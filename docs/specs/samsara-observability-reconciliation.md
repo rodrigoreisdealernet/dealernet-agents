@@ -9,7 +9,7 @@ Define the Samsara-specific operational surface so that support teams can:
 
 - Monitor tenant-safe sync health for Samsara telemetry ingestion.
 - Quarantine/replay failed sync work and disable noisy failing scopes without direct SQL edits.
-- Diagnose drift between Wynne telematics state and Samsara state for supported signals.
+- Diagnose drift between Dealernet telematics state and Samsara state for supported signals.
 
 ## Data model
 
@@ -18,7 +18,7 @@ Define the Samsara-specific operational surface so that support teams can:
 - `samsara_sync_events` — one row per Samsara sync attempt, including tenant/provider/asset/signal context, retry counters, and lag.
 - `samsara_dead_letter_queue` — operator queue for quarantined or exhausted failures with replay audit metadata.
 - `samsara_sync_controls` — scoped disable controls by tenant + asset + signal.
-- `samsara_reconciliation_results` — drift diagnostics comparing Wynne and Samsara values.
+- `samsara_reconciliation_results` — drift diagnostics comparing Dealernet and Samsara values.
 
 ### Supported signal scopes
 

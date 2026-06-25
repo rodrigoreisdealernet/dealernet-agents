@@ -39,16 +39,16 @@ Keycloak group → Grafana role mapping:
 
 | Keycloak group        | Grafana role |
 |-----------------------|--------------|
-| `wynne-admin`         | `Admin`      |
-| `wynne-branch-manager` | `Editor`    |
-| `wynne-field-operator` | `Editor`    |
+| `dia-admin`         | `Admin`      |
+| `dia-branch-manager` | `Editor`    |
+| `dia-field-operator` | `Editor`    |
 | (no matching group)   | denied       |
 
 `GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_STRICT_MODE` is set to `true` and
 `GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP` is set to `false`. This means a Keycloak-authenticated
-user whose groups claim does not match `wynne-admin`, `wynne-branch-manager`, or
-`wynne-field-operator` is denied sign-in by Grafana — there is no catch-all Viewer fallback.
-The `wynne-read-only` group does not grant Grafana access; Grafana access is limited to the
+user whose groups claim does not match `dia-admin`, `dia-branch-manager`, or
+`dia-field-operator` is denied sign-in by Grafana — there is no catch-all Viewer fallback.
+The `dia-read-only` group does not grant Grafana access; Grafana access is limited to the
 three explicitly mapped operational groups.
 
 The Temporal UI boundary is **not changed**: it remains behind oauth2-proxy (ADR-0034 is still

@@ -14,7 +14,7 @@ This spec defines the integrated marketing suite for authenticated operators to 
 campaigns from first-party inventory and branch data, publish campaigns to Google Ads and Meta, and
 measure campaign performance through spend-to-rental attribution.
 
-The approved direction keeps campaign configuration and attribution logic inside Wynne's existing
+The approved direction keeps campaign configuration and attribution logic inside Dealernet's existing
 frontend, API, Temporal, and Supabase stack, but treats campaign publishing and attribution as
 server-side boundaries. Operators work through authenticated back-office flows; ad-platform
 connectors run through the shared integration framework; and conversion attribution is built from
@@ -144,7 +144,7 @@ Campaign and audience rules:
 
 ### 5.4 Budget and publish enforcement
 
-Budget caps are enforced inside Wynne before provider publish, with provider-side budgets as a second
+Budget caps are enforced inside Dealernet before provider publish, with provider-side budgets as a second
 guardrail.
 
 Rules:
@@ -168,7 +168,7 @@ Rules:
    - future `email_marketing`
 2. Conversion or enhanced-conversion payloads must not be sent to Google Ads or Meta unless the
    relevant `advertising_attribution` consent state permits it.
-3. When consent is absent, Wynne may still compute internal first-party attribution for operator
+3. When consent is absent, Dealernet may still compute internal first-party attribution for operator
    analytics, but provider-side conversion sync stays suppressed and dashboard reporting must mark the
    result as partial.
 4. Attribution-relevant records must carry explicit `tenant_id` and publication or storefront scope

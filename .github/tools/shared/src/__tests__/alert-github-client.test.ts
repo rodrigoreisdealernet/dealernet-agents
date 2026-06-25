@@ -62,16 +62,16 @@ describe("createGitHubApiClient.searchIssues", () => {
     const client = createGitHubApiClient("token");
     const matches = await client.searchIssues(
       "Volaris-AI",
-      "wynne-lvl-3",
+      "dia",
       "fingerprint:e2e-dev-failure"
     );
 
     const requestedPaths = fetchMock.mock.calls.map((call) => String(call[0]));
     expect(requestedPaths[0]).toContain(
-      "/repos/Volaris-AI/wynne-lvl-3/issues?state=open&per_page=100&page=1"
+      "/repos/Volaris-AI/dia/issues?state=open&per_page=100&page=1"
     );
     expect(requestedPaths[1]).toContain(
-      "/repos/Volaris-AI/wynne-lvl-3/issues?state=open&per_page=100&page=2"
+      "/repos/Volaris-AI/dia/issues?state=open&per_page=100&page=2"
     );
     expect(requestedPaths.some((path) => path.includes("/search/issues"))).toBe(false);
     expect(matches.map((issue) => issue.number)).toEqual([7, 12]);

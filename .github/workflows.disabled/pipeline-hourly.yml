@@ -11,7 +11,7 @@ name: Pipeline — Hourly
 #     3. operations-manager — public-only posture checks (OPS_CHECK_SCOPE=public)
 #   Private lane (self-hosted/private-access):
 #     4. operations-manager — private runtime checks (OPS_CHECK_SCOPE=private)
-#     5. cluster-guardian   — wynne-* namespace health check (read-only)
+#     5. cluster-guardian   — dia-* namespace health check (read-only)
 #
 # The private lane is explicit and separate from the public lane so private/runtime
 # coverage does not appear healthy when private prerequisites are missing.

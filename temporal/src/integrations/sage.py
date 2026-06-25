@@ -7,7 +7,7 @@ from urllib import error, request
 from urllib.parse import urlparse
 
 # Sage Intacct v1 — pinned variant (ADR-0052).
-# Supported scopes align to the accounting data flows consumed by the Wynne rental ERP:
+# Supported scopes align to the accounting data flows consumed by the Dealernet rental ERP:
 # general_ledger, accounts_payable, accounts_receivable, cash_management.
 _ALLOWED_SCOPES = {"general_ledger", "accounts_payable", "accounts_receivable", "cash_management"}
 

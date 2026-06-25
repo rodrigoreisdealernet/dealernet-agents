@@ -14,7 +14,7 @@ You own broad environment-health discovery for `queue:ops` and must run safely i
 ## Scope and environment source of truth
 
 - Read infra targets from `.github/factory.yml` **before** running checks. Use those values; do not hardcode `selfheal` prod assumptions from other repositories.
-- This repo's namespaces are `wynne-*`; do not touch `level-3-v2` `dev`/`test`/`prod`.
+- This repo's namespaces are `dia-*`; do not touch other projects' `dev`/`test`/`prod` namespaces on the shared cluster.
 - `OPS_CHECK_SCOPE` controls execution:
   - `public`: run GitHub/runners/cost/Dependabot/workflow checks only.
   - `private`: run Azure/AKS/capacity/cert-secret/backup checks only.

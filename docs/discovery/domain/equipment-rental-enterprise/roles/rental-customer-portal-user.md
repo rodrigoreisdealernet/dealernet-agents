@@ -24,7 +24,7 @@ truck, or a phone rather than from inside the rental company. In enterprise mult
 they are not on the supplier's payroll, but they are still a real system user because they need to
 see what is on-rent, what is due back, what has been invoiced, and how to ask for service, pickup,
 or an extension without waiting on a branch callback. Sources:
-[Wynne Customer Portal](https://www.wynnesystems.com/rentalman/customer-portal/),
+[Dealernet Customer Portal](https://www.dealernet.com.br/rentalman/customer-portal/),
 [RER contractor-rental tooling](https://www.rermag.com/mag/article/21237850/kpis-equipment-rental-industry),
 [Renterra portal guide](https://getrenterra.com/blog-posts/what-is-a-customer-portal----and-why-your-rental-business-needs-one).
 
@@ -38,7 +38,7 @@ same routine work by phone and email. Sources:
 Their goal is not "use software"; it is to keep the job moving with less administrative drag.
 They want a current view of rented equipment, fewer overdue surprises, easier invoice retrieval,
 and a faster path to call-off, extension, payment, or service when job conditions change. Sources:
-[Wynne Customer Portal](https://www.wynnesystems.com/rentalman/customer-portal/),
+[Dealernet Customer Portal](https://www.dealernet.com.br/rentalman/customer-portal/),
 [RER contractor-rental tooling](https://www.rermag.com/mag/article/21237850/kpis-equipment-rental-industry).
 
 Motivations cluster around convenience, cost control, and predictability. Renterra frames the
@@ -53,14 +53,14 @@ The daily rhythm is mostly read-heavy until the job changes. A project lead chec
 where it is, and what is coming due; if a crew finishes early, the same person may trigger a
 pickup; if work slips, they ask for an extension; if a machine is down, they raise a service
 request from the field. Sources:
-[Wynne Customer Portal](https://www.wynnesystems.com/rentalman/customer-portal/),
+[Dealernet Customer Portal](https://www.dealernet.com.br/rentalman/customer-portal/),
 [RER contractor-rental tooling](https://www.rermag.com/mag/article/21237850/kpis-equipment-rental-industry).
 
 Weekly and monthly rhythms lean financial: download invoices, match charges to projects, and clear
 payments or disputes through AP. This is why the role spans rental-lifecycle and billing rather
 than being "just portal access." Sources:
 [Renterra portal guide](https://getrenterra.com/blog-posts/what-is-a-customer-portal----and-why-your-rental-business-needs-one),
-[Wynne Customer Portal](https://www.wynnesystems.com/rentalman/customer-portal/).
+[Dealernet Customer Portal](https://www.dealernet.com.br/rentalman/customer-portal/).
 
 ## Frustrations & pains
 The biggest pain is routine dependency on branch hours and branch bandwidth. Renterra spells out
@@ -76,14 +76,14 @@ that visibility, rental charges keep running after the equipment is no longer pr
 The third pain is fragmented job-costing and billing context. Customers need rentals, invoices,
 balances, and contact data in one place, not split across phone calls, PDFs, and internal
 spreadsheets. Sources:
-[Wynne Customer Portal](https://www.wynnesystems.com/rentalman/customer-portal/),
+[Dealernet Customer Portal](https://www.dealernet.com.br/rentalman/customer-portal/),
 [Renterra portal guide](https://getrenterra.com/blog-posts/what-is-a-customer-portal----and-why-your-rental-business-needs-one).
 
 ## Tools today
 The best-case tool stack is a dedicated customer portal integrated to the rental ERP, with invoice
 downloads, online payments, rental visibility, and request flows for pickups, quotes, extensions,
-and service. That is exactly how Wynne positions Customer Portal for RentalMan. Source:
-[Wynne Customer Portal](https://www.wynnesystems.com/rentalman/customer-portal/).
+and service. That is exactly how Dealernet positions Customer Portal for RentalMan. Source:
+[Dealernet Customer Portal](https://www.dealernet.com.br/rentalman/customer-portal/).
 
 In practice, many customers still swivel between the portal, email, phone calls, internal project
 spreadsheets, and AP tooling. Even where a portal exists, the customer often keeps their own
@@ -96,7 +96,7 @@ Sources:
 This user decides when a machine should come off rent, whether a project needs an extension, which
 invoices should be paid or questioned, and when a field issue is urgent enough to request service.
 Those are real operational decisions even though the user sits outside the rental company. Sources:
-[Wynne Customer Portal](https://www.wynnesystems.com/rentalman/customer-portal/),
+[Dealernet Customer Portal](https://www.dealernet.com.br/rentalman/customer-portal/),
 [RER contractor-rental tooling](https://www.rermag.com/mag/article/21237850/kpis-equipment-rental-industry).
 
 That is why the task table mixes `automate` and `assist`: read-only visibility and document access
@@ -129,23 +129,23 @@ the branch and more time deciding what the job actually needs.
   upcoming due-backs, and likely off-rent candidates, then let the customer submit a pickup request
   that routes to an internal approval queue rather than a phone chain. Evidence:
   [RER contractor-rental tooling](https://www.rermag.com/mag/article/21237850/kpis-equipment-rental-industry),
-  [Wynne Customer Portal](https://www.wynnesystems.com/rentalman/customer-portal/).
+  [Dealernet Customer Portal](https://www.dealernet.com.br/rentalman/customer-portal/).
 - **Self-service invoice and balance pack** — bounded `automate` opportunity. Assemble the current
   invoice set, balances, and project references so AP review does not require a branch call. Evidence:
   [Renterra portal guide](https://getrenterra.com/blog-posts/what-is-a-customer-portal----and-why-your-rental-business-needs-one),
-  [Wynne Customer Portal](https://www.wynnesystems.com/rentalman/customer-portal/).
+  [Dealernet Customer Portal](https://www.dealernet.com.br/rentalman/customer-portal/).
 - **After-hours quote and reservation capture** — strong `assist` opportunity. Let customers browse
   equipment and submit a quote-backed reservation request with project context already attached, then
   route it for branch review on availability, pricing, and fulfillment constraints instead of forcing
   a phone-first handoff. Evidence:
-  [Wynne Customer Portal](https://www.wynnesystems.com/rentalman/customer-portal/),
+  [Dealernet Customer Portal](https://www.dealernet.com.br/rentalman/customer-portal/),
   [Texada GateWay](https://texadasoftware.com/ecommerce/).
 - **Field service request triage** — `assist` opportunity. Capture the issue, location, photos, and
   contract context up front so the branch reviews a complete case instead of reconstructing it later.
-  Evidence: [Wynne Customer Portal](https://www.wynnesystems.com/rentalman/customer-portal/).
+  Evidence: [Dealernet Customer Portal](https://www.dealernet.com.br/rentalman/customer-portal/).
 
 ## Domain-expert review
 _For SMEs / real operators: what's right, what's wrong, what's missing, where to scope._
 - [ ] Reviewed by: _&lt;name, date&gt;_
-- **Draft synthesis to validate:** whether Wynne's target buying center uses one portal persona or
+- **Draft synthesis to validate:** whether Dealernet's target buying center uses one portal persona or
   whether this role should later split into project/field user vs. AP/billing contact.

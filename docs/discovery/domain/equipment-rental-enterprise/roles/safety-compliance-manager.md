@@ -20,7 +20,7 @@ last_reviewed: '2026-06-19'
 
 ## Identity & context
 This is the cross-branch owner for the safety and DOT-compliance program: usually a regional or
-HQ specialist sitting between branch managers and the operations executive. In Wynne's target
+HQ specialist sitting between branch managers and the operations executive. In Dealernet's target
 segment, branch leaders still carry day-to-day yard and driver compliance, but this role owns the
 enterprise program the branches cannot reliably run alone: incident logging, audit cadence,
 training currency, driver-file oversight, and leadership reporting. Sources:
@@ -149,5 +149,5 @@ role to spend reporting time finding data that already exists somewhere else.
 _For SMEs / real operators: what's right, what's wrong, what's missing, where to scope._
 - [ ] Reviewed by: _&lt;name, date&gt;_
 - **Draft synthesis to validate:** whether environmental compliance, hazmat/waste handling, and
-  workers' compensation coordination usually sit with this same role in Wynne's target accounts or
+  workers' compensation coordination usually sit with this same role in Dealernet's target accounts or
   split into adjacent specialists.

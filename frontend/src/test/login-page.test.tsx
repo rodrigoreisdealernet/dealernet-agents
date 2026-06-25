@@ -65,9 +65,9 @@ describe('LoginPage — split-brand layout', () => {
     expect(screen.getByTestId('login-brand-panel')).toBeInTheDocument();
   });
 
-  it('renders "Wynne Systems" wordmark in brand panel', () => {
+  it('renders "Dealernet" wordmark in brand panel', () => {
     render(<LoginPage />);
-    expect(screen.getByText('Wynne Systems')).toBeInTheDocument();
+    expect(screen.getByText('Dealernet')).toBeInTheDocument();
   });
 
   it('renders the value proposition headline', () => {
@@ -141,7 +141,7 @@ describe('LoginPage — pending state', () => {
 
     render(<LoginPage />);
 
-    fireEvent.change(screen.getByTestId('login-email'), { target: { value: 'admin@wynne-rental.dev' } });
+    fireEvent.change(screen.getByTestId('login-email'), { target: { value: 'admin@dia-rental.dev' } });
     fireEvent.change(screen.getByTestId('login-password'), { target: { value: 'secret' } });
     fireEvent.submit(screen.getByTestId('login-submit'));
 
@@ -161,7 +161,7 @@ describe('LoginPage — successful sign-in', () => {
 
     render(<LoginPage />);
 
-    fireEvent.change(screen.getByTestId('login-email'), { target: { value: 'admin@wynne-rental.dev' } });
+    fireEvent.change(screen.getByTestId('login-email'), { target: { value: 'admin@dia-rental.dev' } });
     fireEvent.change(screen.getByTestId('login-password'), { target: { value: 'secret' } });
     fireEvent.submit(screen.getByTestId('login-submit'));
 

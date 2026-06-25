@@ -1,6 +1,6 @@
 apiVersion: v2
 name: observability
-description: Deploy kube-prometheus-stack and Wynne scrape contracts
+description: Deploy kube-prometheus-stack and Dealernet scrape contracts
 type: application
 version: 0.1.0
 appVersion: "0.1.0"

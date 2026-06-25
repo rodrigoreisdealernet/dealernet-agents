@@ -3,7 +3,7 @@ name: CI
 # CI enxuto e auto-contido para o dealernet-agents.
 # Foco: sinal verde rápido (compila, lint/typecheck/test do frontend) + guard-rails
 # baratos (unicidade de migration, varredura de segredos). NÃO depende de ACR/AKS/
-# Azure/Supabase-stack — a fábrica pesada do Wynne fica em .github/workflows.disabled/.
+# Azure/Supabase-stack — a fábrica pesada do Dealernet fica em .github/workflows.disabled/.
 
 on:
   pull_request:
@@ -65,7 +65,7 @@ jobs:
         run: npm run lint
         working-directory: frontend
 
-      # Não-bloqueante (report-only): herdado do Wynne, cujo CI também tratava tsc como
+      # Não-bloqueante (report-only): herdado do Dealernet, cujo CI também tratava tsc como
       # report-only. Corrigir os erros de TS herdados é trabalho de re-domínio posterior;
       # não deve barrar o CI base. Os gates reais são lint + build + testes.
       - name: Typecheck (report-only)
@@ -77,8 +77,8 @@ jobs:
         run: npm run build
         working-directory: frontend
 
-      # Quarentena de 2 testes herdados do Wynne que falham por timing/ambiente neste
-      # runner (passam no CI original do Wynne). 119/121 arquivos seguem gateando de
+      # Quarentena de 2 testes herdados do Dealernet que falham por timing/ambiente neste
+      # runner (passam no CI original do Dealernet). 119/121 arquivos seguem gateando de
       # verdade. TODO(re-domínio): remover a quarentena ao tocar nessas áreas e
       # estabilizar/portar os testes para o domínio de concessionária.
       - name: Unit tests (vitest)

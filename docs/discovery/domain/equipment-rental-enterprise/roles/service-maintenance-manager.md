@@ -67,8 +67,8 @@ audit risk, and avoidable downtime. Sources:
 
 The second pain is availability opacity. The branch wants an answer on whether a unit is rent-ready,
 but the real answer lives in the bay, the mechanic's estimate, and a status update that may not yet
-be entered. This is exactly the "it should be available, but it's not ready" problem Wynne calls
-out. Sources: [RentalResult fleet management](https://www.wynnesystems.com/rentalresult/fleet-management/),
+be entered. This is exactly the "it should be available, but it's not ready" problem Dealernet calls
+out. Sources: [RentalResult fleet management](https://www.dealernet.com.br/rentalresult/fleet-management/),
 [Sunbelt Assistant Manager](https://careers.sunbeltrentals.com/assistant-manager/job/P1-5376372-0).
 
 The third pain is prioritization pressure from every direction: counter, branch manager, delivery
@@ -80,13 +80,13 @@ commitments, technician capacity, and compliance obligations all compete for the
 RentalMan or a similar RMS is the system of record for work orders, PM scheduling, status, and
 history. Around that sits the working shop stack: technician smartphones, paper or whiteboard
 scheduling, parts and PO flows, and spreadsheets for the gaps that the RMS does not close cleanly.
-Sources: [RentalMan](https://www.wynnesystems.com/solutions/rentalman/),
+Sources: [RentalMan](https://www.dealernet.com.br/solutions/rentalman/),
 [RER tech trends](https://www.rermag.com/business-technology/business-info-analysis/article/20930823/rental-industrys-upward-trends-in-business-and-technology).
 
 This role depends on both clean system data and messy shop reality. A queue in software is only as
 good as the status updates, inspection outcomes, and technician feedback that keep it current.
 Sources: [RentalResult maintenance management](https://rentalresult.com/equipment-maintenance-management-software/),
-[RentalResult fleet management](https://www.wynnesystems.com/rentalresult/fleet-management/).
+[RentalResult fleet management](https://www.dealernet.com.br/rentalresult/fleet-management/).
 
 ## Decisions they own
 This role decides when PM can defer versus when it must pull a unit out now, which work orders jump
@@ -139,5 +139,5 @@ status changes and spend, but not build the queue from scratch.
 _For SMEs / real operators: what's right, what's wrong, what's missing, where to scope._
 - [ ] Reviewed by: _&lt;name, date&gt;_
 - **Draft synthesis to validate:** whether parts purchasing authority usually sits with this role in
-  Wynne's target accounts, and where inspection ownership moves from shop leadership to dedicated
+  Dealernet's target accounts, and where inspection ownership moves from shop leadership to dedicated
   inspection or yard staff in larger branches.

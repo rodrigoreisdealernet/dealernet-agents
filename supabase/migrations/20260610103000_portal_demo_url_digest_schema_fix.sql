@@ -12,7 +12,7 @@ as $$
 declare
   v_contract_id uuid;
   v_token_hash  text;
-  v_demo_token  constant text := 'wynne-demo-portal-scope-001';
+  v_demo_token  constant text := 'dia-demo-portal-scope-001';
   v_demo_token_hash constant text := '20aac617825fe59b100a0a010687e89b728732c716a9676a3bc1a21b16e0c63d';
 begin
   select e.id

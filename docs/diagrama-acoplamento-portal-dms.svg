@@ -1,0 +1,137 @@
+<svg viewBox="0 0 960 720" xmlns="http://www.w3.org/2000/svg" role="img" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+  <title>Arquitetura de acoplamento do shell Portal DMS ao backend Supabase do dealernet-agents (POC)</title>
+  <desc>O navegador roda o shell Portal DMS, que faz login automático de um usuário demo no Supabase Auth, consome views via supabase-js com JWT, e envia decisões de findings para a ops-api, que grava no banco e sinaliza o Temporal.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <marker id="arrowT" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0d9488"/>
+    </marker>
+  </defs>
+
+  <!-- title -->
+  <text x="40" y="32" font-size="19" font-weight="700" fill="#0f172a">Acoplamento — Portal DMS (frontend)  ×  dealernet-agents (Supabase)</text>
+  <text x="40" y="52" font-size="12.5" fill="#64748b">POC: shell corporativo nativo consumindo a Operations Factory. Sem login real — login automático de usuário demo.</text>
+
+  <!-- ===================== BROWSER CONTAINER ===================== -->
+  <rect x="30" y="68" width="900" height="312" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="46" y="90" font-size="12.5" font-weight="700" fill="#334155">NAVEGADOR · Portal DMS Shell (Vite :5174)</text>
+
+  <!-- row 1: login + shell -->
+  <rect x="46" y="100" width="180" height="52" rx="7" fill="#eef2f7" stroke="#94a3b8"/>
+  <text x="136" y="122" font-size="12.5" font-weight="600" fill="#0f172a" text-anchor="middle">Login (POC)</text>
+  <text x="136" y="139" font-size="10.5" fill="#64748b" text-anchor="middle">sempre autentica</text>
+
+  <rect x="240" y="100" width="670" height="52" rx="7" fill="#eef2f7" stroke="#94a3b8"/>
+  <text x="575" y="122" font-size="12.5" font-weight="600" fill="#0f172a" text-anchor="middle">PortalShell — MDI (Zustand · menu-driven · sem react-router)</text>
+  <text x="575" y="139" font-size="10.5" fill="#64748b" text-anchor="middle">Sidebar (menu “AI Operations”) · TopBar · WindowManager (janelas/abas) · StatusBar · DAI · Tour</text>
+
+  <!-- row 2: 5 native screens -->
+  <text x="46" y="174" font-size="10.5" font-weight="600" fill="#475569">Telas nativas — registry por componentKey  (DataTable · ConfirmDialog · design system OKLCH)</text>
+  <!-- box helper: w=162 gap=10 from x=46 -->
+  <g font-size="11">
+    <!-- 1 -->
+    <rect x="46" y="182" width="162" height="60" rx="7" fill="#eef2f7" stroke="#94a3b8"/>
+    <text x="127" y="205" font-weight="600" fill="#0f172a" text-anchor="middle">Agent Dashboard</text>
+    <text x="127" y="221" font-size="9.5" fill="#64748b" text-anchor="middle">ops_agent_status_view</text>
+    <text x="127" y="233" font-size="9.5" fill="#64748b" text-anchor="middle">ops_finding_kpis</text>
+    <!-- 2 (accent) -->
+    <rect x="218" y="182" width="162" height="60" rx="7" fill="#ecfeff" stroke="#0d9488" stroke-width="1.6"/>
+    <text x="299" y="205" font-weight="700" fill="#0f5e57" text-anchor="middle">Findings Queue</text>
+    <text x="299" y="221" font-size="9.5" fill="#0f766e" text-anchor="middle">ops_findings_view</text>
+    <text x="299" y="233" font-size="9.5" fill="#0f766e" text-anchor="middle">molde InboxView</text>
+    <!-- 3 (accent) -->
+    <rect x="390" y="182" width="162" height="60" rx="7" fill="#ecfeff" stroke="#0d9488" stroke-width="1.6"/>
+    <text x="471" y="205" font-weight="700" fill="#0f5e57" text-anchor="middle">Finding Detail</text>
+    <text x="471" y="221" font-size="9.5" fill="#0f766e" text-anchor="middle">evidência + rationale</text>
+    <text x="471" y="233" font-size="9.5" fill="#0f766e" text-anchor="middle">Aprovar / Rejeitar</text>
+    <!-- 4 -->
+    <rect x="562" y="182" width="162" height="60" rx="7" fill="#eef2f7" stroke="#94a3b8"/>
+    <text x="643" y="205" font-weight="600" fill="#0f172a" text-anchor="middle">Audit Trail</text>
+    <text x="643" y="221" font-size="9.5" fill="#64748b" text-anchor="middle">ops_audit_trail_view</text>
+    <text x="643" y="233" font-size="9.5" fill="#64748b" text-anchor="middle">timeline da decisão</text>
+    <!-- 5 -->
+    <rect x="734" y="182" width="162" height="60" rx="7" fill="#eef2f7" stroke="#94a3b8"/>
+    <text x="815" y="205" font-weight="600" fill="#0f172a" text-anchor="middle">Executive Pack</text>
+    <text x="815" y="221" font-size="9.5" fill="#64748b" text-anchor="middle">v_home_dashboard_kpis</text>
+    <text x="815" y="233" font-size="9.5" fill="#64748b" text-anchor="middle">recuperável Σ$</text>
+  </g>
+
+  <!-- row 3: data layers -->
+  <rect x="46" y="300" width="540" height="56" rx="7" fill="#e7eef7" stroke="#64748b"/>
+  <text x="316" y="322" font-size="12.5" font-weight="600" fill="#0f172a" text-anchor="middle">agentsApi.ts  (camada de dados NOVA)</text>
+  <text x="316" y="340" font-size="10.5" fill="#64748b" text-anchor="middle">@supabase/supabase-js · signInDemo() · leitura de views · POST decisão</text>
+
+  <rect x="598" y="300" width="298" height="56" rx="7" fill="#f1f5f9" stroke="#cbd5e1" stroke-dasharray="5 4"/>
+  <text x="747" y="322" font-size="12" font-weight="600" fill="#334155" text-anchor="middle">portalApi (mock)</text>
+  <text x="747" y="340" font-size="10.5" fill="#94a3b8" text-anchor="middle">boot do shell · config · menu · empresas — sem rede</text>
+
+  <!-- ===================== BACKEND BAND ===================== -->
+  <text x="46" y="408" font-size="12.5" font-weight="700" fill="#334155">BACKEND — dealernet-agents (mesma máquina, dados demo seedados · tenant demo-ops-a)</text>
+
+  <!-- Supabase -->
+  <rect x="46" y="420" width="528" height="150" rx="9" fill="#eef5f0" stroke="#5b9279" stroke-width="1.5"/>
+  <text x="62" y="442" font-size="12.5" font-weight="700" fill="#1f513c">Supabase  (:54331)</text>
+  <rect x="62" y="452" width="496" height="34" rx="6" fill="#ffffff" stroke="#bcd3c6"/>
+  <text x="74" y="473" font-size="11" fill="#0f172a">Auth / GoTrue  →  emite JWT (app_metadata.role + tenant)</text>
+  <rect x="62" y="492" width="496" height="68" rx="6" fill="#ffffff" stroke="#bcd3c6"/>
+  <text x="74" y="512" font-size="11" fill="#0f172a">PostgREST · views (RLS por tenant) — anon travado</text>
+  <text x="74" y="529" font-size="10" fill="#475569">ops_findings_view · ops_agent_status_view · ops_finding_kpis</text>
+  <text x="74" y="544" font-size="10" fill="#475569">ops_audit_trail_view · v_home_dashboard_kpis · ops_agent_config_current</text>
+
+  <!-- ops-api -->
+  <rect x="592" y="420" width="180" height="150" rx="9" fill="#fdf3e7" stroke="#cf9442" stroke-width="1.5"/>
+  <text x="608" y="442" font-size="12" font-weight="700" fill="#8a5a12">ops-api  FastAPI (:8000)</text>
+  <text x="608" y="466" font-size="10.5" fill="#7c4d10">POST /findings/decision</text>
+  <text x="608" y="482" font-size="10" fill="#a06a1f">Bearer = access_token</text>
+  <text x="608" y="520" font-size="10" fill="#7c4d10">1) grava finding (banco)</text>
+  <text x="608" y="536" font-size="10" fill="#7c4d10">2) sinaliza o workflow</text>
+  <text x="608" y="552" font-size="9.5" fill="#a06a1f">decisão = fonte da verdade</text>
+
+  <!-- Temporal -->
+  <rect x="788" y="420" width="124" height="150" rx="9" fill="#eef2f7" stroke="#7c89a5" stroke-width="1.5"/>
+  <text x="850" y="442" font-size="12" font-weight="700" fill="#3b4a66" text-anchor="middle">Temporal</text>
+  <text x="850" y="478" font-size="10" fill="#475569" text-anchor="middle">agentes que</text>
+  <text x="850" y="492" font-size="10" fill="#475569" text-anchor="middle">geram findings</text>
+  <text x="850" y="516" font-size="9.5" fill="#94a3b8" text-anchor="middle">(seedados na</text>
+  <text x="850" y="529" font-size="9.5" fill="#94a3b8" text-anchor="middle">POC — leitura)</text>
+
+  <!-- ===================== ARROWS ===================== -->
+  <!-- Login -> Supabase Auth -->
+  <path d="M136,152 L136,300" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path d="M120,356 C120,390 150,408 175,452" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect x="150" y="270" width="172" height="18" rx="4" fill="#f8fafc"/>
+  <text x="150" y="283" font-size="9.5" fill="#475569">signInWithPassword(demo)</text>
+
+  <!-- agentsApi <-> Supabase (read) -->
+  <path d="M330,356 L330,420" fill="none" stroke="#475569" stroke-width="1.8" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <rect x="338" y="378" width="196" height="18" rx="4" fill="#eef5f0"/>
+  <text x="344" y="391" font-size="9.5" fill="#1f513c">from(view).select — Bearer JWT (RLS)</text>
+
+  <!-- Finding Detail -> ops-api (approve/reject) — accent -->
+  <path d="M520,300 C560,280 640,300 660,418" fill="none" stroke="#0d9488" stroke-width="1.9" marker-end="url(#arrowT)"/>
+  <rect x="556" y="276" width="150" height="18" rx="4" fill="#ecfeff"/>
+  <text x="562" y="289" font-size="9.5" fill="#0f766e">approve / reject (Bearer)</text>
+
+  <!-- ops-api -> Supabase (write finding) -->
+  <path d="M592,520 L566,520" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <!-- ops-api -> Temporal (signal) -->
+  <path d="M772,500 L786,500" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#arrow)"/>
+
+  <!-- ===================== LEGEND ===================== -->
+  <g font-size="10.5">
+    <line x1="46" y1="600" x2="80" y2="600" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)"/>
+    <text x="88" y="604" fill="#475569">HTTP — dados / auth (supabase-js, ops-api)</text>
+    <line x1="360" y1="600" x2="394" y2="600" stroke="#0d9488" stroke-width="1.9" marker-end="url(#arrowT)"/>
+    <text x="402" y="604" fill="#0f766e">loop de IA proativa: push → revisar → decidir</text>
+    <line x1="700" y1="600" x2="734" y2="600" stroke="#cbd5e1" stroke-width="1.8" stroke-dasharray="5 4"/>
+    <text x="742" y="604" fill="#94a3b8">local / mock (sem rede)</text>
+  </g>
+
+  <!-- pre-req note -->
+  <text x="46" y="640" font-size="10.5" font-weight="600" fill="#334155">Pré-requisito (uma vez):</text>
+  <text x="172" y="640" font-size="10.5" fill="#64748b">supabase start  ·  supabase db reset (seed)  ·  scripts/seed-demo-users.sh  ·  (approve real) subir ops-api + Temporal</text>
+  <text x="46" y="660" font-size="10.5" font-weight="600" fill="#334155">Charter:</text>
+  <text x="110" y="660" font-size="10.5" fill="#64748b">“agents propose, humans dispose” — auto_apply travado em false; toda decisão passa pelo gate humano e fica auditável.</text>
+</svg>

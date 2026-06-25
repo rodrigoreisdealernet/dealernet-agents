@@ -510,7 +510,7 @@ begin
     'sage',
     'erp_finance',
     v_scope_key,
-    case when p_direction = 'inbound' then 'provider' else 'wynne' end,
+    case when p_direction = 'inbound' then 'provider' else 'dia' end,
     p_direction,
     p_cursor_value,
     p_cursor_value,
@@ -528,7 +528,7 @@ begin
     set
       connector_key = 'sage',
       exchange_key = 'erp_finance',
-      source_of_truth = case when p_direction = 'inbound' then 'provider' else 'wynne' end,
+      source_of_truth = case when p_direction = 'inbound' then 'provider' else 'dia' end,
       direction = p_direction,
       cursor = p_cursor_value,
       cursor_value = p_cursor_value,

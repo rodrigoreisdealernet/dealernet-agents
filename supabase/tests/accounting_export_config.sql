@@ -36,7 +36,7 @@ begin
     p_format_version => 'xero_csv_v1',
     p_account_code_map => '{"4000-RENT": "200"}'::jsonb,
     p_tax_code_map  => '{}'::jsonb,
-    p_created_by    => 'admin@wynne-rental.dev'
+    p_created_by    => 'admin@dia-rental.dev'
   );
 
   if v_config_row.export_mode <> 'xero' then
@@ -55,7 +55,7 @@ begin
     p_tenant_id     => v_tenant_a_id,
     p_export_mode   => 'sage',
     p_format_version => 'sage_intacct_gl_csv_v1',
-    p_created_by    => 'admin@wynne-rental.dev'
+    p_created_by    => 'admin@dia-rental.dev'
   );
 
   if v_config_row.export_mode <> 'sage' then
@@ -108,7 +108,7 @@ begin
     p_period_start    => '2026-06-01',
     p_period_end      => '2026-06-30',
     p_basis           => 'accrual',
-    p_triggered_by    => 'admin@wynne-rental.dev',
+    p_triggered_by    => 'admin@dia-rental.dev',
     p_row_count       => 42,
     p_artifact_status => 'complete'
   );
@@ -132,7 +132,7 @@ begin
     p_period_start    => '2026-05-01',
     p_period_end      => '2026-05-31',
     p_basis           => 'all',
-    p_triggered_by    => 'manager@wynne-rental.dev',
+    p_triggered_by    => 'manager@dia-rental.dev',
     p_row_count       => 0,
     p_artifact_status => 'empty'
   );
@@ -334,7 +334,7 @@ begin
     p_tenant_id      => v_tenant_a_id,
     p_export_mode    => 'xero',
     p_format_version => 'xero_csv_v1',
-    p_created_by     => 'admin@wynne-rental.dev'
+    p_created_by     => 'admin@dia-rental.dev'
   );
   if v_config_row.export_mode <> 'xero' then
     raise exception 'Expected RPC upsert to succeed as service_role, got export_mode=%', v_config_row.export_mode;
@@ -388,7 +388,7 @@ begin
     ) values (
       v_tenant_a_id, 'export_only', 'export_only_v1',
       '2026-06-30', '2026-06-01',
-      'all', 'admin@wynne-rental.dev', 0, 'empty'
+      'all', 'admin@dia-rental.dev', 0, 'empty'
     );
   exception
     when check_violation then

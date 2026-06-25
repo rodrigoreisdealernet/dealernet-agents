@@ -30,7 +30,7 @@ begin
     true,
     jsonb_build_object(
       'api_base_url', 'https://tenant.coupahost.com',
-      'tenant_slug', 'wynne-rental-a',
+      'tenant_slug', 'dia-rental-a',
       'enabled_scopes', jsonb_build_array('requisitions', 'purchase_orders'),
       'healthcheck_path', '/api/health',
       'healthcheck_timeout_seconds', 5
@@ -56,7 +56,7 @@ begin
 
   -- update and disable to force audit rows
   update public.integration_config
-     set settings = settings || jsonb_build_object('tenant_slug', 'wynne-rental-a-v2')
+     set settings = settings || jsonb_build_object('tenant_slug', 'dia-rental-a-v2')
    where tenant_id = v_tenant_a_id
      and connector_key = 'coupa';
 
@@ -77,7 +77,7 @@ begin
     true,
     jsonb_build_object(
       'api_base_url', 'https://tenant-b.coupahost.com',
-      'tenant_slug', 'wynne-rental-b',
+      'tenant_slug', 'dia-rental-b',
       'enabled_scopes', jsonb_build_array('suppliers')
     ),
     jsonb_build_object(

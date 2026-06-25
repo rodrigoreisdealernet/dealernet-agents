@@ -5,7 +5,7 @@ metadata:
   labels:
     {{- include "monitoring.labels" . | nindent 4 }}
     {{ .Values.grafana.dashboardLabel }}: {{ .Values.grafana.dashboardLabelValue | quote }}
-    wynne/dashboard-folder: temporal
+    dia/dashboard-folder: temporal
 data:
   temporal-server.json: |
     {

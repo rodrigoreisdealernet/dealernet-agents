@@ -7,7 +7,7 @@ from urllib import error
 from urllib.parse import urlparse
 
 # Oracle NetSuite REST Web Services connector (TBA — Token-Based Authentication).
-# Supported scopes align to the rental ERP flows consumed by Wynne:
+# Supported scopes align to the rental ERP flows consumed by Dealernet:
 # items, customers, vendors, invoices.
 _ALLOWED_SCOPES = {"items", "customers", "vendors", "invoices"}
 

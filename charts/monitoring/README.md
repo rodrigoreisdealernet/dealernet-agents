@@ -1,7 +1,7 @@
 # charts/monitoring
 
 Helm chart that provisions Grafana datasource and dashboard ConfigMaps for
-the Wynne monitoring stack. Install alongside
+the Dealernet monitoring stack. Install alongside
 [kube-prometheus-stack](https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack)
 in the `monitoring` namespace.
 
@@ -28,13 +28,13 @@ kubectl create secret generic grafana-admin-credentials \
   --from-literal=admin-password='<strong-password>' \
   -n monitoring
 
-# 3. Install kube-prometheus-stack with Wynne's sidecar configuration
+# 3. Install kube-prometheus-stack with Dealernet's sidecar configuration
 helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
   --namespace monitoring --create-namespace \
   -f charts/monitoring/values-kube-prometheus-stack.yaml
 
 # 4. Install the monitoring chart (provisions dashboards + datasource)
-helm upgrade --install wynne-monitoring charts/monitoring \
+helm upgrade --install dia-monitoring charts/monitoring \
   --namespace monitoring
 ```
 
@@ -45,14 +45,14 @@ helm upgrade --install wynne-monitoring charts/monitoring \
 | Profile | File | Use |
 |---------|------|-----|
 | Base | `values.yaml` | Shared defaults |
-| Dev | `values-dev.yaml` | `wynne-dev` |
-| Test | `values-test.yaml` | `wynne-test` |
-| Prod | `values-prod.yaml` | `wynne-prod` |
+| Dev | `values-dev.yaml` | `dia-dev` |
+| Test | `values-test.yaml` | `dia-test` |
+| Prod | `values-prod.yaml` | `dia-prod` |
 
 Apply an environment profile:
 
 ```bash
-helm upgrade --install wynne-monitoring charts/monitoring \
+helm upgrade --install dia-monitoring charts/monitoring \
   --namespace monitoring \
   -f charts/monitoring/values-prod.yaml
 ```
@@ -65,7 +65,7 @@ helm upgrade --install wynne-monitoring charts/monitoring \
 |-----------|--------|-----|-------------|
 | **Temporal Server** | Temporal | `temporal-server` | Service requests, workflow execution, persistence |
 | **Temporal SDK / Worker** | Temporal | `temporal-sdk` | Poll rates, workflow/activity latency, SDK worker health |
-| **Wynne Ops** | Wynne Ops | `wynne-ops` | Workflow throughput/latency, task-queue backlog/age, activity failure rate, schedule health, ops-api latency/error rate |
+| **Dealernet Ops** | Dealernet Ops | `dia-ops` | Workflow throughput/latency, task-queue backlog/age, activity failure rate, schedule health, ops-api latency/error rate |
 | **System — Pods & Nodes** | System | `system-pods-nodes` | Pod CPU/mem, pod restarts, node pressure |
 
 All dashboards are provisioned from ConfigMaps and are read-only in the UI.
@@ -73,7 +73,7 @@ Edits made in the Grafana UI will be lost on the next Helm upgrade — make
 changes in the ConfigMap templates and redeploy.
 
 Folder organisation is automatic: the kube-prometheus-stack dashboard sidecar
-reads the `wynne/dashboard-folder` annotation on each ConfigMap and groups
+reads the `dia/dashboard-folder` annotation on each ConfigMap and groups
 dashboards accordingly (configured via `grafana.sidecar.dashboards.folderAnnotation`
 in `values-kube-prometheus-stack.yaml`).
 
@@ -127,7 +127,7 @@ kubectl -n monitoring port-forward svc/kube-prometheus-stack-grafana 3000:80
 helm lint charts/monitoring
 
 # Render all manifests with default values
-helm template wynne-monitoring charts/monitoring
+helm template dia-monitoring charts/monitoring
 
 # Run the full CI test suite
 bash charts/monitoring/ci-test.sh

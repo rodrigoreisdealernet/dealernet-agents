@@ -257,7 +257,7 @@ begin
     signal_type,
     drift_status,
     lag_seconds,
-    wynne_value,
+    dia_value,
     provider_value,
     diagnostic_summary
   ) values (

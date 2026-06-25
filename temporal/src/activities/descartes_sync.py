@@ -34,8 +34,8 @@ _SCOPE_DIRECTION: dict[str, str] = {
 }
 
 _SCOPE_SOURCE_OF_TRUTH: dict[str, str] = {
-    "route": "wynne",
-    "shipment": "wynne",
+    "route": "dia",
+    "shipment": "dia",
     "compliance": "descartes",
 }
 
@@ -250,7 +250,7 @@ def _scope_direction(scope: str) -> str:
 
 
 def _scope_source_of_truth(scope: str) -> str:
-    return _SCOPE_SOURCE_OF_TRUTH.get(scope, "wynne")
+    return _SCOPE_SOURCE_OF_TRUTH.get(scope, "dia")
 
 
 def _descartes_token(config_snapshot: Mapping[str, Any]) -> str:

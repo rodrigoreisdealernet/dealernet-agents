@@ -1,6 +1,6 @@
 # Copilot Instructions
 
-These instructions are for Copilot coding agent work in `Volaris-AI/wynne-lvl-3`.
+These instructions are for Copilot coding agent work in `Volaris-AI/dia`.
 
 ## Start Here
 Read these before changing code:

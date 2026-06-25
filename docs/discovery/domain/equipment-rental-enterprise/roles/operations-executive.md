@@ -28,14 +28,14 @@ to ten, and direct reporting to the board. Source:
 They do not live in transaction screens the way a counter rep or dispatcher does. Their view is a
 roll-up across rental, service, logistics, and yard performance, plus the strategic moves that
 change the shape of the branch network. Sources:
-[RentalResult](https://wynnesystems.com/rentalresult/),
+[RentalResult](https://dealernet.com.br/rentalresult/),
 [Hapn multi-location guide](https://www.gethapn.com/blog/multi-location-fleet-management-branch-visibility-guide/).
 
 ## Goals & motivations
 Their north star is network performance: higher utilization, fewer idle days, lower re-rent spend,
-better uptime, and better capital allocation across the fleet. Wynne states those outcomes
+better uptime, and better capital allocation across the fleet. Dealernet states those outcomes
 explicitly in RentalResult's enterprise pitch. Source:
-[RentalResult](https://wynnesystems.com/rentalresult/).
+[RentalResult](https://dealernet.com.br/rentalresult/).
 
 Motivations are strategic and comparative. This role wants to know where the business is below plan
 or below market, which branches are hoarding or underperforming, and where capital or leadership
@@ -48,7 +48,7 @@ The weekly rhythm is comparative: utilization dashboards, KPI reviews, branch ou
 follow-up with regional or branch leaders. The role is less about entering data than deciding which
 outliers matter and which actions should move down the chain. Sources:
 [Hapn multi-location guide](https://www.gethapn.com/blog/multi-location-fleet-management-branch-visibility-guide/),
-[RentalResult](https://wynnesystems.com/rentalresult/).
+[RentalResult](https://dealernet.com.br/rentalresult/).
 
 The monthly rhythm adds pack-building for leadership and board review, plus capital and branch
 network decisions that are too large for a single branch manager to make alone. Ad hoc work spikes
@@ -76,7 +76,7 @@ persona feels when operating conditions move faster than the reporting cycle. So
 This role lives in BI dashboards, branch review packs, utilization and telematics reporting,
 spreadsheets, presentation decks, and whatever benchmark sources the business trusts for rate and
 utilization context. Sources:
-[RentalResult](https://wynnesystems.com/rentalresult/),
+[RentalResult](https://dealernet.com.br/rentalresult/),
 [RER utilization benchmarks](https://www.rermag.com/business-technology/business-info-analysis/article/20930823/rental-industrys-upward-trends-in-business-and-technology).
 
 Even with better platforms, the executive surface is still a collage of roll-up tools rather than a
@@ -90,7 +90,7 @@ This role decides whether a branch issue is local or systemic, whether to transf
 re-rent, where to apply leadership pressure, which KPIs matter enough to surface upward, and how
 aggressively to push standards across the network. Sources:
 [Mazzotta regional director role](https://www.rermag.com/news-analysis/headline-news/article/55320125/regional-director-of-branch-operations),
-[RentalResult](https://wynnesystems.com/rentalresult/).
+[RentalResult](https://dealernet.com.br/rentalresult/).
 
 That is why only report assembly lands in `automate`. Everything that changes capital, staffing,
 standards, or operating priorities stays in `assist` or `none`.
@@ -118,7 +118,7 @@ already-assembled board pack that still leaves the narrative and approvals with 
   that need action, with probable redeployment or escalation paths already scoped for executive
   review. Evidence:
   [Hapn multi-location guide](https://www.gethapn.com/blog/multi-location-fleet-management-branch-visibility-guide/),
-  [RentalResult](https://wynnesystems.com/rentalresult/).
+  [RentalResult](https://dealernet.com.br/rentalresult/).
 - **Automated operating-pack assembly** — clean `automate` candidate. Generate the monthly board or
   leadership pack from the network data already in the system; leave interpretation and commitments
   with the executive. Evidence:
@@ -127,7 +127,7 @@ already-assembled board pack that still leaves the narrative and approvals with 
 - **Buy/transfer/re-rent recommendation modeller** — strong `assist` opportunity. For each demand
   gap, pre-model the three options (internal transfer availability, re-rent cost vs. capex
   implication) so the executive arrives with ranked options rather than an open question. Evidence:
-  [RentalResult](https://wynnesystems.com/rentalresult/),
+  [RentalResult](https://dealernet.com.br/rentalresult/),
   [Renttix equipment rental software guide](https://www.renttix.com/en-us/guides/equipment-rental-software-guide).
 - **Branch KPI gap monitor and push** — `assist` candidate that pairs with the utilization brief.
   Surface benchmark deviations with a probable driver (pricing, utilization, staffing, or process)
@@ -144,6 +144,6 @@ already-assembled board pack that still leaves the narrative and approvals with 
 ## Domain-expert review
 _For SMEs / real operators: what's right, what's wrong, what's missing, where to scope._
 - [ ] Reviewed by: _&lt;name, date&gt;_
-- **Draft synthesis to validate:** whether Wynne's ICP more often titles this layer regional
+- **Draft synthesis to validate:** whether Dealernet's ICP more often titles this layer regional
   director, VP operations, COO, or national fleet leader, and which benchmark set they actually use
   in branch-performance reviews.

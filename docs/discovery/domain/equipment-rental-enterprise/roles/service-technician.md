@@ -19,7 +19,7 @@ last_reviewed: '2026-06-18'
 
 ## Identity & context
 This is the branch-level mechanic or road technician who turns returned or down equipment back
-into rentable fleet. In Wynne's enterprise segment, the role usually sits under a shop foreman
+into rentable fleet. In Dealernet's enterprise segment, the role usually sits under a shop foreman
 or service manager at the branch, with both shop and field-service variants depending on whether
 the technician works mostly in the bay or out of a service truck. Sources:
 [United Rentals service careers](https://jobs.unitedrentals.com/career-areas/service),
@@ -82,10 +82,10 @@ site, not in a controlled shop queue. Sources:
 [Sunbelt Service Technician](https://careers.sunbeltrentals.com/service-technician/job/P1-5347140-0),
 [Sunbelt Field Service Technician Level 1](https://careers.sunbeltrentals.com/field-service-technician-level-1/job/P1-5892068-0).
 
-The fourth pain is incomplete return context. Wynne's mobile condition-report flow exists because
+The fourth pain is incomplete return context. Dealernet's mobile condition-report flow exists because
 the technician needs a reliable "before and after" view at pickup and return instead of
 rediscovering damage from scratch once the equipment is back in the yard. Source:
-[Wynne mobile condition reports](https://www.wynnesystems.com/solutions/mobile/).
+[Dealernet mobile condition reports](https://www.dealernet.com.br/solutions/mobile/).
 
 ## Tools today
 The role spans both physical and digital tools: OEM service manuals, shop diagnostic tools,
@@ -96,10 +96,10 @@ hold PM schedules, work orders, service history, and compliance records together
 
 In practice, the real tool problem is the join between condition capture, actual repair work,
 parts availability, and status updates back into the fleet record. RER's smartphone observation
-and Wynne's condition-report tooling both point to the same reality: the role is still bridging
+and Dealernet's condition-report tooling both point to the same reality: the role is still bridging
 the gap between physical work and digital truth. Sources:
 [RER technology trends](https://www.rermag.com/news-analysis/business-info-analysis/article/20930823/rental-industrys-upward-trends-in-business-and-technology),
-[Wynne mobile condition reports](https://www.wynnesystems.com/solutions/mobile/).
+[Dealernet mobile condition reports](https://www.dealernet.com.br/solutions/mobile/).
 
 ## Decisions they own
 The technician decides whether a return issue is normal wear or escalated damage, whether a unit
@@ -151,12 +151,12 @@ status, chasing history, or re-entering the same facts into multiple places.
 - **Inspection evidence bundle** — `assist` opportunity. Carry the pickup condition record,
   pass-fail checklist, photos, and release status together so the technician is reviewing one
   durable case rather than hunting across paper, notes, and apps. Evidence:
-  [Wynne mobile condition reports](https://www.wynnesystems.com/solutions/mobile/),
+  [Dealernet mobile condition reports](https://www.dealernet.com.br/solutions/mobile/),
   [RentalResult maintenance management](https://rentalresult.com/equipment-maintenance-management-software/).
 
 ## Domain-expert review
 _For SMEs / real operators: what's right, what's wrong, what's missing, where to scope._
 - [ ] Reviewed by: _&lt;name, date&gt;_
-- **Draft synthesis to validate:** how often Wynne's target accounts split this into separate shop
+- **Draft synthesis to validate:** how often Dealernet's target accounts split this into separate shop
   technician and road-mechanic personas, and whether branch parts ordering is owned directly by the
   technician, a parts counter, or the service manager at the 10-50 branch tier.

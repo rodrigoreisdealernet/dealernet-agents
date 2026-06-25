@@ -66,25 +66,25 @@ assert_contains "base: datasource isDefault=true"                  "isDefault: t
 assert_contains "base: temporal-server dashboard ConfigMap present"   "temporal-server.json"
 assert_contains "base: temporal-server dashboard title"               '"title": "Temporal Server"'
 assert_contains "base: temporal-server dashboard uid"                 '"uid": "temporal-server"'
-assert_contains "base: temporal-server grafana_dashboard label"       "wynne/dashboard-folder: temporal"
+assert_contains "base: temporal-server grafana_dashboard label"       "dia/dashboard-folder: temporal"
 
 # Temporal SDK dashboard
 assert_contains "base: temporal-sdk dashboard ConfigMap present"      "temporal-sdk.json"
 assert_contains "base: temporal-sdk dashboard title"                  "Temporal SDK / Worker"
 assert_contains "base: temporal-sdk dashboard uid"                    '"uid": "temporal-sdk"'
-assert_contains "base: temporal-sdk grafana_dashboard label"          "wynne/dashboard-folder: temporal"
+assert_contains "base: temporal-sdk grafana_dashboard label"          "dia/dashboard-folder: temporal"
 
-# Wynne ops dashboard
-assert_contains "base: wynne-ops dashboard ConfigMap present"         "wynne-ops.json"
-assert_contains "base: wynne-ops dashboard title"                     '"title": "Wynne Ops"'
-assert_contains "base: wynne-ops dashboard uid"                       '"uid": "wynne-ops"'
-assert_contains "base: wynne-ops grafana_dashboard label"             "wynne/dashboard-folder: ops"
+# Dealernet ops dashboard
+assert_contains "base: dia-ops dashboard ConfigMap present"         "dia-ops.json"
+assert_contains "base: dia-ops dashboard title"                     '"title": "Dealernet Ops"'
+assert_contains "base: dia-ops dashboard uid"                       '"uid": "dia-ops"'
+assert_contains "base: dia-ops grafana_dashboard label"             "dia/dashboard-folder: ops"
 
 # System dashboard
 assert_contains "base: system dashboard ConfigMap present"            "system.json"
 assert_contains "base: system dashboard title"                        "System.*Pods.*Nodes"
 assert_contains "base: system dashboard uid"                          '"uid": "system-pods-nodes"'
-assert_contains "base: system grafana_dashboard label"                "wynne/dashboard-folder: system"
+assert_contains "base: system grafana_dashboard label"                "dia/dashboard-folder: system"
 
 # Dashboard content spot checks
 assert_contains "base: workflow throughput panel"                  "Workflow Throughput"

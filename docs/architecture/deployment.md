@@ -32,8 +32,8 @@ required variables.
 ## Cluster topology (AKS)
 
 The product runs on AKS (`aks-selfheal-staging`). App workloads live in per-env
-namespaces (`wynne-dev`, `wynne-test`); the self-hosted Supabase stack lives in
-`wynne-supabase`. Azure Front Door provides stable hostnames + managed TLS in front
+namespaces (`dia-dev`, `dia-test`); the self-hosted Supabase stack lives in
+`dia-supabase`. Azure Front Door provides stable hostnames + managed TLS in front
 of the cluster LoadBalancer ([ADR-0015](../adrs/0015-azure-front-door-external-edge.md)).
 
 ```mermaid
@@ -41,11 +41,11 @@ flowchart TB
     users(["Users"]) --> afd["Azure Front Door<br/>(stable host + TLS)"]
 
     subgraph aks["AKS — aks-selfheal-staging"]
-        subgraph app["ns: wynne-dev / wynne-test"]
+        subgraph app["ns: dia-dev / dia-test"]
             fe["frontend Deployment<br/>(nginx + React bundle)<br/>Service :3000"]
             wk["temporal-worker Deployment"]
         end
-        subgraph sb["ns: wynne-supabase"]
+        subgraph sb["ns: dia-supabase"]
             kong["Kong (gateway)"]
             rest["PostgREST"]
             gotrue["GoTrue"]
@@ -59,8 +59,8 @@ flowchart TB
         wk --> tsrv
     end
 
-    afd -->|wynne-app…| fe
-    afd -->|wynne-api…| kong
+    afd -->|dia-app…| fe
+    afd -->|dia-api…| kong
     fe -->|anon key| kong
     wk -->|service-role writes| kong
 
@@ -73,7 +73,7 @@ Studio is **not** publicly exposed — reach it via `kubectl port-forward`.
 > **Per-environment data isolation ([ADR-0062](../adrs/0062-gated-promotion-known-good-digest-per-env-data-isolation.md)):**
 > compute is intentionally separated only by namespace (one cluster, for cost), but **data
 > must not be shared across environments.** Today only dev's data backend is live and the
-> single `wynne-supabase` stack is shared; before UAT/prod carry real data, each environment
+> single `dia-supabase` stack is shared; before UAT/prod carry real data, each environment
 > must get its **own database/schema** (the chart already references per-env Supabase URLs in
 > `values-{dev,test,prod}.yaml`). Promoting compute to prod against dev's database would make
 > the promotion gate cosmetic. See the [promotion runbook](../runbooks/promotion.md).
@@ -115,7 +115,7 @@ flowchart LR
     pr["PR"] -->|build-only| bld["build-images.yml"]
     main["merge → main"] -->|build + push| acr[("ACR")]
     acr -->|on Build Images success| dd["deploy-dev.yml<br/>helm upgrade + DB bootstrap"]
-    dd --> devns["wynne-dev"]
+    dd --> devns["dia-dev"]
     devns --> e2e["e2e-dev.yml<br/>Playwright smoke"]
     e2e -->|gate| promote["digest promotion → test/prod"]
 ```

@@ -381,7 +381,7 @@ describe('StorefrontScreen', () => {
     const preview = screen.getByTestId('quote-document-preview');
 
     expect(within(preview).getByRole('heading', { name: 'Rental Quote' })).toBeInTheDocument();
-    expect(within(preview).getAllByText('Wynne Systems').length).toBeGreaterThan(0);
+    expect(within(preview).getAllByText('Dealernet').length).toBeGreaterThan(0);
     expect(within(preview).getByText('Jane Smith')).toBeInTheDocument();
     expect(within(preview).getByText('Skyline Build Co.')).toBeInTheDocument();
     expect(within(preview).getByText('Excavator XL')).toBeInTheDocument();

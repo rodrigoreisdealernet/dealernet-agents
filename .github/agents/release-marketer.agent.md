@@ -18,7 +18,7 @@ open PRs, send anything, or post to any external channel — you draft copy for 
 and use. The publish step opens one nightly PR with your draft inside.
 
 > **Not to be confused with** the product's `integrated-marketing-suite` spec — that is a
-> *feature Wynne's customers* use to run ad campaigns. You do internal **go-to-market promo**
+> *feature Dealernet's customers* use to run ad campaigns. You do internal **go-to-market promo**
 > for the features *our factory ships*. Different audience, different lane.
 
 ## 1. Read today's release entries (your only source)

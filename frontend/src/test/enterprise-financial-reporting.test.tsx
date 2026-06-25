@@ -53,7 +53,7 @@ function reportingRows() {
       region_scope_id: 'region-gulf',
       region_scope_name: 'Gulf Coast',
       company_scope_id: 'company-1',
-      company_scope_name: 'Wynne Industrial Rentals',
+      company_scope_name: 'Dealernet Industrial Rentals',
       transaction_currency_code: 'CAD',
       reporting_currency_code: 'USD',
       transaction_total_amount: 1000,
@@ -78,7 +78,7 @@ function reportingRows() {
       region_scope_id: 'region-north',
       region_scope_name: 'North Texas',
       company_scope_id: 'company-1',
-      company_scope_name: 'Wynne Industrial Rentals',
+      company_scope_name: 'Dealernet Industrial Rentals',
       transaction_currency_code: 'EUR',
       reporting_currency_code: 'USD',
       transaction_total_amount: 1200,
@@ -103,7 +103,7 @@ function reportingRows() {
       region_scope_id: 'region-gulf',
       region_scope_name: 'Gulf Coast',
       company_scope_id: 'company-1',
-      company_scope_name: 'Wynne Industrial Rentals',
+      company_scope_name: 'Dealernet Industrial Rentals',
       transaction_currency_code: 'USD',
       reporting_currency_code: 'USD',
       transaction_total_amount: 900,
@@ -340,7 +340,7 @@ describe('EnterpriseFinancialReportingScreen', () => {
 
     await screen.findByRole('heading', { name: 'Enterprise Financial Reporting' });
     await waitFor(() => expect(screen.getAllByText('$2,948.00').length).toBeGreaterThan(0));
-    expect(screen.getAllByText('Wynne Industrial Rentals').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Dealernet Industrial Rentals').length).toBeGreaterThan(0);
     expect(screen.getByText('Gulf Coast')).toBeInTheDocument();
     expect(screen.getByText('North Texas')).toBeInTheDocument();
     expect(screen.getAllByText('CAD').length).toBeGreaterThan(0);
@@ -357,7 +357,7 @@ describe('EnterpriseFinancialReportingScreen', () => {
     await waitFor(() => expect(screen.getByTestId('enterprise-report-row-invoice-1')).toBeInTheDocument());
     expect(screen.getByTestId('enterprise-report-row-invoice-3')).toBeInTheDocument();
     expect(screen.queryByTestId('enterprise-report-row-invoice-2')).not.toBeInTheDocument();
-    expect(screen.getAllByText(/Wynne Industrial Rentals · Gulf Coast · Houston Central/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Dealernet Industrial Rentals · Gulf Coast · Houston Central/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/CA\$1,000.00 \(CAD\)/i)).toBeInTheDocument();
     expect(screen.getByText(/\$740.00 \(USD\)/i)).toBeInTheDocument();
   });

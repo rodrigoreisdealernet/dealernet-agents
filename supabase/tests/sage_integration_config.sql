@@ -78,7 +78,7 @@ begin
     true,
     jsonb_build_object(
       'api_base_url', 'https://api.intacct.com',
-      'company_id', 'wynne-rental-01',
+      'company_id', 'dia-rental-01',
       'enabled_scopes', jsonb_build_array('general_ledger', 'accounts_payable')
     ),
     jsonb_build_object(
@@ -137,7 +137,7 @@ begin
     into v_val
     from public.integration_config
    where id = v_config_id;
-  if v_val is distinct from 'wynne-rental-01' then
+  if v_val is distinct from 'dia-rental-01' then
     raise exception 'FAIL 2a: company_id should be in settings (got %)', v_val;
   end if;
 
@@ -199,7 +199,7 @@ begin
     true,
     jsonb_build_object(
       'api_base_url', 'https://api.intacct.com',
-      'company_id', 'wynne-rental-02',
+      'company_id', 'dia-rental-02',
       'enabled_scopes', jsonb_build_array('accounts_receivable')
     ),
     jsonb_build_object(

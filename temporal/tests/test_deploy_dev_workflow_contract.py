@@ -6,7 +6,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "deploy-dev.yml"
 APP_NAME = "rental-app"
-HELM_UPGRADE_STEP = "Helm upgrade (wynne-dev)"
+HELM_UPGRADE_STEP = "Helm upgrade (dia-dev)"
 DIAGNOSTICS_STEP = "Diagnose rollout failure (pods, events, logs)"
 DB_BOOTSTRAP_STEP = "Apply Supabase migrations + demo seed (in-cluster job)"
 YAML_BLOCK_INDENT = 2
@@ -177,7 +177,7 @@ def test_deploy_dev_bootstrap_records_migration_history_via_psql_script_mode() -
 
     assert "psql_exec -v migration_name=\"$migration_name\" <<'SQL'" in script
     assert "VALUES (:'migration_name')" in script
-    assert '-c "INSERT INTO public.wynne_deploy_migrations' not in script
+    assert '-c "INSERT INTO public.dia_deploy_migrations' not in script
 
 
 def test_deploy_dev_bootstrap_migrations_configmap_uses_plain_create() -> None:
@@ -229,7 +229,7 @@ def test_deploy_dev_bootstrap_migrations_configmap_is_run_scoped_and_ephemeral()
     does not accumulate across deploys."""
     script = _extract_step_run_script(DB_BOOTSTRAP_STEP)
 
-    assert 'bootstrap_job="wynne-db-bootstrap-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"' in script, (
+    assert 'bootstrap_job="dia-db-bootstrap-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"' in script, (
         "The bootstrap job (and derived ConfigMap) name must embed GITHUB_RUN_ID "
         "and GITHUB_RUN_ATTEMPT to stay unique per run attempt."
     )

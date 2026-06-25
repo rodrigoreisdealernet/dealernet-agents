@@ -4,7 +4,7 @@ Supported export modes
 ----------------------
 - ``xero``        → Xero manual journal CSV v1 (importable via Xero > Accounting > Manual Journals)
 - ``sage``        → Sage Intacct GL journal CSV v1 (importable via Sage Intacct > GL > Journals)
-- ``export_only`` → Canonical Wynne ledger CSV for accountant hand-off (no provider-specific schema)
+- ``export_only`` → Canonical Dealernet ledger CSV for accountant hand-off (no provider-specific schema)
 
 Format versions are explicit strings so that drift in a provider's import template can be
 detected without scanning CSV content.  Any schema change requires a new version key.
@@ -58,7 +58,7 @@ _SAGE_GL_HEADERS = [
     "REFERENCE",
 ]
 
-# Canonical export-only CSV columns (extended Wynne GL format)
+# Canonical export-only CSV columns (extended Dealernet GL format)
 _EXPORT_ONLY_HEADERS = [
     "Posted At",
     "Basis",
@@ -159,7 +159,7 @@ def build_xero_csv(
     *,
     account_code_map: dict[str, str] | None = None,
     tax_code_map: dict[str, str] | None = None,
-    narration_prefix: str = "Wynne rental export",
+    narration_prefix: str = "Dealernet rental export",
 ) -> str:
     """Map GL rows to Xero manual journal CSV format (xero_csv_v1).
 
@@ -225,8 +225,8 @@ def build_sage_csv(
     ledger_rows: list[dict[str, Any]],
     *,
     account_code_map: dict[str, str] | None = None,
-    journal_symbol: str = "WYNNE",
-    batch_title_prefix: str = "Wynne rental export",
+    journal_symbol: str = "DIA",
+    batch_title_prefix: str = "Dealernet rental export",
 ) -> str:
     """Map GL rows to Sage Intacct GL journal CSV format (sage_intacct_gl_csv_v1).
 
@@ -283,7 +283,7 @@ def build_sage_csv(
 
 
 def build_export_only_csv(ledger_rows: list[dict[str, Any]]) -> str:
-    """Build canonical Wynne ledger CSV for accountant hand-off (export_only_v1)."""
+    """Build canonical Dealernet ledger CSV for accountant hand-off (export_only_v1)."""
     rows: list[list[Any]] = []
     for entry in ledger_rows:
         rows.append([
@@ -354,7 +354,7 @@ def build_export_package(
     row_count = max(0, len(data_rows) - 1) if data_rows else 0
 
     period_str = f"{period_start.isoformat()}-{period_end.isoformat()}"
-    filename = f"wynne-accounting-{export_mode}-{period_str}.csv"
+    filename = f"dia-accounting-{export_mode}-{period_str}.csv"
 
     manifest = ExportManifest(
         export_mode=export_mode,

@@ -43,7 +43,7 @@ config before starting nginx.
   existing `/api/*` path already matches the deployed app contract.
 
 ## Evidence
-- PR [#700](https://github.com/Volaris-AI/wynne-lvl-3/pull/700)
+- PR [#700](https://github.com/Volaris-AI/dia/pull/700)
 - `frontend/nginx/default.conf`
 - `frontend/docker/entrypoint.sh`
 - `frontend/Dockerfile`

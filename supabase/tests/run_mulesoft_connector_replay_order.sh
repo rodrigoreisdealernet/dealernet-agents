@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-container_name="${CONTAINER_NAME:-wynne_lvl3_mulesoft_replay_$$}"
+container_name="${CONTAINER_NAME:-dia_mulesoft_replay_$$}"
 postgres_image="${POSTGRES_IMAGE:-postgres:17}"
 target_migration="20260611160000_mulesoft_connector_tables.sql"
 
@@ -80,7 +80,7 @@ insert into public.integration_sync_state (
     'a1111111-1111-1111-1111-111111111111'::uuid,
     'legacy-outbound',
     'cursor-out',
-    'wynne',
+    'dia',
     '{"legacy":"outbound"}'::jsonb
   ),
   (

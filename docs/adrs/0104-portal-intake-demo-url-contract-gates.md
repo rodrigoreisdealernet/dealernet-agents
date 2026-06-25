@@ -39,5 +39,5 @@ When `E2E_SUPABASE_SERVICE_KEY` is present, the `Resolve portal intake demo URL`
 - `supabase/tests/portal_demo_intake_url_reset.sql`
 - `supabase/tests/run_portal_demo_intake_url_reset.sh`
 - `supabase/tests/demo_baseline_seed.sql`
-- PR: Volaris-AI/wynne-lvl-3#2243
-- Issue: Volaris-AI/wynne-lvl-3#2215
+- PR: Volaris-AI/dia#2243
+- Issue: Volaris-AI/dia#2215

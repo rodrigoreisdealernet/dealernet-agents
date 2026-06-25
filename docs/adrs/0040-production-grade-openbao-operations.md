@@ -9,19 +9,19 @@
 ## Context
 
 ADR-0039 established OpenBao + External Secrets Operator (ESO) as the runtime secret-delivery
-path and was proven end-to-end in `wynne-dev` against a **dev-grade** OpenBao: `bao server -dev`
+path and was proven end-to-end in `dia-dev` against a **dev-grade** OpenBao: `bao server -dev`
 (in-memory, single replica, auto-unsealed, HTTP). That tier is explicitly not production secret
 custody — a pod restart wipes all data, there is no HA, no TLS, no audit trail, and no backup.
 
 Making secret delivery production-quality requires hardening OpenBao itself into a highly
 available, durable, observable, recoverable service. Two environment constraints (confirmed
-on `aks-selfheal-staging`, which currently hosts the Wynne namespaces) shape the decision:
+on `aks-selfheal-staging`, which currently hosts the Dealernet namespaces) shape the decision:
 
 1. **No scoped auto-unseal identity exists yet.** The standard AKS Key Vault seal path needs
    a dedicated workload identity plus one narrow Key Vault key grant before bootstrap can use
    it.
 2. **Single availability zone.** All current nodes are in one zone, so the present cluster
-   can provide node-level HA only, not zone-fault tolerance. There is no `wynne-prod`
+   can provide node-level HA only, not zone-fault tolerance. There is no `dia-prod`
    namespace yet; prod placement is an open question.
 
 Additionally, the CI deploy identity (`gha-deployer`) is namespace-scoped and cannot create
@@ -39,7 +39,7 @@ the official OpenBao Helm chart, with the following production requirements:
 - **Auto-unseal:** automated, no human-in-the-loop on restart/scale, using **one narrowly
   scoped Azure Key Vault key** (`seal "azurekeyvault"`) and **Azure Workload Identity
   Federation**. The committed runtime in `deploy/openbao/values-ha.yaml` uses:
-  - `vault_name = "wynne-openbao-prod"`
+  - `vault_name = "dia-openbao-prod"`
   - `key_name = "openbao-prod-unseal"`
   - `use_workload_identity = "true"` with the projected token file
     `/var/run/secrets/azure/tokens/azure-identity-token`
@@ -58,7 +58,7 @@ the official OpenBao Helm chart, with the following production requirements:
 - **TLS everywhere:** cert-manager-issued server certificates and Raft peer TLS; ESO connects
   over `https` with a `caProvider`/`caBundle`. Certificates rotate automatically.
 - **AuthN/Z least privilege:** Kubernetes auth; one role per consumer; read-only policies
-  scoped to exact paths (`secret/data/wynne/<env>/*`); short token TTLs; no wildcard or root
+  scoped to exact paths (`secret/data/dia/<env>/*`); short token TTLs; no wildcard or root
   access in steady state.
 - **Audit:** an audit device enabled and shipped to the log pipeline; verified to contain no
   secret values; retained per policy.
@@ -91,7 +91,7 @@ Request from whoever owns Azure — note this grants *no* access to read or stor
 secrets, only the ability to wrap/unwrap OpenBao's seal key:
 
 - One Key Vault (existing or new) and **one key** (`openbao-prod-unseal`, RSA-2048+ or AES,
-  soft-delete + purge-protection enabled) in vault `wynne-openbao-prod`.
+  soft-delete + purge-protection enabled) in vault `dia-openbao-prod`.
 - A dedicated user-assigned managed identity for the OpenBao server pods, federated via Azure
   Workload Identity, with an access policy limited to **`wrapKey`, `unwrapKey`, `get`** on
   that single key — nothing else.
@@ -142,7 +142,7 @@ secrets, only the ability to wrap/unwrap OpenBao's seal key:
 
 ## Evidence
 
-- ADR-0039 and PR #856 (dev tier, verified live in `wynne-dev`).
+- ADR-0039 and PR #856 (dev tier, verified live in `dia-dev`).
 - Platform epic: secrets-management prod-hardening (links #125, #196).
 - Cluster facts gathered 2026-06-10 on `aks-selfheal-staging`: no AKV, single-zone nodes,
   no cert-manager, no Prometheus operator, `managed-csi-premium` available, ESO v2.6.0

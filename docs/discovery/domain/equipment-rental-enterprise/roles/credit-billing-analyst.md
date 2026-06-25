@@ -22,13 +22,13 @@ The Credit & Billing Analyst usually sits in a finance or credit function at reg
 not on the branch floor. They manage customer credit governance, billing quality, collections
 pressure, and lien-right preservation across many branches and active accounts at once. Sources:
 [Sunbelt jobs](https://builtin.com/company/sunbelt-rentals/jobs),
-[RentalMan](https://wynnesystems.com/solutions/rentalman/).
+[RentalMan](https://dealernet.com.br/solutions/rentalman/).
 
 This role is operationally adjacent to the branch but structurally separate from it. Counter and
 branch teams create the transactions; this role protects the cash, the credit exposure, and the
 legal recovery options once those transactions exist. Sources:
 [Levelset credit problems](https://www.levelset.com/tools/biggest-credit-problems-equipment-rental/),
-[RentalMan](https://wynnesystems.com/solutions/rentalman/).
+[RentalMan](https://dealernet.com.br/solutions/rentalman/).
 
 ## Goals & motivations
 Their north star is DSO reduction without unnecessary revenue friction. They want invoices to leave
@@ -80,7 +80,7 @@ The system of record is RentalMan for customer records, contract-linked billing,
 invoice history. Around that sits a pragmatic finance toolkit: spreadsheets for DSO and exception
 tracking, phone and email for collections and dispute handling, credit bureau or trade-reference
 data for underwriting, and lien-rights software or manual calendars for notices and waivers.
-Sources: [RentalMan](https://wynnesystems.com/solutions/rentalman/),
+Sources: [RentalMan](https://dealernet.com.br/solutions/rentalman/),
 [Sunbelt jobs](https://builtin.com/company/sunbelt-rentals/jobs),
 [Levelset lien rights](https://www.levelset.com/blog/can-equipment-rental-companies-file-mechanics-liens/).
 
@@ -138,6 +138,6 @@ lien steps, but they should not spend the first hour assembling the worklist.
 ## Domain-expert review
 _For SMEs / real operators: what's right, what's wrong, what's missing, where to scope._
 - [ ] Reviewed by: _&lt;name, date&gt;_
-- **Draft synthesis to validate:** whether lien-waiver handling is truly owned here in Wynne's
+- **Draft synthesis to validate:** whether lien-waiver handling is truly owned here in Dealernet's
   target accounts and how the line is drawn between counter-side billing corrections and centralized
   analyst-side billing control.

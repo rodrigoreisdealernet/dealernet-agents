@@ -7,7 +7,7 @@ import { loadFactoryConfig } from "../factory-config.js";
 const VALID_CONFIG = `
 repository:
   owner: Volaris-AI
-  name: wynne-lvl-3
+  name: dia
   default_branch: main
   project_owner: Volaris-AI
   project_number: null

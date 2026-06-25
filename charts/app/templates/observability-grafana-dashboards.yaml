@@ -11,8 +11,8 @@ metadata:
 data:
   ops-api-dashboard.json: |-
     {
-      "title": "Wynne \u2014 Ops API",
-      "uid": "wynne-ops-api",
+      "title": "Dealernet \u2014 Ops API",
+      "uid": "dia-ops-api",
       "schemaVersion": 36,
       "refresh": "30s",
       "time": { "from": "now-1h", "to": "now" },
@@ -75,8 +75,8 @@ metadata:
 data:
   temporal-worker-dashboard.json: |-
     {
-      "title": "Wynne \u2014 Temporal Worker",
-      "uid": "wynne-temporal-worker",
+      "title": "Dealernet \u2014 Temporal Worker",
+      "uid": "dia-temporal-worker",
       "schemaVersion": 36,
       "refresh": "30s",
       "time": { "from": "now-1h", "to": "now" },

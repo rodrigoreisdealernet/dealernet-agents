@@ -8,11 +8,11 @@
 Issue #222 requires dev deploy automation to apply Supabase migrations and the demo baseline seed against the deployed database. A direct GitHub Actions `kubectl exec` path into the Supabase DB pod expands trusted compute outside the cluster boundary and weakens least-privilege separation from app deploy.
 
 ## Decision
-We run dev DB bootstrap as an **in-cluster Kubernetes Job** in `wynne-supabase`, created by a dedicated DB-bootstrap kubeconfig. GitHub Actions no longer executes SQL directly into the DB pod; it only creates/watches/deletes scoped bootstrap resources. The workflow requires explicit bootstrap role/database settings (`WYNNE_DB_BOOTSTRAP_USER`, `WYNNE_DB_BOOTSTRAP_DB_NAME`) with no `postgres` defaults.
+We run dev DB bootstrap as an **in-cluster Kubernetes Job** in `dia-supabase`, created by a dedicated DB-bootstrap kubeconfig. GitHub Actions no longer executes SQL directly into the DB pod; it only creates/watches/deletes scoped bootstrap resources. The workflow requires explicit bootstrap role/database settings (`DIA_DB_BOOTSTRAP_USER`, `DIA_DB_BOOTSTRAP_DB_NAME`) with no `postgres` defaults.
 
 ## Consequences
 - Privileged migration/seed execution happens inside cluster trust boundaries.
-- Least-privilege RBAC is split by identity in `wynne-supabase`: GitHub bootstrap credential (`gha-db-bootstrap`) can only manage bootstrap Job/ConfigMap lifecycle + job pod logs; in-cluster bootstrap service account (`wynne-db-bootstrap`) can only resolve DB pod + use `pods/exec`.
+- Least-privilege RBAC is split by identity in `dia-supabase`: GitHub bootstrap credential (`gha-db-bootstrap`) can only manage bootstrap Job/ConfigMap lifecycle + job pod logs; in-cluster bootstrap service account (`dia-db-bootstrap`) can only resolve DB pod + use `pods/exec`.
 - Deploy preflight is stricter: bootstrap variables + scoped bootstrap kubeconfig must be configured before enabling dev deploy.
 - Deploy validation now proves demo-baseline seed idempotency by reapplying `seed.sql` and rerunning assertions.
 

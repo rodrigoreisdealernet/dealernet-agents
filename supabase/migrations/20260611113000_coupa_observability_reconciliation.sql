@@ -314,7 +314,7 @@ create table if not exists public.coupa_reconciliation_results (
     check (drift_status in (
       'in_sync',
       'missing_in_coupa',
-      'missing_in_wynne',
+      'missing_in_dia',
       'field_mismatch',
       'quarantined',
       'disabled'

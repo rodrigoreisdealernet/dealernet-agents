@@ -13,7 +13,7 @@ from temporal.src.integrations.sage import (
 def _valid_config() -> dict[str, object]:
     return {
         "api_base_url": "https://api.intacct.com",
-        "company_id": "wynne-rental-01",
+        "company_id": "dia-rental-01",
         "client_id_secret_ref": "secret://integrations/sage_intacct/client_id",
         "client_secret_secret_ref": "secret://integrations/sage_intacct/client_secret",
         "enabled_scopes": ["general_ledger", "accounts_payable", "accounts_receivable", "cash_management"],

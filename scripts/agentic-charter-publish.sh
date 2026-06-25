@@ -16,7 +16,7 @@ if [ -z "$(git status --porcelain docs/agentic-charter.md 2>/dev/null)" ]; then
   exit 0
 fi
 
-git config user.name  "wynne-factory"
+git config user.name  "dia-factory"
 git config user.email "factory@users.noreply.github.com"
 
 git fetch origin main --quiet || true
@@ -26,7 +26,7 @@ git commit -m "agentic-charter: weekly reflection ${DATE_UTC}
 
 Proposed by the agentic-reflector. Evidence-backed refinements to our definition of a
 great agentic workflow. Proposes only — a human disposes (merges or rejects)." \
-  --author="wynne-factory <factory@users.noreply.github.com>"
+  --author="dia-factory <factory@users.noreply.github.com>"
 
 PUSH_URL="https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"
 git push --force "$PUSH_URL" "HEAD:refs/heads/${BRANCH}"

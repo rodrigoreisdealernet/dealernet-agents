@@ -15,10 +15,10 @@
 --      when the UPDATE on auth.users fires the on_auth_user_updated trigger in turn.
 --
 -- Canonical Keycloak group → app_role mapping (precedence: most privileged wins):
---   wynne-admin          → admin
---   wynne-branch-manager → branch_manager
---   wynne-field-operator → field_operator
---   wynne-read-only      → read_only
+--   dia-admin          → admin
+--   dia-branch-manager → branch_manager
+--   dia-field-operator → field_operator
+--   dia-read-only      → read_only
 --   (no matching group)  → read_only
 
 -- ---------------------------------------------------------------------------
@@ -31,16 +31,16 @@ IMMUTABLE
 SECURITY INVOKER
 AS $$
   SELECT CASE
-    WHEN groups @> '["wynne-admin"]'          THEN 'admin'::public.app_role
-    WHEN groups @> '["wynne-branch-manager"]' THEN 'branch_manager'::public.app_role
-    WHEN groups @> '["wynne-field-operator"]' THEN 'field_operator'::public.app_role
+    WHEN groups @> '["dia-admin"]'          THEN 'admin'::public.app_role
+    WHEN groups @> '["dia-branch-manager"]' THEN 'branch_manager'::public.app_role
+    WHEN groups @> '["dia-field-operator"]' THEN 'field_operator'::public.app_role
     ELSE                                           'read_only'::public.app_role
   END;
 $$;
 
 COMMENT ON FUNCTION public.keycloak_groups_to_role(jsonb) IS
   'Maps a Keycloak groups array to an app_role.  Most-privileged wins.  '
-  'Groups checked: wynne-admin > wynne-branch-manager > wynne-field-operator > read_only (default).';
+  'Groups checked: dia-admin > dia-branch-manager > dia-field-operator > read_only (default).';
 
 -- ---------------------------------------------------------------------------
 -- 2. Updated handle_new_user() trigger

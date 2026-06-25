@@ -125,7 +125,7 @@ declare
   v_tenant_key text := 'tenant-sage-reset-9641';
   v_integration_id uuid;
   v_alias_id uuid;
-  v_wynne_entity_id uuid := '40000000-0000-0000-0000-000000009641';
+  v_dia_entity_id uuid := '40000000-0000-0000-0000-000000009641';
   v_delivery_id uuid;
   v_count int;
   v_blocked boolean;
@@ -163,7 +163,7 @@ begin
       direction, scope_key, source_of_truth, idempotency_key, status, request_payload
     ) values (
       v_integration_id, v_tenant_id, 'sage', 'erp_finance',
-      'outbound', 'invoice_sync', 'wynne', 'sage-reset-inv-001', 'pending',
+      'outbound', 'invoice_sync', 'dia', 'sage-reset-inv-001', 'pending',
       jsonb_build_object('entity_type', 'invoice', 'entity_id', 'inv-r01', 'posting_state', 'posted')
     );
   exception
@@ -182,7 +182,7 @@ begin
     direction, scope_key, source_of_truth, idempotency_key, status, request_payload
   ) values (
     v_integration_id, v_tenant_id, 'sage', 'erp_finance',
-    'outbound', 'invoice_sync', 'wynne', 'sage-reset-inv-002', 'pending',
+    'outbound', 'invoice_sync', 'dia', 'sage-reset-inv-002', 'pending',
     jsonb_build_object(
       'external_id', 'SG-RESET-INV-1002', 'entity_type', 'invoice',
       'entity_id', 'inv-r02', 'posting_state', 'posted'
@@ -201,7 +201,7 @@ begin
     direction, scope_key, source_of_truth, idempotency_key, status, request_payload
   ) values (
     v_integration_id, v_tenant_id, 'sage', 'erp_finance',
-    'outbound', 'invoice_sync', 'wynne', 'sage-reset-inv-002', 'sent',
+    'outbound', 'invoice_sync', 'dia', 'sage-reset-inv-002', 'sent',
     jsonb_build_object(
       'external_id', 'SG-RESET-INV-1002', 'entity_type', 'invoice',
       'entity_id', 'inv-r02', 'posting_state', 'posted'
@@ -226,10 +226,10 @@ begin
   -- 6. external_id_map: external_id immutability guard and stable-id replay ──
   insert into public.external_id_map (
     tenant_id, connector_key, provider, exchange_key,
-    entity_type, entity_id, wynne_entity_id, external_id, external_system, metadata
+    entity_type, entity_id, dia_entity_id, external_id, external_system, metadata
   ) values (
     v_tenant_id, 'sage', 'sage', 'erp_finance',
-    'invoice', 'inv-r02', v_wynne_entity_id, 'SG-RESET-INV-1002', 'sage',
+    'invoice', 'inv-r02', v_dia_entity_id, 'SG-RESET-INV-1002', 'sage',
     jsonb_build_object('source', 'initial')
   )
   returning id into v_alias_id;
@@ -252,10 +252,10 @@ begin
 
   insert into public.external_id_map (
     tenant_id, connector_key, provider, exchange_key,
-    entity_type, entity_id, wynne_entity_id, external_id, external_system, metadata
+    entity_type, entity_id, dia_entity_id, external_id, external_system, metadata
   ) values (
     v_tenant_id, 'sage', 'sage', 'erp_finance',
-    'invoice', 'inv-r02', v_wynne_entity_id, 'SG-RESET-INV-1002', 'sage',
+    'invoice', 'inv-r02', v_dia_entity_id, 'SG-RESET-INV-1002', 'sage',
     jsonb_build_object('source', 'replay')
   )
   on conflict (tenant_id, connector_key, exchange_key, entity_type, entity_id)
@@ -282,7 +282,7 @@ begin
     source_of_truth, direction, cursor, last_success_at, state
   ) values (
     v_integration_id, v_tenant_id, 'sage', 'erp_finance', 'invoice:inv-r02',
-    'wynne', 'outbound', 'cursor-r1', now(),
+    'dia', 'outbound', 'cursor-r1', now(),
     jsonb_build_object('posting_state', 'pending', 'delivery_log_id', v_delivery_id)
   )
   on conflict (tenant_id, connector_key, exchange_key, scope_key)
@@ -295,7 +295,7 @@ begin
     source_of_truth, direction, cursor, last_success_at, state
   ) values (
     v_integration_id, v_tenant_id, 'sage', 'erp_finance', 'invoice:inv-r02',
-    'wynne', 'outbound', 'cursor-r2', now(),
+    'dia', 'outbound', 'cursor-r2', now(),
     jsonb_build_object('posting_state', 'posted', 'delivery_log_id', v_delivery_id)
   )
   on conflict (tenant_id, connector_key, exchange_key, scope_key)

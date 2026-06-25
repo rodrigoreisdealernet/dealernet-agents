@@ -56,13 +56,13 @@ def test_record_script_converts_playwright_json_to_expected_history_shape(tmp_pa
         results_path=results_path,
         env={
             "GITHUB_SERVER_URL": "https://github.example",
-            "GITHUB_REPOSITORY": "Volaris-AI/wynne-lvl-3",
+            "GITHUB_REPOSITORY": "Volaris-AI/dia",
             "GITHUB_RUN_ID": "1234",
             "GITHUB_RUN_NUMBER": "56",
             "GITHUB_SHA": "0123456789abcdef0123456789abcdef01234567",
             "GITHUB_REF_NAME": "main",
             "GITHUB_EVENT_NAME": "workflow_run",
-            "E2E_BASE_URL": "https://wynne.dev/",
+            "E2E_BASE_URL": "https://dia.dev/",
         },
     )
 
@@ -78,7 +78,7 @@ def test_record_script_converts_playwright_json_to_expected_history_shape(tmp_pa
         "total": 5,
         "duration_ms": 3210,
     }
-    assert record["run_url"] == "https://github.example/Volaris-AI/wynne-lvl-3/actions/runs/1234"
+    assert record["run_url"] == "https://github.example/Volaris-AI/dia/actions/runs/1234"
     assert record["sha_short"] == "0123456"
     assert record["tests"] == [
         {"title": "home renders", "file": "frontend/e2e/smoke.spec.ts", "status": "passed", "duration_ms": 120},
@@ -190,7 +190,7 @@ def test_render_script_builds_readme_and_trend_with_unstable_failures(tmp_path: 
             "run_url": "https://example/runs/1",
             "run_number": 1,
             "sha_short": "aaaaaaa",
-            "base_url": "https://wynne.dev/",
+            "base_url": "https://dia.dev/",
             "tests": [{"title": "home renders", "status": "passed", "duration_ms": 10}],
         },
         {
@@ -202,7 +202,7 @@ def test_render_script_builds_readme_and_trend_with_unstable_failures(tmp_path: 
             "run_url": "https://example/runs/2",
             "run_number": 2,
             "sha_short": "bbbbbbb",
-            "base_url": "https://wynne.dev/",
+            "base_url": "https://dia.dev/",
             "tests": [
                 {"title": "dashboard KPI useful", "status": "failed", "duration_ms": 20},
                 {"title": "filter retains selection", "status": "flaky", "duration_ms": 30},
@@ -217,7 +217,7 @@ def test_render_script_builds_readme_and_trend_with_unstable_failures(tmp_path: 
             "run_url": "https://example/runs/3",
             "run_number": 3,
             "sha_short": "ccccccc",
-            "base_url": "https://wynne.dev/",
+            "base_url": "https://dia.dev/",
             "tests": [{"title": "home renders", "status": "failed", "duration_ms": 15}],
         },
     ]
@@ -228,7 +228,7 @@ def test_render_script_builds_readme_and_trend_with_unstable_failures(tmp_path: 
         text=True,
         capture_output=True,
         check=True,
-        env={**os.environ, "GITHUB_REPOSITORY": "Volaris-AI/wynne-lvl-3"},
+        env={**os.environ, "GITHUB_REPOSITORY": "Volaris-AI/dia"},
         cwd=REPO_ROOT,
         timeout=60.0,
     )
@@ -239,7 +239,7 @@ def test_render_script_builds_readme_and_trend_with_unstable_failures(tmp_path: 
     assert "Pass rate (last 60 runs)" in trend
     assert "red dot = failing run" in trend
 
-    assert "# E2E trends — `Volaris-AI/wynne-lvl-3`" in readme
+    assert "# E2E trends — `Volaris-AI/dia`" in readme
     assert "**Latest smoke:** ❌ `failed`" in readme
     assert "| Total runs recorded | 3 |" in readme
     assert "## Unstable tests (recent window)" in readme

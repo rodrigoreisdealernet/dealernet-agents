@@ -20,16 +20,16 @@ At the same time, the platform already has the pieces needed for a safer runtime
 - a shared webhook/idempotency framework via `ops_api`, Temporal, and `integration_delivery_log`
   (ADR-0037)
 
-The architecture decision needed here is whether Wynne should ever handle raw payment credentials in
+The architecture decision needed here is whether Dealernet should ever handle raw payment credentials in
 its own browser/backend/database surfaces, or whether payment collection stays on provider-hosted
 surfaces with tokenized references only.
 
 ## Decision
 
-We keep Wynne out of the raw card and bank-account data path.
+We keep Dealernet out of the raw card and bank-account data path.
 
 Payment collection must happen on provider-hosted payment pages, pay links, or equivalent provider
-UI surfaces. Wynne stores only provider token references plus non-sensitive display metadata for
+UI surfaces. Dealernet stores only provider token references plus non-sensitive display metadata for
 saved methods, validates inbound payment webhooks at `ops_api`, and hands durable processing to
 Temporal using `integration_delivery_log` for dedupe and replay safety.
 
@@ -48,7 +48,7 @@ Temporal using `integration_delivery_log` for dedupe and replay safety.
 
 ## Alternatives considered
 
-- **Direct card / ACH entry in Wynne-managed frontend forms:** rejected because it expands the raw
+- **Direct card / ACH entry in Dealernet-managed frontend forms:** rejected because it expands the raw
   credential boundary into the browser and backend and would require much stricter PCI handling.
 - **Store encrypted raw payment credentials in Postgres:** rejected because encryption at rest does
   not remove the operational and compliance burden of handling raw credentials inside the app stack.

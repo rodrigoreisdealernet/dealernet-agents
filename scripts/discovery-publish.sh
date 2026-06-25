@@ -17,7 +17,7 @@ if [ -z "$(git status --porcelain docs/discovery 2>/dev/null)" ]; then
   exit 0
 fi
 
-git config user.name  "wynne-factory"
+git config user.name  "dia-factory"
 git config user.email "factory@users.noreply.github.com"
 
 git fetch origin main --quiet || true
@@ -27,7 +27,7 @@ git commit -m "discovery: nightly roadmap update ${DATE_UTC}
 
 Automated discovery-crew output (market-scout / product-strategist / discovery-critic).
 Evidence + dossier changes for owner review. No build tickets created by this commit." \
-  --author="wynne-factory <factory@users.noreply.github.com>"
+  --author="dia-factory <factory@users.noreply.github.com>"
 
 # Push with an explicit token (checkout uses persist-credentials:false).
 PUSH_URL="https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"

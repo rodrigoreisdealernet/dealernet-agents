@@ -22,7 +22,7 @@ function loadYamlFile(path: string): YamlDocument {
 }
 
 describe("cluster guardian foundations", () => {
-  it("enables kubernetes-app and defines wynne-* namespace scope in factory config", () => {
+  it("enables kubernetes-app and defines dia-* namespace scope in factory config", () => {
     const config = loadYamlFile(FACTORY_CONFIG_PATH);
     const factory = config["factory"] as YamlDocument;
     const stack = config["stack"] as YamlDocument;
@@ -36,7 +36,7 @@ describe("cluster guardian foundations", () => {
     expect(factory["active_runner_profile"]).toBe("kubernetes-app");
     expect(profiles).toContain("kubernetes-app");
     expect(allowedNamespaces.length).toBeGreaterThan(0);
-    expect(allowedNamespaces.every((ns) => ns.startsWith("wynne-"))).toBe(true);
+    expect(allowedNamespaces.every((ns) => ns.startsWith("dia-"))).toBe(true);
     expect(runnerLabels).toContain("factory-cluster-guardian");
   });
 
@@ -100,7 +100,7 @@ describe("cluster guardian foundations", () => {
     expect(prompt).toContain("Supabase self-hosted");
     expect(prompt).toContain("Temporal Python worker");
     expect(prompt).toContain("Vite frontend");
-    expect(prompt).toContain("Do not copy signatures from `level-3-v2`");
+    expect(prompt).toContain("Do not copy signatures from other projects' baselines");
     expect(prompt).toContain("Detection-only mode");
     expect(prompt).toContain("No Helm rollback.");
     expect(prompt).toContain("No pod force-delete.");
@@ -134,7 +134,7 @@ describe("agent-cluster-guardian.yml preflight gate", () => {
     expect(script).toContain("missing");
   });
 
-  it("preflight validates namespace allowlist is non-empty and wynne-* scoped", () => {
+  it("preflight validates namespace allowlist is non-empty and dia-* scoped", () => {
     const workflow = loadYamlFile(GUARDIAN_WORKFLOW_PATH);
     const jobs = workflow["jobs"] as YamlDocument;
     const preflight = jobs["preflight"] as YamlDocument;
@@ -143,7 +143,7 @@ describe("agent-cluster-guardian.yml preflight gate", () => {
 
     const script = preflightStep?.["run"] as string;
     expect(script).toContain("allowed_namespaces");
-    expect(script).toContain("wynne-");
+    expect(script).toContain("dia-");
     expect(script).toContain("missing");
   });
 
@@ -252,19 +252,19 @@ describe("agent-cluster-guardian.yml remediation path guardrails", () => {
 });
 
 describe("cluster guardian namespace scoping and dedupe invariants", () => {
-  it("guardian prompt forbids operations outside configured wynne-* namespaces", () => {
+  it("guardian prompt forbids operations outside configured dia-* namespaces", () => {
     const prompt = readFileSync(AGENT_PROMPT_PATH, "utf8");
 
     expect(prompt).toContain("allowed_namespaces");
-    expect(prompt).toContain("wynne-");
+    expect(prompt).toContain("dia-");
     expect(prompt).toContain("No operations outside configured");
   });
 
-  it("remediator prompt forbids operations outside configured wynne-* namespaces", () => {
+  it("remediator prompt forbids operations outside configured dia-* namespaces", () => {
     const remediatorPrompt = readFileSync(REMEDIATOR_PROMPT_PATH, "utf8");
 
     expect(remediatorPrompt).toContain("allowed_namespaces");
-    expect(remediatorPrompt).toContain("wynne-");
+    expect(remediatorPrompt).toContain("dia-");
     expect(remediatorPrompt).toContain("No operations outside configured");
   });
 

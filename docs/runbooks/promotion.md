@@ -4,7 +4,7 @@ How to promote a **known-good build** through the environments, with the human g
 Design of record: [ADR-0062](../adrs/0062-gated-promotion-known-good-digest-per-env-data-isolation.md).
 Companion: [ci-cd-pipelines.md](../architecture/ci-cd-pipelines.md) · [deployment.md](../architecture/deployment.md).
 
-> **Naming:** "UAT" is the **`test`** environment (`wynne-test` namespace, `deploy-test.yml`,
+> **Naming:** "UAT" is the **`test`** environment (`dia-test` namespace, `deploy-test.yml`,
 > the `test` GitHub Environment). Kept named `test` internally; we call it UAT in conversation.
 
 ---
@@ -21,9 +21,9 @@ merge → main → build-images → deploy-dev → e2e-dev smoke ──passes─
                                                                           │
                               human picks a known-good SHA + approves ◀───┘
                                           │
-                          deploy-test (UAT)  ──human approval (test Environment)──▶ wynne-test
+                          deploy-test (UAT)  ──human approval (test Environment)──▶ dia-test
                                           │
-                          deploy-prod       ──human approval (prod Environment)──▶ wynne-prod
+                          deploy-prod       ──human approval (prod Environment)──▶ dia-prod
 ```
 
 ---
@@ -49,7 +49,7 @@ introduced a problem.
 > A build only appears here if its dev deploy passed the **gating** e2e smoke. If the ledger
 > is empty, no build has passed dev smoke yet — fix dev before promoting.
 
-## 2. Promote to UAT (`wynne-test`)
+## 2. Promote to UAT (`dia-test`)
 
 ```bash
 gh workflow run deploy-test.yml -f sha=<known-good-sha>
@@ -59,7 +59,7 @@ The deploy job resolves the immutable digest from ACR by that SHA and pauses on 
 Environment**'s required-reviewer gate. Approve it in the Actions UI (Deployments → review).
 Then run UAT validation.
 
-## 3. Promote to prod (`wynne-prod`)
+## 3. Promote to prod (`dia-prod`)
 
 Only after UAT is verified. Promote the **same SHA**:
 
@@ -102,8 +102,8 @@ Both `deploy-test.yml` and `deploy-prod.yml` contain a preflight step that **har
 
 | Workflow | Required variable | Effect if absent when K8S enabled |
 |----------|-------------------|-----------------------------------|
-| `deploy-test.yml` | `WYNNE_TEST_GATE_CONFIRMED=true` | preflight exits 1, deploy is blocked |
-| `deploy-prod.yml` | `WYNNE_PROD_GATE_CONFIRMED=true` | preflight exits 1, deploy is blocked |
+| `deploy-test.yml` | `DIA_TEST_GATE_CONFIRMED=true` | preflight exits 1, deploy is blocked |
+| `deploy-prod.yml` | `DIA_PROD_GATE_CONFIRMED=true` | preflight exits 1, deploy is blocked |
 
 This means promotion **cannot proceed on an unprotected environment by accident**: you must
 explicitly set the gate-confirmed variable — and the intended sequence is to do so only
@@ -117,13 +117,13 @@ _after_ the GitHub Environment has required reviewers configured.
 5. **Verify** the environment is protected: trigger a test dispatch and confirm GitHub pauses for approval before proceeding.
 6. Only after step 5 is confirmed: set the gate-confirmed repo variable:
    ```bash
-   gh variable set WYNNE_TEST_GATE_CONFIRMED --body true   # for UAT
-   gh variable set WYNNE_PROD_GATE_CONFIRMED --body true   # for prod
+   gh variable set DIA_TEST_GATE_CONFIRMED --body true   # for UAT
+   gh variable set DIA_PROD_GATE_CONFIRMED --body true   # for prod
    ```
 
 **Programmatic equivalent** (needs the reviewer's numeric user id — `gh api user --jq .id`):
 ```bash
-REPO=Volaris-AI/wynne-lvl-3
+REPO=Volaris-AI/dia
 for ENV in test prod; do
   gh api -X PUT "repos/$REPO/environments/$ENV" \
     -f "reviewers[][type]=User" -F "reviewers[][id]=$(gh api user --jq .id)" \
@@ -131,13 +131,13 @@ for ENV in test prod; do
     -f "deployment_branch_policy[custom_branch_policies]=false"
 done
 # Then confirm the gate is active, then set the variables:
-gh variable set WYNNE_TEST_GATE_CONFIRMED --body true
-gh variable set WYNNE_PROD_GATE_CONFIRMED --body true
+gh variable set DIA_TEST_GATE_CONFIRMED --body true
+gh variable set DIA_PROD_GATE_CONFIRMED --body true
 ```
 
 **Secrets/vars the `sha` path needs** (already used by `build-images`): `vars.ACR_LOGIN_SERVER`,
 `secrets.ACR_USERNAME`, `secrets.ACR_PASSWORD`, plus the per-env `KUBE_CONFIG_TEST`/`KUBE_CONFIG_PROD`
-and `K8S_DEPLOY_ENABLED` + `WYNNE_TEST_NAMESPACE`/`WYNNE_PROD_NAMESPACE` + `WYNNE_TEST_GATE_CONFIRMED`/`WYNNE_PROD_GATE_CONFIRMED`.
+and `K8S_DEPLOY_ENABLED` + `DIA_TEST_NAMESPACE`/`DIA_PROD_NAMESPACE` + `DIA_TEST_GATE_CONFIRMED`/`DIA_PROD_GATE_CONFIRMED`.
 
 ## Legacy path (fallback)
 
@@ -148,5 +148,5 @@ artifacts survive — 90 days). Prefer `sha`.
 ## ⚠️ Per-environment data isolation
 
 Each environment must use **its own database/schema** (ADR-0062). Do **not** enable UAT/prod
-against the shared dev `wynne-supabase` data — promoting compute means nothing if all
+against the shared dev `dia-supabase` data — promoting compute means nothing if all
 environments share one database. Stand up per-env data **before** prod carries real data.

@@ -76,7 +76,7 @@ BEGIN
     p_entity_type => 'company',
     p_source_record_id => 'demo-baseline-company-001',
     p_data => jsonb_build_object(
-      'name', 'Wynne Industrial Rentals',
+      'name', 'Dealernet Industrial Rentals',
       'default_currency_code', 'USD',
       'locale_code', 'en-US',
       'tax_region_code', 'US-TX',
@@ -837,7 +837,7 @@ BEGIN
 
   -- ---------------------------------------------------------------------------
   -- Portal scope token for demo contract (enables portal schedule E2E tests)
-  -- Token 'wynne-demo-portal-scope-001' is a non-secret demo value used only
+  -- Token 'dia-demo-portal-scope-001' is a non-secret demo value used only
   -- in dev/CI. Production tokens must be cryptographically random (32+ bytes)
   -- and provisioned through a secure out-of-band channel — never derived from
   -- predictable identifiers and never shared across environments.
@@ -845,7 +845,7 @@ BEGIN
   INSERT INTO portal_contract_scope_tokens (contract_id, token_hash, job_site_id)
   VALUES (
     v_contract_ids[2],
-    encode(digest('wynne-demo-portal-scope-001', 'sha256'), 'hex'),
+    encode(digest('dia-demo-portal-scope-001', 'sha256'), 'hex'),
     null
   )
   ON CONFLICT (contract_id) DO UPDATE
@@ -854,7 +854,7 @@ BEGIN
 
   -- ---------------------------------------------------------------------------
   -- Portal intake scope token for demo customer (enables portal intake E2E
-  -- tests). Token 'wynne-demo-intake-token-001' is a non-secret demo value
+  -- tests). Token 'dia-demo-intake-token-001' is a non-secret demo value
   -- used only in dev/CI. Production tokens must be cryptographically random
   -- (32+ bytes) and provisioned through a secure out-of-band channel.
   -- ---------------------------------------------------------------------------
@@ -863,7 +863,7 @@ BEGIN
   VALUES (
     'tenant-demo',
     'demo-intake-candidate-001',
-    encode(digest('wynne-demo-intake-token-001', 'sha256'), 'hex'),
+    encode(digest('dia-demo-intake-token-001', 'sha256'), 'hex'),
     '9999-12-31 00:00:00+00'::timestamptz,
     'seed'
   )

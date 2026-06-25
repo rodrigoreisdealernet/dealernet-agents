@@ -67,8 +67,8 @@ describe("buildTemplateVars propagates max_open_copilot_prs from factory config"
     const vars = buildTemplateVars(
       {
         owner: "Volaris-AI",
-        repo: "wynne-lvl-3",
-        runUrl: "https://github.com/Volaris-AI/wynne-lvl-3/actions/runs/1",
+        repo: "dia",
+        runUrl: "https://github.com/Volaris-AI/dia/actions/runs/1",
       },
       config
     );
@@ -80,8 +80,8 @@ describe("buildTemplateVars propagates max_open_copilot_prs from factory config"
     const vars = buildTemplateVars(
       {
         owner: "Volaris-AI",
-        repo: "wynne-lvl-3",
-        runUrl: "https://github.com/Volaris-AI/wynne-lvl-3/actions/runs/1",
+        repo: "dia",
+        runUrl: "https://github.com/Volaris-AI/dia/actions/runs/1",
       },
       config
     );

@@ -51,7 +51,7 @@ export function LoginDialog() {
       </DialogTrigger>
       <DialogContent className="sm:max-w-[400px]">
         <DialogHeader>
-          <DialogTitle>Sign in to Wynne Systems</DialogTitle>
+          <DialogTitle>Sign in to Dealernet</DialogTitle>
           <DialogDescription>
             Enter your email and password to access the rental platform.
           </DialogDescription>

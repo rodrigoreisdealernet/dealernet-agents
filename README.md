@@ -1,6 +1,6 @@
-# Wynne Systems — Equipment Rental Platform
+# Dealernet — Equipment Rental Platform
 
-An equipment-rental ERP for **Wynne Systems** (Volaris Group) — the RentalMan problem space: assets and fleet, rental orders and contracts, billing and invoicing, transfers, inspections, and maintenance. It is designed and operated by AI agents end to end.
+An equipment-rental ERP for **Dealernet** (Volaris Group) — the RentalMan problem space: assets and fleet, rental orders and contracts, billing and invoicing, transfers, inspections, and maintenance. It is designed and operated by AI agents end to end.
 
 This repository holds both the product and the autonomous system that designs, builds, runs, and plans it:
 
@@ -13,7 +13,7 @@ This repository holds both the product and the autonomous system that designs, b
 
 > **Start here:** the [architecture overview](./docs/architecture/README.md) has diagrams of the whole system. Decisions are recorded in [`docs/adrs/`](./docs/adrs/) and detailed designs in [`docs/specs/`](./docs/specs/). Read those before making a change so you know which decisions you're working within.
 
-**Jump to:** [Domain](#the-domain) · [Stack](#the-stack) · [Repository map](#repository-map) · [Live dev environment](#live-dev-environment) · [UAT environment](#uat-environment-wynne-test) · [Local development](#local-development) · [Testing](#testing) · [Documentation](#documentation)
+**Jump to:** [Domain](#the-domain) · [Stack](#the-stack) · [Repository map](#repository-map) · [Live dev environment](#live-dev-environment) · [UAT environment](#uat-environment-dia-test) · [Local development](#local-development) · [Testing](#testing) · [Documentation](#documentation)
 
 ## The domain
 
@@ -59,8 +59,8 @@ The rental-ERP MVP is deployed to Kubernetes (`aks-selfheal-staging`) with a ful
 
 | What | URL |
 |------|-----|
-| **App (frontend)** | https://wynne-app-a4bde4gwecdnfpfb.a02.azurefd.net |
-| **Supabase API** | https://wynne-api-fvd0fcfubfb2drcy.a02.azurefd.net |
+| **App (frontend)** | https://dia-app-a4bde4gwecdnfpfb.a02.azurefd.net |
+| **Supabase API** | https://dia-api-fvd0fcfubfb2drcy.a02.azurefd.net |
 
 Both are served through **Azure Front Door** (stable hostname + managed TLS; the
 underlying cluster LoadBalancer IP can change without the URL changing). If a Front
@@ -94,11 +94,11 @@ yourself against a local Supabase instance with passwords of your choosing.
 
 | Email | Role |
 |-------|------|
-| `admin@wynne-rental.dev` | `admin` |
-| `manager@wynne-rental.dev` | `branch_manager` |
-| `operator@wynne-rental.dev` | `field_operator` |
-| `readonly@wynne-rental.dev` | `read_only` |
-| `demo@wynne-rental.dev` | Legacy break-glass account (disabled unless explicitly re-enabled for incident recovery) |
+| `admin@dia-rental.dev` | `admin` |
+| `manager@dia-rental.dev` | `branch_manager` |
+| `operator@dia-rental.dev` | `field_operator` |
+| `readonly@dia-rental.dev` | `read_only` |
+| `demo@dia-rental.dev` | Legacy break-glass account (disabled unless explicitly re-enabled for incident recovery) |
 
 To seed demo users against a local Supabase instance:
 ```bash
@@ -117,8 +117,8 @@ bash scripts/seed-demo-users.sh
 
 Studio is **internal-only** (not public). Reach it via port-forward:
 ```bash
-kubectl -n wynne-supabase port-forward svc/supabase-supabase-studio 3001:3000
-# then open http://localhost:3001  (dashboard creds: `kubectl get secret supabase-dashboard -n wynne-supabase`)
+kubectl -n dia-supabase port-forward svc/supabase-supabase-studio 3001:3000
+# then open http://localhost:3001  (dashboard creds: `kubectl get secret supabase-dashboard -n dia-supabase`)
 ```
 
 Use temporary credentials only and rotate/rollback via the
@@ -127,18 +127,18 @@ Use temporary credentials only and rotate/rollback via the
 > Hardening of this environment (TLS everywhere, JWT rotation, real auth, secrets
 > management, backups, network policy) is tracked under epic **#130**.
 
-## UAT Environment (`wynne-test`)
+## UAT Environment (`dia-test`)
 
 A human-gated **UAT** environment that mirrors dev but with a **fully isolated data plane** —
-its own self-hosted Supabase + Postgres in the `wynne-supabase-test` namespace, sharing **no
+its own self-hosted Supabase + Postgres in the `dia-supabase-test` namespace, sharing **no
 data** with dev ([ADR-0062](./docs/adrs/0062-gated-promotion-known-good-digest-per-env-data-isolation.md)).
-App workloads run in the `wynne-test` namespace on the same `aks-selfheal-staging` cluster
+App workloads run in the `dia-test` namespace on the same `aks-selfheal-staging` cluster
 (namespace isolation, to control cost).
 
 | What | URL |
 |------|-----|
-| **App (frontend)** | https://wynne-app-test-gtehe0hddtcyf4gq.a02.azurefd.net |
-| **Supabase API** | https://wynne-api-test-h5hbdeb8b9fdhedu.a02.azurefd.net |
+| **App (frontend)** | https://dia-app-test-gtehe0hddtcyf4gq.a02.azurefd.net |
+| **Supabase API** | https://dia-api-test-h5hbdeb8b9fdhedu.a02.azurefd.net |
 
 Served through **Azure Front Door** (managed TLS; a brief 404 right after a change just means
 the edge is still propagating).
@@ -155,12 +155,12 @@ GitHub restricts to write-access users.)
 
 **Access / sign-in:** same role model + demo accounts as dev (above). UAT has its **own
 isolated auth**, so demo users must be seeded against the UAT Supabase before sign-in works
-(`scripts/seed-demo-users.sh` pointed at the `wynne-supabase-test` database). The schema is
+(`scripts/seed-demo-users.sh` pointed at the `dia-supabase-test` database). The schema is
 migrated and the demo **baseline** data is seeded.
 
 **In-cluster fallback** (if Front Door is mid-propagation):
 ```bash
-kubectl -n wynne-test port-forward svc/rental-app-frontend 8080:80   # → http://localhost:8080
+kubectl -n dia-test port-forward svc/rental-app-frontend 8080:80   # → http://localhost:8080
 ```
 
 > **Status (2026-06-14):** frontend + ops-api live and public; data plane isolated, schema
@@ -172,13 +172,13 @@ kubectl -n wynne-test port-forward svc/rental-app-frontend 8080:80   # → http:
 Quick hardening verification:
 ```bash
 # discover the Kong origin IP
-kubectl -n wynne-supabase-test get svc supabase-supabase-kong -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+kubectl -n dia-supabase-test get svc supabase-supabase-kong -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
 
 # direct origin should fail (expected: curl exits non-zero). If this prints, hardening failed:
 curl --max-time 8 -sS -o /dev/null http://<kong-loadbalancer-ip>/auth/v1/health && echo "unexpected reachable (security issue)"
 
 # Front Door API path must still work
-curl --max-time 20 -sS -o /dev/null -w '%{http_code}\n' https://wynne-api-test-h5hbdeb8b9fdhedu.a02.azurefd.net/auth/v1/health
+curl --max-time 20 -sS -o /dev/null -w '%{http_code}\n' https://dia-api-test-h5hbdeb8b9fdhedu.a02.azurefd.net/auth/v1/health
 ```
 
 ## Local development
@@ -267,12 +267,12 @@ E2E runs in CI hourly + after each dev deploy ([`.github/workflows/e2e-dev.yml`]
 
 ### Test trends, coverage & quality (build over build)
 
-Where each suite stands across builds — plus **coverage**, **code quality**, and how we're tracking against explicit **SLO targets** ([`.github/qa-targets.json`](./.github/qa-targets.json)) — is recorded on two durable, append-only **orphan branches**. Each has an auto-regenerated dashboard (pass-rate + coverage trend charts, an SLO **Targets** table with ✅/⚠️ breach flags, a **Code quality** section, and recent-runs + flakiness/skip-rate tables) over a machine-readable [`runs.jsonl`](https://github.com/Volaris-AI/wynne-lvl-3/blob/e2e-history/runs.jsonl) feed (one record per suite-run, shared schema; `kind:"coverage"`/`"quality"` records carry the metric axes):
+Where each suite stands across builds — plus **coverage**, **code quality**, and how we're tracking against explicit **SLO targets** ([`.github/qa-targets.json`](./.github/qa-targets.json)) — is recorded on two durable, append-only **orphan branches**. Each has an auto-regenerated dashboard (pass-rate + coverage trend charts, an SLO **Targets** table with ✅/⚠️ breach flags, a **Code quality** section, and recent-runs + flakiness/skip-rate tables) over a machine-readable [`runs.jsonl`](https://github.com/Volaris-AI/dia/blob/e2e-history/runs.jsonl) feed (one record per suite-run, shared schema; `kind:"coverage"`/`"quality"` records carry the metric axes):
 
 | Dashboard | Covers | Cadence | Branch |
 |---|---|---|---|
-| 📊 **[E2E trends →](https://github.com/Volaris-AI/wynne-lvl-3/blob/e2e-history/README.md)** | Deployed-env Playwright: smoke + experience; **daily Visual UX** review (vision critique → `ux` tickets) | Hourly + post-deploy; visual daily | [`e2e-history`](https://github.com/Volaris-AI/wynne-lvl-3/tree/e2e-history) ([`trend.svg`](https://github.com/Volaris-AI/wynne-lvl-3/blob/e2e-history/trend.svg)) |
-| 📊 **[CI test trends →](https://github.com/Volaris-AI/wynne-lvl-3/blob/ci-history/README.md)** | Unit · Temporal/contract · Helm · Seed · **Coverage** (e2e screens/journeys + unit) · **Code quality** (tsc/ruff/shellcheck/SAST/deps/secrets) | Per merge to `main`; quality nightly | [`ci-history`](https://github.com/Volaris-AI/wynne-lvl-3/tree/ci-history) ([`trend.svg`](https://github.com/Volaris-AI/wynne-lvl-3/blob/ci-history/trend.svg)) |
+| 📊 **[E2E trends →](https://github.com/Volaris-AI/dia/blob/e2e-history/README.md)** | Deployed-env Playwright: smoke + experience; **daily Visual UX** review (vision critique → `ux` tickets) | Hourly + post-deploy; visual daily | [`e2e-history`](https://github.com/Volaris-AI/dia/tree/e2e-history) ([`trend.svg`](https://github.com/Volaris-AI/dia/blob/e2e-history/trend.svg)) |
+| 📊 **[CI test trends →](https://github.com/Volaris-AI/dia/blob/ci-history/README.md)** | Unit · Temporal/contract · Helm · Seed · **Coverage** (e2e screens/journeys + unit) · **Code quality** (tsc/ruff/shellcheck/SAST/deps/secrets) | Per merge to `main`; quality nightly | [`ci-history`](https://github.com/Volaris-AI/dia/tree/ci-history) ([`trend.svg`](https://github.com/Volaris-AI/dia/blob/ci-history/trend.svg)) |
 
 Producers: [`e2e-dev.yml`](./.github/workflows/e2e-dev.yml) + [`visual-ux.yml`](./.github/workflows/visual-ux.yml) (E2E/UX); the `publish-test-history` job in [`pr-validation.yml`](./.github/workflows/pr-validation.yml) + the nightly [`code-quality.yml`](./.github/workflows/code-quality.yml) (CI suites, coverage, quality). The **QA Manager** agent reads both feeds against the SLO targets, publishes a **scorecard**, and drives a deduped ticket for every breached target — covering not just red suites but **coverage growth** (uncovered screens/journeys) and **stability** (flip-flop flakiness, skip-rate). Two specialist reviewers own their lanes: the **code-quality-reviewer** files static-analysis tickets and the **ux-vision-reviewer** files visual tickets. New checks land **report-only and ratchet to gating** once their target holds.
 

@@ -404,7 +404,7 @@ export function GeneralLedgerScreen() {
       }
       const csvText = await resp.text();
       const filename = resp.headers.get('Content-Disposition')?.match(/filename="([^"]+)"/)?.[1]
-        ?? `wynne-accounting-export-${startDate}-${endDate}.csv`;
+        ?? `dia-accounting-export-${startDate}-${endDate}.csv`;
       const exportMode = resp.headers.get('X-Export-Mode') ?? 'export_only';
       const rowCount = resp.headers.get('X-Export-Row-Count') ?? '0';
       const anchor = document.createElement('a');

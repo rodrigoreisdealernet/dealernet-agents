@@ -18,7 +18,7 @@ if [ -z "$(git status --porcelain docs/release-notes 2>/dev/null)" ]; then
   exit 0
 fi
 
-git config user.name  "wynne-factory"
+git config user.name  "dia-factory"
 git config user.email "factory@users.noreply.github.com"
 
 # Remember where we started so we can restore HEAD afterwards. This step runs in the
@@ -35,7 +35,7 @@ Automated release-notes output (release-notes-curator / release-marketer).
 End-user release entries + the day's marketing plan, for owner review.
 No build tickets are created by this commit; doc-gap tickets (if any) are filed
 in the user-docs lane by the curator." \
-  --author="wynne-factory <factory@users.noreply.github.com>"
+  --author="dia-factory <factory@users.noreply.github.com>"
 
 # Push with an explicit token (checkout uses persist-credentials:false).
 PUSH_URL="https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"

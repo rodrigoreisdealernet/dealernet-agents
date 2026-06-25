@@ -116,14 +116,14 @@ without OpenBao's audit trail and dynamic rotation.
 - `charts/app/templates/external-secrets.yaml` — conditional template; each `remoteRef`
   emits `property` when `externalSecrets.properties.*` is set.
 - `charts/app/values-dev.yaml`, `values-test.yaml`, `values-prod.yaml` — `externalSecrets`
-  blocks: `openbao-<env>` store names, grouped-map paths (`wynne/<env>/runtime`,
-  `wynne/<env>/acr-pull`, `wynne/<env>/oauth2-proxy`) and per-field `properties`.
+  blocks: `openbao-<env>` store names, grouped-map paths (`dia/<env>/runtime`,
+  `dia/<env>/acr-pull`, `dia/<env>/oauth2-proxy`) and per-field `properties`.
 - `charts/app/README.md` — ESO + OpenBao setup, sample `vault`-provider `SecretStore`,
   KV-v2 path/field provisioning, values table including `properties.*`.
 - `docs/runbooks/secret-operations.md` — OpenBao path/field convention table, KV-v2 rotation
   (`bao kv patch` / `bao kv destroy`), break-glass, and store health checks.
-- `deploy/k8s/wynne-dev/secretstore-openbao.yaml` — namespaced `SecretStore` for dev.
-- `deploy/k8s/wynne-vault/openbao-dev.yaml` — dev-grade OpenBao (in-memory, bootstrap docs).
+- `deploy/k8s/dia-dev/secretstore-openbao.yaml` — namespaced `SecretStore` for dev.
+- `deploy/k8s/dia-vault/openbao-dev.yaml` — dev-grade OpenBao (in-memory, bootstrap docs).
 - `deploy/k8s/rbac-nonprod.yaml` — `externalsecrets` RBAC for the `gha-deployer` role.
 
 ## Test strategy
@@ -135,8 +135,8 @@ without OpenBao's audit trail and dynamic rotation.
     the right `secretStoreRef`, `remoteRef.key`, target secret names, and policies.
   - `remoteRef.property` is **omitted** when `properties.*` is unset (flat layout) and
     **rendered** when set (KV-v2 grouped map), including the dev profile's shared
-    `wynne/dev/runtime` path with distinct `anon-key` / `service-role-key` fields and the
-    `wynne/dev/acr-pull` `dockerconfigjson` field.
+    `dia/dev/runtime` path with distinct `anon-key` / `service-role-key` fields and the
+    `dia/dev/acr-pull` `dockerconfigjson` field.
   - ACR pull `ExternalSecret` renders `kubernetes.io/dockerconfigjson` type only when
     `acrPullDockerConfig` is set.
   - Partial oauth2-proxy key config renders no `ExternalSecret`.
@@ -145,6 +145,6 @@ without OpenBao's audit trail and dynamic rotation.
 ## Evidence
 
 - `charts/app/templates/external-secrets.yaml`, `charts/app/values{,-dev,-test,-prod}.yaml`.
-- `deploy/k8s/wynne-dev/secretstore-openbao.yaml`, `deploy/k8s/wynne-vault/openbao-dev.yaml`.
+- `deploy/k8s/dia-dev/secretstore-openbao.yaml`, `deploy/k8s/dia-vault/openbao-dev.yaml`.
 - `charts/app/ci-test.sh` — assertions cover ESO enabled/disabled, property rendering,
   ACR pull, dev profile path alignment, and partial oauth2-proxy safety gate.

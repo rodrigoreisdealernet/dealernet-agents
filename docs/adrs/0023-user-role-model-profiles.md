@@ -6,7 +6,7 @@
 
 ## Context
 
-GoTrue is running and one placeholder user (`demo@wynne-rental.dev`) existed, but there was
+GoTrue is running and one placeholder user (`demo@dia-rental.dev`) existed, but there was
 no role/permission model, no way to create additional users from the app, no user profile
 surfaced in the UI, and no documented demo credentials. The RLS migration (20260606) gated
 writes to `service_role` only; authenticated users had read-only access with no way to
@@ -66,12 +66,12 @@ plain text. The script is idempotent (ON CONFLICT DO UPDATE). Demo accounts:
 
 | Email | Role |
 |-------|------|
-| `admin@wynne-rental.dev` | `admin` |
-| `manager@wynne-rental.dev` | `branch_manager` |
-| `operator@wynne-rental.dev` | `field_operator` |
-| `readonly@wynne-rental.dev` | `read_only` |
+| `admin@dia-rental.dev` | `admin` |
+| `manager@dia-rental.dev` | `branch_manager` |
+| `operator@dia-rental.dev` | `field_operator` |
+| `readonly@dia-rental.dev` | `read_only` |
 
-The legacy `demo@wynne-rental.dev` account is promoted to `admin`.
+The legacy `demo@dia-rental.dev` account is promoted to `admin`.
 
 Credentials are stored using the secrets workflow (#125) — specifically as
 `DEMO_ADMIN_PASS` and `DEMO_OPERATOR_PASS` secrets in the environment's secret store.

@@ -8,17 +8,17 @@
 
 | Exchange | Direction | Source of truth | Replay / backfill semantics |
 |---|---|---|---|
-| `rental_contract_snapshot` | Wynne → MuleSoft | Wynne `rental_contract` current entity snapshot | Automatic runs dedupe on `entity_id + entity_version`. Operator replay/backfill republishes the latest current snapshot for scoped entity ids with a workflow-scoped replay token. |
-| `invoice_snapshot` | Wynne → MuleSoft | Wynne `invoice` current entity snapshot | Automatic runs dedupe on `entity_id + entity_version`. Operator replay/backfill republishes the latest current snapshot for scoped entity ids with a workflow-scoped replay token. |
-| `delivery_receipt` | MuleSoft → Wynne | MuleSoft delivery acknowledgement state | Inbound callbacks dedupe on MuleSoft delivery id before workflow handoff; repeated callbacks update the same delivery-log and sync-state scope. |
+| `rental_contract_snapshot` | Dealernet → MuleSoft | Dealernet `rental_contract` current entity snapshot | Automatic runs dedupe on `entity_id + entity_version`. Operator replay/backfill republishes the latest current snapshot for scoped entity ids with a workflow-scoped replay token. |
+| `invoice_snapshot` | Dealernet → MuleSoft | Dealernet `invoice` current entity snapshot | Automatic runs dedupe on `entity_id + entity_version`. Operator replay/backfill republishes the latest current snapshot for scoped entity ids with a workflow-scoped replay token. |
+| `delivery_receipt` | MuleSoft → Dealernet | MuleSoft delivery acknowledgement state | Inbound callbacks dedupe on MuleSoft delivery id before workflow handoff; repeated callbacks update the same delivery-log and sync-state scope. |
 
 ## Field mappings
 
 ### `rental_contract_snapshot`
 
-| Wynne field | MuleSoft field |
+| Dealernet field | MuleSoft field |
 |---|---|
-| `entity_id` | `wynneContractId` |
+| `entity_id` | `diaContractId` |
 | `external_id_map.external_id` (or `entity_id` fallback) | `contractId` |
 | `data.contract_number` | `contractNumber` |
 | `data.status` | `status` |
@@ -31,9 +31,9 @@
 
 ### `invoice_snapshot`
 
-| Wynne field | MuleSoft field |
+| Dealernet field | MuleSoft field |
 |---|---|
-| `entity_id` | `wynneInvoiceId` |
+| `entity_id` | `diaInvoiceId` |
 | `external_id_map.external_id` (or `entity_id` fallback) | `invoiceId` |
 | `data.invoice_number` | `invoiceNumber` |
 | `data.status` | `status` |
@@ -48,7 +48,7 @@
 
 ### `delivery_receipt`
 
-| MuleSoft field | Wynne persistence |
+| MuleSoft field | Dealernet persistence |
 |---|---|
 | `deliveryId` | `integration_delivery_log.provider_delivery_id` + inbound idempotency key |
 | `subjectExchangeKey` | `integration_sync_state.exchange_key` |
@@ -62,6 +62,6 @@
 ## Persistence contract
 
 - `integration_config` stores tenant-scoped MuleSoft endpoint paths, mappings, enablement, and env-var secret references.
-- `external_id_map` stores durable Wynne ↔ MuleSoft aliases per supported exchange.
+- `external_id_map` stores durable Dealernet ↔ MuleSoft aliases per supported exchange.
 - `integration_sync_state` stores the last outbound entity-version cursor or inbound delivery cursor per exchange scope.
 - `integration_delivery_log` stores inbound dedupe keys, outbound idempotency keys, request/response payloads, workflow ids, and retry history.

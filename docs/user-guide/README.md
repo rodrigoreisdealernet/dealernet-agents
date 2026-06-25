@@ -1,6 +1,6 @@
 # User Guide
 
-Practical guides for staff using the Wynne rental application.
+Practical guides for staff using the Dealernet rental application.
 
 | Guide | Covers |
 |------|--------|

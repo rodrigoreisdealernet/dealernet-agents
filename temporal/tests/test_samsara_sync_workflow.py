@@ -479,7 +479,7 @@ async def test_workflow_forwards_mappings_to_persist_activity() -> None:
 
     Regression guard: if the workflow does not pass mappings, the mapping profile
     is silently ignored and _apply_samsara_mapping receives an empty dict,
-    causing the Wynne-side response_payload to ignore the configured field aliases.
+    causing the Dealernet-side response_payload to ignore the configured field aliases.
     This test fails if the 5th argument to samsara_persist_telemetry_batch is
     missing or does not contain the profile from config_snapshot.
     """

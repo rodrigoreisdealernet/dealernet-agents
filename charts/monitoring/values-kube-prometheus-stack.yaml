@@ -1,6 +1,6 @@
 # charts/monitoring/values-kube-prometheus-stack.yaml
 #
-# Recommended kube-prometheus-stack values for the Wynne monitoring stack.
+# Recommended kube-prometheus-stack values for the Dealernet monitoring stack.
 # Install kube-prometheus-stack separately with these values, then install
 # charts/monitoring in the same namespace to provision datasources and dashboards.
 #
@@ -51,10 +51,10 @@ grafana:
       labelValue: "1"
       # Look for ConfigMaps in all namespaces (use namespace selector to restrict).
       searchNamespace: monitoring
-      # Organise dashboards into Grafana folders by wynne/dashboard-folder label value.
+      # Organise dashboards into Grafana folders by dia/dashboard-folder label value.
       # The sidecar creates the necessary Grafana provisioning configuration automatically;
       # no separate provider ConfigMap is required.
-      folderAnnotation: wynne/dashboard-folder
+      folderAnnotation: dia/dashboard-folder
       provider:
         allowUiUpdates: false
         disableDelete: true

@@ -1,11 +1,11 @@
 name: Deploy Prod
 
-# Phase 2 (#41/#44): promote a previously-built set of images to the `wynne-prod`
+# Phase 2 (#41/#44): promote a previously-built set of images to the `dia-prod`
 # namespace.  Gated by a protected GitHub Environment with required reviewers.
 # Should only be triggered after test smoke has passed.
 #
 # GATED: until Phase 2 is enabled the deploy job is skipped cleanly.  To enable,
-# set K8S_DEPLOY_ENABLED=true, WYNNE_PROD_NAMESPACE, and the KUBE_CONFIG_PROD
+# set K8S_DEPLOY_ENABLED=true, DIA_PROD_NAMESPACE, and the KUBE_CONFIG_PROD
 # secret.  See docs/specs/live-cluster-deploy-smoke-rollback.md.
 #
 # Promotion carries the SAME immutable image digest that build-images.yml pushed
@@ -51,18 +51,18 @@ jobs:
       - id: gate
         env:
           DEPLOY_ENABLED: ${{ vars.K8S_DEPLOY_ENABLED }}
-          PROD_NAMESPACE: ${{ vars.WYNNE_PROD_NAMESPACE }}
+          PROD_NAMESPACE: ${{ vars.DIA_PROD_NAMESPACE }}
           HAS_DEPLOY_KUBECONFIG: ${{ secrets.KUBE_CONFIG_PROD != '' }}
-          GATE_CONFIRMED: ${{ vars.WYNNE_PROD_GATE_CONFIRMED }}
+          GATE_CONFIRMED: ${{ vars.DIA_PROD_GATE_CONFIRMED }}
         run: |
           APP_ENABLED=false
           if [[ "$DEPLOY_ENABLED" == "true" && -n "$PROD_NAMESPACE" && "$HAS_DEPLOY_KUBECONFIG" == "true" ]]; then
             # Hard-fail if the human gate (GitHub Environment + required reviewers) has not
             # been explicitly confirmed as configured (ADR-0062). The 'prod' GitHub Environment
-            # must exist with required reviewers BEFORE setting WYNNE_PROD_GATE_CONFIRMED=true.
+            # must exist with required reviewers BEFORE setting DIA_PROD_GATE_CONFIRMED=true.
             # See docs/runbooks/promotion.md — "One-time setup (required for the human gates)".
             if [[ "$GATE_CONFIRMED" != "true" ]]; then
-              echo "::error::WYNNE_PROD_GATE_CONFIRMED is not set to 'true'. Create the 'prod' GitHub Environment with required reviewers first, then set this variable. See docs/runbooks/promotion.md." >&2
+              echo "::error::DIA_PROD_GATE_CONFIRMED is not set to 'true'. Create the 'prod' GitHub Environment with required reviewers first, then set this variable. See docs/runbooks/promotion.md." >&2
               exit 1
             fi
             APP_ENABLED=true
@@ -76,19 +76,19 @@ jobs:
             if [ "$APP_ENABLED" = true ]; then
               echo "| App deploy (frontend + worker) | ✅ enabled → \`$PROD_NAMESPACE\` |"
             else
-              echo "| App deploy (frontend + worker) | ⏭️ skipped — needs K8S_DEPLOY_ENABLED + WYNNE_PROD_NAMESPACE + KUBE_CONFIG_PROD |"
+              echo "| App deploy (frontend + worker) | ⏭️ skipped — needs K8S_DEPLOY_ENABLED + DIA_PROD_NAMESPACE + KUBE_CONFIG_PROD |"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
   deploy:
-    name: Deploy app to wynne-prod
+    name: Deploy app to dia-prod
     needs: preflight
     if: needs.preflight.outputs.app_enabled == 'true'
     runs-on: ubuntu-latest   # TODO: move to factory-prod-ops per spec once provisioned
     environment: prod         # Protected environment — requires human reviewer approval
     env:
-      PROD_NAMESPACE: ${{ vars.WYNNE_PROD_NAMESPACE }}
-      OBSERVABILITY_NAMESPACE: wynne-observability
+      PROD_NAMESPACE: ${{ vars.DIA_PROD_NAMESPACE }}
+      OBSERVABILITY_NAMESPACE: dia-observability
       IMAGE_REGISTRY: ${{ vars.ACR_LOGIN_SERVER }}
     steps:
       - uses: actions/checkout@v4
@@ -185,7 +185,7 @@ jobs:
           echo "worker=$WK"   >> "$GITHUB_OUTPUT"
           echo "tag=${SHA_TAG:-${SHA:-build-${BUILD_RUN_ID}}}" >> "$GITHUB_OUTPUT"
 
-      - name: Helm upgrade (wynne-prod)
+      - name: Helm upgrade (dia-prod)
         run: |
           set -euo pipefail
           helm upgrade --install rental-app charts/app \

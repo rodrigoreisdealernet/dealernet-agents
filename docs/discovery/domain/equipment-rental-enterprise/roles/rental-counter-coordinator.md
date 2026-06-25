@@ -24,9 +24,9 @@ customer demand into the transaction record: quote, contract, extension, return,
 handoff. The role is distinct from yard/logistics, which moves equipment physically, and from
 credit/billing, which manages AR and escalations. Sources: [Sunbelt CSR](https://careers.sunbeltrentals.com/customer-service-representative/job/P1-5347160-0),
 [Sunbelt Assistant Manager](https://careers.sunbeltrentals.com/assistant-manager/job/P1-5376372-0),
-[RentalMan](https://www.wynnesystems.com/solutions/rentalman/).
+[RentalMan](https://www.dealernet.com.br/solutions/rentalman/).
 
-In Wynne's enterprise multi-branch contractor/project segment, this role is usually embedded in the
+In Dealernet's enterprise multi-branch contractor/project segment, this role is usually embedded in the
 branch operating rhythm rather than acting as a pure call-center rep. They sit between the customer,
 the branch manager, the yard, dispatch, and outside sales, and they are accountable for the quality
 of the booking data that the rest of the branch will live with later. Sources:
@@ -37,7 +37,7 @@ of the booking data that the rest of the branch will live with later. Sources:
 Their job is to get transactions right the first time: real availability, correct contract terms,
 clean handoff to dispatch or yard, and fewer billing disputes at close. A counter mistake is not
 local; it turns into a delivery miss, a customer callback, or a credit problem later. Sources:
-[RentalMan](https://www.wynnesystems.com/solutions/rentalman/),
+[RentalMan](https://www.dealernet.com.br/solutions/rentalman/),
 [MCS dispatch guide](https://www.mcsrentalsoftware.com/us/resources/blog/dispatch-and-delivery-rental-business/).
 
 They are also a branch sales surface. The role is expected to recognize when an inquiry is purely
@@ -57,13 +57,13 @@ The weekly rhythm adds follow-up on slow movers, larger project opportunities, a
 customers who should be routed to outside sales or handled more proactively. This is a high-switching
 role: customer service, light selling, booking control, and branch coordination all happen in the
 same shift. Sources: [RER customer-service guidance](https://www.rermag.com/mag/article/20930805/14-tips-to-legendary-customer-service),
-[RentalResult reporting](https://wynnesystems.com/rentalresult/reporting/).
+[RentalResult reporting](https://dealernet.com.br/rentalresult/reporting/).
 
 ## Frustrations & pains
 The loudest pain is false confidence in availability. The system may say a unit is available while
 the yard or shop reality says otherwise, which means the counter discovers the problem only after
 the customer believes the booking is confirmed. Sources: [MCS dispatch guide](https://www.mcsrentalsoftware.com/us/resources/blog/dispatch-and-delivery-rental-business/),
-[RentalResult reporting](https://wynnesystems.com/rentalresult/reporting/).
+[RentalResult reporting](https://dealernet.com.br/rentalresult/reporting/).
 
 The second pain is extension conflict. A routine customer request to keep equipment longer can
 quietly displace the next booking on the same unit unless someone manually checks both the late
@@ -74,14 +74,14 @@ return and the dependent future order. Sources:
 The third pain is swivel-chair work: flipping between quote entry, account standing, customer
 history, phone calls, and paperwork while the line is moving. Even where RentalMan is the system of
 record, branches still carry re-keying and manual follow-up overhead that slows the counter down.
-Sources: [RentalMan](https://www.wynnesystems.com/solutions/rentalman/),
-[RentalResult reporting](https://wynnesystems.com/rentalresult/reporting/).
+Sources: [RentalMan](https://www.dealernet.com.br/solutions/rentalman/),
+[RentalResult reporting](https://dealernet.com.br/rentalresult/reporting/).
 
 ## Tools today
 The core tool is RentalMan for quoting, contract entry, availability, returns, and billing. Around
 that sits the real branch toolkit: phone, email, AP-on-hold reports, customer history notes, and
 paper or mobile inspection artifacts that help the counter understand what really happened on the
-last rental. Sources: [RentalMan](https://www.wynnesystems.com/solutions/rentalman/),
+last rental. Sources: [RentalMan](https://www.dealernet.com.br/solutions/rentalman/),
 [Sunbelt CSR](https://careers.sunbeltrentals.com/customer-service-representative/job/P1-5347160-0),
 [Sunbelt Assistant Manager](https://careers.sunbeltrentals.com/assistant-manager/job/P1-5376372-0).
 
@@ -129,8 +129,8 @@ the standard case and isolated only the anomalies.
   is committed, compare system availability to maintenance status, unconfirmed returns, and branch
   readiness signals so the counter reviews a conflict-aware result instead of discovering it later.
   Evidence: [MCS dispatch guide](https://www.mcsrentalsoftware.com/us/resources/blog/dispatch-and-delivery-rental-business/),
-  [RentalMan](https://www.wynnesystems.com/solutions/rentalman/),
-  [RentalResult reporting](https://wynnesystems.com/rentalresult/reporting/).
+  [RentalMan](https://www.dealernet.com.br/solutions/rentalman/),
+  [RentalResult reporting](https://dealernet.com.br/rentalresult/reporting/).
 - **Extension conflict surfacer** — another strong `assist` candidate. When a customer asks to keep
   equipment longer, show which future booking is displaced and what alternate path exists before the
   counter calls the customer back. Evidence:
@@ -138,12 +138,12 @@ the standard case and isolated only the anomalies.
   [MCS dispatch guide](https://www.mcsrentalsoftware.com/us/resources/blog/dispatch-and-delivery-rental-business/).
 - **Invoice draft at close** — bounded `assist` opportunity. Generate standard invoice drafts and
   flag only rate, duration, or charge anomalies for human review before anything customer-facing is
-  released. Evidence: [RentalMan](https://www.wynnesystems.com/solutions/rentalman/),
-  [RentalResult reporting](https://wynnesystems.com/rentalresult/reporting/).
+  released. Evidence: [RentalMan](https://www.dealernet.com.br/solutions/rentalman/),
+  [RentalResult reporting](https://dealernet.com.br/rentalresult/reporting/).
 
 ## Domain-expert review
 _For SMEs / real operators: what's right, what's wrong, what's missing, where to scope._
 - [ ] Reviewed by: _&lt;name, date&gt;_
-- **Draft synthesis to validate:** whether Wynne's target accounts place this role mainly in the
+- **Draft synthesis to validate:** whether Dealernet's target accounts place this role mainly in the
   branch or in a centralized CSR desk, and where the clean handoff sits between counter billing and
   the dedicated credit/billing function.

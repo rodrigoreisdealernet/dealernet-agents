@@ -11,12 +11,12 @@ type RuntimeConfig = Partial<{
 
 declare global {
   interface Window {
-    __WYNNE_RUNTIME_CONFIG__?: RuntimeConfig;
+    __DIA_RUNTIME_CONFIG__?: RuntimeConfig;
   }
 }
 
 export function resolveSupabaseConfig(
-  runtimeConfig: RuntimeConfig | undefined = window.__WYNNE_RUNTIME_CONFIG__,
+  runtimeConfig: RuntimeConfig | undefined = window.__DIA_RUNTIME_CONFIG__,
   viteEnv: RuntimeConfig = import.meta.env as RuntimeConfig
 ) {
   return {

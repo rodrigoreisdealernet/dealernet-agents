@@ -14,7 +14,7 @@ This spec defines the payments and invoicing slice for branded invoices/statemen
 card and ACH collection, saved payment-method references, settlement/refund orchestration, AR aging
 materialization, and reminder scheduling.
 
-The approved architecture keeps Wynne out of raw card and bank-account handling: payment collection
+The approved architecture keeps Dealernet out of raw card and bank-account handling: payment collection
 surfaces are provider-hosted, saved methods are stored as token references plus non-sensitive
 metadata only, and inbound payment events terminate at `ops_api` before durable handoff to Temporal.
 
@@ -32,7 +32,7 @@ metadata only, and inbound payment events terminate at `ops_api` before durable 
 ## 3. Non-goals
 
 - Do not select a specific processor vendor in this spec.
-- Do not support direct raw PAN or bank-account entry/storage in Wynne-managed UI or database paths.
+- Do not support direct raw PAN or bank-account entry/storage in Dealernet-managed UI or database paths.
 - Do not add GL posting or full accounting-ledger ownership here; downstream accounting systems
   consume normalized payment events.
 - Do not invent a second webhook/idempotency system outside the connector framework.
@@ -87,7 +87,7 @@ Temporal workflow / activity orchestration
 Rules:
 
 1. Card and ACH collection happens on provider-hosted surfaces only.
-2. Wynne stores provider token references and non-sensitive display metadata only.
+2. Dealernet stores provider token references and non-sensitive display metadata only.
 3. Webhook authenticity validation happens at `ops_api`; durable business handling happens in
    Temporal.
 4. Payment event dedupe uses `integration_delivery_log` with provider/event idempotency keys.

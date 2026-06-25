@@ -27,16 +27,16 @@ drivers across a market while the coordinator works at the dispatcher's directio
 [Market Logistics Dispatcher](https://builtin.com/job/market-logistics-dispatcher/4220117),
 [Market Logistics Coordinator](https://builtin.com/job/market-logistics-coordinator/4195284).
 
-In Wynne's enterprise multi-branch segment, this role usually sits in a market logistics center or a
+In Dealernet's enterprise multi-branch segment, this role usually sits in a market logistics center or a
 regional operations structure rather than on the counter. They are the coordination point between
 branch staging, driver capacity, contract readiness, third-party hauling, and same-day customer
-promise recovery. Sources: [Wynne Logistics Solution](https://wynnesystems.com/products/logistics-solution/),
+promise recovery. Sources: [Dealernet Logistics Solution](https://dealernet.com.br/products/logistics-solution/),
 [Renttix dispatch guide](https://www.renttix.com/en-us/guides/equipment-rental-dispatch-management).
 
 ## Goals & motivations
 Their north star is transport reliability at market scale: on-time deliveries and pickups, low
 outside-haul spend, minimal driver idle time, and fewer avoidable misses that turn into branch
-rework or customer escalation. Sources: [Wynne Logistics Solution](https://wynnesystems.com/products/logistics-solution/),
+rework or customer escalation. Sources: [Dealernet Logistics Solution](https://dealernet.com.br/products/logistics-solution/),
 [Renttix dispatch guide](https://www.renttix.com/en-us/guides/equipment-rental-dispatch-management).
 
 The motivation underneath that is that dispatch failures leak margin quietly. Late or poorly staged
@@ -56,7 +56,7 @@ The weekly rhythm adds DOT and driver-log review plus KPI assembly for branch an
 That split is what separates this role from the coordinator tier: the coordinator keeps the board
 moving, while the dispatcher owns the market-level recovery and trend story behind it. Sources:
 [Market Logistics Dispatcher](https://builtin.com/job/market-logistics-dispatcher/4220117),
-[Wynne Logistics Solution](https://wynnesystems.com/products/logistics-solution/).
+[Dealernet Logistics Solution](https://dealernet.com.br/products/logistics-solution/).
 
 ## Frustrations & pains
 The first pain is authority without full control. Dispatch is the coordination point, not a clean
@@ -67,7 +67,7 @@ place. Source: [MCS dispatch blog](https://www.mcsrentalsoftware.com/us/resource
 The second pain is same-day volatility. Customer windows move, drivers call out, trucks break down,
 and late returns collide with the next booking. The role is most cognitively expensive exactly when
 the service risk is highest. Sources: [Renttix dispatch guide](https://www.renttix.com/en-us/guides/equipment-rental-dispatch-management),
-[Wynne Logistics Solution](https://wynnesystems.com/products/logistics-solution/).
+[Dealernet Logistics Solution](https://dealernet.com.br/products/logistics-solution/).
 
 The third pain is proof-bundle reconstruction. When a customer or branch disputes a missed or late
 move, the dispatcher often has to reconstruct the story from calls, notes, and driver memory instead
@@ -76,10 +76,10 @@ should be. Sources: [Market Logistics Dispatcher](https://builtin.com/job/market
 [MCS dispatch blog](https://www.mcsrentalsoftware.com/us/resources/blog/dispatch-and-delivery-rental-business/).
 
 ## Tools today
-This role lives in the scheduler first: Wynne positions the dispatcher around visual timelines, live
+This role lives in the scheduler first: Dealernet positions the dispatcher around visual timelines, live
 GPS maps, route adjustments, and the driver mobile-app handoff. Around that sits the rental-system
 contract queue, ELD or HOS tools, DVIR and repair records, hauler contacts, spreadsheets, and a lot
-of branch messaging. Sources: [Wynne Logistics Solution](https://wynnesystems.com/products/logistics-solution/),
+of branch messaging. Sources: [Dealernet Logistics Solution](https://dealernet.com.br/products/logistics-solution/),
 [RentalResult idle-time logistics](https://rentalresult.com/reduce-equipment-idle-time-construction-equipment-management-software/).
 
 The real tooling problem is not the absence of systems but the join between them. The dispatcher has
@@ -124,7 +124,7 @@ they would stop spending their first 15 minutes rebuilding the case.
   down, or an urgent move lands, assemble the affected runs, the next-best driver options, the likely
   outside-haul cost, and the contract blockers before the dispatcher chooses the recovery path.
   Evidence: [Renttix dispatch guide](https://www.renttix.com/en-us/guides/equipment-rental-dispatch-management),
-  [Wynne Logistics Solution](https://wynnesystems.com/products/logistics-solution/),
+  [Dealernet Logistics Solution](https://dealernet.com.br/products/logistics-solution/),
   [MCS dispatch blog](https://www.mcsrentalsoftware.com/us/resources/blog/dispatch-and-delivery-rental-business/).
 - **Complaint proof bundle** — strong `assist` opportunity. Pull delivery timestamps, route changes,
   branch notes, and proof-of-delivery artifacts into one reviewer-ready case before the dispatcher
@@ -133,11 +133,11 @@ they would stop spending their first 15 minutes rebuilding the case.
   [MCS dispatch blog](https://www.mcsrentalsoftware.com/us/resources/blog/dispatch-and-delivery-rental-business/).
 - **Weekly logistics KPI pack** — bounded `automate` opportunity. Assemble on-time, outside-haul,
   productivity, and late-return conflict metrics without making the dispatcher hand-build the market
-  story each week. Evidence: [Wynne Logistics Solution](https://wynnesystems.com/products/logistics-solution/),
+  story each week. Evidence: [Dealernet Logistics Solution](https://dealernet.com.br/products/logistics-solution/),
   [RentalResult idle-time logistics](https://rentalresult.com/reduce-equipment-idle-time-construction-equipment-management-software/).
 
 ## Domain-expert review
 _For SMEs / real operators: what's right, what's wrong, what's missing, where to scope._
 - [ ] Reviewed by: _&lt;name, date&gt;_
-- **Draft synthesis to validate:** where Wynne's target accounts draw the line between dispatcher
+- **Draft synthesis to validate:** where Dealernet's target accounts draw the line between dispatcher
   and coordinator authority on same-day replans, outside-haul approval, and compliance follow-up.

@@ -3,13 +3,13 @@
 ## Overview
 Create a reusable `.github` automation layer that turns this template repository into a software creation factory. The factory will use GitHub Actions as the control plane, Copilot SDK agents as orchestration/review/monitoring workers, Copilot cloud agent as the implementation worker, and GitHub-hosted plus self-hosted runners for isolated execution.
 
-The baseline is `/Users/ian.reay/w/level-3-v2/.github`. When that repository's active workflows disagree with its README or agent docs, the active workflow files are treated as the source of truth.
+The baseline is the upstream repository's `.github`. When that repository's active workflows disagree with its README or agent docs, the active workflow files are treated as the source of truth.
 
 ## Metadata
 - **Feature Name**: Software Creation Factory
 - **Status**: Draft
 - **Priority**: P0 - Critical
-- **Target Repository**: `Volaris-AI/wynne-lvl-3`
+- **Target Repository**: `Volaris-AI/dia`
 - **Target Release**: Incremental factory rollout
 - **Owner**: TBD
 - **Stakeholders**: Engineering, platform operations, product owner, QA
@@ -17,22 +17,22 @@ The baseline is `/Users/ian.reay/w/level-3-v2/.github`. When that repository's a
 - **Last Updated**: 2026-06-05
 
 ## Target Repository
-This factory will be implemented in `Volaris-AI/wynne-lvl-3`.
+This factory will be implemented in `Volaris-AI/dia`.
 
 Verified on 2026-06-05:
 
 | Field | Value |
 |---|---|
-| Repository URL | `https://github.com/Volaris-AI/wynne-lvl-3` |
+| Repository URL | `https://github.com/Volaris-AI/dia` |
 | Visibility | Private |
 | Default branch | `main` |
-| Local remote | `origin` -> `https://github.com/Volaris-AI/wynne-lvl-3` |
+| Local remote | `origin` -> `https://github.com/Volaris-AI/dia` |
 
 The rollout should grow this repository over time. The first implementation should make the GitHub-only factory useful before adding Kubernetes deployment mutation.
 
 ## Baseline Findings
 
-### Active Factory Shape In `level-3-v2`
+### Active Factory Shape In the Upstream Baseline
 The active `.github/workflows` directory defines these factory roles:
 
 | Workflow | Trigger | Runner | Purpose |
@@ -58,7 +58,7 @@ Important baseline conflicts:
 - The issue-label handler exists only under `workflows.disabled`; active orchestration relies primarily on Product Owner and Project Manager creating and assigning work rather than direct label-triggered issue execution. In this spec, that Project Manager role is called **Project Coordinator**; the baseline workflow file can still be named `agent-project-manager.yml`.
 - The README says to avoid Octokit, but active `pr-enrichment.yml` uses `actions/github-script`. The factory should avoid Octokit inside Copilot SDK tools, but deterministic workflow steps may use `gh` or `actions/github-script` when simpler and scoped.
 
-Runner placement note: the table above records the active `level-3-v2` baseline. The reusable factory should not copy all of that runner placement. Most SDK control agents can run on GitHub-hosted runners; self-hosted should be reserved for jobs that need private environment access, cluster credentials, preinstalled private tooling, host-level remediation, or production-controlled secrets.
+Runner placement note: the table above records the active upstream baseline. The reusable factory should not copy all of that runner placement. Most SDK control agents can run on GitHub-hosted runners; self-hosted should be reserved for jobs that need private environment access, cluster credentials, preinstalled private tooling, host-level remediation, or production-controlled secrets.
 
 ### Agent Runtime Pattern
 The reusable runtime pattern is:
@@ -261,7 +261,7 @@ Recommended initial placement:
 | Operations Manager | split: `ubuntu-latest` for GitHub/board/cost APIs, self-hosted for private env checks | Avoid unnecessary privileged runner use |
 | Runner cleanup/remediation | self-hosted | Host-level maintenance |
 
-### Verified Existing `level-3-v2` Infrastructure
+### Verified Existing Upstream-Baseline Infrastructure
 Verified with `az`, `kubectl`, `helm`, and `gh` on 2026-06-05.
 
 #### Azure Subscription
@@ -303,7 +303,7 @@ Current Helm releases:
 | `aks-selfheal-prod` | `app` in `prod`; `ingress-nginx`; Istio 1.28.3; AKS managed overlay/VPA add-ons |
 
 Reuse recommendation:
-- Reuse the clusters for prototype factory deployment only if we create new namespaces, for example `wynne-dev`, `wynne-test`, and `wynne-prod`, rather than overwriting existing `dev`, `test`, or `prod`.
+- Reuse the clusters for prototype factory deployment only if we create new namespaces, for example `dia-dev`, `dia-test`, and `dia-prod`, rather than overwriting existing `dev`, `test`, or `prod`.
 - Before using prod, resolve the `nodepool1` provisioning failure and decide whether the two scheduling-disabled nodes are intentional.
 - Add namespace-specific RBAC/service accounts for deploy workflows instead of letting a generic runner identity mutate the whole cluster.
 - If the long-term design uses GitHub OIDC or workload identity, enable/configure those deliberately; current clusters report OIDC issuer disabled.
@@ -325,11 +325,11 @@ Reuse recommendation:
 Reuse recommendation:
 - Reuse `acrselfhealstg` for early image builds if repository credentials/RBAC are granted.
 - Do not rely on ACR admin credentials as the long-term path; prefer scoped tokens, managed identity, or OIDC-based push where possible.
-- Create new image repository names/tags for this template and avoid overwriting `level-3-v2` images.
-- Existing Front Door endpoints are tied to `level-3-v2` routes; create separate endpoints/routes or use temporary ingress URLs for the new template.
+- Create new image repository names/tags for this template and avoid overwriting the upstream baseline images.
+- Existing Front Door endpoints are tied to the upstream baseline routes; create separate endpoints/routes or use temporary ingress URLs for the new template.
 
 #### Self-Hosted Runner Inventory
-GitHub repository `Volaris-AI/level-3-v2` currently reports three online self-hosted runners:
+The upstream baseline repository currently reports three online self-hosted runners:
 
 | GitHub runner | Status | Busy | Labels |
 |---|---|---:|---|
@@ -355,7 +355,7 @@ Reuse recommendation:
 - If keeping VM runners, update docs/scripts to reflect the verified VM reality: `github-runners-rg` currently exposes only `github-runner-01`, while `rg-selfheal-staging` contains `vm-gh-runner`.
 
 #### Existing GitHub Configuration
-Verified non-secret repository variables in `Volaris-AI/level-3-v2`:
+Verified non-secret repository variables in the upstream baseline repository:
 
 | Variable | Value |
 |---|---|
@@ -381,7 +381,7 @@ Verified secret names only; values were not read:
 
 Configuration needed for this template if reusing the infrastructure:
 - Create equivalent variables/secrets in the new repository.
-- Add prod variables if production deploy workflows need them; `level-3-v2` variables currently expose dev/staging AKS config but not an `AKS_PROD_*` pair through the variable API output.
+- Add prod variables if production deploy workflows need them; the upstream baseline variables currently expose dev/staging AKS config but not an `AKS_PROD_*` pair through the variable API output.
 - Add environment-specific URLs for this template rather than reusing the `selfheal` Front Door URL.
 - Ensure `PROJECT_MANAGER_PAT` has access to the new repository and can assign Copilot, manage project items, and query workflow/runners as required.
 
@@ -445,7 +445,7 @@ The baseline agents are directionally right, but they do not yet fully mimic a h
 | `incident-manager` | Incident commander/SRE | Converts runtime failures into postmortems, follow-ups, and reliability work |
 | `handoff-guardian` | Engineering manager / delivery lead | Ensures closed PRs/issues did not drop acceptance criteria |
 
-Several of these already exist in `level-3-v2` as disabled or prompt-only assets (`architect`, `security-auditor`, `handoff-guardian`, audit agents). The factory should activate a smaller, clearer subset rather than adding many overlapping auditors.
+Several of these already exist in the upstream baseline as disabled or prompt-only assets (`architect`, `security-auditor`, `handoff-guardian`, audit agents). The factory should activate a smaller, clearer subset rather than adding many overlapping auditors.
 
 ### Workflow Gaps To Add
 | Workflow | Purpose | Runner |
@@ -996,7 +996,7 @@ A single repo-local configuration file that parameterizes the factory:
 ```yaml
 repository:
   owner: Volaris-AI
-  name: wynne-lvl-3
+  name: dia
   default_branch: main
 
 factory:
@@ -1038,7 +1038,7 @@ The implementation should tolerate missing commands and mark them as skipped wit
 Use an incremental rollout. The first implementation should prove ticket flow, Copilot assignment, PR validation, and roadmap coordination before any workflow mutates Kubernetes.
 
 ### MVP: GitHub-Only Factory
-Goal: make the software factory useful inside `Volaris-AI/wynne-lvl-3` without requiring self-hosted runners or live cluster access.
+Goal: make the software factory useful inside `Volaris-AI/dia` without requiring self-hosted runners or live cluster access.
 
 MVP includes:
 
@@ -1069,13 +1069,13 @@ MVP excludes:
 All MVP workflows should run on `ubuntu-latest`.
 
 ### Phase 2: Kubernetes Nonprod Profile
-Goal: deploy this template to Kubernetes without touching existing `level-3-v2` namespaces.
+Goal: deploy this template to Kubernetes without touching existing the upstream baseline namespaces.
 
 Add:
 
 - `charts/app` or `deploy/k8s`
 - image build workflow using `acrselfhealstg`
-- namespaces such as `wynne-dev` and `wynne-test`
+- namespaces such as `dia-dev` and `dia-test`
 - namespace-scoped RBAC/service accounts
 - self-hosted deploy runner or protected runner group
 - `deploy-dev.yml`
@@ -1083,14 +1083,14 @@ Add:
 - smoke tests
 - Release Manager coordination workflow
 
-Phase 2 must not use `dev`, `test`, or `prod` namespaces that already belong to `level-3-v2`.
+Phase 2 must not use `dev`, `test`, or `prod` namespaces that already belong to the upstream baseline.
 
 ### Phase 3: Production Profile
 Goal: production deployment only after nonprod release flow is reliable.
 
 Add:
 
-- `wynne-prod` namespace or separate production cluster decision
+- `dia-prod` namespace or separate production cluster decision
 - protected environment approvals
 - rollback workflow
 - production Release Manager gates
@@ -1101,7 +1101,7 @@ Add:
 Before Phase 3, resolve or consciously accept the current `aks-selfheal-prod` node pool issue.
 
 ### 2. `.github/agents/*.agent.md`
-Initial agents should be adapted from `level-3-v2`, but generalized:
+Initial agents should be adapted from the upstream baseline, but generalized:
 
 - `product-owner.agent.md`: issue triage, backlog shaping, project board maintenance.
 - `project-manager.agent.md`: assignment, Copilot PR flow control, stale work cleanup.
@@ -1156,7 +1156,7 @@ Example desired shape:
 The current baseline has many independent `package.json` files and duplicated SDK boilerplate. The factory should start with a shared runtime and add bespoke packages only for deterministic analyzers such as QA coverage parsing.
 
 ### 5. Workflow Set
-Create an initial active workflow set based on `level-3-v2`:
+Create an initial active workflow set based on the upstream baseline:
 
 | Workflow | Baseline | Initial Template Adaptation | Recommended runner |
 |---|---|---|---|
@@ -1220,7 +1220,7 @@ Optional based on enabled profiles:
 - Deployment secrets such as app JWTs.
 - Cloud credentials only if the runner is not already authenticated and the profile permits them.
 
-Baseline note: `level-3-v2` assumes self-hosted runners are already authenticated for Azure and explicitly avoids Entra/OIDC. For this template, environment authentication must be profile-specific and documented rather than assumed globally.
+Baseline note: the upstream baseline assumes self-hosted runners are already authenticated for Azure and explicitly avoids Entra/OIDC. For this template, environment authentication must be profile-specific and documented rather than assumed globally.
 
 ## Guardrails
 
@@ -1263,7 +1263,7 @@ Baseline note: `level-3-v2` assumes self-hosted runners are already authenticate
 ### Phase 1: Baseline Factory Scaffold
 - [ ] Create `.github/factory.yml`.
 - [ ] Create generalized `.github/copilot-instructions.md`.
-- [ ] Add initial agents adapted from `level-3-v2`.
+- [ ] Add initial agents adapted from the upstream baseline.
 - [ ] Add shared TypeScript runtime and tests.
 - [ ] Add core workflows: Product Owner, Project Coordinator, Tech Reviewer, QA Manager, Docs Improver, Actions Monitor.
 - [ ] Add PR validation and enrichment for this repo's current stack.

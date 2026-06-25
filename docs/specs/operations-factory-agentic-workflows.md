@@ -15,10 +15,10 @@ This spec proposes the same pattern, turned **outward at the product's users**: 
 
 The foundation already exists across two repos we compose:
 
-- **`wynne-lvl-3/temporal/`** — Temporal (Python SDK 1.5.0) orchestrating the rental domain: signal-driven workflows (`RentalOrderWorkflow`), activities over the generic entity model (`entities` / `entity_versions` / `relationships_v2` / `entity_facts` / `time_series_points`), human-in-the-loop via workflow signals.
+- **`dia/temporal/`** — Temporal (Python SDK 1.5.0) orchestrating the rental domain: signal-driven workflows (`RentalOrderWorkflow`), activities over the generic entity model (`entities` / `entity_versions` / `relationships_v2` / `entity_facts` / `time_series_points`), human-in-the-loop via workflow signals.
 - **`ma-app/temporal/`** — the **agentic** pattern: a Temporal activity calls an agent function, which runs a `chat_with_tools()` loop against **Azure OpenAI** with a constrained tool-belt and a strict JSON output schema, then returns a validated structured verdict to the workflow. This is exactly the "investigation" shape we want, with internal rental data as the evidence instead of the web.
 
-**Operations Factory = `ma-app`'s Azure-OpenAI agentic activity pattern + `wynne-lvl-3`'s rental domain + the software factory's governance model — with all prompts and configuration stored in tenant-scoped database schemas so the workflow code stays identical across tenants and is configurable without code changes.**
+**Operations Factory = `ma-app`'s Azure-OpenAI agentic activity pattern + `dia`'s rental domain + the software factory's governance model — with all prompts and configuration stored in tenant-scoped database schemas so the workflow code stays identical across tenants and is configurable without code changes.**
 
 This document is for review before implementation.
 
@@ -92,7 +92,7 @@ Structurally identical to `ma-app`'s `CompanyEvaluationWorkflow → om_classify_
 - The `om_create_workflow_run` / `om_finalize_workflow_run` run-record bookkeeping (try/except that always finalizes).
 - `agents/tools/url_safety.py` (only for the optional external-lookup tool, e.g. supplier re-rent pricing).
 
-**Reuse from `wynne-lvl-3` (already here):**
+**Reuse from `dia` (already here):**
 - The generic entity substrate and its activities (`supabase_core.create_entity`, `update_entity_scd2`, `get_entity`, `append_event`, `create_relationship`) as the read/write + **audit-trail** layer.
 - Signal-driven human-in-the-loop, as in `RentalOrderWorkflow` (`@workflow.signal` + `workflow.wait_condition(...)`).
 - The `Worker` registration shape in `temporal/src/worker.py`.
@@ -287,7 +287,7 @@ Agent receives the contract payload + line items + relevant `time_series_points`
 - On approve: draft the invoice adjustment via entity activities; emit an audit event capturing the agent's rationale **and** the approver. On reject/timeout: record outcome, continue.
 
 ### 7.5 Value
-Turns a multi-hour pre-cycle reconciliation into a reviewed exception queue; directly attacks revenue leakage and DSO — Wynne's headline metrics. Strong demo: synthetic data seeded with a handful of deliberate leaks the agent reliably catches.
+Turns a multi-hour pre-cycle reconciliation into a reviewed exception queue; directly attacks revenue leakage and DSO — Dealernet's headline metrics. Strong demo: synthetic data seeded with a handful of deliberate leaks the agent reliably catches.
 
 ---
 

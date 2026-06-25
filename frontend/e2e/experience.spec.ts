@@ -107,11 +107,11 @@ interface ScopedAvailabilityDrillDown {
   categoryId: string;
 }
 
-const AVAILABILITY_HREF_BASE = 'https://wynne-rental.dev';
-const PORTAL_SCHEDULE_HREF_BASE = 'https://wynne-rental.dev';
-const PORTAL_CATALOG_HREF_BASE = 'https://wynne-rental.dev';
-const PORTAL_INTAKE_HREF_BASE = 'https://wynne-rental.dev';
-const PORTAL_BILLING_UPDATE_HREF_BASE = 'https://wynne-rental.dev';
+const AVAILABILITY_HREF_BASE = 'https://dia-rental.dev';
+const PORTAL_SCHEDULE_HREF_BASE = 'https://dia-rental.dev';
+const PORTAL_CATALOG_HREF_BASE = 'https://dia-rental.dev';
+const PORTAL_INTAKE_HREF_BASE = 'https://dia-rental.dev';
+const PORTAL_BILLING_UPDATE_HREF_BASE = 'https://dia-rental.dev';
 const AVAILABILITY_NEXT_ACTION_NAME = /create|new|order|contract|reserve|transfer|return|maintenance/i;
 const MAINTENANCE_WORK_ORDER_BILLING_VIEW = '/rest/v1/v_maintenance_work_order_billing';
 // Portal-financials: allow up to this many raw UUIDs on the page; the component uses IDs internally
@@ -1036,12 +1036,12 @@ async function signInAsPortalCustomer(page: Page, email: string, password: strin
   await page.waitForLoadState('domcontentloaded');
 
   const [supabaseUrl, supabaseAnonKey] = await page.evaluate((): [string, string] => {
-    const config = ((window as unknown as Record<string, unknown>).__WYNNE_RUNTIME_CONFIG__ ?? {}) as Record<string, string>;
+    const config = ((window as unknown as Record<string, unknown>).__DIA_RUNTIME_CONFIG__ ?? {}) as Record<string, string>;
     const url = config['VITE_SUPABASE_URL'];
     const key = config['VITE_SUPABASE_ANON_KEY'];
     if (!url || !key) {
       throw new Error(
-        `window.__WYNNE_RUNTIME_CONFIG__ is missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY — cannot sign in as portal customer`,
+        `window.__DIA_RUNTIME_CONFIG__ is missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY — cannot sign in as portal customer`,
       );
     }
     return [url, key];
@@ -2199,7 +2199,7 @@ test.describe('@experience good-UX expectations (allowed to fail = improvement b
 
     // Start from a clean local dashboard state so the assertions are deterministic.
     await page.evaluate(() => {
-      localStorage.removeItem('wynne_saved_dashboards');
+      localStorage.removeItem('dia_saved_dashboards');
     });
     await page.reload({ waitUntil: 'load' });
     await page.waitForLoadState('networkidle');
@@ -2268,7 +2268,7 @@ test.describe('@experience good-UX expectations (allowed to fail = improvement b
     await page.waitForLoadState('networkidle');
 
     const staleKeyInjected = await page.evaluate((name) => {
-      const storageKey = 'wynne_saved_dashboards';
+      const storageKey = 'dia_saved_dashboards';
       const raw = localStorage.getItem(storageKey);
       if (!raw) return false;
       try {
@@ -4804,7 +4804,7 @@ test.describe('@experience good-UX expectations (allowed to fail = improvement b
 
     await page.getByTestId('input-contact-name').fill('Portal E2E Customer');
     await page.getByTestId('input-contact-email').fill('portal.e2e@example.com');
-    await page.getByTestId('input-company-name').fill('Wynne Portal QA');
+    await page.getByTestId('input-company-name').fill('Dealernet Portal QA');
     await page.getByTestId('input-notes').fill('Please include delivery estimate with the quote.');
 
     const submitQuoteResponsePromise = page.waitForResponse((response) => (

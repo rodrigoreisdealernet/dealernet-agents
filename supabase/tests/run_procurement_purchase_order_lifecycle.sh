@@ -8,7 +8,7 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-container_name="${CONTAINER_NAME:-wynne_procurement_purchase_order_lifecycle_$$}"
+container_name="${CONTAINER_NAME:-dia_procurement_purchase_order_lifecycle_$$}"
 postgres_image="${POSTGRES_IMAGE:-postgres:17}"
 readiness_timeout_seconds="${READINESS_TIMEOUT_SECONDS:-30}"
 

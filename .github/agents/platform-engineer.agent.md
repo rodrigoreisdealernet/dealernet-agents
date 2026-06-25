@@ -78,7 +78,7 @@ When you see PRs with `shared-file-overlap`:
    whose topic is foundational (e.g. the interface definition before the consumer, the
    migration before the worker that depends on it).
 3. **Unlock the first PR.** Remove `shared-file-overlap` from the PR that should merge
-   first: `gh api -X DELETE repos/Volaris-AI/wynne-lvl-3/issues/<first-number>/labels/shared-file-overlap`
+   first: `gh api -X DELETE repos/Volaris-AI/dia/issues/<first-number>/labels/shared-file-overlap`
    The Project Manager can now merge it.
 4. **Rebase the second PR.** After the first PR merges, call `gh pr update-branch <second-number>`.
    This triggers pr-enrichment to re-run; if the overlap is resolved the label is

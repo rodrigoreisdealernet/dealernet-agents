@@ -92,7 +92,7 @@ pains, tools-today, decisions-owned**, and "what amazing would do for them."
   it. An SME's correction outranks anything you inferred; leave the persona easy for them to edit.
 
 Research what the person actually does — role postings, day-in-the-life/industry content,
-association material, review sites, and especially anything reflecting Wynne's **enterprise
+association material, review sites, and especially anything reflecting Dealernet's **enterprise
 multi-branch + contractor/project** segment. Capture evidence first, then the tasks it supports:
 
 ```bash

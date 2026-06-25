@@ -80,7 +80,7 @@ flowchart TD
 | `engine/ExpressionEvaluator.ts` | Resolves `{{…}}` expressions against `{state, data, params, item, row}` |
 | `engine/ActionDispatcher.ts` | Executes declarative actions: `setState`, `navigate`, `apiCall`, `refetch`, `openModal`/`closeModal`, `sequence`, `conditional` |
 | `engine/useDataSources.ts` | Maps each data source to a TanStack Query; supports Supabase / API / static |
-| `data/supabase.ts` | Supabase client singleton; config from `window.__WYNNE_RUNTIME_CONFIG__` or Vite env ([ADR-0022](../adrs/0022-frontend-prod-bundle-runtime-config.md)) |
+| `data/supabase.ts` | Supabase client singleton; config from `window.__DIA_RUNTIME_CONFIG__` or Vite env ([ADR-0022](../adrs/0022-frontend-prod-bundle-runtime-config.md)) |
 | `data/queryBuilder.ts` | Turns a `SupabaseDataSource` into a PostgREST query (filters, order, limit) |
 | `registry/` | Maps JSON component `type` → registered React component |
 | `components/engine/` | Generic, registry-bound renderers (layout, typography, forms, actions, feedback) |

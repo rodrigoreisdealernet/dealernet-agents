@@ -16,15 +16,15 @@ The repo already has adjacent boundaries:
 - ADR-0037 defines the callback -> `ops_api` -> Temporal integration pattern.
 - The CRM spec defines `customer_document` and `customer_issue` records for compliance state.
 
-The unresolved architecture decision is whether Wynne should ever hold raw driver's-license and
+The unresolved architecture decision is whether Dealernet should ever hold raw driver's-license and
 selfie media inside its own browser, API, database, storage, or Temporal payloads, or whether those
-artifacts must stay on the verification provider while Wynne stores only derived outcomes and report
+artifacts must stay on the verification provider while Dealernet stores only derived outcomes and report
 references.
 
 ## Decision
 
 We keep raw driver's-license and selfie capture on a provider-hosted verification surface and store
-only consent state, provider references, and derived verification metadata or outcomes inside Wynne.
+only consent state, provider references, and derived verification metadata or outcomes inside Dealernet.
 
 Verification links use a narrow fragment-token boundary, provider callbacks terminate at `ops_api`
 for authenticity validation, and operational enforcement uses CRM document and issue state rather
@@ -32,7 +32,7 @@ than storing raw media in Supabase Storage, `entity_versions`, or Temporal paylo
 
 ## Consequences
 
-- Wynne avoids expanding its own data boundary to raw biometric and document media.
+- Dealernet avoids expanding its own data boundary to raw biometric and document media.
 - The platform now requires a first-class consent record, provider DPA review, retention controls,
   and a pseudonymization or erasure path for stored derived verification records.
 - The CRM document model must explicitly carve driver's-license verification out of the generic
@@ -45,8 +45,8 @@ than storing raw media in Supabase Storage, `entity_versions`, or Temporal paylo
 ## Alternatives considered
 
 - **Store raw license and selfie media in Supabase Storage with signed URLs:** rejected because it
-  materially expands Wynne's biometric and sensitive-document handling scope.
-- **Proxy raw uploads through Wynne-managed frontend or API surfaces before forwarding to the
+  materially expands Dealernet's biometric and sensitive-document handling scope.
+- **Proxy raw uploads through Dealernet-managed frontend or API surfaces before forwarding to the
   provider:** rejected because transient handling still expands the raw-data boundary and creates
   unnecessary retention risk.
 - **Skip selfie face match and treat license upload as a plain document workflow:** rejected because

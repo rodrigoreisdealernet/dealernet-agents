@@ -146,7 +146,7 @@ create table if not exists public.external_id_map (
   exchange_key text,
   entity_type text not null,
   entity_id text not null,
-  wynne_entity_id uuid,
+  dia_entity_id uuid,
   external_id text not null,
   external_system text,
   metadata jsonb not null default '{}'::jsonb,
@@ -159,7 +159,7 @@ alter table public.external_id_map add column if not exists provider text;
 alter table public.external_id_map add column if not exists exchange_key text;
 alter table public.external_id_map add column if not exists entity_type text;
 alter table public.external_id_map add column if not exists entity_id text;
-alter table public.external_id_map add column if not exists wynne_entity_id uuid;
+alter table public.external_id_map add column if not exists dia_entity_id uuid;
 alter table public.external_id_map add column if not exists external_system text;
 alter table public.external_id_map add column if not exists metadata jsonb not null default '{}'::jsonb;
 alter table public.external_id_map add column if not exists created_at timestamptz not null default now();
@@ -220,7 +220,7 @@ update public.integration_sync_state s
        direction = coalesce(
          s.direction,
          case
-           when coalesce(s.source_of_truth, 'wynne') in ('provider', 'mulesoft') then 'inbound'
+           when coalesce(s.source_of_truth, 'dia') in ('provider', 'mulesoft') then 'inbound'
            else 'outbound'
          end
        ),
@@ -366,7 +366,7 @@ begin
 
   if new.direction is null then
     new.direction := case
-      when coalesce(new.source_of_truth, 'wynne') in ('provider', 'mulesoft') then 'inbound'
+      when coalesce(new.source_of_truth, 'dia') in ('provider', 'mulesoft') then 'inbound'
       else 'outbound'
     end;
   end if;
@@ -417,9 +417,9 @@ create unique index if not exists idx_external_id_map_entity
 create unique index if not exists idx_external_id_map_external
   on public.external_id_map (tenant_id, connector_key, exchange_key, external_id);
 
-create unique index if not exists idx_external_id_map_wynne
-  on public.external_id_map (tenant_id, provider, entity_type, wynne_entity_id, external_system)
-  where wynne_entity_id is not null;
+create unique index if not exists idx_external_id_map_dia
+  on public.external_id_map (tenant_id, provider, entity_type, dia_entity_id, external_system)
+  where dia_entity_id is not null;
 
 create unique index if not exists idx_external_id_map_provider_external
   on public.external_id_map (tenant_id, provider, entity_type, external_id, external_system);

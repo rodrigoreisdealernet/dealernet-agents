@@ -109,7 +109,7 @@ as $$
 declare
   v_contract_id uuid;
   v_token_hash  text;
-  v_demo_token  constant text := 'wynne-demo-portal-scope-001';
+  v_demo_token  constant text := 'dia-demo-portal-scope-001';
 begin
   -- Look up the demo contract entity ID
   select e.id

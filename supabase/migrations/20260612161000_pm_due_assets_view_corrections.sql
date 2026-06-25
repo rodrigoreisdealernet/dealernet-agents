@@ -5,7 +5,7 @@
 --             metadata->>'source' = 'maintenance'
 --          2. suppressing meter-trigger pre-due until a meter-specific lead
 --             concept exists in the product model
--- Issue: https://github.com/Volaris-AI/wynne-lvl-3/issues/1166
+-- Issue: https://github.com/Volaris-AI/dia/issues/1166
 
 CREATE OR REPLACE VIEW v_pm_due_assets
 WITH (security_invoker = true)

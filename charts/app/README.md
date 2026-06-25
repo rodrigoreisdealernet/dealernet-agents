@@ -43,7 +43,7 @@ path (ADR-0100). A manual fallback is available for local development where ESO 
 
    The store name/kind must match `externalSecrets.secretStore.{name,kind}` in your values
    file (dev uses `openbao-dev` / `SecretStore`). The committed bootstrap manifest is
-   `deploy/k8s/wynne-dev/secretstore-openbao.yaml`; the dev shape (proven against ESO v2.6.0,
+   `deploy/k8s/dia-dev/secretstore-openbao.yaml`; the dev shape (proven against ESO v2.6.0,
    API `external-secrets.io/v1`) is:
 
    ```yaml
@@ -51,19 +51,19 @@ path (ADR-0100). A manual fallback is available for local development where ESO 
    kind: SecretStore
    metadata:
      name: openbao-dev
-     namespace: wynne-dev
+     namespace: dia-dev
    spec:
      provider:
        vault:                                       # OpenBao is Vault-API compatible
-         server: "http://openbao.wynne-vault.svc:8200"  # dev-grade OpenBao (HTTP, no TLS)
+         server: "http://openbao.dia-vault.svc:8200"  # dev-grade OpenBao (HTTP, no TLS)
          path: "secret"                             # KV-v2 mount; remoteRef.key is relative to this
          version: "v2"
          auth:
            kubernetes:
              mountPath: "kubernetes"
-             role: "wynne-eso"                      # OpenBao role bound to the eso-vault-auth SA
+             role: "dia-eso"                      # OpenBao role bound to the eso-vault-auth SA
              serviceAccountRef:
-               name: "eso-vault-auth"               # SA in wynne-dev ESO authenticates as
+               name: "eso-vault-auth"               # SA in dia-dev ESO authenticates as
    ```
 
 3. **Provision OpenBao secrets** at the paths declared in `externalSecrets.keys.*` (and, for
@@ -75,9 +75,9 @@ path (ADR-0100). A manual fallback is available for local development where ESO 
    # Use `bao kv put` for initial provisioning of a new path.
    # For subsequent rotations use `bao kv patch` to update only the changed field
    # without overwriting sibling fields at the same path.
-   bao kv put secret/wynne/dev/runtime \
+   bao kv put secret/dia/dev/runtime \
      anon-key="$SUPABASE_ANON_KEY" service-role-key="$SUPABASE_SERVICE_ROLE_KEY"
-   bao kv put secret/wynne/dev/acr-pull dockerconfigjson="$ACR_DOCKERCONFIGJSON"
+   bao kv put secret/dia/dev/acr-pull dockerconfigjson="$ACR_DOCKERCONFIGJSON"
    ```
 
    No literal values should appear in repo files, workflow env, or operator shell history.
@@ -176,16 +176,16 @@ helm install my-release charts/app \
 
 The chart includes static values profiles for the proposed namespaces:
 
-- `charts/app/values-dev.yaml` (`wynne-dev`)
-- `charts/app/values-test.yaml` (`wynne-test`)
-- `charts/app/values-prod.yaml` (`wynne-prod`)
+- `charts/app/values-dev.yaml` (`dia-dev`)
+- `charts/app/values-test.yaml` (`dia-test`)
+- `charts/app/values-prod.yaml` (`dia-prod`)
 
 Use them with explicit namespace selection:
 
 ```bash
-helm upgrade --install app-dev charts/app -n wynne-dev -f charts/app/values-dev.yaml
-helm upgrade --install app-test charts/app -n wynne-test -f charts/app/values-test.yaml
-helm upgrade --install app-prod charts/app -n wynne-prod -f charts/app/values-prod.yaml
+helm upgrade --install app-dev charts/app -n dia-dev -f charts/app/values-dev.yaml
+helm upgrade --install app-test charts/app -n dia-test -f charts/app/values-test.yaml
+helm upgrade --install app-prod charts/app -n dia-prod -f charts/app/values-prod.yaml
 ```
 
 ---
@@ -223,7 +223,7 @@ helm template my-release charts/app \
 helm template my-release charts/app \
   --set adminAccess.grafana.enabled=true \
   --set adminAccess.grafana.nativeOidc.enabled=true \
-  --set adminAccess.grafana.nativeOidc.issuerUrl=https://keycloak.example.com/realms/wynne \
+  --set adminAccess.grafana.nativeOidc.issuerUrl=https://keycloak.example.com/realms/dia \
   --set adminAccess.grafana.nativeOidc.redirectUrl=https://grafana.example.com/login/generic_oauth \
   --set adminAccess.grafana.ingress.enabled=true
 ```
@@ -242,17 +242,17 @@ Required secret keys for **Grafana native OIDC** (in `grafana-oidc-secrets-<env>
 When `adminAccess.grafana.nativeOidc.enabled=true`, the app chart renders the Grafana ingress
 routing directly to the upstream. The `GF_AUTH_GENERIC_OAUTH_*` ConfigMap that Grafana consumes
 at runtime is rendered by the **observability chart** (`charts/observability`) in the
-`wynne-observability` namespace where Grafana runs. Configure the kube-prometheus-stack Grafana
+`dia-observability` namespace where Grafana runs. Configure the kube-prometheus-stack Grafana
 deployment to consume that ConfigMap via `extraEnvFrom` and mount the above Secret directly.
 
 **Keycloak group → Grafana role mapping** (rendered in the ConfigMap):
 
 | Keycloak group | Grafana role |
 |---|---|
-| `wynne-admin` | `Admin` |
-| `wynne-branch-manager` | `Editor` |
-| `wynne-field-operator` | `Editor` |
-| `wynne-read-only` | denied |
+| `dia-admin` | `Admin` |
+| `dia-branch-manager` | `Editor` |
+| `dia-field-operator` | `Editor` |
+| `dia-read-only` | denied |
 | (no matching group) | denied |
 
 See [ADR-0036](../../docs/adrs/0036-keycloak-sso-consumer-rbac.md) and `OPERATIONS.md` for full context.

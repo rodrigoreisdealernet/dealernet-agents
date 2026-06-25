@@ -19,7 +19,7 @@ const NAMESPACES_MANIFEST_PATH = join(REPO_ROOT, "deploy/k8s/namespaces.yaml");
 const RBAC_MANIFEST_PATH = join(REPO_ROOT, "deploy/k8s/rbac-nonprod.yaml");
 const DB_BOOTSTRAP_RBAC_MANIFEST_PATH = join(REPO_ROOT, "deploy/k8s/rbac-dev-db-bootstrap.yaml");
 
-const ALLOWED_NONPROD_NAMESPACES = new Set(["wynne-dev", "wynne-test", "wynne-observability"]);
+const ALLOWED_NONPROD_NAMESPACES = new Set(["dia-dev", "dia-test", "dia-observability"]);
 
 function loadYamlFile(path: string): YamlDocument {
   const parsed = yaml.load(readFileSync(path, "utf8"));
@@ -117,14 +117,14 @@ describe("phase2 nonprod deployment foundations", () => {
       expect(outcome.summary).toContain("## Deploy Dev preflight");
       expect(outcome.summary).toContain("| App deploy (frontend + worker) | ⏭️ skipped");
       expect(outcome.summary).toContain("| DB bootstrap | ⏭️ skipped");
-      expect(outcome.summary).toContain("explicit least-privilege WYNNE_DB_BOOTSTRAP_USER");
+      expect(outcome.summary).toContain("explicit least-privilege DIA_DB_BOOTSTRAP_USER");
       expect(outcome.log).not.toContain("App deploy enabled but DB bootstrap SKIPPED");
     });
 
     it("enables app deploy and DB bootstrap when all required settings are present", () => {
       const outcome = runGateScript({
         DEPLOY_ENABLED: "true",
-        DEV_NAMESPACE: "wynne-dev",
+        DEV_NAMESPACE: "dia-dev",
         HAS_DEPLOY_KUBECONFIG: "true",
         HAS_DB_BOOTSTRAP_KUBECONFIG: "true",
         HAS_DB_BOOTSTRAP_USER: "true",
@@ -132,38 +132,38 @@ describe("phase2 nonprod deployment foundations", () => {
       });
       expect(outcome.appEnabled).toBe("true");
       expect(outcome.bootstrapEnabled).toBe("true");
-      expect(outcome.summary).toContain("| App deploy (frontend + worker) | ✅ enabled → `wynne-dev` |");
+      expect(outcome.summary).toContain("| App deploy (frontend + worker) | ✅ enabled → `dia-dev` |");
       expect(outcome.summary).toContain("| DB bootstrap | ✅ enabled |");
-      expect(outcome.summary).toContain("wynne-dev");
+      expect(outcome.summary).toContain("dia-dev");
       expect(outcome.log).not.toContain("App deploy enabled but DB bootstrap SKIPPED");
     });
 
     it("keeps app deploy enabled when DB bootstrap kubeconfig is missing", () => {
       const outcome = runGateScript({
         DEPLOY_ENABLED: "true",
-        DEV_NAMESPACE: "wynne-dev",
+        DEV_NAMESPACE: "dia-dev",
         HAS_DEPLOY_KUBECONFIG: "true",
       });
       expect(outcome.appEnabled).toBe("true");
       expect(outcome.bootstrapEnabled).toBe("false");
-      expect(outcome.summary).toContain("| App deploy (frontend + worker) | ✅ enabled → `wynne-dev` |");
+      expect(outcome.summary).toContain("| App deploy (frontend + worker) | ✅ enabled → `dia-dev` |");
       expect(outcome.summary).toContain("| DB bootstrap | ⏭️ skipped");
-      expect(outcome.summary).toContain("explicit least-privilege WYNNE_DB_BOOTSTRAP_USER");
+      expect(outcome.summary).toContain("explicit least-privilege DIA_DB_BOOTSTRAP_USER");
       expect(outcome.log).toContain("App deploy enabled but DB bootstrap SKIPPED");
     });
 
     it("keeps app deploy enabled when DB bootstrap variables are missing", () => {
       const outcome = runGateScript({
         DEPLOY_ENABLED: "true",
-        DEV_NAMESPACE: "wynne-dev",
+        DEV_NAMESPACE: "dia-dev",
         HAS_DEPLOY_KUBECONFIG: "true",
         HAS_DB_BOOTSTRAP_KUBECONFIG: "true",
       });
       expect(outcome.appEnabled).toBe("true");
       expect(outcome.bootstrapEnabled).toBe("false");
-      expect(outcome.summary).toContain("| App deploy (frontend + worker) | ✅ enabled → `wynne-dev` |");
+      expect(outcome.summary).toContain("| App deploy (frontend + worker) | ✅ enabled → `dia-dev` |");
       expect(outcome.summary).toContain("| DB bootstrap | ⏭️ skipped");
-      expect(outcome.summary).toContain("explicit least-privilege WYNNE_DB_BOOTSTRAP_USER");
+      expect(outcome.summary).toContain("explicit least-privilege DIA_DB_BOOTSTRAP_USER");
       expect(outcome.log).toContain("App deploy enabled but DB bootstrap SKIPPED");
     });
 
@@ -248,7 +248,7 @@ describe("phase2 nonprod deployment foundations", () => {
       expect(incidentScript).toContain("queue:ops");
       expect(incidentScript).toContain("priority:critical");
       expect(incidentScript).toContain("KUBE_CONFIG_DEV_DB_BOOTSTRAP");
-      expect(incidentScript).toContain("wynne-db-bootstrap-runner");
+      expect(incidentScript).toContain("dia-db-bootstrap-runner");
     });
   });
 
@@ -276,7 +276,7 @@ describe("phase2 nonprod deployment foundations", () => {
         (step) => step["name"] === "Clear stuck Helm release state (if pending)"
       );
       const helmUpgradeIdx = steps.findIndex(
-        (step) => step["name"] === "Helm upgrade (wynne-dev)"
+        (step) => step["name"] === "Helm upgrade (dia-dev)"
       );
       expect(selfHealIdx).toBeGreaterThan(-1);
       expect(helmUpgradeIdx).toBeGreaterThan(-1);
@@ -354,19 +354,19 @@ describe("phase2 nonprod deployment foundations", () => {
         const cases = [
           {
             path: DEPLOY_DEV_WORKFLOW_PATH,
-            appStepName: "Helm upgrade (wynne-dev)",
+            appStepName: "Helm upgrade (dia-dev)",
             obsStepName: "Helm upgrade observability stack (dev profile)",
             valuesFile: "charts/observability/values-dev.yaml",
           },
           {
             path: DEPLOY_TEST_WORKFLOW_PATH,
-            appStepName: "Helm upgrade (wynne-test)",
+            appStepName: "Helm upgrade (dia-test)",
             obsStepName: "Helm upgrade observability stack (test profile)",
             valuesFile: "charts/observability/values-test.yaml",
           },
           {
             path: DEPLOY_PROD_WORKFLOW_PATH,
-            appStepName: "Helm upgrade (wynne-prod)",
+            appStepName: "Helm upgrade (dia-prod)",
             obsStepName: "Helm upgrade observability stack (prod profile)",
             valuesFile: "charts/observability/values-prod.yaml",
           },
@@ -377,7 +377,7 @@ describe("phase2 nonprod deployment foundations", () => {
           const jobs = workflow["jobs"] as YamlDocument;
           const deploy = jobs["deploy"] as YamlDocument;
           const env = deploy["env"] as YamlDocument;
-          expect(env["OBSERVABILITY_NAMESPACE"]).toBe("wynne-observability");
+          expect(env["OBSERVABILITY_NAMESPACE"]).toBe("dia-observability");
 
           const steps = getDeployWorkflowSteps(testCase.path);
           const appIdx = steps.findIndex((step) => step["name"] === testCase.appStepName);
@@ -453,12 +453,12 @@ describe("phase2 nonprod deployment foundations", () => {
   });
 
   describe("nonprod namespace/RBAC safety", () => {
-    it("keeps namespace manifests scoped to wynne-dev and wynne-test", () => {
+    it("keeps namespace manifests scoped to dia-dev and dia-test", () => {
       const namespaceDocs = loadYamlDocuments(NAMESPACES_MANIFEST_PATH);
       const namespaces = namespaceDocs.map((doc) => (doc["metadata"] as YamlDocument)["name"]);
 
       expect(namespaceDocs.every((doc) => doc["kind"] === "Namespace")).toBe(true);
-      expect(namespaces).toEqual(["wynne-dev", "wynne-test", "wynne-observability"]);
+      expect(namespaces).toEqual(["dia-dev", "dia-test", "dia-observability"]);
       expect(namespaces.every((ns) => ALLOWED_NONPROD_NAMESPACES.has(ns as string))).toBe(true);
     });
 
@@ -500,7 +500,7 @@ describe("phase2 nonprod deployment foundations", () => {
       expect(
         serviceAccounts.every((doc) => {
           const metadata = doc["metadata"] as YamlDocument;
-          return metadata["namespace"] === "wynne-supabase";
+          return metadata["namespace"] === "dia-supabase";
         })
       ).toBe(true);
 
@@ -522,7 +522,7 @@ describe("phase2 nonprod deployment foundations", () => {
       ).toBe(false);
 
       const inClusterBootstrapRole = roles.find(
-        (doc) => ((doc["metadata"] as YamlDocument)["name"] as string) === "wynne-db-bootstrap"
+        (doc) => ((doc["metadata"] as YamlDocument)["name"] as string) === "dia-db-bootstrap"
       );
       expect(inClusterBootstrapRole).toBeTruthy();
       expect((inClusterBootstrapRole?.["rules"] as YamlDocument[]).length).toBe(2);
@@ -531,13 +531,13 @@ describe("phase2 nonprod deployment foundations", () => {
       expect(roleBindings).toHaveLength(2);
       for (const roleBinding of roleBindings) {
         const metadata = roleBinding["metadata"] as YamlDocument;
-        expect(metadata["namespace"]).toBe("wynne-supabase");
+        expect(metadata["namespace"]).toBe("dia-supabase");
         const roleRef = roleBinding["roleRef"] as YamlDocument;
         expect(roleRef["kind"]).toBe("Role");
         const subjects = roleBinding["subjects"] as YamlDocument[];
         expect(subjects).toHaveLength(1);
         expect(subjects[0]["kind"]).toBe("ServiceAccount");
-        expect(subjects[0]["namespace"]).toBe("wynne-supabase");
+        expect(subjects[0]["namespace"]).toBe("dia-supabase");
       }
     });
   });

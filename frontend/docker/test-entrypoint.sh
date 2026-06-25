@@ -77,7 +77,7 @@ run_entrypoint \
   VITE_SUPABASE_ANON_KEY="my-anon-key" \
   2>/dev/null
 CONFIG=$(cat /tmp/runtime-config.js)
-assert_contains     "$CONFIG" "config: global runtime-config object present"  "window\.__WYNNE_RUNTIME_CONFIG__"
+assert_contains     "$CONFIG" "config: global runtime-config object present"  "window\.__DIA_RUNTIME_CONFIG__"
 assert_contains     "$CONFIG" "config: VITE_SUPABASE_URL key present"         "VITE_SUPABASE_URL:"
 assert_contains     "$CONFIG" "config: URL encoded with atob()"               'atob\('
 assert_contains     "$CONFIG" "config: VITE_SUPABASE_ANON_KEY key present"    "VITE_SUPABASE_ANON_KEY:"
@@ -99,7 +99,7 @@ else
 fi
 assert_contains "$(cat /tmp/runtime-config.js)" \
   "entrypoint: /tmp file contains runtime config object" \
-  "window\.__WYNNE_RUNTIME_CONFIG__"
+  "window\.__DIA_RUNTIME_CONFIG__"
 
 # ── test: generic non-VITE_ var names (SUPABASE_URL / SUPABASE_ANON_KEY) ─────
 echo ""

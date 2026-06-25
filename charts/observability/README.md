@@ -1,9 +1,9 @@
 # charts/observability
 
 Helm chart for in-cluster monitoring with `kube-prometheus-stack` in the dedicated
-`wynne-observability` namespace.
+`dia-observability` namespace.
 
-It also renders the Wynne scrape contract resources required for issue #679:
+It also renders the Dealernet scrape contract resources required for issue #679:
 
 - `Service` + `ServiceMonitor` for Temporal server metrics
 - `Service` + `ServiceMonitor` for temporal-worker SDK metrics

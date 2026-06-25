@@ -1,7 +1,7 @@
 # Production-grade OpenBao Helm values (ADR-0040). Chart: openbao/openbao (>= 0.28.x).
 #
 #   helm repo add openbao https://openbao.github.io/openbao-helm
-#   helm upgrade --install openbao openbao/openbao -n wynne-vault -f deploy/openbao/values-ha.yaml
+#   helm upgrade --install openbao openbao/openbao -n dia-vault -f deploy/openbao/values-ha.yaml
 #
 # ⚠️  Apply only via the cluster-admin platform-bootstrap path — NOT the namespace-scoped
 #     gha-deployer. Production auto-unseal is committed here as a scoped Azure Key Vault key
@@ -78,7 +78,7 @@ server:
         # Keep metrics on the authenticated management path; add a private scraper/token later
         # rather than exposing unauthenticated telemetry on the shared listener.
         seal "azurekeyvault" {
-          vault_name                   = "wynne-openbao-prod"
+          vault_name                   = "dia-openbao-prod"
           key_name                     = "openbao-prod-unseal"
           environment                  = "AzurePublicCloud"
           use_workload_identity        = "true"

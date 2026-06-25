@@ -21,7 +21,7 @@ The Sage portfolio spans several distinct products with incompatible APIs:
 | Sage X3 | Enterprise on-premise / cloud | REST API but field-operator–heavy setup; heavyweight |
 | Sage 300 | Mid-market (construction, rental) | COM/SOAP legacy; limited REST |
 
-The Wynne rental platform is a cloud-native SaaS system already consuming cloud APIs (NetSuite,
+The Dealernet rental platform is a cloud-native SaaS system already consuming cloud APIs (NetSuite,
 Billtrust, Samsara, Descartes). The integration framework (ADR-0037) calls for clean OAuth
 client_credentials auth at the connector boundary with secret references in `secret_refs`, which
 rules out the legacy COM/SOAP connectors.
@@ -42,7 +42,7 @@ The connector uses **OAuth 2.0 client_credentials** auth with:
 - `client_secret_secret_ref` — OAuth client secret stored as a `secret://` reference
 - `company_id` — non-secret Intacct company identifier stored in `settings`
 
-Supported v1 scopes (accounting data flows consumed by the Wynne rental ERP):
+Supported v1 scopes (accounting data flows consumed by the Dealernet rental ERP):
 
 | Scope | Purpose |
 |-------|---------|

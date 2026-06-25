@@ -1552,7 +1552,7 @@ def _sage_configure_payload() -> dict[str, Any]:
     return {
         "enabled": True,
         "api_base_url": "https://api.intacct.com",
-        "company_id": "wynne-rental-01",
+        "company_id": "dia-rental-01",
         "client_id_secret_ref": "secret://integrations/sage_intacct/client_id",
         "client_secret_secret_ref": "secret://integrations/sage_intacct/client_secret",
         "enabled_scopes": ["general_ledger"],
@@ -1582,7 +1582,7 @@ def test_configure_sage_intacct_persists_selected_variant_config() -> None:
     assert row["connector_key"] == "sage_intacct"
     assert row["settings"] == {
         "api_base_url": "https://api.intacct.com",
-        "company_id": "wynne-rental-01",
+        "company_id": "dia-rental-01",
         "enabled_scopes": ["general_ledger"],
         "healthcheck_path": "/v1/healthcheck",
         "healthcheck_timeout_seconds": 5,
@@ -1626,7 +1626,7 @@ def test_validate_sage_intacct_uses_saved_selected_scope_without_defaulting() ->
     assert healthcheck_configs == [
         {
             "api_base_url": "https://api.intacct.com",
-            "company_id": "wynne-rental-01",
+            "company_id": "dia-rental-01",
             "client_id_secret_ref": "secret://integrations/sage_intacct/client_id",
             "client_secret_secret_ref": "secret://integrations/sage_intacct/client_secret",
             "enabled_scopes": ["general_ledger"],
@@ -1682,7 +1682,7 @@ def test_validate_sage_intacct_ignores_ambiguous_sage_default_row() -> None:
     assert response.status_code == 200
     assert supabase.integration_config["sage"]["settings"]["company_id"] == "ambiguous-default-company"
     assert len(healthcheck_configs) == 1
-    assert healthcheck_configs[0]["company_id"] == "wynne-rental-01"
+    assert healthcheck_configs[0]["company_id"] == "dia-rental-01"
     assert healthcheck_configs[0]["company_id"] != "ambiguous-default-company"
     assert healthcheck_configs[0]["enabled_scopes"] == ["general_ledger"]
     assert healthcheck_configs[0]["general_ledger_profile"] == {"account_id_field": "glAccountNo"}
@@ -1713,7 +1713,7 @@ def _coupa_configure_payload() -> dict[str, Any]:
     return {
         "enabled": True,
         "api_base_url": "https://tenant.coupahost.com",
-        "tenant_slug": "wynne-rental",
+        "tenant_slug": "dia-rental",
         "client_id_secret_ref": "secret://integrations/coupa/client_id",
         "client_secret_secret_ref": "secret://integrations/coupa/client_secret",
         "enabled_scopes": ["requisitions", "purchase_orders"],
@@ -1742,7 +1742,7 @@ def test_configure_coupa_persists_tenant_scoped_integration_config() -> None:
     row = supabase.integration_config["coupa"]
     assert row["tenant_id"] == "tenant-a-id"
     assert row["settings"]["enabled_scopes"] == ["requisitions", "purchase_orders"]
-    assert row["settings"]["tenant_slug"] == "wynne-rental"
+    assert row["settings"]["tenant_slug"] == "dia-rental"
     assert row["secret_refs"]["client_id_secret_ref"].startswith("secret://")
     assert "client_id_secret_ref" not in row["settings"]
 
@@ -1783,7 +1783,7 @@ def test_validate_coupa_returns_healthcheck_classification() -> None:
         "enabled": True,
         "settings": {
             "api_base_url": "https://tenant.coupahost.com",
-            "tenant_slug": "wynne-rental",
+            "tenant_slug": "dia-rental",
             "enabled_scopes": ["requisitions"],
             "healthcheck_path": "/api/health",
             "healthcheck_timeout_seconds": 5,
@@ -1821,7 +1821,7 @@ def test_disable_coupa_marks_config_disabled() -> None:
         "enabled": True,
         "settings": {
             "api_base_url": "https://tenant.coupahost.com",
-            "tenant_slug": "wynne-rental",
+            "tenant_slug": "dia-rental",
             "enabled_scopes": ["requisitions"],
         },
         "mappings": {"requisition_mapping_profile": {"requisition_id_field": "id"}},
@@ -1902,7 +1902,7 @@ def test_health_endpoint_returns_ok() -> None:
 
 
 def test_keycloak_federated_admin_principal_can_approve() -> None:
-    """admin (from wynne-admin group via Keycloak federation) can approve findings."""
+    """admin (from dia-admin group via Keycloak federation) can approve findings."""
     client, supabase, temporal, call_order = _make_client(role="admin")
 
     response = client.post(
@@ -1916,7 +1916,7 @@ def test_keycloak_federated_admin_principal_can_approve() -> None:
 
 
 def test_keycloak_federated_branch_manager_principal_can_approve() -> None:
-    """branch_manager (from wynne-branch-manager via Keycloak federation) can approve findings."""
+    """branch_manager (from dia-branch-manager via Keycloak federation) can approve findings."""
     client, supabase, temporal, call_order = _make_client(role="branch_manager")
 
     response = client.post(
@@ -1930,7 +1930,7 @@ def test_keycloak_federated_branch_manager_principal_can_approve() -> None:
 
 
 def test_keycloak_federated_field_operator_principal_can_operate() -> None:
-    """field_operator (from wynne-field-operator via Keycloak federation) is allowed to operate."""
+    """field_operator (from dia-field-operator via Keycloak federation) is allowed to operate."""
     client, supabase, _temporal, _ = _make_client(role="field_operator", can_operate=True)
 
     response = client.post(
@@ -1943,7 +1943,7 @@ def test_keycloak_federated_field_operator_principal_can_operate() -> None:
 
 
 def test_keycloak_federated_read_only_principal_denied_approve() -> None:
-    """read_only (from wynne-read-only or no group via Keycloak federation) cannot approve findings."""
+    """read_only (from dia-read-only or no group via Keycloak federation) cannot approve findings."""
     client, supabase, temporal, _ = _make_client(role="read_only")
 
     response = client.post(

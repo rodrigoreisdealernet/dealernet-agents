@@ -13,7 +13,7 @@ set -euo pipefail
 
 OPENBAO_DIR="deploy/openbao"
 RELEASE="ci-test-openbao"
-NAMESPACE="wynne-vault"
+NAMESPACE="dia-vault"
 PASS=0
 FAIL=0
 

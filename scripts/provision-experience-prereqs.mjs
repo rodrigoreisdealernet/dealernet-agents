@@ -14,11 +14,11 @@ const MAX_AUTH_USER_PAGES = 20;
 const BILLING_TOKEN_TTL_MS = 60 * 60 * 1000;
 const PASSWORD_SPECIALS = '!@#$%^&*';
 const ELIGIBLE_PORTAL_USER = {
-  email: 'portal.eligible.e2e@wynne-rental.dev',
+  email: 'portal.eligible.e2e@dia-rental.dev',
   displayName: 'E2E Portal Eligible',
 };
 const INELIGIBLE_PORTAL_USER = {
-  email: 'portal.ineligible.e2e@wynne-rental.dev',
+  email: 'portal.ineligible.e2e@dia-rental.dev',
   displayName: 'E2E Portal Ineligible',
 };
 
@@ -94,7 +94,7 @@ function writeSecretEnv(name, value, maskedValues) {
 }
 
 function parseScheduleScopeContext(rawUrl) {
-  const parsed = new URL(rawUrl, 'https://wynne.invalid');
+  const parsed = new URL(rawUrl, 'https://dia.invalid');
   const contractId = parsed.pathname.match(/\/portal\/schedule\/([^/?#]+)/)?.[1] ?? '';
   const scopeToken = parsed.searchParams.get('scope') ?? '';
 

@@ -17,7 +17,7 @@
  *
  * Environment variables required for GitHub API calls:
  *   GH_TOKEN            — GitHub token with issues:write permission
- *   GITHUB_REPOSITORY   — owner/repo (e.g. Volaris-AI/wynne-lvl-3)
+ *   GITHUB_REPOSITORY   — owner/repo (e.g. Volaris-AI/dia)
  */
 
 import { createHash } from "node:crypto";

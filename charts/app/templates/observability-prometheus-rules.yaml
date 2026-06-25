@@ -2,7 +2,7 @@
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
-  name: {{ include "app.fullname" . }}-wynne-alerts
+  name: {{ include "app.fullname" . }}-dia-alerts
   labels:
     {{- include "app.labels" . | nindent 4 }}
     {{- with .Values.observability.prometheusRule.additionalLabels }}
@@ -10,7 +10,7 @@ metadata:
     {{- end }}
 spec:
   groups:
-    - name: wynne.temporal-worker
+    - name: dia.temporal-worker
       interval: 60s
       rules:
         # Worker is unreachable — Prometheus has seen no scrape in the last 5 minutes.
@@ -27,7 +27,7 @@ spec:
               The Prometheus scrape target for the Temporal worker
               ({{ include "app.temporalWorkerMetrics.fullname" . }}) has been absent for 5 minutes.
               Workflows will stall and no new activities will execute.
-            runbook_url: "https://github.com/Volaris-AI/wynne-lvl-3/blob/main/OPERATIONS.md"
+            runbook_url: "https://github.com/Volaris-AI/dia/blob/main/OPERATIONS.md"
 
         # Sustained workflow failure rate — more than 5% of completions are failures.
         - alert: TemporalWorkflowFailureSpike
@@ -46,7 +46,7 @@ spec:
             description: >-
               More than 5% of Temporal workflow completions are failures over the last 5 minutes.
               Investigate the failing workflows in the Temporal Web UI.
-            runbook_url: "https://github.com/Volaris-AI/wynne-lvl-3/blob/main/OPERATIONS.md"
+            runbook_url: "https://github.com/Volaris-AI/dia/blob/main/OPERATIONS.md"
 
         # Task-queue backlog — pollers are idle while schedule-to-start latency spikes.
         - alert: TemporalTaskQueueBacklog
@@ -63,9 +63,9 @@ spec:
               The 95th percentile schedule-to-start latency exceeds 30 seconds. This indicates
               a task-queue backlog: work is queued but workers are not picking it up fast enough.
               Check worker health and consider scaling up replicas.
-            runbook_url: "https://github.com/Volaris-AI/wynne-lvl-3/blob/main/OPERATIONS.md"
+            runbook_url: "https://github.com/Volaris-AI/dia/blob/main/OPERATIONS.md"
 
-    - name: wynne.ops-api
+    - name: dia.ops-api
       interval: 60s
       rules:
         # Ops-API health check failures — 5xx rate above 1%.
@@ -86,7 +86,7 @@ spec:
               The ops-api is returning HTTP 5xx responses for more than 1% of requests
               over the last 5 minutes. This may indicate Temporal connectivity issues or
               an unhandled exception.
-            runbook_url: "https://github.com/Volaris-AI/wynne-lvl-3/blob/main/OPERATIONS.md"
+            runbook_url: "https://github.com/Volaris-AI/dia/blob/main/OPERATIONS.md"
 
         # Ops-API is not responding to scrapes.
         - alert: OpsApiDown
@@ -102,9 +102,9 @@ spec:
               The Prometheus scrape target for the ops-api
               ({{ include "app.opsApi.fullname" . }}) has been absent for 5 minutes.
               Workflow approvals and asset-update signals are unavailable.
-            runbook_url: "https://github.com/Volaris-AI/wynne-lvl-3/blob/main/OPERATIONS.md"
+            runbook_url: "https://github.com/Volaris-AI/dia/blob/main/OPERATIONS.md"
 
-    - name: wynne.ops-approval-sla
+    - name: dia.ops-approval-sla
       interval: 300s
       rules:
         # Schedule-miss — no successful revrec schedule seen in the last 25 hours (1 day + buffer).
@@ -122,5 +122,5 @@ spec:
               The RevRec ops workflow schedule has not processed for more than 25 hours.
               Expected cadence is daily (0 2 * * *). Investigate Temporal schedules in the
               Temporal Web UI and check worker health.
-            runbook_url: "https://github.com/Volaris-AI/wynne-lvl-3/blob/main/OPERATIONS.md"
+            runbook_url: "https://github.com/Volaris-AI/dia/blob/main/OPERATIONS.md"
 {{- end }}

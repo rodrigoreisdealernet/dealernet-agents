@@ -1,6 +1,6 @@
 name: Roadmap curation (daily)
 
-# Daily roadmap hygiene for org Project #15 "Wynne ERP Factory": the roadmap-curator agent
+# Daily roadmap hygiene for org Project #15 "Dealernet ERP Factory": the roadmap-curator agent
 # sweeps the whole board and keeps the Initiative → Epic → Story sub-issue hierarchy tight —
 # attaching orphan stories to epics and orphan epics to initiatives (creating initiatives/epics
 # as needed), and adding off-board issues. It operates directly via the gh CLI.

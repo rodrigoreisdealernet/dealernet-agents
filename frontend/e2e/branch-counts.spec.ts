@@ -11,7 +11,7 @@ import { test, expect, type APIRequestContext, type Page } from '@playwright/tes
  * pre-existing data.  The fixture is cleaned up in a finally block regardless
  * of outcome.
  *
- * Closes https://github.com/Volaris-AI/wynne-lvl-3/issues/1402 (follow-up
+ * Closes https://github.com/Volaris-AI/dia/issues/1402 (follow-up
  * gating coverage requested in PR #1510 review comment 4491945403).
  */
 

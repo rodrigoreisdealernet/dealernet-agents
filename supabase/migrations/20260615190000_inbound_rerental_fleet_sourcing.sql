@@ -19,7 +19,7 @@ for each row execute function public.update_updated_at();
 insert into public.dim_inbound_rerental_custody_status (key, label, description, sort_order, is_terminal)
 values
   ('inbound_requested',        'Inbound Requested',        'Third-party unit requested and agreement recorded',                         1, false),
-  ('inbound_received',         'Inbound Received',         'Third-party unit received into Wynne custody',                               2, false),
+  ('inbound_received',         'Inbound Received',         'Third-party unit received into Dealernet custody',                               2, false),
   ('deployed_on_contract',     'Deployed On Contract',     'Third-party unit is fulfilling a customer contract line',                    3, false),
   ('off_hired_pending_return', 'Off-Hired Pending Return', 'Customer off-hire complete; unit awaiting physical return to owner',        4, false),
   ('returned_to_owner',        'Returned To Owner',        'Unit returned to third-party owner and custody closed',                     5, true)

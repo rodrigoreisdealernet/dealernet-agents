@@ -6,7 +6,7 @@ apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
   name: openbao-selfsigned
-  namespace: wynne-vault
+  namespace: dia-vault
 spec:
   selfSigned: {}
 ---
@@ -14,7 +14,7 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: openbao-ca
-  namespace: wynne-vault
+  namespace: dia-vault
 spec:
   isCA: true
   commonName: openbao-ca
@@ -31,7 +31,7 @@ apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
   name: openbao-ca-issuer
-  namespace: wynne-vault
+  namespace: dia-vault
 spec:
   ca:
     secretName: openbao-ca
@@ -40,7 +40,7 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: openbao-tls
-  namespace: wynne-vault
+  namespace: dia-vault
 spec:
   secretName: openbao-tls        # mounted at /openbao/userconfig/openbao-tls (values-ha.yaml)
   duration: 2160h                # 90d leaf
@@ -55,11 +55,11 @@ spec:
   # SANs cover the per-pod Raft peer DNS, the client Service, and loopback.
   dnsNames:
     - openbao
-    - openbao.wynne-vault
-    - openbao.wynne-vault.svc
-    - openbao.wynne-vault.svc.cluster.local
+    - openbao.dia-vault
+    - openbao.dia-vault.svc
+    - openbao.dia-vault.svc.cluster.local
     - "*.openbao-internal"
-    - "*.openbao-internal.wynne-vault.svc.cluster.local"
+    - "*.openbao-internal.dia-vault.svc.cluster.local"
     - localhost
   ipAddresses:
     - 127.0.0.1

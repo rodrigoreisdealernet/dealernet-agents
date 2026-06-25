@@ -199,12 +199,12 @@ describe('saved dashboard persistence', () => {
   });
 
   it('loadSavedDashboards returns [] on corrupt JSON', () => {
-    localStorage.setItem('wynne_saved_dashboards', 'not-json}}}');
+    localStorage.setItem('dia_saved_dashboards', 'not-json}}}');
     expect(loadSavedDashboards()).toEqual([]);
   });
 
   it('loadSavedDashboards returns [] when storage contains a non-array', () => {
-    localStorage.setItem('wynne_saved_dashboards', '{"foo":"bar"}');
+    localStorage.setItem('dia_saved_dashboards', '{"foo":"bar"}');
     expect(loadSavedDashboards()).toEqual([]);
   });
 });

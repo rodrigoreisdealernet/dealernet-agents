@@ -1,6 +1,6 @@
 name: Agent — Cluster Guardian
 
-# Dedicated workflow for wynne-* runtime health monitoring and approved remediation.
+# Dedicated workflow for dia-* runtime health monitoring and approved remediation.
 #
 # Trigger cadence:
 #   - Scheduled: hourly at :45 for read-only detection only.
@@ -87,7 +87,7 @@ jobs:
             missing+=("factory.yml stack.deployment_profiles must include kubernetes-app")
           fi
 
-          # ── Namespace allowlist: non-empty and all wynne-* ──────────────────
+          # ── Namespace allowlist: non-empty and all dia-* ──────────────────
           allowed_namespaces="$(awk '
             /^cluster_guardian:/ { in_cg=1; next }
             in_cg && /^[[:space:]]*allowed_namespaces:/ { in_ns=1; next }
@@ -99,7 +99,7 @@ jobs:
           else
             while IFS= read -r ns; do
               [[ -n "$ns" ]] || continue
-              if [[ "$ns" != wynne-* ]]; then
+              if [[ "$ns" != dia-* ]]; then
                 missing+=("cluster_guardian.allowed_namespaces contains out-of-scope namespace: $ns")
               fi
             done <<< "$allowed_namespaces"

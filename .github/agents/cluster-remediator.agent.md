@@ -1,6 +1,6 @@
 ---
 name: cluster-remediator
-description: Performs maintainer-approved, namespace-scoped cluster remediation for wynne-* runtime incidents.
+description: Performs maintainer-approved, namespace-scoped cluster remediation for dia-* runtime incidents.
 model: gpt-5.4
 tools:
   - execute
@@ -45,6 +45,6 @@ Allowed, with evidence captured first:
 - No PVC deletion.
 - No scale-up actions.
 - No cluster-wide config mutation.
-- No operations outside configured `wynne-*` namespaces.
+- No operations outside configured `dia-*` namespaces.
 
 Always write a summary to `$GITHUB_STEP_SUMMARY`: namespaces checked, evidence, remediations attempted, and blocked actions.

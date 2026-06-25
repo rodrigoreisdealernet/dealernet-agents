@@ -18,7 +18,7 @@ begin
      and (
        (table_name = 'integration_config' and column_name in ('id', 'tenant_id', 'connector_key', 'provider', 'provider_key', 'settings', 'secret_refs', 'mappings', 'connection_config', 'feature_config'))
        or (table_name = 'integration_delivery_log' and column_name in ('integration_id', 'tenant_id', 'connector_key', 'exchange_key', 'idempotency_key', 'scope_key', 'request_payload', 'response_payload'))
-       or (table_name = 'external_id_map' and column_name in ('tenant_id', 'connector_key', 'provider', 'exchange_key', 'entity_type', 'entity_id', 'wynne_entity_id', 'external_system'))
+       or (table_name = 'external_id_map' and column_name in ('tenant_id', 'connector_key', 'provider', 'exchange_key', 'entity_type', 'entity_id', 'dia_entity_id', 'external_system'))
        or (table_name = 'integration_sync_state' and column_name in ('integration_id', 'tenant_id', 'connector_key', 'exchange_key', 'scope_key', 'cursor', 'cursor_value', 'state', 'metadata'))
      );
 
@@ -182,7 +182,7 @@ begin
     'admin-scope',
     'rental_contract',
     '00000000-0000-0000-0000-000000000101',
-    'wynne',
+    'dia',
     'admin-delivery',
     'pending',
     '{"contract_id":"contract-admin"}'::jsonb
@@ -195,7 +195,7 @@ begin
     exchange_key,
     entity_type,
     entity_id,
-    wynne_entity_id,
+    dia_entity_id,
     external_id,
     external_system,
     metadata
@@ -226,7 +226,7 @@ begin
     'mulesoft',
     'rental_contract_snapshot',
     'admin-scope',
-    'wynne',
+    'dia',
     'outbound',
     'cursor-admin',
     '{"source":"admin"}'::jsonb
@@ -402,7 +402,7 @@ begin
       'field-operator-scope',
       'rental_contract',
       '00000000-0000-0000-0000-000000000102',
-      'wynne',
+      'dia',
       'field-operator-delivery',
       'pending',
       '{}'::jsonb
@@ -417,7 +417,7 @@ begin
   v_blocked := false;
   begin
     insert into public.external_id_map (
-      tenant_id, connector_key, provider, exchange_key, entity_type, entity_id, wynne_entity_id, external_id, external_system, metadata
+      tenant_id, connector_key, provider, exchange_key, entity_type, entity_id, dia_entity_id, external_id, external_system, metadata
     ) values (
       'a1111111-1111-1111-1111-111111111111'::uuid,
       'mulesoft',
@@ -446,7 +446,7 @@ begin
       'mulesoft',
       'rental_contract_snapshot',
       'field-operator-scope',
-      'wynne',
+      'dia',
       'outbound',
       'cursor-field',
       '{}'::jsonb
@@ -526,7 +526,7 @@ begin
       'read-only-scope',
       'rental_contract',
       '00000000-0000-0000-0000-000000000103',
-      'wynne',
+      'dia',
       'read-only-delivery',
       'pending',
       '{}'::jsonb
@@ -541,7 +541,7 @@ begin
   v_blocked := false;
   begin
     insert into public.external_id_map (
-      tenant_id, connector_key, provider, exchange_key, entity_type, entity_id, wynne_entity_id, external_id, external_system, metadata
+      tenant_id, connector_key, provider, exchange_key, entity_type, entity_id, dia_entity_id, external_id, external_system, metadata
     ) values (
       'a1111111-1111-1111-1111-111111111111'::uuid,
       'mulesoft',
@@ -570,7 +570,7 @@ begin
       'mulesoft',
       'rental_contract_snapshot',
       'read-only-scope',
-      'wynne',
+      'dia',
       'outbound',
       'cursor-read-only',
       '{}'::jsonb
@@ -630,7 +630,7 @@ begin
       'cross-tenant-scope',
       'rental_contract',
       '00000000-0000-0000-0000-000000000104',
-      'wynne',
+      'dia',
       'cross-tenant-delivery',
       'pending',
       '{}'::jsonb
@@ -645,7 +645,7 @@ begin
   v_blocked := false;
   begin
     insert into public.external_id_map (
-      tenant_id, connector_key, provider, exchange_key, entity_type, entity_id, wynne_entity_id, external_id, external_system, metadata
+      tenant_id, connector_key, provider, exchange_key, entity_type, entity_id, dia_entity_id, external_id, external_system, metadata
     ) values (
       'a1111111-1111-1111-1111-111111111111'::uuid,
       'mulesoft',
@@ -674,7 +674,7 @@ begin
       'mulesoft',
       'rental_contract_snapshot',
       'cross-tenant-scope',
-      'wynne',
+      'dia',
       'outbound',
       'cursor-cross-tenant',
       '{}'::jsonb

@@ -74,13 +74,13 @@ begin
       v_tenant_a, 'sage', 'invoice', 'INV-200',
       'internal-inv-200', 'sage-inv-200', 'drifted',
       'digest-i1', 'digest-i2', '["invoice_total","posting_period"]'::jsonb,
-      'invoice total drift detected between Wynne and Sage', v_event_a1
+      'invoice total drift detected between Dealernet and Sage', v_event_a1
     ),
     (
       v_tenant_a, 'sage', 'general_ledger', 'GL-300',
       'internal-gl-300', null, 'missing_sage',
       'digest-gl-1', null, '["posted_at","line_count"]'::jsonb,
-      'general-ledger batch exists in Wynne but is absent in Sage', v_event_a2
+      'general-ledger batch exists in Dealernet but is absent in Sage', v_event_a2
     ),
     (
       v_tenant_b, 'sage', 'accounts_receivable', 'AR-400',

@@ -19,14 +19,14 @@ The repo already has the right adjacent architecture:
   implicit generic-table scoping.
 
 The unresolved architecture decision is whether campaign publishing and attribution should rely on
-browser-direct provider APIs and client-only tracking, or whether Wynne should centralize publish,
+browser-direct provider APIs and client-only tracking, or whether Dealernet should centralize publish,
 click-id capture, conversion matching, and provider-side conversion sync on the server side with
 explicit consent and tenant scoping.
 
 ## Decision
 
 We keep campaign publish, spend synchronization, click-id persistence, conversion matching, and
-provider-side conversion synchronization on Wynne's server-side API plus Temporal connector path.
+provider-side conversion synchronization on Dealernet's server-side API plus Temporal connector path.
 
 Campaign and audience definitions live in first-party records, storefront click identifiers are
 forwarded through server-side submission paths, attribution records carry explicit tenant scope, and

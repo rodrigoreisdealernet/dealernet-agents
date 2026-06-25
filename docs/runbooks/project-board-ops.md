@@ -1,12 +1,12 @@
 # Project board operations (via `gh`)
 
-Canonical recipes for operating org **Project #15 "Wynne ERP Factory"** (owner `Volaris-AI`,
+Canonical recipes for operating org **Project #15 "Dealernet ERP Factory"** (owner `Volaris-AI`,
 id `PVT_kwDODKSoyc4BZ2Sp`) and the **Initiative → Epic → Story** sub-issue hierarchy
 ([ADR-0030](../adrs/0030-project-plan-initiative-epic-story-hierarchy.md)).
 
 Agents perform these **directly with the `gh` CLI** (`gh project`, `gh issue`, and
 `gh api graphql` for sub-issues). There is no wrapper script — introspect IDs at runtime and
-run the commands. All examples use `--owner Volaris-AI` and repo `Volaris-AI/wynne-lvl-3`.
+run the commands. All examples use `--owner Volaris-AI` and repo `Volaris-AI/dia`.
 
 > Single-select board fields: **Status** (Triage/Design/Todo/In Progress/Review/Ready for
 > Release/Done/Blocked), **Queue Owner**, **Phase**, **Risk**, **Copilot Eligible**.
@@ -14,7 +14,7 @@ run the commands. All examples use `--owner Volaris-AI` and repo `Volaris-AI/wyn
 ## Resolve project + field/option IDs (once per run)
 
 ```bash
-PROJECT=15; OWNER=Volaris-AI; REPO=Volaris-AI/wynne-lvl-3
+PROJECT=15; OWNER=Volaris-AI; REPO=Volaris-AI/dia
 PID=$(gh api graphql -f query='query($o:String!,$n:Int!){organization(login:$o){projectV2(number:$n){id}}}' \
         -f o=$OWNER -F n=$PROJECT --jq '.data.organization.projectV2.id')   # PVT_kwDODKSoyc4BZ2Sp
 
@@ -59,7 +59,7 @@ gh api graphql -H 'GraphQL-Features: sub_issues' \
 gh api graphql -H 'GraphQL-Features: sub_issues' \
   -f query='query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){issue(number:$n){
     parent{number title} subIssues(first:100){totalCount nodes{number title}} }}}' \
-  -f o=$OWNER -f r=wynne-lvl-3 -F n=<N>
+  -f o=$OWNER -f r=dia -F n=<N>
 
 # Discover the standing levels (numbers change — never hard-code):
 gh issue list --repo $REPO --state open --search 'Initiative: in:title' --json number,title

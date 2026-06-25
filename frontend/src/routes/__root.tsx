@@ -91,7 +91,7 @@ function RootComponent() {
   );
 }
 
-const GITHUB_REPO_URL = 'https://github.com/Volaris-AI/wynne-lvl-3';
+const GITHUB_REPO_URL = 'https://github.com/Volaris-AI/dia';
 
 function BuildFooter() {
   const sha = import.meta.env.VITE_COMMIT_SHA || 'dev';
@@ -150,7 +150,7 @@ function Header({ onMenuClick }: { onMenuClick: () => void }) {
           <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center">
             <Truck className="h-4 w-4 text-primary-foreground" aria-hidden="true" />
           </div>
-          <span className="text-lg font-bold tracking-tight">Wynne Systems</span>
+          <span className="text-lg font-bold tracking-tight">Dealernet</span>
         </div>
         <div className="ml-auto flex items-center gap-3">
           {!isLoading && profile && (

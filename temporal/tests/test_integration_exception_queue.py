@@ -104,7 +104,7 @@ def _make_assessment(
         "summary": "Customer portal order-sync is failing with 503 errors.",
         "affected_workflows": ["order_sync", "availability_check"],
         "likely_root_cause": "Downstream portal service unavailable.",
-        "recommended_action": "Check portal service health dashboard and contact Wynne support.",
+        "recommended_action": "Check portal service health dashboard and contact Dealernet support.",
         "evidence": ["503 Gateway Timeout on order_sync endpoint", "3 retries exhausted"],
         "duplicate_signal_count": 0,
         "source_connector": source_connector,
@@ -603,7 +603,7 @@ async def test_review_signal_is_informational_only() -> None:
         reviewer_id="admin-1",
         decision="routed",
         fingerprint=f"integration-exception:portal_exception:{_CONNECTOR_KEY}:{_EXCEPTION_ID}",
-        note="Escalated to Wynne support team.",
+        note="Escalated to Dealernet support team.",
     )
     await wf.review_exception_thread(sig)
     key = f"integration-exception:portal_exception:{_CONNECTOR_KEY}:{_EXCEPTION_ID}"
@@ -612,7 +612,7 @@ async def test_review_signal_is_informational_only() -> None:
     assert review["reviewer_id"] == "admin-1"
     assert review["decision"] == "routed"
     assert review["reviewed"] is True
-    assert review["note"] == "Escalated to Wynne support team."
+    assert review["note"] == "Escalated to Dealernet support team."
 
 
 @pytest.mark.asyncio

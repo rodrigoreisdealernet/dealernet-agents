@@ -67,7 +67,7 @@ jobs:
           helm dependency build charts/observability >/dev/null
           for profile in values.yaml values-dev.yaml values-test.yaml values-prod.yaml; do
             echo "::group::kubeconform (observability) — $profile"
-            helm template wynne-observability charts/observability -f "charts/observability/$profile" \
+            helm template dia-observability charts/observability -f "charts/observability/$profile" \
               | kubeconform -strict -summary -ignore-missing-schemas
             echo "::endgroup::"
           done

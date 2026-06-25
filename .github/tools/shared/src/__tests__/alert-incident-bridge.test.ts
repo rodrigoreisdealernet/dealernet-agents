@@ -35,12 +35,12 @@ function makeFiringAlert(overrides: Partial<AlertmanagerAlert> = {}): Alertmanag
     labels: {
       alertname: "TemporalWorkerDown",
       severity: "critical",
-      env: "wynne-test",
+      env: "dia-test",
       component: "temporal-worker",
-      namespace: "wynne-test",
+      namespace: "dia-test",
     },
     annotations: {
-      summary: "Temporal worker is down in wynne-test",
+      summary: "Temporal worker is down in dia-test",
       description: "No temporal-worker pod has been ready for 2 minutes.",
       runbook: "See OPERATIONS.md § TemporalWorkerDown",
     },
@@ -66,7 +66,7 @@ function makePayload(alerts: AlertmanagerAlert[]): AlertmanagerPayload {
     status: "firing",
     receiver: "incident-bridge",
     groupLabels: { alertname: "TemporalWorkerDown" },
-    commonLabels: { env: "wynne-test" },
+    commonLabels: { env: "dia-test" },
     commonAnnotations: {},
     externalURL: "https://alertmanager.example.com",
     alerts,
@@ -81,7 +81,7 @@ function makeMockApi(existingIssues: GitHubIssue[] = []): GitHubApiClient & {
 } {
   const mockIssue: GitHubIssue = {
     number: 42,
-    title: "🔴 [wynne-test] TemporalWorkerDown — temporal-worker",
+    title: "🔴 [dia-test] TemporalWorkerDown — temporal-worker",
     body: "existing body",
     state: "open",
     html_url: "https://github.com/example/repo/issues/42",
@@ -116,8 +116,8 @@ describe("buildAlertFingerprint", () => {
   });
 
   it("differs for different environments", () => {
-    const alertA = makeFiringAlert({ labels: { ...makeFiringAlert().labels, env: "wynne-test" } });
-    const alertB = makeFiringAlert({ labels: { ...makeFiringAlert().labels, env: "wynne-prod" } });
+    const alertA = makeFiringAlert({ labels: { ...makeFiringAlert().labels, env: "dia-test" } });
+    const alertB = makeFiringAlert({ labels: { ...makeFiringAlert().labels, env: "dia-prod" } });
     expect(buildAlertFingerprint(alertA)).not.toBe(buildAlertFingerprint(alertB));
   });
 
@@ -192,7 +192,7 @@ describe("buildIssueTitle", () => {
     const alert = makeFiringAlert();
     const title = buildIssueTitle(alert);
     expect(title).toContain("🔴");
-    expect(title).toContain("wynne-test");
+    expect(title).toContain("dia-test");
     expect(title).toContain("TemporalWorkerDown");
     expect(title).toContain("temporal-worker");
   });
@@ -216,7 +216,7 @@ describe("buildIssueBody", () => {
   it("includes the summary and description", () => {
     const alert = makeFiringAlert();
     const body = buildIssueBody(alert, buildAlertFingerprint(alert));
-    expect(body).toContain("Temporal worker is down in wynne-test");
+    expect(body).toContain("Temporal worker is down in dia-test");
     expect(body).toContain("No temporal-worker pod has been ready");
   });
 
@@ -230,7 +230,7 @@ describe("buildIssueBody", () => {
     const alert = makeFiringAlert();
     const body = buildIssueBody(alert, buildAlertFingerprint(alert));
     expect(body).toContain("alertname=TemporalWorkerDown");
-    expect(body).toContain("env=wynne-test");
+    expect(body).toContain("env=dia-test");
   });
 });
 

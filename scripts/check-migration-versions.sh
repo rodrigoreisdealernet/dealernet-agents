@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Guard-rail (armadilha #1 do Wynne): rejeita prefixos de versão de migration duplicados.
+# Guard-rail (armadilha #1 do Dealernet): rejeita prefixos de versão de migration duplicados.
 # O Supabase CLI usa o timestamp/versão como chave primária — duplicatas abortam o
 # `supabase start`/`db reset`. Este check barra o problema no CI, antes de quebrar o
 # ambiente local de qualquer pessoa.

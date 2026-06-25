@@ -402,7 +402,7 @@ begin
     if v_portal_url is null then
       raise exception 'portal_get_demo_portal_url() returned null — demo portal scope token must be seeded for demo-baseline-rental-contract-002';
     end if;
-    if v_portal_url not like '/portal/schedule/%?scope=wynne-demo-portal-scope-001' then
+    if v_portal_url not like '/portal/schedule/%?scope=dia-demo-portal-scope-001' then
       raise exception 'portal_get_demo_portal_url() returned unexpected URL: %', v_portal_url;
     end if;
   end;
@@ -414,10 +414,10 @@ begin
     perform set_config('request.jwt.claim.role', 'service_role', true);
     select portal_get_demo_intake_url() into v_intake_url;
     if v_intake_url is null then
-      raise exception 'portal_get_demo_intake_url() returned null — demo intake token must be seeded (wynne-demo-intake-token-001)';
+      raise exception 'portal_get_demo_intake_url() returned null — demo intake token must be seeded (dia-demo-intake-token-001)';
     end if;
-    if v_intake_url not like '/portal/intake/%#token=wynne-demo-intake-token-001' then
-      raise exception 'portal_get_demo_intake_url() returned unexpected URL: % (expected /portal/intake/<uuid>#token=wynne-demo-intake-token-001)', v_intake_url;
+    if v_intake_url not like '/portal/intake/%#token=dia-demo-intake-token-001' then
+      raise exception 'portal_get_demo_intake_url() returned unexpected URL: % (expected /portal/intake/<uuid>#token=dia-demo-intake-token-001)', v_intake_url;
     end if;
   end;
 

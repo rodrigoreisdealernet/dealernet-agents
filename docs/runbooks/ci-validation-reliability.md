@@ -1,7 +1,7 @@
 # Runbook: Factory CI / PR validation reliability
 
 Triage and remediation guide for the recurring shared CI / PR-validation failures tracked
-under epic [#1537](https://github.com/Volaris-AI/wynne-lvl-3/issues/1537).  Use this
+under epic [#1537](https://github.com/Volaris-AI/dia/issues/1537).  Use this
 runbook when a CI incident affects multiple open PRs or recurs on `main` rather than being
 specific to a single PR author's change.
 
@@ -69,7 +69,7 @@ escalate to a GitHub organisation admin — the root cause may be at the org lev
 `Apply Supabase migrations + demo seed (in-cluster job)` step with an error similar to:
 
 ```
-ConfigMap "wynne-db-bootstrap-<run-id>-1-migrations" is invalid:
+ConfigMap "dia-db-bootstrap-<run-id>-1-migrations" is invalid:
 [...]: Too long: may not be more than 1048576 bytes
 ```
 
@@ -156,11 +156,11 @@ degraded job fails explicitly so the monitoring gap is visible.
 **Triage.**
 ```bash
 # Check which runners are registered and their status
-gh api "/repos/Volaris-AI/wynne-lvl-3/actions/runners?per_page=100" \
+gh api "/repos/Volaris-AI/dia/actions/runners?per_page=100" \
   --jq '.runners[] | {name, status, labels: [.labels[].name]}'
 
 # Filter to factory-cluster-guardian runners
-gh api "/repos/Volaris-AI/wynne-lvl-3/actions/runners?per_page=100" \
+gh api "/repos/Volaris-AI/dia/actions/runners?per_page=100" \
   --jq '.runners[] | select(.labels[].name == "factory-cluster-guardian") | {name, status}'
 ```
 

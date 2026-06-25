@@ -1,28 +1,28 @@
-# Phase 2 nonprod namespaces for the wynne-lvl-3 rental-ERP app.
+# Phase 2 nonprod namespaces for the dia rental-ERP app.
 # Apply with: kubectl apply -f deploy/k8s/namespaces.yaml
 #
-# These are dedicated namespaces — do NOT reuse the existing level-3-v2
+# These are dedicated namespaces — do NOT reuse other projects' pre-existing
 # `dev`/`test`/`prod` namespaces (see docs/specs/live-cluster-deploy-smoke-rollback.md).
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: wynne-dev
+  name: dia-dev
   labels:
-    app.kubernetes.io/part-of: wynne-rental-erp
-    wynne.factory/environment: dev
+    app.kubernetes.io/part-of: dia-rental-erp
+    dia.factory/environment: dev
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: wynne-test
+  name: dia-test
   labels:
-    app.kubernetes.io/part-of: wynne-rental-erp
-    wynne.factory/environment: test
+    app.kubernetes.io/part-of: dia-rental-erp
+    dia.factory/environment: test
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: wynne-observability
+  name: dia-observability
   labels:
-    app.kubernetes.io/part-of: wynne-rental-erp
-    wynne.factory/environment: shared
+    app.kubernetes.io/part-of: dia-rental-erp
+    dia.factory/environment: shared

@@ -40,9 +40,9 @@ describe("fingerprintComment / extractFingerprint", () => {
 
 describe("fingerprintId / fingerprintSearchToken", () => {
   it("builds a stable prefixed fingerprint id", () => {
-    const id = fingerprintId("cluster", ["wynne-dev", "deployment/rental-app", "CrashLoopBackOff"]);
+    const id = fingerprintId("cluster", ["dia-dev", "deployment/rental-app", "CrashLoopBackOff"]);
     expect(id).toMatch(/^cluster-[0-9a-f]{12}$/);
-    expect(id).toBe(fingerprintId("cluster", ["wynne-dev", "deployment/rental-app", "CrashLoopBackOff"]));
+    expect(id).toBe(fingerprintId("cluster", ["dia-dev", "deployment/rental-app", "CrashLoopBackOff"]));
   });
 
   it("builds a search token for issue body scans", () => {

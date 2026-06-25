@@ -46,7 +46,7 @@ sequence of steps** (stages), so ticket flow is deterministic and reproducible.
 | Pipeline | Cadence | Stages (in order) | Purpose |
 |----------|---------|-------------------|---------|
 | **fast** | every ~5 min (see §2) | enrich/triage (Product Owner) → review (Tech Reviewer) → merge + rerun-cancelled-CI + assign-next (Project Manager) → board sync → *conditional* specialist stages | The value stream: move tickets/PRs through. |
-| **hourly** | hourly | Factory Architect (design) → QA Manager → Operations Manager (env/cost/security/backup health) → Cluster Guardian (wynne-* namespace health) | Design, quality, **and runtime/ops health** — these need to surface problems within the hour, not once a day. |
+| **hourly** | hourly | Factory Architect (design) → QA Manager → Operations Manager (env/cost/security/backup health) → Cluster Guardian (dia-* namespace health) | Design, quality, **and runtime/ops health** — these need to surface problems within the hour, not once a day. |
 | **daily** | daily | Docs Improver → audits / reporting / cleanup | Housekeeping, audits, reporting. |
 
 ### 2. Reliable responsiveness via single-pass cadence + CI-completion fast-path

@@ -5,12 +5,12 @@ metadata:
   labels:
     {{- include "monitoring.labels" . | nindent 4 }}
     {{ .Values.grafana.dashboardLabel }}: {{ .Values.grafana.dashboardLabelValue | quote }}
-    wynne/dashboard-folder: system
+    dia/dashboard-folder: system
 data:
   system.json: |
     {
       "annotations": { "list": [] },
-      "description": "Wynne pod and node system health — CPU, memory, pod restarts, and node pressure.",
+      "description": "Dealernet pod and node system health — CPU, memory, pod restarts, and node pressure.",
       "editable": true,
       "graphTooltip": 1,
       "id": null,
@@ -240,12 +240,12 @@ data:
       "templating": {
         "list": [
           {
-            "current": { "selected": false, "text": "wynne.*", "value": "wynne.*" },
+            "current": { "selected": false, "text": "dia.*", "value": "dia.*" },
             "hide": 0,
             "label": "Namespace",
             "name": "namespace",
             "options": [],
-            "query": "wynne.*",
+            "query": "dia.*",
             "type": "textbox"
           },
           {

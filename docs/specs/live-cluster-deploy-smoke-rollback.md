@@ -8,7 +8,7 @@
 
 ## Overview
 
-This document defines the Phase 2 design for live-cluster deployment automation in `Volaris-AI/wynne-lvl-3`.
+This document defines the Phase 2 design for live-cluster deployment automation in `Volaris-AI/dia`.
 
 It covers:
 - `deploy-dev.yml`
@@ -44,8 +44,8 @@ This is a design artifact only. It does **not** authorize implementation of live
 
 ### Runner rules
 
-- `factory-deploy-nonprod` must only reach `wynne-dev` and `wynne-test`.
-- `factory-prod-ops` must only reach `wynne-prod`.
+- `factory-deploy-nonprod` must only reach `dia-dev` and `dia-test`.
+- `factory-prod-ops` must only reach `dia-prod`.
 - Privileged workflows must target explicit labels or runner groups, never plain `self-hosted`.
 - Production runner access must be isolated from general CI and Copilot execution.
 - Release coordination may run on GitHub-hosted runners, but any `kubectl` or `helm upgrade` step must run on the environment-specific deploy runner.
@@ -57,12 +57,12 @@ This is a design artifact only. It does **not** authorize implementation of live
    - commit SHA
    - optional release tag/metadata
    - image digest recorded in workflow output
-3. `deploy-dev.yml` automatically deploys the exact built digests to `wynne-dev`.
+3. `deploy-dev.yml` automatically deploys the exact built digests to `dia-dev`.
 4. `smoke-dev-test-prod.yml` runs dev smoke checks and records pass/fail evidence.
 5. Promotion to test uses the **same previously validated digests**, not a rebuild.
 6. `deploy-test.yml` is gated by successful dev smoke plus release-manager intent.
 7. `smoke-dev-test-prod.yml` runs test smoke checks and confirms promotion evidence.
-8. `deploy-prod.yml` promotes the same validated digests to `wynne-prod` through a protected GitHub Environment with required reviewers.
+8. `deploy-prod.yml` promotes the same validated digests to `dia-prod` through a protected GitHub Environment with required reviewers.
 9. Post-deploy prod smoke must succeed before the release is considered complete.
 
 ### Immutable artifact contract
@@ -75,9 +75,9 @@ This is a design artifact only. It does **not** authorize implementation of live
 
 | Environment | Namespace | Trigger | Approval model |
 |---|---|---|---|
-| Dev | `wynne-dev` | Automatic on `main` after build success | No manual approval required |
-| Test | `wynne-test` | Promotion of validated dev release | Manual or release-manager-controlled |
-| Prod | `wynne-prod` | Promotion of validated test release only | Protected environment + required reviewers |
+| Dev | `dia-dev` | Automatic on `main` after build success | No manual approval required |
+| Test | `dia-test` | Promotion of validated dev release | Manual or release-manager-controlled |
+| Prod | `dia-prod` | Promotion of validated test release only | Protected environment + required reviewers |
 
 ### GitHub Environment policy
 
@@ -93,9 +93,9 @@ Each environment gets its own namespace-scoped deployment identity.
 
 | Namespace | Service account | Used by |
 |---|---|---|
-| `wynne-dev` | `gha-deployer` | `deploy-dev.yml`, nonprod smoke helpers |
-| `wynne-test` | `gha-deployer` | `deploy-test.yml`, nonprod smoke helpers |
-| `wynne-prod` | `gha-deployer` | `deploy-prod.yml`, prod smoke, `rollback.yml` |
+| `dia-dev` | `gha-deployer` | `deploy-dev.yml`, nonprod smoke helpers |
+| `dia-test` | `gha-deployer` | `deploy-test.yml`, nonprod smoke helpers |
+| `dia-prod` | `gha-deployer` | `deploy-prod.yml`, prod smoke, `rollback.yml` |
 
 ### RBAC requirements
 
@@ -180,7 +180,7 @@ The following approvals are required before implementation issues can be unblock
 Phase 2 implementation stays blocked until these are resolved or explicitly accepted:
 
 1. Resolve the `aks-selfheal-prod` `nodepool1` provisioning failure and confirm the intended production node state.
-2. Create dedicated namespaces: `wynne-dev`, `wynne-test`, `wynne-prod`.
+2. Create dedicated namespaces: `dia-dev`, `dia-test`, `dia-prod`.
 3. Create environment-specific service accounts and namespace-scoped RBAC bindings.
 4. Stand up the required runner placement:
    - `factory-deploy-nonprod`

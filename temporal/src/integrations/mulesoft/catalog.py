@@ -1,6 +1,6 @@
 """MuleSoft endpoint / flow catalog.
 
-Defines the first-release set of API exchanges supported between Wynne and a
+Defines the first-release set of API exchanges supported between Dealernet and a
 customer's MuleSoft deployment. Each entry is an EndpointDefinition that
 captures the exchange key, direction, human label, and supported mapping
 profiles.
@@ -19,8 +19,8 @@ from dataclasses import dataclass, field
 class FlowDirection(str, enum.Enum):
     """Data flow direction for an exchange."""
 
-    OUTBOUND = "outbound"   # Wynne → MuleSoft (customer systems)
-    INBOUND = "inbound"     # MuleSoft → Wynne
+    OUTBOUND = "outbound"   # Dealernet → MuleSoft (customer systems)
+    INBOUND = "inbound"     # MuleSoft → Dealernet
     BIDIRECTIONAL = "bidirectional"
 
 
@@ -112,7 +112,7 @@ MULESOFT_ENDPOINT_CATALOG: dict[str, EndpointDefinition] = {
             label="Customer / Account Sync",
             direction=FlowDirection.OUTBOUND,
             description=(
-                "Publishes Wynne customer/account data to MuleSoft for CRM or ERP "
+                "Publishes Dealernet customer/account data to MuleSoft for CRM or ERP "
                 "reconciliation. Operator must confirm field-mapping profile."
             ),
             supported_mapping_profiles=[MappingProfile.CUSTOMER_V1, MappingProfile.DEFAULT],

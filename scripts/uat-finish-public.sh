@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# uat-finish-public.sh — finish making UAT (wynne-test) publicly reachable via Front Door.
+# uat-finish-public.sh — finish making UAT (dia-test) publicly reachable via Front Door.
 #
 # Run this AFTER the Azure public-IP quota has been raised (the only blocker; needs an
 # MFA-authenticated session — see docs/runbooks/promotion.md / memory uat-environment-bringup).
@@ -8,17 +8,17 @@
 #     --limit-object value=20 --resource-type PublicIpAddresses
 #
 # Everything else is already in place (2026-06-14):
-#  - app running in wynne-test (frontend+ops-api); isolated Supabase in wynne-supabase-test
-#  - Front Door endpoints + origin-groups pre-created on wynne-afd (rg-wynne-dev)
-#  - frontend already configured with supabaseUrl=https://<wynne-api-test host>
+#  - app running in dia-test (frontend+ops-api); isolated Supabase in dia-supabase-test
+#  - Front Door endpoints + origin-groups pre-created on dia-afd (rg-dia-dev)
+#  - frontend already configured with supabaseUrl=https://<dia-api-test host>
 # This script: flips frontend to LoadBalancer, flips Supabase/Kong to LoadBalancer with
 # Azure Front Door backend source-range allowlisting, waits for public IPs, attaches them as
 # Front Door origins, creates the routes, and verifies direct-origin bypass is blocked.
 # Idempotent.
 set -euo pipefail
 
-RG=rg-wynne-dev; PROF=wynne-afd
-APP_EP=wynne-app-test; API_EP=wynne-api-test
+RG=rg-dia-dev; PROF=dia-afd
+APP_EP=dia-app-test; API_EP=dia-api-test
 AFD_SERVICE_TAG_LOCATION=eastus2
 API_HEALTH_CHECK_TIMEOUT_SECONDS=20
 DIRECT_ORIGIN_BLOCK_TIMEOUT_SECONDS=8 # blocked path should fail quickly if source-range allowlist is active.
@@ -26,7 +26,7 @@ CURL_EXIT_COULDNT_CONNECT=7
 CURL_EXIT_OPERATION_TIMEDOUT=28
 
 echo "1/6 flip frontend to LoadBalancer"
-kubectl -n wynne-test patch svc rental-app-frontend -p '{"spec":{"type":"LoadBalancer"}}'
+kubectl -n dia-test patch svc rental-app-frontend -p '{"spec":{"type":"LoadBalancer"}}'
 
 echo "2/6 set Kong to LoadBalancer with Azure Front Door backend allowlist"
 # Keep IPv4 CIDRs only; this cluster's LB allowlist is IPv4-only. IPv6 entries are
@@ -78,7 +78,7 @@ if [ "$AFD_RANGES_JSON" = "[]" ]; then
   exit 1
 fi
 
-kubectl -n wynne-supabase-test patch svc supabase-supabase-kong --type merge -p \
+kubectl -n dia-supabase-test patch svc supabase-supabase-kong --type merge -p \
   "{\"spec\":{\"type\":\"LoadBalancer\",\"loadBalancerSourceRanges\":$AFD_RANGES_JSON}}"
 
 echo "3/6 wait for public IPs (fails if quota still capped: PublicIPCountLimitReached)"
@@ -90,8 +90,8 @@ wait_ip() { # ns svc
   done
   echo "ERROR: $1/$2 never got an external IP — is the public-IP quota raised?" >&2; return 1
 }
-FE_IP=$(wait_ip wynne-test rental-app-frontend)
-KONG_IP=$(wait_ip wynne-supabase-test supabase-supabase-kong)
+FE_IP=$(wait_ip dia-test rental-app-frontend)
+KONG_IP=$(wait_ip dia-supabase-test supabase-supabase-kong)
 python - "$KONG_IP" <<'PY' || {
 import ipaddress
 import sys

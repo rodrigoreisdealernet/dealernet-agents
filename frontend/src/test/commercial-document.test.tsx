@@ -14,9 +14,9 @@ function buildModel(variant: CommercialDocumentModel['variant']): CommercialDocu
     issuedAtLabel: 'June 10, 2026',
     rentalPeriodLabel: 'June 12, 2026 – June 19, 2026',
     branding: {
-      companyName: 'Wynne Systems',
+      companyName: 'Dealernet',
       eyebrow: 'Equipment Rental',
-      supportEmail: 'support@wynne.example',
+      supportEmail: 'support@dia.example',
     },
     customer: {
       name: 'Taylor Morgan',
@@ -51,7 +51,7 @@ describe('CommercialDocument', () => {
   it('renders quote branding, customer context, and mobile-friendly document structure', () => {
     render(<CommercialDocument model={buildModel('quote')} shareUrl="https://example.com/doc" />);
 
-    expect(screen.getByText('Wynne Systems')).toBeInTheDocument();
+    expect(screen.getByText('Dealernet')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Rental Quote' })).toBeInTheDocument();
     expect(screen.getByText('Taylor Morgan')).toBeInTheDocument();
     expect(screen.getByText('Downtown Tower')).toBeInTheDocument();

@@ -11,13 +11,13 @@ for the same convention).
 Coverage targets (per issue requirements):
   1. agent-cluster-guardian.yml enforces preflight gate for:
        - kubernetes-app profile enablement
-       - wynne-* namespace allowlist
+       - dia-* namespace allowlist
        - dedicated runner label availability
   2. Manual remediation path requirements:
        - workflow_dispatch trigger required
        - cluster-remediation approval environment required
        - cluster-remediator agent identity (not cluster-guardian)
-  3. Namespace scoping and incident-dedupe/search constrained to wynne-* / auto:cluster.
+  3. Namespace scoping and incident-dedupe/search constrained to dia-* / auto:cluster.
 """
 from __future__ import annotations
 
@@ -81,11 +81,11 @@ def test_preflight_checks_allowed_namespaces() -> None:
     assert "allowed_namespaces" in text
 
 
-def test_preflight_rejects_non_wynne_namespace() -> None:
+def test_preflight_rejects_non_dia_namespace() -> None:
     text = _workflow_text()
-    # The script must validate the wynne-* prefix so out-of-scope namespaces
+    # The script must validate the dia-* prefix so out-of-scope namespaces
     # are caught at preflight time rather than during live cluster commands.
-    assert "wynne-" in text
+    assert "dia-" in text
     assert "out-of-scope" in text or "missing" in text
 
 
@@ -201,14 +201,14 @@ def test_detect_degraded_job_emits_degraded_status() -> None:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 6. Namespace scoping: guardian and remediator prompts stay within wynne-*
+# 6. Namespace scoping: guardian and remediator prompts stay within dia-*
 # ──────────────────────────────────────────────────────────────────────────────
 
 
 def test_guardian_prompt_scopes_to_allowed_namespaces() -> None:
     prompt = GUARDIAN_PROMPT.read_text()
     assert "allowed_namespaces" in prompt
-    assert "wynne-" in prompt
+    assert "dia-" in prompt
 
 
 def test_guardian_prompt_forbids_out_of_scope_operations() -> None:
@@ -219,7 +219,7 @@ def test_guardian_prompt_forbids_out_of_scope_operations() -> None:
 def test_remediator_prompt_scopes_to_allowed_namespaces() -> None:
     prompt = REMEDIATOR_PROMPT.read_text()
     assert "allowed_namespaces" in prompt
-    assert "wynne-" in prompt
+    assert "dia-" in prompt
 
 
 def test_remediator_prompt_forbids_out_of_scope_operations() -> None:
@@ -227,7 +227,7 @@ def test_remediator_prompt_forbids_out_of_scope_operations() -> None:
     assert "No operations outside configured" in prompt
 
 
-def test_factory_config_allowed_namespaces_all_wynne_prefixed() -> None:
+def test_factory_config_allowed_namespaces_all_dia_prefixed() -> None:
     text = _factory_text()
     # Extract the allowed_namespaces list items from the cluster_guardian section.
     # Pattern: match from "cluster_guardian:" through the "allowed_namespaces:" block
@@ -235,8 +235,8 @@ def test_factory_config_allowed_namespaces_all_wynne_prefixed() -> None:
     # Expected factory.yml format (block sequence, one item per line):
     #   cluster_guardian:
     #     allowed_namespaces:
-    #       - wynne-dev
-    #       - wynne-prod
+    #       - dia-dev
+    #       - dia-prod
     match = re.search(
         r"cluster_guardian:.*?allowed_namespaces:(.*?)(?=^\S|\Z)",
         text,
@@ -249,10 +249,10 @@ def test_factory_config_allowed_namespaces_all_wynne_prefixed() -> None:
     namespaces = re.findall(r"^\s+-\s+(\S+)", ns_section, re.MULTILINE)
     assert len(namespaces) > 0, "cluster_guardian.allowed_namespaces must be non-empty"
     for ns in namespaces:
-        assert ns.startswith("wynne-"), (
+        assert ns.startswith("dia-"), (
             f"Namespace '{ns}' in cluster_guardian.allowed_namespaces does not "
-            "start with 'wynne-'; the cluster guardian must stay scoped to "
-            "wynne-* namespaces only."
+            "start with 'dia-'; the cluster guardian must stay scoped to "
+            "dia-* namespaces only."
         )
 
 

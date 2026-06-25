@@ -9,7 +9,7 @@ declare
   v_integration_id uuid;
   v_other_integration_id uuid;
   v_alias_id uuid;
-  v_wynne_entity_id uuid := '40000000-0000-0000-0000-000000001349';
+  v_dia_entity_id uuid := '40000000-0000-0000-0000-000000001349';
   v_count int;
   v_blocked boolean;
   v_payload_id uuid;
@@ -189,7 +189,7 @@ begin
       'erp_finance',
       'outbound',
       'invoice_sync',
-      'wynne',
+      'dia',
       'netsuite-invoice-001',
       'pending',
       jsonb_build_object('entity_type', 'invoice', 'entity_id', 'inv-001')
@@ -220,7 +220,7 @@ begin
     'erp_finance',
     'outbound',
     'invoice_sync',
-    'wynne',
+    'dia',
     'netsuite-invoice-002',
     'pending',
     jsonb_build_object('external_id', 'NS-INV-1002', 'entity_type', 'invoice', 'entity_id', 'inv-002')
@@ -238,7 +238,7 @@ begin
     exchange_key,
     entity_type,
     entity_id,
-    wynne_entity_id,
+    dia_entity_id,
     external_id,
     external_system,
     metadata
@@ -249,7 +249,7 @@ begin
     'erp_finance',
     'invoice',
     'inv-002',
-    v_wynne_entity_id,
+    v_dia_entity_id,
     'NS-INV-1002',
     'netsuite',
     jsonb_build_object('source', 'initial')
@@ -281,7 +281,7 @@ begin
     exchange_key,
     entity_type,
     entity_id,
-    wynne_entity_id,
+    dia_entity_id,
     external_id,
     external_system,
     metadata
@@ -292,7 +292,7 @@ begin
     'erp_finance',
     'invoice',
     'inv-002',
-    v_wynne_entity_id,
+    v_dia_entity_id,
     'NS-INV-1002',
     'netsuite',
     jsonb_build_object('source', 'replay')

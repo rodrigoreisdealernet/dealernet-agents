@@ -16,7 +16,7 @@ if [ -z "$(git status --porcelain docs/discovery/domain 2>/dev/null)" ]; then
   exit 0
 fi
 
-git config user.name  "wynne-factory"
+git config user.name  "dia-factory"
 git config user.email "factory@users.noreply.github.com"
 
 git fetch origin main --quiet || true
@@ -27,7 +27,7 @@ git commit -m "operating-model: weekly map update ${DATE_UTC}
 Domain-cartographer extension of the operating model (roles, cited tasks, agentic
 assessments). Research only — surfaces opportunities into the discovery pipeline; opens
 no build tickets." \
-  --author="wynne-factory <factory@users.noreply.github.com>"
+  --author="dia-factory <factory@users.noreply.github.com>"
 
 PUSH_URL="https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"
 git push --force "$PUSH_URL" "HEAD:refs/heads/${BRANCH}"

@@ -85,7 +85,7 @@ function makeStaffSession(): MockSession {
   return {
     user: {
       id: 'user-staff-1',
-      email: 'operator@wynne.com',
+      email: 'operator@dia.com',
       app_metadata: { role: 'branch_manager' },
     },
     access_token: 'token-staff',
@@ -644,7 +644,7 @@ describe('extractPortalSessionFields', () => {
     const session = {
       user: {
         id: 'u-2',
-        email: 'op@wynne.com',
+        email: 'op@dia.com',
         app_metadata: { role: 'branch_manager' },
       },
     } as Parameters<typeof extractPortalSessionFields>[0];

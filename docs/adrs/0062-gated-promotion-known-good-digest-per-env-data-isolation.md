@@ -20,7 +20,7 @@ digest (ADR-0010/0012). Three gaps remained for a safe, owner-controlled release
    `prod` Environment with required reviewers; `deploy-test` declared `environment: test`
    but no reviewers, so promotion to UAT wasn't actually gated.
 3. **Environments shared one database.** All app namespaces pointed at the single
-   `wynne-supabase` stack, so "promoting to prod" would run prod against the same data
+   `dia-supabase` stack, so "promoting to prod" would run prod against the same data
    dev mutates — making the promotion gate cosmetic where it matters most.
 
 The owner's constraints: promotion `dev → UAT` and `UAT → prod` must be **human-approved**;
@@ -45,8 +45,8 @@ internally (namespace/secret/Environment churn isn't worth a rename); docs call 
    build is promotable. The legacy `build_run_id` artifact path remains as a fallback;
    digest-artifact retention is raised 7 → 90 days as defense-in-depth, not a dependency.
 
-3. **Compute stays on one cluster, separated by namespace** (`wynne-dev`/`wynne-test`/
-   `wynne-prod`) — the right cost/complexity trade-off now. Splitting prod onto its own
+3. **Compute stays on one cluster, separated by namespace** (`dia-dev`/`dia-test`/
+   `dia-prod`) — the right cost/complexity trade-off now. Splitting prod onto its own
    cluster later (ADR-0021's `aks-selfheal-prod`) does not change the promotion model.
 
 4. **Data is isolated per environment** — the real isolation boundary. Each environment

@@ -43,10 +43,10 @@ import { AuthProvider, useAuth } from '@/auth/AuthContext';
 function makeUser(overrides: Partial<User> = {}): User {
   return {
     id: 'user-1',
-    email: 'admin@wynne-rental.dev',
+    email: 'admin@dia-rental.dev',
     aud: 'authenticated',
     role: 'authenticated',
-    app_metadata: { role: 'admin', tenant: 'wynne-demo' },
+    app_metadata: { role: 'admin', tenant: 'dia-demo' },
     user_metadata: { display_name: 'Demo Admin' },
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
@@ -86,7 +86,7 @@ function SignInButton() {
     <button
       type="button"
       onClick={() => {
-        void signIn('admin@wynne-rental.dev', 'secret');
+        void signIn('admin@dia-rental.dev', 'secret');
       }}
     >
       Trigger sign in
@@ -134,9 +134,9 @@ describe('AuthProvider — authenticated state', () => {
     renderWithAuth(<AuthDisplay />);
     await screen.findByTestId('user-email');
 
-    expect(screen.getByTestId('user-email')).toHaveTextContent('admin@wynne-rental.dev');
+    expect(screen.getByTestId('user-email')).toHaveTextContent('admin@dia-rental.dev');
     expect(screen.getByTestId('user-role')).toHaveTextContent('admin');
-    expect(screen.getByTestId('user-tenant')).toHaveTextContent('wynne-demo');
+    expect(screen.getByTestId('user-tenant')).toHaveTextContent('dia-demo');
     expect(screen.getByTestId('user-display-name')).toHaveTextContent('Demo Admin');
   });
 

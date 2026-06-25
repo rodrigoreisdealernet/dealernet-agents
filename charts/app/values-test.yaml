@@ -1,5 +1,5 @@
 # Test profile for charts/app
-# Intended namespace: wynne-test (use: helm install/upgrade ... -n wynne-test)
+# Intended namespace: dia-test (use: helm install/upgrade ... -n dia-test)
 
 frontend:
   replicaCount: 2
@@ -12,7 +12,7 @@ frontend:
   imagePullSecrets:
     - name: acr-pull
   # Cluster is Istio-only (no nginx ingress class) — expose via LoadBalancer like dev,
-  # fronted publicly by the wynne-app-test Azure Front Door endpoint.
+  # fronted publicly by the dia-app-test Azure Front Door endpoint.
   service:
     type: LoadBalancer
     port: 80
@@ -26,15 +26,15 @@ frontend:
       cpu: 500m
       memory: 512Mi
   env:
-    # Browser → Supabase through the wynne-api-test Front Door endpoint (HTTPS; avoids
+    # Browser → Supabase through the dia-api-test Front Door endpoint (HTTPS; avoids
     # mixed-content when the app itself is served over HTTPS). The Kong origin must stay
     # Front-Door-restricted (no arbitrary direct-origin access).
-    supabaseUrl: "https://wynne-api-test-h5hbdeb8b9fdhedu.a02.azurefd.net"
-    apiUrl: "https://wynne-api-test-h5hbdeb8b9fdhedu.a02.azurefd.net/functions/v1"
+    supabaseUrl: "https://dia-api-test-h5hbdeb8b9fdhedu.a02.azurefd.net"
+    apiUrl: "https://dia-api-test-h5hbdeb8b9fdhedu.a02.azurefd.net/functions/v1"
     opsApiUrl: "http://rental-app-ops-api:8000"
   secrets:
     supabaseAnonKey:
-      secretName: "frontend-secrets-wynne-test"
+      secretName: "frontend-secrets-dia-test"
       key: "VITE_SUPABASE_ANON_KEY"
 
 temporalWorker:
@@ -57,13 +57,13 @@ temporalWorker:
       memory: 512Mi
   temporal:
     address: "temporal-frontend.temporal.svc.cluster.local:7233"
-    namespace: "wynne-test"
-    taskQueue: "wynne-test-main"
+    namespace: "dia-test"
+    taskQueue: "dia-test-main"
   supabase:
-    url: "http://supabase-supabase-kong.wynne-supabase-test.svc.cluster.local"
+    url: "http://supabase-supabase-kong.dia-supabase-test.svc.cluster.local"
   secrets:
     supabaseServiceRoleKey:
-      secretName: "temporal-worker-secrets-wynne-test"
+      secretName: "temporal-worker-secrets-dia-test"
       key: "SUPABASE_SERVICE_ROLE_KEY"
 
 opsApi:
@@ -77,12 +77,12 @@ opsApi:
     - name: acr-pull
   temporal:
     address: "temporal-frontend.temporal.svc.cluster.local:7233"
-    namespace: "wynne-test"
+    namespace: "dia-test"
   supabase:
-    url: "http://supabase-supabase-kong.wynne-supabase-test.svc.cluster.local"
+    url: "http://supabase-supabase-kong.dia-supabase-test.svc.cluster.local"
   secrets:
     supabaseServiceRoleKey:
-      secretName: "temporal-worker-secrets-wynne-test"
+      secretName: "temporal-worker-secrets-dia-test"
       key: "SUPABASE_SERVICE_ROLE_KEY"
 
 alerting:
@@ -94,7 +94,7 @@ alerting:
     incidentBridge:
       # Set to the deployed incident bridge endpoint; update before enabling.
       webhookUrl: ""
-      bearerTokenSecretName: "alert-bridge-secrets-wynne-test"
+      bearerTokenSecretName: "alert-bridge-secrets-dia-test"
       bearerTokenSecretKey: "ALERT_BRIDGE_TOKEN"
 
 adminAccess:
@@ -102,135 +102,135 @@ adminAccess:
   oauth2Proxy:
     enabled: true
     oidc:
-      issuerUrl: "https://keycloak.wynne-test.example.com/realms/wynne"
+      issuerUrl: "https://keycloak.dia-test.example.com/realms/dia"
       # Must match temporalUi.ingress.hosts[*].host + /oauth2/callback for this env.
-      redirectUrl: "https://temporal.wynne-test.example.com/oauth2/callback"
+      redirectUrl: "https://temporal.dia-test.example.com/oauth2/callback"
       groupsClaim: "groups"
       adminGroup: "admin"
     secrets:
       clientId:
-        secretName: "oauth2-proxy-secrets-wynne-test"
+        secretName: "oauth2-proxy-secrets-dia-test"
         key: "OAUTH2_PROXY_CLIENT_ID"
       clientSecret:
-        secretName: "oauth2-proxy-secrets-wynne-test"
+        secretName: "oauth2-proxy-secrets-dia-test"
         key: "OAUTH2_PROXY_CLIENT_SECRET"
       cookieSecret:
-        secretName: "oauth2-proxy-secrets-wynne-test"
+        secretName: "oauth2-proxy-secrets-dia-test"
         key: "OAUTH2_PROXY_COOKIE_SECRET"
   temporalUi:
     enabled: true
     # Point to the in-namespace Temporal UI service deployed by temporalUi.enabled below.
-    upstreamHost: "rental-app-temporal-ui.wynne-test.svc.cluster.local"
+    upstreamHost: "rental-app-temporal-ui.dia-test.svc.cluster.local"
     upstreamPort: 8080
     ingress:
       enabled: true
       className: nginx
       hosts:
-        - host: temporal.wynne-test.example.com
+        - host: temporal.dia-test.example.com
           paths:
             - path: /
               pathType: Prefix
   grafana:
     enabled: true
     # kube-prometheus-stack is deployed as Helm release "observability" in the
-    # wynne-observability namespace (charts/observability, PR #789).
-    upstreamHost: "observability-grafana.wynne-observability.svc.cluster.local"
+    # dia-observability namespace (charts/observability, PR #789).
+    upstreamHost: "observability-grafana.dia-observability.svc.cluster.local"
     upstreamPort: 80
     nativeOidc:
       enabled: true
-      issuerUrl: "https://keycloak.wynne-test.example.com/realms/wynne"
+      issuerUrl: "https://keycloak.dia-test.example.com/realms/dia"
       # Must match grafana.ingress.hosts[*].host + /login/generic_oauth for this env.
-      redirectUrl: "https://grafana.wynne-test.example.com/login/generic_oauth"
+      redirectUrl: "https://grafana.dia-test.example.com/login/generic_oauth"
       secrets:
         clientId:
-          secretName: "grafana-oidc-secrets-wynne-test"
+          secretName: "grafana-oidc-secrets-dia-test"
           key: "GF_AUTH_GENERIC_OAUTH_CLIENT_ID"
         clientSecret:
-          secretName: "grafana-oidc-secrets-wynne-test"
+          secretName: "grafana-oidc-secrets-dia-test"
           key: "GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET"
     ingress:
       enabled: true
       className: nginx
       hosts:
-        - host: grafana.wynne-test.example.com
+        - host: grafana.dia-test.example.com
           paths:
             - path: /
               pathType: Prefix
   studio:
     enabled: true
-    upstreamHost: "supabase-supabase-studio.wynne-supabase.svc.cluster.local"
+    upstreamHost: "supabase-supabase-studio.dia-supabase.svc.cluster.local"
     upstreamPort: 3000
     oauth2Proxy:
       enabled: true
       # Must match studio.ingress.hosts[*].host + /oauth2/callback for this env.
-      redirectUrl: "https://studio.wynne-test.example.com/oauth2/callback"
+      redirectUrl: "https://studio.dia-test.example.com/oauth2/callback"
       secrets:
         clientId:
-          secretName: "oauth2-proxy-studio-secrets-wynne-test"
+          secretName: "oauth2-proxy-studio-secrets-dia-test"
           key: "OAUTH2_PROXY_CLIENT_ID"
         clientSecret:
-          secretName: "oauth2-proxy-studio-secrets-wynne-test"
+          secretName: "oauth2-proxy-studio-secrets-dia-test"
           key: "OAUTH2_PROXY_CLIENT_SECRET"
         cookieSecret:
-          secretName: "oauth2-proxy-studio-secrets-wynne-test"
+          secretName: "oauth2-proxy-studio-secrets-dia-test"
           key: "OAUTH2_PROXY_COOKIE_SECRET"
     ingress:
       enabled: true
       className: nginx
       hosts:
-        - host: studio.wynne-test.example.com
+        - host: studio.dia-test.example.com
           paths:
             - path: /
               pathType: Prefix
   prometheus:
     enabled: true
-    upstreamHost: "observability-kube-prometheus-stack-prometheus.wynne-observability.svc.cluster.local"
+    upstreamHost: "observability-kube-prometheus-stack-prometheus.dia-observability.svc.cluster.local"
     upstreamPort: 9090
     oauth2Proxy:
       enabled: true
       # Must match prometheus.ingress.hosts[*].host + /oauth2/callback for this env.
-      redirectUrl: "https://prometheus.wynne-test.example.com/oauth2/callback"
+      redirectUrl: "https://prometheus.dia-test.example.com/oauth2/callback"
       secrets:
         clientId:
-          secretName: "oauth2-proxy-prometheus-secrets-wynne-test"
+          secretName: "oauth2-proxy-prometheus-secrets-dia-test"
           key: "OAUTH2_PROXY_CLIENT_ID"
         clientSecret:
-          secretName: "oauth2-proxy-prometheus-secrets-wynne-test"
+          secretName: "oauth2-proxy-prometheus-secrets-dia-test"
           key: "OAUTH2_PROXY_CLIENT_SECRET"
         cookieSecret:
-          secretName: "oauth2-proxy-prometheus-secrets-wynne-test"
+          secretName: "oauth2-proxy-prometheus-secrets-dia-test"
           key: "OAUTH2_PROXY_COOKIE_SECRET"
     ingress:
       enabled: true
       className: nginx
       hosts:
-        - host: prometheus.wynne-test.example.com
+        - host: prometheus.dia-test.example.com
           paths:
             - path: /
               pathType: Prefix
   alertmanager:
     enabled: true
-    upstreamHost: "observability-kube-prometheus-stack-alertmanager.wynne-observability.svc.cluster.local"
+    upstreamHost: "observability-kube-prometheus-stack-alertmanager.dia-observability.svc.cluster.local"
     upstreamPort: 9093
     oauth2Proxy:
       enabled: true
       # Must match alertmanager.ingress.hosts[*].host + /oauth2/callback for this env.
-      redirectUrl: "https://alertmanager.wynne-test.example.com/oauth2/callback"
+      redirectUrl: "https://alertmanager.dia-test.example.com/oauth2/callback"
       secrets:
         clientId:
-          secretName: "oauth2-proxy-alertmanager-secrets-wynne-test"
+          secretName: "oauth2-proxy-alertmanager-secrets-dia-test"
           key: "OAUTH2_PROXY_CLIENT_ID"
         clientSecret:
-          secretName: "oauth2-proxy-alertmanager-secrets-wynne-test"
+          secretName: "oauth2-proxy-alertmanager-secrets-dia-test"
           key: "OAUTH2_PROXY_CLIENT_SECRET"
         cookieSecret:
-          secretName: "oauth2-proxy-alertmanager-secrets-wynne-test"
+          secretName: "oauth2-proxy-alertmanager-secrets-dia-test"
           key: "OAUTH2_PROXY_COOKIE_SECRET"
     ingress:
       enabled: true
       className: nginx
       hosts:
-        - host: alertmanager.wynne-test.example.com
+        - host: alertmanager.dia-test.example.com
           paths:
             - path: /
               pathType: Prefix
@@ -241,7 +241,7 @@ adminAccess:
 temporalUi:
   enabled: false   # no in-cluster Temporal server for UAT yet
   temporalGrpcAddress: "temporal-frontend.temporal.svc.cluster.local:7233"
-  temporalDefaultNamespace: "wynne-test"
+  temporalDefaultNamespace: "dia-test"
 
 # ---------------------------------------------------------------------------
 # Observability
@@ -261,7 +261,7 @@ observability:
       enabled: false
 
 # ---------------------------------------------------------------------------
-# External Secrets Operator — test (wynne-test)
+# External Secrets Operator — test (dia-test)
 # ---------------------------------------------------------------------------
 externalSecrets:
   enabled: false
@@ -270,12 +270,12 @@ externalSecrets:
     name: "openbao-test"
     kind: "ClusterSecretStore"
   keys:
-    supabaseAnonKey: "wynne/test/runtime"
-    supabaseServiceRoleKey: "wynne/test/runtime"
+    supabaseAnonKey: "dia/test/runtime"
+    supabaseServiceRoleKey: "dia/test/runtime"
     acrPullDockerConfig: ""
-    oauth2ProxyClientId: "wynne/test/oauth2-proxy"
-    oauth2ProxyClientSecret: "wynne/test/oauth2-proxy"
-    oauth2ProxyCookieSecret: "wynne/test/oauth2-proxy"
+    oauth2ProxyClientId: "dia/test/oauth2-proxy"
+    oauth2ProxyClientSecret: "dia/test/oauth2-proxy"
+    oauth2ProxyCookieSecret: "dia/test/oauth2-proxy"
   properties:
     supabaseAnonKey: "anon-key"
     supabaseServiceRoleKey: "service-role-key"

@@ -72,9 +72,9 @@ begin
     ),
     (
       v_tenant_b, 'coupa', 'invoice', 'INV-200',
-      'internal-inv-200', 'coupa-inv-200', 'missing_in_wynne',
+      'internal-inv-200', 'coupa-inv-200', 'missing_in_dia',
       null, 'digest-inv-b', '["invoice_total"]'::jsonb,
-      'invoice exists in Coupa but not in Wynne', v_event_b
+      'invoice exists in Coupa but not in Dealernet', v_event_b
     )
   on conflict (tenant_id, provider_name, object_type, object_key) do update
     set drift_status = excluded.drift_status,

@@ -1,4 +1,4 @@
-# Development observability profile (namespace: wynne-observability)
+# Development observability profile (namespace: dia-observability)
 # Keep this profile lightweight to reduce dev cluster spend/noise.
 kube-prometheus-stack:
   prometheus:
@@ -21,6 +21,6 @@ targets:
     # current AKS runtime, matching charts/app/values-dev.yaml temporal wiring.
     namespace: dev
   temporalWorker:
-    namespace: wynne-dev
+    namespace: dia-dev
   opsApi:
-    namespace: wynne-dev
+    namespace: dia-dev

@@ -1,4 +1,4 @@
-# Test observability profile (namespace: wynne-observability)
+# Test observability profile (namespace: dia-observability)
 kube-prometheus-stack:
   prometheus:
     prometheusSpec:
@@ -14,18 +14,18 @@ kube-prometheus-stack:
       - configMapRef:
           name: grafana-oidc-config
       - secretRef:
-          name: "grafana-oidc-secrets-wynne-test"
+          name: "grafana-oidc-secrets-dia-test"
 
 targets:
   temporalServer:
     namespace: temporal
   temporalWorker:
-    namespace: wynne-test
+    namespace: dia-test
   opsApi:
-    namespace: wynne-test
+    namespace: dia-test
 
 grafanaOidc:
   enabled: true
-  issuerUrl: "https://keycloak.wynne-test.example.com/realms/wynne"
-  redirectUrl: "https://grafana.wynne-test.example.com/login/generic_oauth"
-  secretName: "grafana-oidc-secrets-wynne-test"
+  issuerUrl: "https://keycloak.dia-test.example.com/realms/dia"
+  redirectUrl: "https://grafana.dia-test.example.com/login/generic_oauth"
+  secretName: "grafana-oidc-secrets-dia-test"

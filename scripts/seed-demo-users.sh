@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# seed-demo-users.sh — provision known demo users in a Wynne Supabase environment.
+# seed-demo-users.sh — provision known demo users in a Dealernet Supabase environment.
 #
 # Requires Postgres access with enough privilege to write to auth.users
 # (e.g. the Supabase service-role connection or a direct superuser connection).
@@ -11,26 +11,26 @@
 #
 # Environment variables (all required unless a default is shown):
 #   SUPABASE_DB_URL     – Postgres DSN with superuser or service-role credentials.
-#   DEMO_ADMIN_PASS     – Password for admin@wynne-rental.dev  (required)
-#   DEMO_OPERATOR_PASS  – Password for operator@wynne-rental.dev (required)
+#   DEMO_ADMIN_PASS     – Password for admin@dia-rental.dev  (required)
+#   DEMO_OPERATOR_PASS  – Password for operator@dia-rental.dev (required)
 #   DEMO_TENANT         – Tenant slug (default: auto-detect from seeded demo ops findings)
 #
 # Passwords are consumed from environment variables only — they are NEVER
 # committed to the repository.  Rotate them via the secrets workflow (#125).
 #
 # Demo users created:
-#   admin@wynne-rental.dev      role=admin          (also sets up the legacy demo@ account)
-#   operator@wynne-rental.dev   role=field_operator
-#   manager@wynne-rental.dev    role=branch_manager
-#   readonly@wynne-rental.dev   role=read_only
+#   admin@dia-rental.dev      role=admin          (also sets up the legacy demo@ account)
+#   operator@dia-rental.dev   role=field_operator
+#   manager@dia-rental.dev    role=branch_manager
+#   readonly@dia-rental.dev   role=read_only
 #
-# The legacy demo@wynne-rental.dev account has its role promoted to admin if it
+# The legacy demo@dia-rental.dev account has its role promoted to admin if it
 # already exists.
 set -euo pipefail
 
 : "${SUPABASE_DB_URL:?SUPABASE_DB_URL must be set to a Postgres DSN}"
-: "${DEMO_ADMIN_PASS:?DEMO_ADMIN_PASS must be set (password for admin@wynne-rental.dev)}"
-: "${DEMO_OPERATOR_PASS:?DEMO_OPERATOR_PASS must be set (password for operator@wynne-rental.dev)}"
+: "${DEMO_ADMIN_PASS:?DEMO_ADMIN_PASS must be set (password for admin@dia-rental.dev)}"
+: "${DEMO_OPERATOR_PASS:?DEMO_OPERATOR_PASS must be set (password for operator@dia-rental.dev)}"
 
 DEMO_TENANT="${DEMO_TENANT:-}"
 DEMO_MANAGER_PASS="${DEMO_MANAGER_PASS:-${DEMO_OPERATOR_PASS}}"
@@ -99,13 +99,13 @@ INSERT INTO auth.users (
   updated_at
 )
 VALUES
-  -- admin@wynne-rental.dev  (role: admin)
+  -- admin@dia-rental.dev  (role: admin)
   (
     '00000000-0000-0000-0000-000000000000',
     gen_random_uuid(),
     'authenticated',
     'authenticated',
-    'admin@wynne-rental.dev',
+    'admin@dia-rental.dev',
     crypt(:'demo_admin_pass', gen_salt('bf')),
     now(),
     jsonb_build_object('provider', 'email', 'providers', array['email'], 'role', 'admin', 'tenant', :'demo_tenant'),
@@ -113,13 +113,13 @@ VALUES
     now(),
     now()
   ),
-  -- operator@wynne-rental.dev  (role: field_operator)
+  -- operator@dia-rental.dev  (role: field_operator)
   (
     '00000000-0000-0000-0000-000000000000',
     gen_random_uuid(),
     'authenticated',
     'authenticated',
-    'operator@wynne-rental.dev',
+    'operator@dia-rental.dev',
     crypt(:'demo_operator_pass', gen_salt('bf')),
     now(),
     jsonb_build_object('provider', 'email', 'providers', array['email'], 'role', 'field_operator', 'tenant', :'demo_tenant'),
@@ -127,13 +127,13 @@ VALUES
     now(),
     now()
   ),
-  -- manager@wynne-rental.dev  (role: branch_manager)
+  -- manager@dia-rental.dev  (role: branch_manager)
   (
     '00000000-0000-0000-0000-000000000000',
     gen_random_uuid(),
     'authenticated',
     'authenticated',
-    'manager@wynne-rental.dev',
+    'manager@dia-rental.dev',
     crypt(:'demo_manager_pass', gen_salt('bf')),
     now(),
     jsonb_build_object('provider', 'email', 'providers', array['email'], 'role', 'branch_manager', 'tenant', :'demo_tenant'),
@@ -141,13 +141,13 @@ VALUES
     now(),
     now()
   ),
-  -- readonly@wynne-rental.dev  (role: read_only)
+  -- readonly@dia-rental.dev  (role: read_only)
   (
     '00000000-0000-0000-0000-000000000000',
     gen_random_uuid(),
     'authenticated',
     'authenticated',
-    'readonly@wynne-rental.dev',
+    'readonly@dia-rental.dev',
     crypt(:'demo_readonly_pass', gen_salt('bf')),
     now(),
     jsonb_build_object('provider', 'email', 'providers', array['email'], 'role', 'read_only', 'tenant', :'demo_tenant'),
@@ -180,7 +180,7 @@ UPDATE auth.users SET
   phone_change               = COALESCE(phone_change, ''),
   phone_change_token         = COALESCE(phone_change_token, ''),
   reauthentication_token     = COALESCE(reauthentication_token, '')
-WHERE email LIKE '%@wynne-rental.dev';
+WHERE email LIKE '%@dia-rental.dev';
 
 -- GoTrue requires a matching auth.identities row (provider 'email') or password
 -- login fails with "Invalid login credentials" even though auth.users has the hash.
@@ -195,10 +195,10 @@ SELECT
   now(), now(), now()
 FROM auth.users u
 WHERE u.email IN (
-  'admin@wynne-rental.dev',
-  'operator@wynne-rental.dev',
-  'manager@wynne-rental.dev',
-  'readonly@wynne-rental.dev'
+  'admin@dia-rental.dev',
+  'operator@dia-rental.dev',
+  'manager@dia-rental.dev',
+  'readonly@dia-rental.dev'
 )
 AND NOT EXISTS (
   SELECT 1 FROM auth.identities i WHERE i.user_id = u.id AND i.provider = 'email'
@@ -210,7 +210,7 @@ SET
   raw_app_meta_data = raw_app_meta_data
     || jsonb_build_object('role', 'admin', 'tenant', :'demo_tenant'),
   updated_at = now()
-WHERE email = 'demo@wynne-rental.dev';
+WHERE email = 'demo@dia-rental.dev';
 
 -- Sync profiles table (trigger covers new rows, but UPDATE above won't fire it).
 INSERT INTO public.profiles (id, display_name, role, tenant)
@@ -221,11 +221,11 @@ SELECT
   COALESCE(u.raw_app_meta_data ->> 'tenant', :'demo_tenant')
 FROM auth.users u
 WHERE u.email IN (
-  'admin@wynne-rental.dev',
-  'operator@wynne-rental.dev',
-  'manager@wynne-rental.dev',
-  'readonly@wynne-rental.dev',
-  'demo@wynne-rental.dev'
+  'admin@dia-rental.dev',
+  'operator@dia-rental.dev',
+  'manager@dia-rental.dev',
+  'readonly@dia-rental.dev',
+  'demo@dia-rental.dev'
 )
 ON CONFLICT (id) DO UPDATE
   SET role         = EXCLUDED.role,
@@ -246,10 +246,10 @@ BEGIN
   JOIN public.tenants t
     ON t.tenant_key = u.raw_app_meta_data ->> 'tenant'
   WHERE u.email IN (
-    'admin@wynne-rental.dev',
-    'operator@wynne-rental.dev',
-    'manager@wynne-rental.dev',
-    'readonly@wynne-rental.dev'
+    'admin@dia-rental.dev',
+    'operator@dia-rental.dev',
+    'manager@dia-rental.dev',
+    'readonly@dia-rental.dev'
   )
     AND EXISTS (
       SELECT 1
@@ -268,7 +268,7 @@ $$;
 
 SELECT email, raw_app_meta_data ->> 'role' AS role
 FROM auth.users
-WHERE email LIKE '%@wynne-rental.dev'
+WHERE email LIKE '%@dia-rental.dev'
 ORDER BY email;
 SQL
 

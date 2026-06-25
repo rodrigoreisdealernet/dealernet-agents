@@ -1,4 +1,4 @@
-# Production observability profile (namespace: wynne-observability)
+# Production observability profile (namespace: dia-observability)
 kube-prometheus-stack:
   prometheus:
     prometheusSpec:
@@ -14,18 +14,18 @@ kube-prometheus-stack:
       - configMapRef:
           name: grafana-oidc-config
       - secretRef:
-          name: "grafana-oidc-secrets-wynne-prod"
+          name: "grafana-oidc-secrets-dia-prod"
 
 targets:
   temporalServer:
     namespace: temporal
   temporalWorker:
-    namespace: wynne-prod
+    namespace: dia-prod
   opsApi:
-    namespace: wynne-prod
+    namespace: dia-prod
 
 grafanaOidc:
   enabled: true
-  issuerUrl: "https://keycloak.wynne.example.com/realms/wynne"
-  redirectUrl: "https://grafana.wynne.example.com/login/generic_oauth"
-  secretName: "grafana-oidc-secrets-wynne-prod"
+  issuerUrl: "https://keycloak.dia.example.com/realms/dia"
+  redirectUrl: "https://grafana.dia.example.com/login/generic_oauth"
+  secretName: "grafana-oidc-secrets-dia-prod"

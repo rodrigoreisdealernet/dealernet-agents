@@ -1,4 +1,4 @@
-# Phase 2 namespace-scoped deploy identity for nonprod (wynne-dev, wynne-test).
+# Phase 2 namespace-scoped deploy identity for nonprod (dia-dev, dia-test).
 # Apply with: kubectl apply -f deploy/k8s/rbac-nonprod.yaml
 #
 # Design: docs/specs/live-cluster-deploy-smoke-rollback.md (RBAC Design).
@@ -12,17 +12,17 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: gha-deployer
-  namespace: wynne-dev
+  namespace: dia-dev
   labels:
-    app.kubernetes.io/part-of: wynne-rental-erp
+    app.kubernetes.io/part-of: dia-rental-erp
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: gha-deployer
-  namespace: wynne-dev
+  namespace: dia-dev
   labels:
-    app.kubernetes.io/part-of: wynne-rental-erp
+    app.kubernetes.io/part-of: dia-rental-erp
 rules:
   # Helm release objects + the app's namespaced workload resources.
   - apiGroups: ["apps"]
@@ -52,9 +52,9 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: gha-deployer
-  namespace: wynne-dev
+  namespace: dia-dev
   labels:
-    app.kubernetes.io/part-of: wynne-rental-erp
+    app.kubernetes.io/part-of: dia-rental-erp
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -62,23 +62,23 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: gha-deployer
-    namespace: wynne-dev
+    namespace: dia-dev
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: gha-deployer
-  namespace: wynne-test
+  namespace: dia-test
   labels:
-    app.kubernetes.io/part-of: wynne-rental-erp
+    app.kubernetes.io/part-of: dia-rental-erp
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: gha-deployer
-  namespace: wynne-test
+  namespace: dia-test
   labels:
-    app.kubernetes.io/part-of: wynne-rental-erp
+    app.kubernetes.io/part-of: dia-rental-erp
 rules:
   - apiGroups: ["apps"]
     resources: ["deployments", "replicasets"]
@@ -105,9 +105,9 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: gha-deployer
-  namespace: wynne-test
+  namespace: dia-test
   labels:
-    app.kubernetes.io/part-of: wynne-rental-erp
+    app.kubernetes.io/part-of: dia-rental-erp
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -115,4 +115,4 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: gha-deployer
-    namespace: wynne-test
+    namespace: dia-test

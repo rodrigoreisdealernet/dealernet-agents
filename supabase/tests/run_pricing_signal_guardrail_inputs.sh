@@ -6,7 +6,7 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 suffix="$(date +%s%N)"
-container_name="${CONTAINER_NAME:-wynne_pricing_tests_${suffix}_$$}"
+container_name="${CONTAINER_NAME:-dia_pricing_tests_${suffix}_$$}"
 postgres_image="${POSTGRES_IMAGE:-postgres:17}"
 readiness_timeout_seconds="${READINESS_TIMEOUT_SECONDS:-30}"
 

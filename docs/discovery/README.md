@@ -6,7 +6,7 @@
 > weeks so that — when there is time to build — the tickets are already exceptional.
 >
 > **Companion docs:** [`MONITORING.md`](../../MONITORING.md) (operational runbook),
-> the GitHub Project board #15 "Wynne ERP Factory" (the roadmap scoreboard).
+> the GitHub Project board #15 "Dealernet ERP Factory" (the roadmap scoreboard).
 
 An idea is not the final state — it is the *start*. The job of this pipeline is to take
 a raw spark and, a little every night, validate it, enrich it, refine it, and let it

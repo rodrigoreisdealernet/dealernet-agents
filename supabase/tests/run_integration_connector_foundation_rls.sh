@@ -8,7 +8,7 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-container_name="${CONTAINER_NAME:-wynne_intg_connector_rls_$$}"
+container_name="${CONTAINER_NAME:-dia_intg_connector_rls_$$}"
 postgres_image="${POSTGRES_IMAGE:-postgres:17}"
 target_migration="20260611090000_integration_connector_foundation.sql"
 

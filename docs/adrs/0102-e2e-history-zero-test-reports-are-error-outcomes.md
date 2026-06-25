@@ -73,4 +73,4 @@ unchanged.
 - `.github/scripts/e2e-history-record.mjs` — outcome logic (lines 63-78)
 - `temporal/tests/test_e2e_history_scripts.py` — `test_record_script_marks_report_with_errors_array_as_error` and `test_record_script_marks_zero_test_report_as_error`
 - `frontend/e2e/experience.spec.ts` — duplicate title removed (was at lines 8242-8335)
-- Issue: Volaris-AI/wynne-lvl-3#2263
+- Issue: Volaris-AI/dia#2263

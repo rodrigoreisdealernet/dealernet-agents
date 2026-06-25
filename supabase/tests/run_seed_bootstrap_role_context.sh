@@ -20,7 +20,7 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-container_name="${CONTAINER_NAME:-wynne_seed_role_ctx_$$}"
+container_name="${CONTAINER_NAME:-dia_seed_role_ctx_$$}"
 postgres_image="${POSTGRES_IMAGE:-postgres:17}"
 readiness_timeout_seconds="${READINESS_TIMEOUT_SECONDS:-60}"
 docker_run_attempts="${DOCKER_RUN_ATTEMPTS:-4}"

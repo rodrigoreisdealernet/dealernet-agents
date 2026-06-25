@@ -1,6 +1,6 @@
 # Architecture Overview
 
-This directory holds the **cross-cutting architecture documentation** for the Wynne
+This directory holds the **cross-cutting architecture documentation** for the Dealernet
 Systems equipment-rental platform — the diagrams and narrative that tie the
 subsystems together. It complements, and does not replace:
 
@@ -64,7 +64,7 @@ flowchart TB
     aoai(["Azure OpenAI"])
     azure(["Azure<br/>(AKS · ACR · Front Door)"])
 
-    sys["<b>Wynne Rental Platform</b><br/>Rental ERP + two AI factories"]
+    sys["<b>Dealernet Rental Platform</b><br/>Rental ERP + two AI factories"]
 
     user -->|signs in, manages rentals| sys
     maint -->|files epics, sets guardrails| sys
@@ -83,11 +83,11 @@ flowchart TB
     end
 
     subgraph aks["AKS cluster (aks-selfheal-staging)"]
-        subgraph nsapp["ns: wynne-dev / wynne-test"]
+        subgraph nsapp["ns: dia-dev / dia-test"]
             fe["frontend<br/>(nginx + React bundle)"]
             worker["temporal-worker<br/>(Python)"]
         end
-        subgraph nssb["ns: wynne-supabase"]
+        subgraph nssb["ns: dia-supabase"]
             kong["Kong (API gateway)"]
             rest["PostgREST"]
             auth["GoTrue (auth)"]

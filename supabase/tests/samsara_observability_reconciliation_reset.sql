@@ -245,10 +245,10 @@ begin
 
   insert into public.samsara_reconciliation_results (
     tenant_id, asset_external_id, signal_type, drift_status, lag_seconds,
-    diagnostic_summary, wynne_value, provider_value
+    diagnostic_summary, dia_value, provider_value
   ) values (
     v_tenant_id, 'RESET-ASSET-001', 'gps', 'mismatch', 300,
-    'Wynne position differs from Samsara payload during reset-path check',
+    'Dealernet position differs from Samsara payload during reset-path check',
     jsonb_build_object('lat', 51.501, 'lng', -0.141),
     jsonb_build_object('lat', 51.492, 'lng', -0.130)
   );

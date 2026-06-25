@@ -6,7 +6,7 @@
 - **Supersedes / Superseded by:** Tooling clause superseded by [ADR-0070](0070-daily-roadmap-curator-workflow-gh-cli-direct.md) (linking via `scripts/project-sync.sh` → direct `gh` CLI + daily curator workflow)
 
 ## Context
-The GitHub Project board (`{{ owner }}` org Project #15, "Wynne ERP Factory") had grown to
+The GitHub Project board (`{{ owner }}` org Project #15, "Dealernet ERP Factory") had grown to
 ~285 items dominated by a flat list of 77 epics — most with no child stories, no top-level
 grouping, and a tail of orphan tickets. A flat board hides what work belongs together,
 makes prioritization and roll-up reporting impossible, and lets newly-created tickets drift

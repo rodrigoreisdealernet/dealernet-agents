@@ -27,7 +27,7 @@ sales, with roles spanning contractor supplies and national accounts. Sources:
 [United Rentals sales careers](https://careers.unitedrentals.com/career-areas/sales),
 [RER customer-service guidance](https://www.rermag.com/mag/article/20930805/14-tips-to-legendary-customer-service).
 
-In Wynne's enterprise multi-branch contractor/project segment, this role is the downstream
+In Dealernet's enterprise multi-branch contractor/project segment, this role is the downstream
 recipient of the branch handoff when an opportunity stops being a simple counter order and
 becomes account development, project pursuit, or negotiated relationship work. They are
 customer-facing, mobile, and commercially accountable, but still depend on branch operations for
@@ -99,12 +99,12 @@ surface for equipment sales teams. Sources:
 [United Rentals sales development](https://careers.unitedrentals.com/career-development),
 [Texada sales solutions](https://texadasoftware.com/equipment-growth-platform/sales/).
 
-In the Wynne segment, that means the rep lives across phone, email, mobile CRM, account history,
+In the Dealernet segment, that means the rep lives across phone, email, mobile CRM, account history,
 RentalMan quoting and pricing context, and the branch's informal communication loops. The hard
 part is not just having the data; it is getting the right account context and branch reality in
 one place before the rep talks to the customer. Sources:
 [Texada sales solutions](https://texadasoftware.com/equipment-growth-platform/sales/),
-[Wynne RentalMan](https://www.wynnesystems.com/solutions/rentalman/).
+[Dealernet RentalMan](https://www.dealernet.com.br/solutions/rentalman/).
 
 ## Decisions they own
 This role decides where to spend field time, which contractors deserve active pursuit, whether a
@@ -161,6 +161,6 @@ answers, and remembering which relationship needs attention first.
 ## Domain-expert review
 _For SMEs / real operators: what's right, what's wrong, what's missing, where to scope._
 - [ ] Reviewed by: _&lt;name, date&gt;_
-- **Draft synthesis to validate:** whether Wynne's target accounts expect outside sales to own
+- **Draft synthesis to validate:** whether Dealernet's target accounts expect outside sales to own
   ongoing account-health review directly, or whether some of that responsibility is centralized in
   regional sales leadership or key-account functions.

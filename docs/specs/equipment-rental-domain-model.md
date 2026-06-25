@@ -5,19 +5,19 @@
 **Related issues:** #3 (research), #5 (implementation)
 
 ## Overview
-This specification defines the canonical domain language, entity relationships, and lifecycle/business rules for the equipment rental ERP MVP in `Volaris-AI/wynne-lvl-3`.
+This specification defines the canonical domain language, entity relationships, and lifecycle/business rules for the equipment rental ERP MVP in `Volaris-AI/dia`.
 
 It is the implementation baseline for schema and service work tracked in:
-- Epic: `Volaris-AI/wynne-lvl-3#2`
-- Domain spec issue: `Volaris-AI/wynne-lvl-3#3`
+- Epic: `Volaris-AI/dia#2`
+- Domain spec issue: `Volaris-AI/dia#3`
 
 ## Metadata
 - **Spec ID**: `equipment-rental-domain-model-mvp`
 - **Status**: Approved for implementation
 - **Version**: `1.0.0`
-- **Repository**: `Volaris-AI/wynne-lvl-3`
-- **Related Epic**: `Volaris-AI/wynne-lvl-3#2`
-- **Related Issue**: `Volaris-AI/wynne-lvl-3#3`
+- **Repository**: `Volaris-AI/dia`
+- **Related Epic**: `Volaris-AI/dia#2`
+- **Related Issue**: `Volaris-AI/dia#3`
 - **Published**: `2026-06-05`
 - **Last Updated**: `2026-06-05`
 
@@ -381,7 +381,7 @@ Use numeric codes in `entity_facts.value` with `dimension_type` + `dimension_id`
 - **Status code drift**: if dimension rows are edited in place, historical interpretation can break.
 
 ## Unblocking Criteria for Epic #2
-This specification is intended to unblock child implementation stories under `Volaris-AI/wynne-lvl-3#2` by providing:
+This specification is intended to unblock child implementation stories under `Volaris-AI/dia#2` by providing:
 - Canonical entity names
 - Canonical relationship types
 - Canonical lifecycle states and transition constraints

@@ -25,7 +25,7 @@ begin;
 
 do $$
 declare
-  v_demo_token  constant text := 'wynne-demo-portal-scope-001';
+  v_demo_token  constant text := 'dia-demo-portal-scope-001';
   v_forged_token constant text := 'portal-schedule-access-test-forged-token';
 
   v_contract_id      uuid;
@@ -141,7 +141,7 @@ begin
     raise exception 'FAIL 2c: portal_get_demo_portal_url() returned null — demo scope token not seeded';
   end if;
 
-  if v_demo_url not like '/portal/schedule/%?scope=wynne-demo-portal-scope-001' then
+  if v_demo_url not like '/portal/schedule/%?scope=dia-demo-portal-scope-001' then
     raise exception 'FAIL 2c: portal_get_demo_portal_url() returned unexpected URL: %', v_demo_url;
   end if;
 

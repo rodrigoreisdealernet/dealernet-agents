@@ -35,7 +35,7 @@ from .connector import MulesoftConnector
 class MuleSoftExchangeDefinition:
     exchange_key: str
     direction: Literal["outbound", "inbound"]
-    source_of_truth: Literal["wynne", "mulesoft"]
+    source_of_truth: Literal["dia", "mulesoft"]
     entity_type: str
     replay_semantics: str
     field_mapping: dict[str, str]
@@ -57,16 +57,16 @@ _EXCHANGES: dict[str, MuleSoftExchangeDefinition] = {
     "rental_contract_snapshot": MuleSoftExchangeDefinition(
         exchange_key="rental_contract_snapshot",
         direction="outbound",
-        source_of_truth="wynne",
+        source_of_truth="dia",
         entity_type="rental_contract",
         replay_semantics=(
-            "Replay and backfill republish the latest current Wynne rental-contract snapshot for the "
+            "Replay and backfill republish the latest current Dealernet rental-contract snapshot for the "
             "scoped entity ids. Automatic runs dedupe on entity version; explicit replays use the "
             "workflow-scoped replay token so retries stay idempotent while operator-initiated reruns "
             "still produce a fresh publish."
         ),
         field_mapping={
-            "entity_id": "wynneContractId",
+            "entity_id": "diaContractId",
             "external_id": "contractId",
             "contract_number": "contractNumber",
             "status": "status",
@@ -80,16 +80,16 @@ _EXCHANGES: dict[str, MuleSoftExchangeDefinition] = {
     "invoice_snapshot": MuleSoftExchangeDefinition(
         exchange_key="invoice_snapshot",
         direction="outbound",
-        source_of_truth="wynne",
+        source_of_truth="dia",
         entity_type="invoice",
         replay_semantics=(
-            "Replay and backfill republish the latest current Wynne invoice snapshot for the scoped "
+            "Replay and backfill republish the latest current Dealernet invoice snapshot for the scoped "
             "entity ids. Automatic runs dedupe on entity version; explicit replays use the workflow-"
             "scoped replay token so retries stay idempotent while operator-initiated reruns still "
             "produce a fresh publish."
         ),
         field_mapping={
-            "entity_id": "wynneInvoiceId",
+            "entity_id": "diaInvoiceId",
             "external_id": "invoiceId",
             "invoice_number": "invoiceNumber",
             "status": "status",
@@ -149,7 +149,7 @@ def build_outbound_payload(
     if exchange_key == "rental_contract_snapshot":
         return {
             "contractId": external_id or entity_id,
-            "wynneContractId": entity_id,
+            "diaContractId": entity_id,
             "contractNumber": str(data.get("contract_number") or ""),
             "status": str(data.get("status") or ""),
             "branchId": str(data.get("branch_id") or ""),
@@ -163,7 +163,7 @@ def build_outbound_payload(
     if exchange_key == "invoice_snapshot":
         return {
             "invoiceId": external_id or entity_id,
-            "wynneInvoiceId": entity_id,
+            "diaInvoiceId": entity_id,
             "invoiceNumber": str(data.get("invoice_number") or ""),
             "status": str(data.get("status") or ""),
             "contractId": str(data.get("contract_id") or ""),

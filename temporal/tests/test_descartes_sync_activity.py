@@ -124,7 +124,7 @@ def test_persist_route_batch_writes_alias_and_delivery_log(fake_client: _FakePer
     assert alias_rows[0]["connector_key"] == "descartes"
     log_rows = fake_client.tables["integration_delivery_log"]
     assert log_rows[0]["direction"] == "outbound"
-    assert log_rows[0]["source_of_truth"] == "wynne"
+    assert log_rows[0]["source_of_truth"] == "dia"
 
 
 def test_persist_batch_deduplicates_on_idempotency_key(fake_client: _FakePersistenceClient) -> None:
@@ -144,7 +144,7 @@ def test_advance_sync_cursor_writes_integration_sync_state(fake_client: _FakePer
     state_rows = fake_client.tables["integration_sync_state"]
     assert len(state_rows) == 1
     assert state_rows[0]["direction"] == "outbound"
-    assert state_rows[0]["source_of_truth"] == "wynne"
+    assert state_rows[0]["source_of_truth"] == "dia"
 
 
 def test_classify_http_error_mapping() -> None:

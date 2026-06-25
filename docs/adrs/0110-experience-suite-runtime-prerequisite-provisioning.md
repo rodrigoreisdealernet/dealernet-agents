@@ -44,4 +44,4 @@ The suite remains non-gating, but the workflow now treats missing service-role p
 - `.github/workflows/e2e-dev.yml`: experience job env now includes operator auth and calls the runtime provisioning step before `experience.spec.ts`.
 - `scripts/provision-experience-prereqs.mjs`: service-role provisioning for portal catalog URL, billing-update token, and portal-customer auth/grant fixtures.
 - `frontend/e2e/experience.spec.ts`: prerequisite-gated journeys consume `E2E_OPERATOR_*`, `E2E_PORTAL_CATALOG_SCOPED_URL`, `E2E_PORTAL_BILLING_UPDATE_SCOPED_URL`, and portal-customer auth env vars.
-- Issue: Volaris-AI/wynne-lvl-3#2295.
+- Issue: Volaris-AI/dia#2295.

@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 // E2E runs against a REAL running environment (dev by default), not a build.
-// Set E2E_BASE_URL to the deployed frontend URL (e.g. the wynne-dev LoadBalancer).
+// Set E2E_BASE_URL to the deployed frontend URL (e.g. the dia-dev LoadBalancer).
 const baseURL = process.env.E2E_BASE_URL || 'http://localhost:3000';
 
 export default defineConfig({

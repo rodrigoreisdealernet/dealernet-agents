@@ -1,5 +1,5 @@
 # charts/monitoring/values-dev.yaml
-# Development environment overrides (namespace: wynne-dev / monitoring)
+# Development environment overrides (namespace: dia-dev / monitoring)
 
 grafana:
   namespace: monitoring

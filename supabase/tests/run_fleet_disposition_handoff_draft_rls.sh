@@ -8,7 +8,7 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-container_name="${CONTAINER_NAME:-wynne_fleet_handoff_draft_rls_$$}"
+container_name="${CONTAINER_NAME:-dia_fleet_handoff_draft_rls_$$}"
 postgres_image="${POSTGRES_IMAGE:-postgres:17}"
 target_migration="20260620083000_fleet_disposition_handoff_draft_idempotency.sql"
 

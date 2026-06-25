@@ -3,9 +3,9 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: grafana-oidc-config
-  namespace: wynne-observability
+  namespace: dia-observability
   labels:
-    app.kubernetes.io/part-of: wynne-observability
+    app.kubernetes.io/part-of: dia-observability
     app.kubernetes.io/component: grafana-oidc-config
 data:
   GF_AUTH_GENERIC_OAUTH_ENABLED: "true"
@@ -20,12 +20,12 @@ data:
   GF_AUTH_GENERIC_OAUTH_API_URL: {{ printf "%s/protocol/openid-connect/userinfo" .Values.grafanaOidc.issuerUrl | quote }}
   # Map Keycloak groups to Grafana roles — explicit groups only; no catch-all fallback.
   # Users whose groups claim does not match any entry are denied by ROLE_ATTRIBUTE_STRICT_MODE.
-  #   wynne-admin              → Admin
-  #   wynne-branch-manager     → Editor
-  #   wynne-field-operator     → Editor
+  #   dia-admin              → Admin
+  #   dia-branch-manager     → Editor
+  #   dia-field-operator     → Editor
   #   (no matching group)      → denied
   GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH: >-
-    contains(groups[*], 'wynne-admin') && 'Admin' || (contains(groups[*], 'wynne-branch-manager') || contains(groups[*], 'wynne-field-operator')) && 'Editor'
+    contains(groups[*], 'dia-admin') && 'Admin' || (contains(groups[*], 'dia-branch-manager') || contains(groups[*], 'dia-field-operator')) && 'Editor'
   # Fail-closed: deny sign-in if ROLE_ATTRIBUTE_PATH resolves to an empty/unrecognised value.
   GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_STRICT_MODE: "true"
   GF_AUTH_GENERIC_OAUTH_GROUPS_ATTRIBUTE_PATH: "groups"

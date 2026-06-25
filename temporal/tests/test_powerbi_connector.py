@@ -31,7 +31,7 @@ def _valid_config() -> dict[str, object]:
         "enabled_scopes": ["dataset_push", "dataset_refresh"],
         "dataset_push_profile": {"table_name": "RentalFacts", "schema_version": "1.0"},
         "dataset_refresh_profile": {"refresh_type": "full"},
-        "workspace_mapping": {"wynne_tenant_id_field": "tenantId"},
+        "workspace_mapping": {"dia_tenant_id_field": "tenantId"},
         "healthcheck_path": "/v1.0/myorg/groups",
         "healthcheck_timeout_seconds": 5,
         "stale_refresh_threshold_minutes": 120,

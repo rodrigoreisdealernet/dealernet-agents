@@ -149,9 +149,9 @@ begin
     v_job_site_id,
     'override',
     'Customer provided resale certificate for labor-only line',
-    'billing-manager@wynne.dev',
+    'billing-manager@dia.dev',
     jsonb_build_object('override_ticket', 'TAX-123', 'requested_by', 'billing_manager'),
-    jsonb_build_object('actor', 'billing-manager@wynne.dev', 'action', 'invoice_finalized')
+    jsonb_build_object('actor', 'billing-manager@dia.dev', 'action', 'invoice_finalized')
   )
   returning id into v_snapshot_issue_id;
 
@@ -420,7 +420,7 @@ begin
       'invoice_finalized',
       date '2026-06-20',
       'override',
-      jsonb_build_object('actor', 'billing-manager@wynne.dev')
+      jsonb_build_object('actor', 'billing-manager@dia.dev')
     );
   exception
     when check_violation then

@@ -1,16 +1,16 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "monitoring.fullname" . }}-dashboard-wynne-ops
+  name: {{ include "monitoring.fullname" . }}-dashboard-dia-ops
   labels:
     {{- include "monitoring.labels" . | nindent 4 }}
     {{ .Values.grafana.dashboardLabel }}: {{ .Values.grafana.dashboardLabelValue | quote }}
-    wynne/dashboard-folder: ops
+    dia/dashboard-folder: ops
 data:
-  wynne-ops.json: |
+  dia-ops.json: |
     {
       "annotations": { "list": [] },
-      "description": "Wynne Operations Factory — workflow throughput/latency, task-queue backlog, activity failures, schedule health, and ops-api API metrics.",
+      "description": "Dealernet Operations Factory — workflow throughput/latency, task-queue backlog, activity failures, schedule health, and ops-api API metrics.",
       "editable": true,
       "graphTooltip": 1,
       "id": null,
@@ -271,7 +271,7 @@ data:
       ],
       "schemaVersion": 36,
       "style": "dark",
-      "tags": ["wynne", "ops", "temporal"],
+      "tags": ["dia", "ops", "temporal"],
       "templating": {
         "list": [
           {
@@ -306,7 +306,7 @@ data:
       "time": { "from": "now-3h", "to": "now" },
       "timepicker": {},
       "timezone": "browser",
-      "title": "Wynne Ops",
-      "uid": "wynne-ops",
+      "title": "Dealernet Ops",
+      "uid": "dia-ops",
       "version": 1
     }

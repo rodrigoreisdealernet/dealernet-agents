@@ -21,7 +21,7 @@ The portal schedule journey already uses the identical pattern (`portal_get_demo
 
 We extend the e2e pipeline to resolve a portal intake URL at workflow runtime using the same pattern already established for the schedule portal:
 
-1. Seed one demo intake token (`wynne-demo-intake-token-001`) in `supabase/seed.sql`, idempotent via `ON CONFLICT (token_hash) DO UPDATE`.
+1. Seed one demo intake token (`dia-demo-intake-token-001`) in `supabase/seed.sql`, idempotent via `ON CONFLICT (token_hash) DO UPDATE`.
 2. Add a migration (`20260618120000_portal_demo_intake_url.sql`) that creates the `portal_get_demo_intake_url()` function, granted to `service_role` only.
 3. Add a "Resolve portal intake demo URL" step in `.github/workflows/e2e-dev.yml` that calls the RPC and writes the result to `GITHUB_ENV` as `E2E_PORTAL_INTAKE_SCOPED_URL`.
 
@@ -46,4 +46,4 @@ The e2e workflow test run remains non-blocking (`|| true`); this change does not
 - `supabase/migrations/20260618120000_portal_demo_intake_url.sql`: `portal_get_demo_intake_url()` function.
 - `.github/workflows/e2e-dev.yml`: "Resolve portal intake demo URL" step mirroring lines ~260–283 (schedule step).
 - Reference pattern: `supabase/migrations/20260610010100_crm_portal_contract_scope_tokens.sql` and the existing "Resolve portal schedule demo URL" step.
-- Issue: Volaris-AI/wynne-lvl-3#2020.
+- Issue: Volaris-AI/dia#2020.

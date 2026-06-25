@@ -94,7 +94,7 @@ The shared connector layer introduces these additive, tenant-scoped tables:
 | Table | Purpose |
 |---|---|
 | `integration_config` | Non-secret connector config, enablement, schedules, mappings, and secret references |
-| `external_id_map` | Stable aliasing between Wynne entities and vendor identifiers |
+| `external_id_map` | Stable aliasing between Dealernet entities and vendor identifiers |
 | `integration_sync_state` | Cursors, checkpoints, reconciliation watermarks, and source-of-truth state |
 | `integration_delivery_log` | Webhook dedupe, outbound delivery attempts, idempotency, and replay handling |
 

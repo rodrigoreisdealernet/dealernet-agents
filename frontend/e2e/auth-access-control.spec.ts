@@ -316,7 +316,7 @@ async function findOrderWithLines(page: Page): Promise<OrderLineCandidate> {
     jobSiteId: string;
   } | null> => {
     type RuntimeConfig = { VITE_SUPABASE_URL?: string; VITE_SUPABASE_ANON_KEY?: string };
-    const cfg = (window as unknown as { __WYNNE_RUNTIME_CONFIG__?: RuntimeConfig }).__WYNNE_RUNTIME_CONFIG__;
+    const cfg = (window as unknown as { __DIA_RUNTIME_CONFIG__?: RuntimeConfig }).__DIA_RUNTIME_CONFIG__;
     const supabaseUrl = cfg?.VITE_SUPABASE_URL;
     const anonKey = cfg?.VITE_SUPABASE_ANON_KEY;
     if (!supabaseUrl || !anonKey) return null;

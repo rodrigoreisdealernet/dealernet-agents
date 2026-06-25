@@ -24,14 +24,14 @@ The Temporal Web UI pod is deployed in-cluster when `temporalUi.enabled: true` (
 
 ```bash
 # dev
-kubectl -n wynne-dev port-forward svc/rental-app-temporal-ui 8080:8080
+kubectl -n dia-dev port-forward svc/rental-app-temporal-ui 8080:8080
 # then open http://localhost:8080
 
 # test
-kubectl -n wynne-test port-forward svc/rental-app-temporal-ui 8080:8080
+kubectl -n dia-test port-forward svc/rental-app-temporal-ui 8080:8080
 
 # prod
-kubectl -n wynne-prod port-forward svc/rental-app-temporal-ui 8080:8080
+kubectl -n dia-prod port-forward svc/rental-app-temporal-ui 8080:8080
 ```
 
 The UI connects directly to the in-cluster Temporal frontend (`temporal-frontend.<env>.svc.cluster.local:7233`).
@@ -39,16 +39,16 @@ The UI connects directly to the in-cluster Temporal frontend (`temporal-frontend
 #### Grafana (port-forward, once kube-prometheus-stack is deployed)
 
 ```bash
-kubectl -n wynne-observability port-forward svc/observability-grafana 3000:80
+kubectl -n dia-observability port-forward svc/observability-grafana 3000:80
 # then open http://localhost:3000  (default admin/prom-operator or from the grafana admin secret)
 ```
 
-Dashboard provisioning via `observability.grafana.dashboards.enabled: true` loads Wynne dashboards into Grafana automatically when the Grafana sidecar is running.
+Dashboard provisioning via `observability.grafana.dashboards.enabled: true` loads Dealernet dashboards into Grafana automatically when the Grafana sidecar is running.
 
 #### Prometheus (port-forward, once kube-prometheus-stack is deployed)
 
 ```bash
-kubectl -n wynne-observability port-forward svc/observability-kube-prometheus-stack-prometheus 9090:9090
+kubectl -n dia-observability port-forward svc/observability-kube-prometheus-stack-prometheus 9090:9090
 # then open http://localhost:9090
 ```
 
@@ -63,22 +63,22 @@ kubectl -n wynne-observability port-forward svc/observability-kube-prometheus-st
 
 External admin tooling is gated by the unified Keycloak OIDC boundary:
 
-- **Temporal UI:** Ingress → `oauth2-proxy` → Temporal UI upstream service (group-gated; requires Keycloak `wynne-admin` group)
+- **Temporal UI:** Ingress → `oauth2-proxy` → Temporal UI upstream service (group-gated; requires Keycloak `dia-admin` group)
 - **Grafana:** Ingress → Grafana upstream service (native OIDC; Grafana authenticates directly against Keycloak with group→role mapping)
 - **Authorization source of truth:** Keycloak `groups` claim
 - **Default posture:** unauthenticated users are redirected to Keycloak; users without a mapped group are denied in both Grafana and Temporal UI
 
 | Environment | Temporal UI (external) | Grafana (external) | OIDC issuer |
 |---|---|---|---|
-| `test` | `https://temporal.wynne-test.example.com` | `https://grafana.wynne-test.example.com` | `https://keycloak.wynne-test.example.com/realms/wynne` |
-| `prod` | `https://temporal.wynne.example.com` | `https://grafana.wynne.example.com` | `https://keycloak.wynne.example.com/realms/wynne` |
+| `test` | `https://temporal.dia-test.example.com` | `https://grafana.dia-test.example.com` | `https://keycloak.dia-test.example.com/realms/dia` |
+| `prod` | `https://temporal.dia.example.com` | `https://grafana.dia.example.com` | `https://keycloak.dia.example.com/realms/dia` |
 
 **Login/logout expectations (when OIDC is active):**
 
 1. Open Temporal UI or Grafana URL.
 2. You are redirected to Keycloak if no active SSO session exists.
-3. For Temporal UI: only users whose Keycloak `groups` contains `wynne-admin` are admitted; others receive 403.
-4. For Grafana: only users in `wynne-admin`, `wynne-branch-manager`, or `wynne-field-operator` groups are admitted; unmatched users are denied.
+3. For Temporal UI: only users whose Keycloak `groups` contains `dia-admin` are admitted; others receive 403.
+4. For Grafana: only users in `dia-admin`, `dia-branch-manager`, or `dia-field-operator` groups are admitted; unmatched users are denied.
 5. Logout from the tool and from Keycloak to clear SSO session/cookie state.
 
 ---
@@ -90,10 +90,10 @@ The canonical Keycloak groups are:
 
 | Keycloak group          | App role (`app_metadata.role`) | Grafana role |
 |-------------------------|-------------------------------|--------------|
-| `wynne-admin`           | `admin`                       | `Admin`      |
-| `wynne-branch-manager`  | `branch_manager`              | `Editor`     |
-| `wynne-field-operator`  | `field_operator`              | `Editor`     |
-| `wynne-read-only`       | `read_only`                   | denied       |
+| `dia-admin`           | `admin`                       | `Admin`      |
+| `dia-branch-manager`  | `branch_manager`              | `Editor`     |
+| `dia-field-operator`  | `field_operator`              | `Editor`     |
+| `dia-read-only`       | `read_only`                   | denied       |
 | (no matching group)     | `read_only` (default)         | denied       |
 
 **Role semantics:**
@@ -125,7 +125,7 @@ App sign-in flows through Keycloak OIDC into GoTrue (Supabase Auth):
   app enforces role-gated access via RLS on every request.
 
 **Required Keycloak configuration (provisioned by #689):**
-- Realm: `wynne`
+- Realm: `dia`
 - Client for app federation (confidential, standard flow)
 - Client for Grafana native OIDC (confidential, standard flow + PKCE)
 - Protocol mappers: `groups` claim (group membership list), `tenant` claim (user attribute), `email`, `name`
@@ -144,7 +144,7 @@ Key non-secret settings (rendered from `adminAccess.grafana.nativeOidc.*` in val
 | `GF_AUTH_GENERIC_OAUTH_ENABLED` | `"true"` |
 | `GF_AUTH_GENERIC_OAUTH_NAME` | `"Keycloak"` |
 | `GF_AUTH_GENERIC_OAUTH_SCOPES` | `"openid email profile groups"` |
-| `GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH` | `contains(groups[*], 'wynne-admin') && 'Admin' || ...` |
+| `GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH` | `contains(groups[*], 'dia-admin') && 'Admin' || ...` |
 | `GF_AUTH_GENERIC_OAUTH_USE_PKCE` | `"true"` |
 
 Required secrets in `grafana-oidc-secrets-<env>`:
@@ -209,7 +209,7 @@ Edits made in the Grafana UI will be lost on the next Helm release — change th
 |-----------|---------------|-----|------------|
 | **Temporal Server** | Temporal | `temporal-server` | Service request rate/failures, open workflow executions, workflow completion rate/latency, persistence latency |
 | **Temporal SDK / Worker** | Temporal | `temporal-sdk` | Worker task-slot availability, poll success/empty rate, workflow outcome rate, workflow task execution latency, activity outcome/latency by type |
-| **Wynne Ops** | Wynne Ops | `wynne-ops` | Workflow throughput (completed/failed/canceled/s), end-to-end latency (p50/p95/p99), task-queue backlog depth and age, activity failure rate and failures by type, schedule missed-catch-up windows and buffer overruns, ops-api request latency and error rates |
+| **Dealernet Ops** | Dealernet Ops | `dia-ops` | Workflow throughput (completed/failed/canceled/s), end-to-end latency (p50/p95/p99), task-queue backlog depth and age, activity failure rate and failures by type, schedule missed-catch-up windows and buffer overruns, ops-api request latency and error rates |
 | **System — Pods & Nodes** | System | `system-pods-nodes` | Pod CPU usage and CPU vs limit %, pod memory working set and memory vs limit %, container restart count/rate, node CPU/memory utilisation, node pressure conditions (MemoryPressure / DiskPressure / PIDPressure) |
 
 #### Internal (port-forward) access
@@ -225,13 +225,13 @@ kubectl -n monitoring port-forward svc/kube-prometheus-stack-grafana 3000:80
 #### Deploying the monitoring stack
 
 ```bash
-# Install kube-prometheus-stack with Wynne's sidecar configuration
+# Install kube-prometheus-stack with Dealernet's sidecar configuration
 helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
   --namespace monitoring --create-namespace \
   -f charts/monitoring/values-kube-prometheus-stack.yaml
 
 # Install dashboard / datasource provisioning
-helm upgrade --install wynne-monitoring charts/monitoring \
+helm upgrade --install dia-monitoring charts/monitoring \
   --namespace monitoring \
   -f charts/monitoring/values-<env>.yaml
 ```

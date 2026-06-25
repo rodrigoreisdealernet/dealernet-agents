@@ -38,7 +38,7 @@ if [ -z "$SUPABASE_URL_VALUE" ] || [ -z "$SUPABASE_ANON_KEY_VALUE" ]; then
 fi
 
 cat <<EOF > /tmp/runtime-config.js
-window.__WYNNE_RUNTIME_CONFIG__ = {
+window.__DIA_RUNTIME_CONFIG__ = {
   VITE_SUPABASE_URL: $SUPABASE_URL_EXPR,
   VITE_SUPABASE_ANON_KEY: $SUPABASE_ANON_KEY_EXPR,
 };

@@ -1,7 +1,7 @@
 # Operating model — Enterprise multi-branch equipment rental
 
 > **North star:** What does it take to operate an enterprise multi-branch equipment-rental business?
-> **Segment:** Enterprise, multi-branch, contractor/project rental (Wynne RentalMan ICP)
+> **Segment:** Enterprise, multi-branch, contractor/project rental (Dealernet RentalMan ICP)
 
 The capability map for this vertical: what it takes to operate the business, decomposed
 into capability areas → roles → real tasks. Roles live in [`roles/`](./roles/); coverage is

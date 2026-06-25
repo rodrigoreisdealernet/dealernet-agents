@@ -6,11 +6,11 @@
 --   1. Schema: portal_get_demo_intake_url() exists as a security definer
 --      function, has EXECUTE granted to service_role, and is NOT callable
 --      by anon (service_role only).
---   2. Seed: the demo intake token 'wynne-demo-intake-token-001' is present in
+--   2. Seed: the demo intake token 'dia-demo-intake-token-001' is present in
 --      portal_intake_scope_tokens after seed.sql runs.
 --   3. URL contract: portal_get_demo_intake_url() called under the actual
 --      service_role PostgreSQL session role returns a non-empty string
---      matching /portal/intake/<uuid>#token=wynne-demo-intake-token-001
+--      matching /portal/intake/<uuid>#token=dia-demo-intake-token-001
 --      — the exact format that the e2e-dev.yml "Resolve portal intake demo URL"
 --      step exports as E2E_PORTAL_INTAKE_SCOPED_URL.
 --   4. Access control: anon cannot call portal_get_demo_intake_url().
@@ -21,7 +21,7 @@ begin;
 
 do $$
 declare
-  v_demo_token      constant text := 'wynne-demo-intake-token-001';
+  v_demo_token      constant text := 'dia-demo-intake-token-001';
   v_demo_token_hash constant text := '5467ab75215992bc249e670aa6827ed439067156ec4d6647f5f21fb37bf29c26';
   v_token_count     int;
   v_intake_url      text;
@@ -96,7 +96,7 @@ begin
   where token_hash = v_demo_token_hash;
 
   if v_token_count <> 1 then
-    raise exception 'FAIL 2: demo intake token row not found in portal_intake_scope_tokens (found % rows) — seed.sql must insert wynne-demo-intake-token-001', v_token_count;
+    raise exception 'FAIL 2: demo intake token row not found in portal_intake_scope_tokens (found % rows) — seed.sql must insert dia-demo-intake-token-001', v_token_count;
   end if;
 
   raise notice 'PASS 2: demo intake token is seeded in portal_intake_scope_tokens';

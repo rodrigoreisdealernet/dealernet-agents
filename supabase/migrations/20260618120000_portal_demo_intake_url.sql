@@ -5,7 +5,7 @@
 -- workflow can exercise the portal intake E2E journey without hard-coding
 -- a database row ID. Follows the same pattern as portal_get_demo_portal_url.
 --
--- The demo token 'wynne-demo-intake-token-001' is a non-secret value used
+-- The demo token 'dia-demo-intake-token-001' is a non-secret value used
 -- only in dev/CI. It is seeded by seed.sql.
 -- ---------------------------------------------------------------------------
 
@@ -17,7 +17,7 @@ set search_path = public, pg_temp
 as $$
 declare
   v_token_id        uuid;
-  v_demo_token      constant text := 'wynne-demo-intake-token-001';
+  v_demo_token      constant text := 'dia-demo-intake-token-001';
   v_demo_token_hash constant text := '5467ab75215992bc249e670aa6827ed439067156ec4d6647f5f21fb37bf29c26';
 begin
   select id

@@ -34,7 +34,7 @@ produce a new row with `replayed_from_id` set.
 | `tenant_id` | Tenant scoping for RLS and cross-tenant isolation |
 | `exchange_id` | Stable identifier for the logical exchange across retry/replay cycles |
 | `flow_name` | MuleSoft flow or API endpoint name |
-| `direction` | `inbound` (webhook to Wynne) or `outbound` (Wynne to provider) |
+| `direction` | `inbound` (webhook to Dealernet) or `outbound` (Dealernet to provider) |
 | `delivery_status` | `attempted → retrying → delivered / dead_lettered / quarantined / replayed` |
 | `failure_class` | Normalized failure class (`auth`, `signature`, `mapping`, `provider_policy`, …) |
 | `failure_code` | Provider-specific or HTTP error code |
@@ -143,7 +143,7 @@ affects inbound webhook exchanges.
 1. Compare the `payload_digest` on the delivery event with the digest computed using the current
    HMAC secret to detect key drift.
 2. Check if the provider recently rotated the webhook signing secret.
-3. Verify clock skew between Wynne and the MuleSoft runtime is within tolerance (< 5 minutes).
+3. Verify clock skew between Dealernet and the MuleSoft runtime is within tolerance (< 5 minutes).
 4. Check that the payload encoding (UTF-8, base64, line endings) matches provider expectations.
 
 **Recovery:**

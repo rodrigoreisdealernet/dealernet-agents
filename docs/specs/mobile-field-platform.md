@@ -10,7 +10,7 @@
 
 ## 1. Summary
 
-This spec defines the shared runtime for Wynne's field-mobile platform: Quick Order, Quick Return,
+This spec defines the shared runtime for Dealernet's field-mobile platform: Quick Order, Quick Return,
 Logistics Picking, Confirm Load, and adjacent field workflows that require scanning, capture,
 offline work, and durable replay.
 

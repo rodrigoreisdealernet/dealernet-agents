@@ -14,7 +14,7 @@ This spec defines the driver's-license scanning and identity-verification slice 
 fraud reduction, and insurance/audit readiness.
 
 The approved direction keeps raw license and selfie capture on a provider-hosted verification
-surface reached from a scoped SMS link. Wynne stores only consent state, provider references, and
+surface reached from a scoped SMS link. Dealernet stores only consent state, provider references, and
 derived verification metadata or outcomes in its own stack, then enforces readiness through explicit
 pre-rental checks and scheduled expiry monitoring.
 
@@ -28,7 +28,7 @@ pre-rental checks and scheduled expiry monitoring.
   activation, dispatch, or checkout.
 - Reuse the CRM customer-profile and compliance-document architecture instead of inventing a parallel
   identity subsystem.
-- Keep raw biometric and document media out of Wynne-managed browser, database, storage, and Temporal
+- Keep raw biometric and document media out of Dealernet-managed browser, database, storage, and Temporal
   payloads.
 - Produce auditable verification status, operator-visible blocking reasons, and a controlled
   back-office export path.
@@ -54,7 +54,7 @@ The repo already has the right adjacent architecture to build on:
 
 The ID-verification rollout must resolve these verified gaps before implementation stories start:
 
-1. The CRM spec assumes document blobs can live behind signed URLs in Wynne-managed storage. That is
+1. The CRM spec assumes document blobs can live behind signed URLs in Dealernet-managed storage. That is
    **not** the approved storage boundary for driver's-license or selfie verification media.
 2. The repo has no first-class consent record yet for biometric or advertising uses. Identity
    verification needs explicit pre-capture consent and later withdrawal or erasure handling.
@@ -133,7 +133,7 @@ Raw driver's-license and selfie media stay on the verification provider's hosted
 
 Rules:
 
-1. Wynne issues a provider session reference but does not proxy raw image bytes through its own
+1. Dealernet issues a provider session reference but does not proxy raw image bytes through its own
    frontend, `ops_api`, Supabase Storage, or Temporal payloads.
 2. Provider callbacks terminate at `temporal/src/ops_api/app.py`, validate provider authenticity, and
    hand durable work to Temporal per ADR-0037.
@@ -221,7 +221,7 @@ Rules:
 | Provider ingress | provider callback/webhook terminates at `ops_api` and hands durable work to Temporal |
 | CRM write path | authenticated back-office writes remain behind approved RPC/API boundaries per ADR-0024 |
 | Compliance check | explicit readiness RPC or API used before contract activation and checkout release |
-| Storage | provider-hosted media only; Wynne stores metadata, references, and derived results |
+| Storage | provider-hosted media only; Dealernet stores metadata, references, and derived results |
 | Audit/export | authenticated back-office export or report generation only |
 
 ---
@@ -252,7 +252,7 @@ Implementation derived from this spec should prove:
 - fragment tokens never reach server logs or query strings
 - public verification links cannot read or write outside their verification case
 - provider callback authenticity is enforced and duplicate callbacks are idempotent
-- raw driver's-license or selfie media is not persisted in Wynne-managed storage or JSONB state
+- raw driver's-license or selfie media is not persisted in Dealernet-managed storage or JSONB state
 - expired, missing, or failed verification blocks contract activation and checkout transitions
 - consent withdrawal or erasure requests transition the verification record into the correct blocked
   state

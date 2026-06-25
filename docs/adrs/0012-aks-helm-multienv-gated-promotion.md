@@ -8,7 +8,7 @@
 Phase 2 requires running the app and Temporal worker on real infrastructure across dev/test/prod with consistent artifacts and safe promotion. AKS + Helm + Istio is the verified existing platform.
 
 ## Decision
-The frontend and Temporal worker deploy to **AKS** via a single Helm chart (`charts/app`) with per-environment values profiles (`values.yaml` defaults + `values-dev/test/prod.yaml`). Environments are namespaces: `wynne-dev` (auto-deploy on `main`), `wynne-test` (manual promotion), `wynne-prod` (protected environment + reviewers). Promotion carries the immutable image digest (ADR-0010).
+The frontend and Temporal worker deploy to **AKS** via a single Helm chart (`charts/app`) with per-environment values profiles (`values.yaml` defaults + `values-dev/test/prod.yaml`). Environments are namespaces: `dia-dev` (auto-deploy on `main`), `dia-test` (manual promotion), `dia-prod` (protected environment + reviewers). Promotion carries the immutable image digest (ADR-0010).
 
 ## Consequences
 - One chart, env differences isolated to values files — but those profiles must be diff-reviewed to avoid drift; the prod profile is security-sensitive.
@@ -22,5 +22,5 @@ The frontend and Temporal worker deploy to **AKS** via a single Helm chart (`cha
 
 ## Evidence
 - `charts/app/` (Chart + `values-dev/test/prod.yaml`); PR #47, PR #83 (`eb84429`)
-- `deploy/k8s/namespaces.yaml`; `.github/workflows/deploy-dev.yml` — PR #100 (`e6c2548`), PR #106 (dev live on `wynne-dev`)
+- `deploy/k8s/namespaces.yaml`; `.github/workflows/deploy-dev.yml` — PR #100 (`e6c2548`), PR #106 (dev live on `dia-dev`)
 - `docs/specs/live-cluster-deploy-smoke-rollback.md` (promotion flow, smoke, rollback)

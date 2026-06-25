@@ -92,7 +92,7 @@ begin
     true,
     jsonb_build_object(
       'api_base_url', 'https://tenant.coupahost.com',
-      'tenant_slug', 'wynne-rental-a',
+      'tenant_slug', 'dia-rental-a',
       'enabled_scopes', jsonb_build_array('requisitions', 'purchase_orders', 'suppliers', 'invoices'),
       'healthcheck_path', '/api/health',
       'healthcheck_timeout_seconds', 5
@@ -153,7 +153,7 @@ begin
     into v_val
     from public.integration_config
    where id = v_config_id;
-  if v_val is distinct from 'wynne-rental-a' then
+  if v_val is distinct from 'dia-rental-a' then
     raise exception 'FAIL 2b: tenant_slug should be in settings (got %)', v_val;
   end if;
 
@@ -231,7 +231,7 @@ begin
     true,
     jsonb_build_object(
       'api_base_url', 'https://tenant-b.coupahost.com',
-      'tenant_slug', 'wynne-rental-b',
+      'tenant_slug', 'dia-rental-b',
       'enabled_scopes', jsonb_build_array('suppliers')
     ),
     jsonb_build_object(
@@ -305,7 +305,7 @@ begin
   -- 9) Admin can re-enable and rotate credential refs (config rotation)
   update public.integration_config
      set enabled     = true,
-         settings    = settings || jsonb_build_object('tenant_slug', 'wynne-rental-a-v2'),
+         settings    = settings || jsonb_build_object('tenant_slug', 'dia-rental-a-v2'),
          secret_refs = jsonb_build_object(
            'client_id_secret_ref',     'secret://integrations/coupa/client_id-v2',
            'client_secret_secret_ref', 'secret://integrations/coupa/client_secret-v2'
@@ -319,7 +319,7 @@ begin
    where tenant_id = v_tenant_a_id
      and connector_key = 'coupa';
 
-  if v_val is distinct from 'wynne-rental-a-v2' then
+  if v_val is distinct from 'dia-rental-a-v2' then
     raise exception 'FAIL 9a: updated tenant_slug not persisted (got %)', v_val;
   end if;
 

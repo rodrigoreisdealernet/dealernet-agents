@@ -7,7 +7,7 @@
 -- Tables
 --   integration_config       – connector registration, auth type, secret refs, schedules, mappings
 --   integration_sync_state   – cursor/checkpoint/source-of-truth state per connector scope
---   external_id_map          – durable aliasing between Wynne entities and vendor identifiers
+--   external_id_map          – durable aliasing between Dealernet entities and vendor identifiers
 --   integration_delivery_log – webhook dedupe, outbound idempotency, and delivery history
 
 -- ---------------------------------------------------------------------------
@@ -57,7 +57,7 @@ create table if not exists public.integration_sync_state (
     tenant_id           uuid not null references public.tenants(id) on delete cascade,
     scope_key           text not null,     -- stream / topic / entity-type being synced
     cursor_value        text,              -- opaque cursor, checkpoint, or watermark
-    source_of_truth     text not null default 'wynne',  -- 'wynne' | 'provider' | 'bidirectional'
+    source_of_truth     text not null default 'dia',  -- 'dia' | 'provider' | 'bidirectional'
     last_synced_at      timestamptz,
     metadata            jsonb not null default '{}'::jsonb,
     created_at          timestamptz not null default now(),
@@ -82,25 +82,25 @@ create table if not exists public.external_id_map (
     tenant_id           uuid not null references public.tenants(id) on delete cascade,
     provider            text not null,
     entity_type         text not null,     -- e.g. 'asset', 'contract', 'customer'
-    wynne_entity_id     uuid not null,
+    dia_entity_id     uuid not null,
     external_id         text not null,
     external_system     text not null,     -- e.g. 'mulesoft', 'salesforce_org_001'
     metadata            jsonb not null default '{}'::jsonb,
     created_at          timestamptz not null default now(),
     updated_at          timestamptz not null default now(),
-    constraint uq_external_id_map_wynne
-        unique (tenant_id, provider, entity_type, wynne_entity_id, external_system),
+    constraint uq_external_id_map_dia
+        unique (tenant_id, provider, entity_type, dia_entity_id, external_system),
     constraint uq_external_id_map_external
         unique (tenant_id, provider, entity_type, external_id, external_system)
 );
 
 create index if not exists idx_external_id_map_tenant_provider
     on public.external_id_map (tenant_id, provider);
-create index if not exists idx_external_id_map_wynne_entity
-    on public.external_id_map (tenant_id, entity_type, wynne_entity_id);
+create index if not exists idx_external_id_map_dia_entity
+    on public.external_id_map (tenant_id, entity_type, dia_entity_id);
 
 comment on table public.external_id_map is
-    'Stable bidirectional aliasing between Wynne entity UUIDs and provider-assigned identifiers.';
+    'Stable bidirectional aliasing between Dealernet entity UUIDs and provider-assigned identifiers.';
 
 -- ---------------------------------------------------------------------------
 -- integration_delivery_log

@@ -65,10 +65,10 @@ else
 fi
 assert_contains "$(cat "$CHART/values-test.yaml")" "test: grafana OIDC enabled" "grafanaOidc:"
 assert_contains "$(cat "$CHART/values-test.yaml")" "test: grafana extraEnvFrom references oidc configmap" "grafana-oidc-config"
-assert_contains "$(cat "$CHART/values-test.yaml")" "test: grafana extraEnvFrom references oidc secret" "grafana-oidc-secrets-wynne-test"
+assert_contains "$(cat "$CHART/values-test.yaml")" "test: grafana extraEnvFrom references oidc secret" "grafana-oidc-secrets-dia-test"
 assert_contains "$(cat "$CHART/values-prod.yaml")" "prod: grafana OIDC enabled" "grafanaOidc:"
 assert_contains "$(cat "$CHART/values-prod.yaml")" "prod: grafana extraEnvFrom references oidc configmap" "grafana-oidc-config"
-assert_contains "$(cat "$CHART/values-prod.yaml")" "prod: grafana extraEnvFrom references oidc secret" "grafana-oidc-secrets-wynne-prod"
+assert_contains "$(cat "$CHART/values-prod.yaml")" "prod: grafana extraEnvFrom references oidc secret" "grafana-oidc-secrets-dia-prod"
 
 if [ "$RENDER_CHECKS" = true ]; then
   BASE=$(helm template "$RELEASE" "$CHART")
@@ -80,10 +80,10 @@ if [ "$RENDER_CHECKS" = true ]; then
   assert_contains "$BASE" "base: temporal server metrics Service rendered" "name: temporal-server-metrics"
   assert_contains "$BASE" "base: temporal worker metrics Service rendered" "name: temporal-worker-metrics"
   assert_contains "$BASE" "base: ops-api metrics Service rendered" "name: ops-api-metrics"
-  assert_contains "$BASE" "base: ServiceMonitor namespace is wynne-observability" "namespace: wynne-observability"
+  assert_contains "$BASE" "base: ServiceMonitor namespace is dia-observability" "namespace: dia-observability"
   assert_contains "$DEV" "dev: temporal namespace wiring set to dev" "- dev"
-  assert_contains "$TEST" "test: app target namespace wiring set to wynne-test" "- wynne-test"
-  assert_contains "$PROD" "prod: app target namespace wiring set to wynne-prod" "- wynne-prod"
+  assert_contains "$TEST" "test: app target namespace wiring set to dia-test" "- dia-test"
+  assert_contains "$PROD" "prod: app target namespace wiring set to dia-prod" "- dia-prod"
   # Grafana OIDC ConfigMap rendered in test/prod, absent in base/dev
   if echo "$BASE" | grep -q "grafana-oidc-config"; then
     fail "base: grafana-oidc ConfigMap must not render when grafanaOidc.enabled=false"

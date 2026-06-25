@@ -23,7 +23,7 @@ Define the Power BI-specific operational surface so that support teams can:
 
 ### Supported export scopes
 
-- `dataset_push` — Wynne pushes structured rental/financial data rows to a Power BI push dataset.
+- `dataset_push` — Dealernet pushes structured rental/financial data rows to a Power BI push dataset.
 - `dataset_refresh` — triggers an on-demand Power BI dataset refresh after a data push.
 - `report_embed` — embed token generation and report configuration operations.
 

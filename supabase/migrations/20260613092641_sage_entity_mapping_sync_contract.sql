@@ -13,7 +13,7 @@ as $$
       jsonb_build_object(
         'entity_type', 'general_ledger',
         'direction', 'outbound',
-        'conflict_rule', 'wynne_wins_with_stable_external_id',
+        'conflict_rule', 'dia_wins_with_stable_external_id',
         'reconciliation_behavior', 'line_totals_must_balance_before_post'
       ),
       jsonb_build_object(
@@ -31,7 +31,7 @@ as $$
       jsonb_build_object(
         'entity_type', 'invoice',
         'direction', 'outbound',
-        'conflict_rule', 'wynne_wins_with_stable_external_id',
+        'conflict_rule', 'dia_wins_with_stable_external_id',
         'reconciliation_behavior', 'posting_state_must_not_regress_on_replay'
       )
     ),

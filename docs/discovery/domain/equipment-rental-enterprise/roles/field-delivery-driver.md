@@ -24,38 +24,38 @@ all riding together. In enterprise rental the role usually reports into dispatch
 logistics, works from a branch or logistics center, and uses a mobile app rather than living at a
 desk. Sources:
 [Sunbelt logistics coordinator](https://builtin.com/job/market-logistics-coordinator/4195284),
-[Wynne Logistics Solution](https://wynnesystems.com/products/logistics-solution/).
+[Dealernet Logistics Solution](https://dealernet.com.br/products/logistics-solution/).
 
 Unlike the yard coordinator, this person works at the edge of connectivity and is the last internal
 user to touch the equipment before the customer does. That makes them both an operator and a mobile
 evidence collector. Sources:
 [MCS driver software](https://www.mcsrentalsoftware.com/us/rental-software-solutions/driver-software/),
-[Wynne MobileLink](https://www.wynnesystems.com/products/mobilelink/).
+[Dealernet MobileLink](https://www.dealernet.com.br/products/mobilelink/).
 
 ## Goals & motivations
 Their north star is a clean, on-time handoff: correct load, correct site, no avoidable rework, and
 enough evidence captured that the branch does not fight about what happened later. Sources:
-[Wynne Logistics Solution](https://wynnesystems.com/products/logistics-solution/),
+[Dealernet Logistics Solution](https://dealernet.com.br/products/logistics-solution/),
 [MCS driver software](https://www.mcsrentalsoftware.com/us/rental-software-solutions/driver-software/).
 
 Motivation is practical and immediate: stay road-ready, avoid wasted trips, resolve customer issues
 at the stop, and keep the branch's dispatch promises intact. The better the mobile workflow, the
 less time gets lost to paper, callbacks, and post hoc dispute reconstruction. Sources:
 [Sunbelt logistics coordinator](https://builtin.com/job/market-logistics-coordinator/4195284),
-[Wynne MobileLink](https://www.wynnesystems.com/products/mobilelink/).
+[Dealernet MobileLink](https://www.dealernet.com.br/products/mobilelink/).
 
 ## A day / week in the life
 The day starts before the truck moves: route review, load details, and the pre-trip/DVIR check.
 Once on the road, the work flips into a high-switching pattern of delivery, pickup, signatures,
 condition capture, access problems, and ETA changes. Sources:
 [Sunbelt logistics coordinator](https://builtin.com/job/market-logistics-coordinator/4195284),
-[Wynne Logistics Solution](https://wynnesystems.com/products/logistics-solution/).
+[Dealernet Logistics Solution](https://dealernet.com.br/products/logistics-solution/).
 
 The weekly rhythm adds repair follow-up, recurring route patterns, and the accumulated branch
 questions that surface from field evidence. In a modern mobile flow, these updates should already
 be digital; without that, the driver becomes a courier for paper and memory. Sources:
 [MCS driver software](https://www.mcsrentalsoftware.com/us/rental-software-solutions/driver-software/),
-[Wynne MobileLink](https://www.wynnesystems.com/products/mobilelink/).
+[Dealernet MobileLink](https://www.dealernet.com.br/products/mobilelink/).
 
 ## Frustrations & pains
 The biggest pain is leaving the yard with incomplete or changing information. Sunbelt's logistics
@@ -63,28 +63,28 @@ posting makes the dependency explicit: correct contacts, delivery instructions, 
 monitoring, and next-run staging all matter before the truck rolls. Source:
 [Sunbelt logistics coordinator](https://builtin.com/job/market-logistics-coordinator/4195284).
 
-The second pain is customer-facing dispute resolution after the fact. MCS and Wynne both center
+The second pain is customer-facing dispute resolution after the fact. MCS and Dealernet both center
 photos, signatures, and digital proof because without them, damage and delivery disputes are slow,
 expensive, and relationship-harming. Sources:
 [MCS driver software](https://www.mcsrentalsoftware.com/us/rental-software-solutions/driver-software/),
-[Wynne MobileLink](https://www.wynnesystems.com/products/mobilelink/).
+[Dealernet MobileLink](https://www.dealernet.com.br/products/mobilelink/).
 
 The third pain is paper and connectivity friction. The job happens on the road and at the jobsite,
 not in the branch, so a mobile workflow that still depends on later re-keying creates avoidable
 latency and mistakes. Sources:
-[Wynne Logistics Solution](https://wynnesystems.com/products/logistics-solution/),
+[Dealernet Logistics Solution](https://dealernet.com.br/products/logistics-solution/),
 [MCS driver software](https://www.mcsrentalsoftware.com/us/rental-software-solutions/driver-software/).
 
 ## Tools today
 The core tools are a mobile driver or yard app, route/scheduler views, digital signature capture,
 photos, DVIR workflows, and constant phone contact with dispatch. Sources:
-[Wynne Logistics Solution](https://wynnesystems.com/products/logistics-solution/),
+[Dealernet Logistics Solution](https://dealernet.com.br/products/logistics-solution/),
 [MCS driver software](https://www.mcsrentalsoftware.com/us/rental-software-solutions/driver-software/).
 
 When the workflow is mature, proof-of-delivery, proof-of-collection, and damage evidence sync
 directly back into the rental system. When it is not, the driver still falls back to phone notes,
 paper manifests, and memory. Sources:
-[Wynne MobileLink](https://www.wynnesystems.com/products/mobilelink/),
+[Dealernet MobileLink](https://www.dealernet.com.br/products/mobilelink/),
 [Sunbelt logistics coordinator](https://builtin.com/job/market-logistics-coordinator/4195284).
 
 ## Decisions they own
@@ -92,7 +92,7 @@ This role decides whether a truck is safe to leave, whether delivery evidence is
 close the stop, whether a route problem needs dispatch escalation, and whether a condition issue is
 routine wear or a billable exception worth capturing immediately. Sources:
 [Sunbelt logistics coordinator](https://builtin.com/job/market-logistics-coordinator/4195284),
-[Wynne MobileLink](https://www.wynnesystems.com/products/mobilelink/).
+[Dealernet MobileLink](https://www.dealernet.com.br/products/mobilelink/).
 
 That decision mix keeps the role mostly in `assist`: the system can assemble route context,
 highlight missing data, and package evidence, but deliveries, pickups, safety checks, and
@@ -121,14 +121,14 @@ what was delivered, what came back, or what damage was already present.
   load, contact, address, contract, and prior condition data all line up so the driver reviews one
   exception list instead of discovering problems at the gate or jobsite. Evidence:
   [Sunbelt logistics coordinator](https://builtin.com/job/market-logistics-coordinator/4195284),
-  [Wynne Logistics Solution](https://wynnesystems.com/products/logistics-solution/).
+  [Dealernet Logistics Solution](https://dealernet.com.br/products/logistics-solution/).
 - **Damage-evidence bundle** — strong `assist` opportunity. Auto-package photos, signatures,
   timestamps, and contract context into one dispute-ready record for branch review. Evidence:
-  [Wynne MobileLink](https://www.wynnesystems.com/products/mobilelink/),
+  [Dealernet MobileLink](https://www.dealernet.com.br/products/mobilelink/),
   [MCS driver software](https://www.mcsrentalsoftware.com/us/rental-software-solutions/driver-software/).
 
 ## Domain-expert review
 _For SMEs / real operators: what's right, what's wrong, what's missing, where to scope._
 - [ ] Reviewed by: _&lt;name, date&gt;_
-- **Draft synthesis to validate:** where Wynne's target accounts split this work between pure
+- **Draft synthesis to validate:** where Dealernet's target accounts split this work between pure
   drivers, dispatcher-led coordinators, and yard staff who also perform mobile field handoffs.

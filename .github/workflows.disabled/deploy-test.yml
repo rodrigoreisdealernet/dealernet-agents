@@ -1,10 +1,10 @@
 name: Deploy Test
 
-# Phase 2 (#41/#44): promote a previously-built set of images to the `wynne-test`
+# Phase 2 (#41/#44): promote a previously-built set of images to the `dia-test`
 # namespace.  Triggered manually by a release manager once dev smoke passes.
 #
 # GATED: until Phase 2 is enabled the deploy job is skipped cleanly.  To enable,
-# set K8S_DEPLOY_ENABLED=true, WYNNE_TEST_NAMESPACE, and the KUBE_CONFIG_TEST
+# set K8S_DEPLOY_ENABLED=true, DIA_TEST_NAMESPACE, and the KUBE_CONFIG_TEST
 # secret.  See docs/specs/live-cluster-deploy-smoke-rollback.md.
 #
 # Promotion carries the SAME immutable image digest that build-images.yml pushed
@@ -50,18 +50,18 @@ jobs:
       - id: gate
         env:
           DEPLOY_ENABLED: ${{ vars.K8S_DEPLOY_ENABLED }}
-          TEST_NAMESPACE: ${{ vars.WYNNE_TEST_NAMESPACE }}
+          TEST_NAMESPACE: ${{ vars.DIA_TEST_NAMESPACE }}
           HAS_DEPLOY_KUBECONFIG: ${{ secrets.KUBE_CONFIG_TEST != '' }}
-          GATE_CONFIRMED: ${{ vars.WYNNE_TEST_GATE_CONFIRMED }}
+          GATE_CONFIRMED: ${{ vars.DIA_TEST_GATE_CONFIRMED }}
         run: |
           APP_ENABLED=false
           if [[ "$DEPLOY_ENABLED" == "true" && -n "$TEST_NAMESPACE" && "$HAS_DEPLOY_KUBECONFIG" == "true" ]]; then
             # Hard-fail if the human gate (GitHub Environment + required reviewers) has not
             # been explicitly confirmed as configured (ADR-0062). The 'test' GitHub Environment
-            # must exist with required reviewers BEFORE setting WYNNE_TEST_GATE_CONFIRMED=true.
+            # must exist with required reviewers BEFORE setting DIA_TEST_GATE_CONFIRMED=true.
             # See docs/runbooks/promotion.md — "One-time setup (required for the human gates)".
             if [[ "$GATE_CONFIRMED" != "true" ]]; then
-              echo "::error::WYNNE_TEST_GATE_CONFIRMED is not set to 'true'. Create the 'test' GitHub Environment with required reviewers first, then set this variable. See docs/runbooks/promotion.md." >&2
+              echo "::error::DIA_TEST_GATE_CONFIRMED is not set to 'true'. Create the 'test' GitHub Environment with required reviewers first, then set this variable. See docs/runbooks/promotion.md." >&2
               exit 1
             fi
             APP_ENABLED=true
@@ -75,19 +75,19 @@ jobs:
             if [ "$APP_ENABLED" = true ]; then
               echo "| App deploy (frontend + worker) | ✅ enabled → \`$TEST_NAMESPACE\` |"
             else
-              echo "| App deploy (frontend + worker) | ⏭️ skipped — needs K8S_DEPLOY_ENABLED + WYNNE_TEST_NAMESPACE + KUBE_CONFIG_TEST |"
+              echo "| App deploy (frontend + worker) | ⏭️ skipped — needs K8S_DEPLOY_ENABLED + DIA_TEST_NAMESPACE + KUBE_CONFIG_TEST |"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
   deploy:
-    name: Deploy app to wynne-test
+    name: Deploy app to dia-test
     needs: preflight
     if: needs.preflight.outputs.app_enabled == 'true'
     runs-on: ubuntu-latest   # TODO: move to factory-deploy-nonprod per spec once provisioned
     environment: test
     env:
-      TEST_NAMESPACE: ${{ vars.WYNNE_TEST_NAMESPACE }}
-      OBSERVABILITY_NAMESPACE: wynne-observability
+      TEST_NAMESPACE: ${{ vars.DIA_TEST_NAMESPACE }}
+      OBSERVABILITY_NAMESPACE: dia-observability
       IMAGE_REGISTRY: ${{ vars.ACR_LOGIN_SERVER }}
     steps:
       - uses: actions/checkout@v4
@@ -184,7 +184,7 @@ jobs:
           echo "worker=$WK"   >> "$GITHUB_OUTPUT"
           echo "tag=${SHA_TAG:-${SHA:-build-${BUILD_RUN_ID}}}" >> "$GITHUB_OUTPUT"
 
-      - name: Helm upgrade (wynne-test)
+      - name: Helm upgrade (dia-test)
         run: |
           set -euo pipefail
           helm upgrade --install rental-app charts/app \

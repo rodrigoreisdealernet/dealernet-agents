@@ -81,7 +81,7 @@ export function LoginPage() {
       >
         {/* Wordmark */}
         <p className="text-xs font-semibold uppercase tracking-widest text-white/50 mb-1">
-          Wynne Systems
+          Dealernet
         </p>
         <h1 className="text-2xl font-semibold text-white leading-snug md:text-3xl">
           Equipment rental operations,<br className="hidden md:block" /> run by agents —<br className="hidden md:block" /> overseen by you.

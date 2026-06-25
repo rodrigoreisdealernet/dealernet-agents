@@ -35,7 +35,7 @@ setup_supabase_reset_validation() {
     reset_args+=(--yes)
   fi
 
-  supabase_reset_stage_root="$(mktemp -d "${TMPDIR:-/tmp}/wynne-supabase-reset.XXXXXX")"
+  supabase_reset_stage_root="$(mktemp -d "${TMPDIR:-/tmp}/dia-supabase-reset.XXXXXX")"
   _supabase_reset_stage_project "$repo_root" "$supabase_reset_stage_root"
   _supabase_reset_disable_edge_runtime "$supabase_reset_stage_root"
   local project_root="$supabase_reset_stage_root"
@@ -239,10 +239,10 @@ PY
 # to release.
 #
 # Environment variables:
-#   SUPABASE_SLOT_DIR   - directory for slot lock files (default: /tmp/wynne-supabase-slots)
+#   SUPABASE_SLOT_DIR   - directory for slot lock files (default: /tmp/dia-supabase-slots)
 #   SUPABASE_SLOT_START - slot index to start scanning from (0–1332); override for tests
 _supabase_reset_acquire_slot() {
-  local lock_dir="${SUPABASE_SLOT_DIR:-/tmp/wynne-supabase-slots}"
+  local lock_dir="${SUPABASE_SLOT_DIR:-/tmp/dia-supabase-slots}"
   mkdir -p "$lock_dir"
   local start_slot
   if [[ -n "${SUPABASE_SLOT_START:-}" ]]; then

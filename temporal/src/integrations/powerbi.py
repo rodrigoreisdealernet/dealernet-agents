@@ -318,7 +318,7 @@ class DatasetRefreshState:
     Attributes
     ----------
     tenant_id:
-        Wynne tenant identifier.
+        Dealernet tenant identifier.
     workspace_id:
         Power BI workspace (group) identifier.
     dataset_id:
@@ -452,7 +452,7 @@ class ExportRunContext:
     Attributes
     ----------
     tenant_id:
-        Wynne tenant identifier.
+        Dealernet tenant identifier.
     workspace_id:
         Target Power BI workspace identifier.
     dataset_id:

@@ -48,7 +48,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
     print(sock.getsockname()[1])
 PY
 )"
-  validation_tmp_root="$(mktemp -d "${TMPDIR:-/tmp}/wynne-project-hierarchy-mixed-fleet-reset.XXXXXX")"
+  validation_tmp_root="$(mktemp -d "${TMPDIR:-/tmp}/dia-project-hierarchy-mixed-fleet-reset.XXXXXX")"
   cp -R "$repo_root/supabase" "$validation_tmp_root/supabase"
   python - "$validation_tmp_root/supabase/config.toml" "$db_port" <<'PY'
 import re

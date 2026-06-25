@@ -1,11 +1,11 @@
 name: Deploy Dev
 
-# Phase 2 (#41/#44): deploy freshly-built images to the `wynne-dev` namespace.
+# Phase 2 (#41/#44): deploy freshly-built images to the `dia-dev` namespace.
 #
 # GATED: until Phase 2 is enabled the deploy job is skipped cleanly (the preflight
 # runs on ubuntu-latest and never queues a missing runner). To enable, see
 # PHASE2-DEPLOYMENT.md (registry creds, namespaces+RBAC applied, KUBE_CONFIG_DEV
-# secret, dev environment, K8S_DEPLOY_ENABLED=true, WYNNE_DEV_NAMESPACE=wynne-dev).
+# secret, dev environment, K8S_DEPLOY_ENABLED=true, DIA_DEV_NAMESPACE=dia-dev).
 #
 # Dev deploys run on ubuntu-latest against the cluster's PUBLIC API using a
 # namespace-scoped gha-deployer kubeconfig (KUBE_CONFIG_DEV). Test/prod must still
@@ -68,11 +68,11 @@ jobs:
       - id: gate
         env:
           DEPLOY_ENABLED: ${{ vars.K8S_DEPLOY_ENABLED }}
-          DEV_NAMESPACE: ${{ vars.WYNNE_DEV_NAMESPACE }}
+          DEV_NAMESPACE: ${{ vars.DIA_DEV_NAMESPACE }}
           HAS_DEPLOY_KUBECONFIG: ${{ secrets.KUBE_CONFIG_DEV != '' }}
           HAS_DB_BOOTSTRAP_KUBECONFIG: ${{ secrets.KUBE_CONFIG_DEV_DB_BOOTSTRAP != '' }}
-          HAS_DB_BOOTSTRAP_USER: ${{ vars.WYNNE_DB_BOOTSTRAP_USER != '' }}
-          HAS_DB_BOOTSTRAP_DB_NAME: ${{ vars.WYNNE_DB_BOOTSTRAP_DB_NAME != '' }}
+          HAS_DB_BOOTSTRAP_USER: ${{ vars.DIA_DB_BOOTSTRAP_USER != '' }}
+          HAS_DB_BOOTSTRAP_DB_NAME: ${{ vars.DIA_DB_BOOTSTRAP_DB_NAME != '' }}
         run: |
           APP_ENABLED=false
           BOOTSTRAP_ENABLED=false
@@ -95,12 +95,12 @@ jobs:
             if [ "$APP_ENABLED" = true ]; then
               echo "| App deploy (frontend + worker) | ✅ enabled → \`$DEV_NAMESPACE\` |"
             else
-              echo "| App deploy (frontend + worker) | ⏭️ skipped — needs K8S_DEPLOY_ENABLED + WYNNE_DEV_NAMESPACE + KUBE_CONFIG_DEV |"
+              echo "| App deploy (frontend + worker) | ⏭️ skipped — needs K8S_DEPLOY_ENABLED + DIA_DEV_NAMESPACE + KUBE_CONFIG_DEV |"
             fi
             if [ "$BOOTSTRAP_ENABLED" = true ]; then
               echo "| DB bootstrap | ✅ enabled |"
             else
-              echo "| DB bootstrap | ⏭️ skipped — needs KUBE_CONFIG_DEV_DB_BOOTSTRAP + explicit least-privilege WYNNE_DB_BOOTSTRAP_USER + WYNNE_DB_BOOTSTRAP_DB_NAME |"
+              echo "| DB bootstrap | ⏭️ skipped — needs KUBE_CONFIG_DEV_DB_BOOTSTRAP + explicit least-privilege DIA_DB_BOOTSTRAP_USER + DIA_DB_BOOTSTRAP_DB_NAME |"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
           if [[ "$APP_ENABLED" == "true" && "$BOOTSTRAP_ENABLED" != "true" ]]; then
@@ -108,14 +108,14 @@ jobs:
           fi
 
   deploy:
-    name: Deploy app to wynne-dev
+    name: Deploy app to dia-dev
     needs: preflight
     if: needs.preflight.outputs.app_enabled == 'true'
     runs-on: ubuntu-latest
     environment: dev
     env:
-      DEV_NAMESPACE: ${{ vars.WYNNE_DEV_NAMESPACE }}
-      OBSERVABILITY_NAMESPACE: wynne-observability
+      DEV_NAMESPACE: ${{ vars.DIA_DEV_NAMESPACE }}
+      OBSERVABILITY_NAMESPACE: dia-observability
       IMAGE_REGISTRY: ${{ vars.ACR_LOGIN_SERVER }}
     steps:
       - uses: actions/checkout@v4
@@ -213,7 +213,7 @@ jobs:
               --ignore-not-found
           fi
 
-      - name: Helm upgrade (wynne-dev)
+      - name: Helm upgrade (dia-dev)
         run: |
           set -euo pipefail
           helm upgrade --install rental-app charts/app \
@@ -263,7 +263,7 @@ jobs:
         # when pods never become Ready — it does NOT say WHY (ImagePullBackOff vs
         # CrashLoopBackOff vs failing probe). Capture the cluster-side detail here so
         # the failure is actionable in the run log (and to the deploy-failure sentinel),
-        # instead of needing manual kubectl access to wynne-dev to diagnose.
+        # instead of needing manual kubectl access to dia-dev to diagnose.
         run: |
           set +e
           ns="$DEV_NAMESPACE"
@@ -355,11 +355,11 @@ jobs:
       failure_class: ${{ steps.ensure-bootstrap-rbac.outputs.failure_class }}
     environment: dev
     env:
-      DEV_NAMESPACE: ${{ vars.WYNNE_DEV_NAMESPACE }}
-      SUPABASE_NAMESPACE: ${{ vars.WYNNE_SUPABASE_NAMESPACE || 'wynne-supabase' }}
-      DB_BOOTSTRAP_USER: ${{ vars.WYNNE_DB_BOOTSTRAP_USER }}
-      DB_BOOTSTRAP_DB_NAME: ${{ vars.WYNNE_DB_BOOTSTRAP_DB_NAME }}
-      DB_BOOTSTRAP_SERVICE_ACCOUNT: wynne-db-bootstrap
+      DEV_NAMESPACE: ${{ vars.DIA_DEV_NAMESPACE }}
+      SUPABASE_NAMESPACE: ${{ vars.DIA_SUPABASE_NAMESPACE || 'dia-supabase' }}
+      DB_BOOTSTRAP_USER: ${{ vars.DIA_DB_BOOTSTRAP_USER }}
+      DB_BOOTSTRAP_DB_NAME: ${{ vars.DIA_DB_BOOTSTRAP_DB_NAME }}
+      DB_BOOTSTRAP_SERVICE_ACCOUNT: dia-db-bootstrap
     steps:
       - uses: actions/checkout@v4
 
@@ -376,7 +376,7 @@ jobs:
 
       - name: Ensure bootstrap RBAC is applied (self-heal)
         id: ensure-bootstrap-rbac
-        # Apply the RBAC manifest for the wynne-db-bootstrap service account
+        # Apply the RBAC manifest for the dia-db-bootstrap service account
         # idempotently before launching the bootstrap job. This self-heals RBAC
         # drift that causes the in-cluster job pod to fail immediately with
         # "Bootstrap service account must be allowed: create pods/exec".
@@ -430,7 +430,7 @@ jobs:
             exit 1
           fi
 
-          bootstrap_job="wynne-db-bootstrap-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          bootstrap_job="dia-db-bootstrap-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           migrations_configmap="${bootstrap_job}-migrations"
           checks_configmap="${bootstrap_job}-checks"
 
@@ -602,9 +602,9 @@ jobs:
                         }
 
                         psql_exec -c \
-                          "CREATE TABLE IF NOT EXISTS public.wynne_deploy_migrations (filename text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now());"
+                          "CREATE TABLE IF NOT EXISTS public.dia_deploy_migrations (filename text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now());"
 
-                        applied_migrations="$(psql_exec -qtAX -c "SELECT filename FROM public.wynne_deploy_migrations;")"
+                        applied_migrations="$(psql_exec -qtAX -c "SELECT filename FROM public.dia_deploy_migrations;")"
 
                         while IFS= read -r migration; do
                           if [ -z "$migration" ]; then
@@ -635,7 +635,7 @@ jobs:
                           fi
                           rm -f "$migration_error_log"
                           psql_exec -v migration_name="$migration_name" <<'SQL'
-                          INSERT INTO public.wynne_deploy_migrations (filename)
+                          INSERT INTO public.dia_deploy_migrations (filename)
                           VALUES (:'migration_name')
                           ON CONFLICT (filename) DO NOTHING;
                           SQL
@@ -791,7 +791,7 @@ jobs:
       contents: read
       issues: write
     env:
-      DEV_NAMESPACE: ${{ vars.WYNNE_DEV_NAMESPACE }}
+      DEV_NAMESPACE: ${{ vars.DIA_DEV_NAMESPACE }}
     steps:
       - name: File / update critical deploy incident
         env:
@@ -843,7 +843,7 @@ jobs:
       contents: read
       issues: write
     env:
-      SUPABASE_NAMESPACE: ${{ vars.WYNNE_SUPABASE_NAMESPACE || 'wynne-supabase' }}
+      SUPABASE_NAMESPACE: ${{ vars.DIA_SUPABASE_NAMESPACE || 'dia-supabase' }}
     steps:
       - name: File / update critical bootstrap incident
         env:
@@ -863,7 +863,7 @@ jobs:
           Evidence: $RUN_URL
 
           Suggested ops action:
-          1. Restore RBAC for \`system:serviceaccount:$SUPABASE_NAMESPACE:wynne-db-bootstrap-runner\` so it can create/patch the bootstrap ServiceAccount and read/apply \`gha-db-bootstrap\` + \`wynne-db-bootstrap\` Role/RoleBinding resources in \`$SUPABASE_NAMESPACE\`.
+          1. Restore RBAC for \`system:serviceaccount:$SUPABASE_NAMESPACE:dia-db-bootstrap-runner\` so it can create/patch the bootstrap ServiceAccount and read/apply \`gha-db-bootstrap\` + \`dia-db-bootstrap\` Role/RoleBinding resources in \`$SUPABASE_NAMESPACE\`.
           2. Alternatively rotate \`KUBE_CONFIG_DEV_DB_BOOTSTRAP\` to an identity that already has those rights.
           3. Re-run \`Deploy Dev\` and confirm bootstrap + downstream dev E2E recover.
 

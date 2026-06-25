@@ -17,7 +17,7 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-container_name="${CONTAINER_NAME:-wynne_lvl3_home_dashboard_kpis_grant_$$}"
+container_name="${CONTAINER_NAME:-dia_home_dashboard_kpis_grant_$$}"
 postgres_image="${POSTGRES_IMAGE:-postgres:17}"
 
 cleanup() {

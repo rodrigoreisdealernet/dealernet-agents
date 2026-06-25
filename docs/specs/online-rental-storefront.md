@@ -166,7 +166,7 @@ storefront browser
 /api storefront endpoint
         |
         v
-ops_api / wynne-api validation + publication resolution
+ops_api / dia-api validation + publication resolution
         |
         v
 Temporal / DB write surfaces / quote engine
@@ -234,7 +234,7 @@ storefront.
 |---|---|
 | Frontend | dedicated public storefront route tree and publication-aware rendering |
 | Catalog read path | storefront-safe projections and availability RPCs only |
-| Submission path | `/api/*` -> `ops_api` / `wynne-api` -> workflow or DB write surfaces |
+| Submission path | `/api/*` -> `ops_api` / `dia-api` -> workflow or DB write surfaces |
 | Quote engine | existing pricing and fee calculation boundary, not bespoke browser math |
 | Order pipeline | submitted storefront outcomes enter the canonical quote or reservation flow |
 | Publication model | branding, visibility, hostname, embed, and verification metadata |

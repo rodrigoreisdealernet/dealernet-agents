@@ -13,7 +13,7 @@ from temporal.src.integrations.registry import build_connector_registry
 def _valid_config() -> dict[str, object]:
     return {
         "api_base_url": "https://tenant.coupahost.com",
-        "tenant_slug": "wynne-rental",
+        "tenant_slug": "dia-rental",
         "client_id_secret_ref": "secret://integrations/coupa/client_id",
         "client_secret_secret_ref": "secret://integrations/coupa/client_secret",
         "enabled_scopes": ["requisitions", "purchase_orders", "suppliers", "invoices"],

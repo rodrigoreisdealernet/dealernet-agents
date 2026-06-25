@@ -8,7 +8,7 @@ import { test, expect, type APIRequestContext, type Page } from '@playwright/tes
  * Mixed-Content / HTTP Supabase calls, wrong API URL, RLS lockout, and blank data renders.
  * All tests here are GATING (failures block a deploy via e2e-dev.yml).
  *
- * Closes https://github.com/Volaris-AI/wynne-lvl-3/issues/170
+ * Closes https://github.com/Volaris-AI/dia/issues/170
  */
 
 const ROUTES: { path: string; name: string }[] = [
@@ -350,10 +350,10 @@ async function findEligibleOrderForConversion(page: Page): Promise<OrderConversi
   throw new Error('No approved rental order with an available order-to-contract conversion action and visible line context was found.');
 }
 
-test('app shell renders Wynne Systems branding in header and document title', async ({ page }) => {
+test('app shell renders Dealernet branding in header and document title', async ({ page }) => {
   await gotoAndCollectErrors(page, '/');
-  await expect(page).toHaveTitle(/Wynne Systems/);
-  await expect(page.getByRole('heading', { name: 'Wynne Systems' })).toBeVisible();
+  await expect(page).toHaveTitle(/Dealernet/);
+  await expect(page.getByRole('heading', { name: 'Dealernet' })).toBeVisible();
   // old internal framework name must not appear anywhere in the rendered page
   await expect(page.locator('body')).not.toContainText('JSON UI Engine');
 });
@@ -779,7 +779,7 @@ test('rental-orders: list structure renders; ≥1 row when seed data is present'
  * those vars are absent the first "View Profile" button is clicked, but the test
  * fails hard if no rows are present so the detail route is never silently skipped.
  *
- * Closes https://github.com/Volaris-AI/wynne-lvl-3/issues/945 (live route coverage).
+ * Closes https://github.com/Volaris-AI/dia/issues/945 (live route coverage).
  */
 test('crm-customers: list renders; detail route reachable from first customer row', async ({ page, request }) => {
   test.skip(!AUTH_EMAIL || !AUTH_PASSWORD, 'Set E2E_AUTH_EMAIL/PASSWORD to run authenticated CRM smoke.');
@@ -942,7 +942,7 @@ test('enterprise-financials: route renders structure and data layer responds wit
  * experience coverage to the durable smoke suite.  Failures here indicate
  * that the stock-item create RPC, list refresh, or detail route has broken.
  *
- * Closes https://github.com/Volaris-AI/wynne-lvl-3/issues/1326
+ * Closes https://github.com/Volaris-AI/dia/issues/1326
  */
 test('inventory stock-item creation journey — guided form to persisted item context', async ({ page, request }) => {
   test.skip(!AUTH_EMAIL || !AUTH_PASSWORD, 'Set E2E_AUTH_EMAIL and E2E_AUTH_PASSWORD to run authenticated inventory stock-item creation smoke.');
@@ -1125,7 +1125,7 @@ test('inventory stock-item creation journey — guided form to persisted item co
  * into smoke to protect the operator path from checked-out queue row to
  * persisted post-check-in contract state.
  *
- * Closes https://github.com/Volaris-AI/wynne-lvl-3/issues/1333
+ * Closes https://github.com/Volaris-AI/dia/issues/1333
  */
 test('returns queue row-scoped check-in handoff opens prefilled and persists after reload', async ({ page }) => {
   test.skip(!AUTH_EMAIL || !AUTH_PASSWORD, 'Set E2E_AUTH_EMAIL and E2E_AUTH_PASSWORD to run authenticated write E2E.');
@@ -1247,7 +1247,7 @@ test('returns queue row-scoped check-in handoff opens prefilled and persists aft
  *
  * Promotes approved-order handoff into smoke so regression blocks deployment.
  *
- * Closes https://github.com/Volaris-AI/wynne-lvl-3/issues/1582
+ * Closes https://github.com/Volaris-AI/dia/issues/1582
  */
 test('approved rental order converts into a linked rental contract that persists after reload and prevents duplicate conversion', async ({ page }) => {
   test.skip(!AUTH_EMAIL || !AUTH_PASSWORD, 'Set E2E_AUTH_EMAIL and E2E_AUTH_PASSWORD to run authenticated write E2E.');

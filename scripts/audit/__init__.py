@@ -1,4 +1,4 @@
-"""Architecture-audit checks for the Wynne software factory.
+"""Architecture-audit checks for the Dealernet software factory.
 
 Each check is a standing, whole-repo audit that catches a class of defect the
 per-PR review agents structurally cannot see (cross-file wiring, holistic

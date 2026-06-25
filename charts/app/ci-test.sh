@@ -177,11 +177,11 @@ assert_contains     "$DEV_FRONTEND_SERVICE" "dev: frontend service type=LoadBala
 assert_contains     "$DEV" "dev: frontend image tag=dev-latest"         "image: (.*/)?frontend:dev-latest"
 assert_contains     "$DEV" "dev: worker image tag=dev-latest"           "image: (.*/)?temporal-worker:dev-latest"
 assert_contains     "$DEV" "dev: ops-api image tag=dev-latest"          "image: (.*/)?temporal-worker:dev-latest"
-assert_contains     "$DEV" "dev: temporal namespace=wynne-dev"          "wynne-dev"
-assert_contains     "$DEV" "dev: temporal taskQueue=wynne-dev-main"     "wynne-dev-main"
+assert_contains     "$DEV" "dev: temporal namespace=dia-dev"          "dia-dev"
+assert_contains     "$DEV" "dev: temporal taskQueue=dia-dev-main"     "dia-dev-main"
 assert_contains     "$DEV" "dev: secretKeyRef present"                  "secretKeyRef"
-assert_contains     "$DEV" "dev: frontend secret=frontend-secrets-wynne-dev"       "frontend-secrets-wynne-dev"
-assert_contains     "$DEV" "dev: worker secret=temporal-worker-secrets-wynne-dev"  "temporal-worker-secrets-wynne-dev"
+assert_contains     "$DEV" "dev: frontend secret=frontend-secrets-dia-dev"       "frontend-secrets-dia-dev"
+assert_contains     "$DEV" "dev: worker secret=temporal-worker-secrets-dia-dev"  "temporal-worker-secrets-dia-dev"
 assert_contains     "$DEV" "dev: ops-api health endpoint configured"    "/api/ops/health"
 assert_contains     "$DEV_VALUES" "dev values: frontend Supabase URL uses HTTPS"    "supabaseUrl: \"https://"
 assert_contains     "$DEV_VALUES" "dev values: frontend API URL uses HTTPS"         "apiUrl: \"https://"
@@ -277,18 +277,18 @@ assert_not_contains "$TEST" "test: Ingress disabled for UAT profile"     "kind: 
 assert_contains     "$TEST" "test: frontend Service type=LoadBalancer"   "type: LoadBalancer"
 assert_not_contains "$TEST" "test: oauth2-proxy deployment disabled"     "component: oauth2-proxy"
 assert_not_contains "$TEST" "test: grafana oauth2-proxy removed"          "component: oauth2-proxy-grafana"
-assert_not_contains "$TEST" "test: temporal admin ingress disabled"      "temporal\\.wynne-test\\.example\\.com"
-assert_not_contains "$TEST" "test: grafana admin ingress disabled"       "grafana\\.wynne-test\\.example\\.com"
+assert_not_contains "$TEST" "test: temporal admin ingress disabled"      "temporal\\.dia-test\\.example\\.com"
+assert_not_contains "$TEST" "test: grafana admin ingress disabled"       "grafana\\.dia-test\\.example\\.com"
 assert_not_contains "$TEST" "test: oauth2-proxy admin group absent"      "\\-\\-allowed-group=admin"
 assert_not_contains "$TEST" "test: grafana ingress not via oauth2-proxy" "grafana-oauth2-proxy"
 assert_contains     "$TEST" "test: frontend image tag prefix=test-"      "image: frontend:test-"
 assert_contains     "$TEST" "test: worker image tag prefix=test-"        "image: temporal-worker:test-"
 assert_contains     "$TEST" "test: ops-api image tag prefix=test- (shared temporal-worker image)" "image: temporal-worker:test-"
-assert_contains     "$TEST" "test: temporal namespace=wynne-test"        "wynne-test"
-assert_contains     "$TEST" "test: temporal taskQueue=wynne-test-main"   "wynne-test-main"
+assert_contains     "$TEST" "test: temporal namespace=dia-test"        "dia-test"
+assert_contains     "$TEST" "test: temporal taskQueue=dia-test-main"   "dia-test-main"
 assert_contains     "$TEST" "test: secretKeyRef present"                 "secretKeyRef"
-assert_contains     "$TEST" "test: frontend secret=frontend-secrets-wynne-test"       "frontend-secrets-wynne-test"
-assert_contains     "$TEST" "test: worker secret=temporal-worker-secrets-wynne-test"  "temporal-worker-secrets-wynne-test"
+assert_contains     "$TEST" "test: frontend secret=frontend-secrets-dia-test"       "frontend-secrets-dia-test"
+assert_contains     "$TEST" "test: worker secret=temporal-worker-secrets-dia-test"  "temporal-worker-secrets-dia-test"
 assert_not_contains "$TEST" "test: VITE_SUPABASE_ANON_KEY not literal"   "value:.*VITE_SUPABASE_ANON_KEY"
 assert_not_contains "$TEST" "test: SUPABASE_SERVICE_ROLE_KEY not literal" "value:.*SUPABASE_SERVICE_ROLE_KEY"
 
@@ -319,10 +319,10 @@ assert_not_contains "$TEST"                "test observability: TemporalWorkerDo
 assert_not_contains "$TEST"                "test observability: OpsApiDown alert disabled"           "OpsApiDown"
 assert_not_contains "$TEST"                "test observability: TemporalWorkflowFailureSpike alert disabled" "TemporalWorkflowFailureSpike"
 assert_not_contains "$TEST"                "test observability: kube-prometheus-stack label absent"  "release: observability"
-# Grafana upstream DNS contract — must point at the observability Helm release in wynne-observability (PR #789)
+# Grafana upstream DNS contract — must point at the observability Helm release in dia-observability (PR #789)
 TEST_GRAFANA_ROUTE=$(awk 'BEGIN{RS="---\n"; ORS=""} /kind: Service/ && /component: grafana-admin-upstream/' <<<"$TEST")
 assert_not_contains "$TEST_GRAFANA_ROUTE" "test observability: Grafana upstream route not rendered with adminAccess=false" \
-  "observability-grafana\\.wynne-observability\\.svc\\.cluster\\.local"
+  "observability-grafana\\.dia-observability\\.svc\\.cluster\\.local"
 # test profile: deeper observability guardrails — Temporal UI Deployment, scrape config alignment, full alert set
 TEST_TEMPORAL_UI_DEPLOY=$(awk 'BEGIN{RS="---\n"; ORS=""} /kind: Deployment/ && /component: temporal-ui/' <<<"$TEST")
 if [ -z "$TEST_TEMPORAL_UI_DEPLOY" ]; then
@@ -360,22 +360,22 @@ assert_contains     "$PROD" "prod: frontend Deployment renders"          "kind: 
 assert_contains     "$PROD" "prod: frontend replicas=3"                  "replicas: 3"
 assert_contains     "$PROD" "prod: worker replicas=2"                    "replicas: 2"
 assert_contains     "$PROD" "prod: Ingress enabled"                      "kind: Ingress"
-assert_contains     "$PROD" "prod: ingress host=frontend.wynne.example.com"  "frontend\\.wynne\\.example\\.com"
+assert_contains     "$PROD" "prod: ingress host=frontend.dia.example.com"  "frontend\\.dia\\.example\\.com"
 assert_contains     "$PROD" "prod: ingress className=nginx"              "ingressClassName: nginx"
 assert_contains     "$PROD" "prod: oauth2-proxy deployment enabled"      "component: oauth2-proxy"
 assert_not_contains "$PROD" "prod: grafana oauth2-proxy removed"          "component: oauth2-proxy-grafana"
-assert_contains     "$PROD" "prod: temporal admin ingress host"          "temporal\\.wynne\\.example\\.com"
-assert_contains     "$PROD" "prod: grafana admin ingress host"           "grafana\\.wynne\\.example\\.com"
+assert_contains     "$PROD" "prod: temporal admin ingress host"          "temporal\\.dia\\.example\\.com"
+assert_contains     "$PROD" "prod: grafana admin ingress host"           "grafana\\.dia\\.example\\.com"
 assert_contains     "$PROD" "prod: oauth2-proxy admin group enforced"    "\\-\\-allowed-group=admin"
 assert_not_contains "$PROD" "prod: grafana ingress not via oauth2-proxy" "grafana-oauth2-proxy"
 assert_contains     "$PROD" "prod: frontend image tag prefix=prod-"      "/frontend:prod-"
 assert_contains     "$PROD" "prod: worker image tag prefix=prod-"        "/temporal-worker:prod-"
 assert_contains     "$PROD" "prod: ops-api image tag prefix=prod-"       "/temporal-worker:prod-"
-assert_contains     "$PROD" "prod: temporal namespace=wynne-prod"        "wynne-prod"
-assert_contains     "$PROD" "prod: temporal taskQueue=wynne-prod-main"   "wynne-prod-main"
+assert_contains     "$PROD" "prod: temporal namespace=dia-prod"        "dia-prod"
+assert_contains     "$PROD" "prod: temporal taskQueue=dia-prod-main"   "dia-prod-main"
 assert_contains     "$PROD" "prod: secretKeyRef present"                 "secretKeyRef"
-assert_contains     "$PROD" "prod: frontend secret=frontend-secrets-wynne-prod"       "frontend-secrets-wynne-prod"
-assert_contains     "$PROD" "prod: worker secret=temporal-worker-secrets-wynne-prod"  "temporal-worker-secrets-wynne-prod"
+assert_contains     "$PROD" "prod: frontend secret=frontend-secrets-dia-prod"       "frontend-secrets-dia-prod"
+assert_contains     "$PROD" "prod: worker secret=temporal-worker-secrets-dia-prod"  "temporal-worker-secrets-dia-prod"
 assert_not_contains "$PROD" "prod: VITE_SUPABASE_ANON_KEY not literal"   "value:.*VITE_SUPABASE_ANON_KEY"
 assert_not_contains "$PROD" "prod: SUPABASE_SERVICE_ROLE_KEY not literal" "value:.*SUPABASE_SERVICE_ROLE_KEY"
 
@@ -402,10 +402,10 @@ assert_contains "$PROD"                 "prod observability: ServiceMonitor rend
 assert_contains "$PROD"                 "prod observability: PrometheusRule rendered"          "kind: PrometheusRule"
 assert_contains "$PROD"                 "prod observability: Grafana dashboard ConfigMaps"     "grafana_dashboard"
 assert_contains "$PROD"                 "prod observability: kube-prometheus-stack label"      "release: observability"
-# Grafana upstream DNS contract — must point at the observability Helm release in wynne-observability (PR #789)
+# Grafana upstream DNS contract — must point at the observability Helm release in dia-observability (PR #789)
 PROD_GRAFANA_ROUTE=$(awk 'BEGIN{RS="---\n"; ORS=""} /kind: Service/ && /component: grafana-admin-upstream/' <<<"$PROD")
 assert_contains "$PROD_GRAFANA_ROUTE" "prod observability: Grafana upstream targets observability-grafana service" \
-  "observability-grafana\\.wynne-observability\\.svc\\.cluster\\.local"
+  "observability-grafana\\.dia-observability\\.svc\\.cluster\\.local"
 assert_not_contains "$PROD_GRAFANA_ROUTE" "prod observability: Grafana upstream not stale monitoring namespace" \
   "grafana\\.monitoring\\.svc\\.cluster\\.local"
 # prod profile: deeper observability guardrails — Temporal UI Deployment, worker-metrics Service, scrape config, full alert set
@@ -547,8 +547,8 @@ assert_contains "$TEST_ALERTMANAGER_PROXY" "test: alertmanager oauth2-proxy OIDC
 TEST_TEMPORAL_UPSTREAM_SVC=$(awk 'BEGIN{RS="---\n"; ORS=""} /kind: Service/ && /temporal-ui-admin-upstream/' <<<"$TEST_ADMIN")
 assert_contains "$TEST_TEMPORAL_UPSTREAM_SVC" "test: temporal-ui-upstream service type=ExternalName" \
   "type: ExternalName"
-assert_contains "$TEST_TEMPORAL_UPSTREAM_SVC" "test: temporal-ui-upstream externalName=rental-app-temporal-ui.wynne-test.svc.cluster.local" \
-  "externalName: .*rental-app-temporal-ui\.wynne-test\.svc\.cluster\.local"
+assert_contains "$TEST_TEMPORAL_UPSTREAM_SVC" "test: temporal-ui-upstream externalName=rental-app-temporal-ui.dia-test.svc.cluster.local" \
+  "externalName: .*rental-app-temporal-ui\.dia-test\.svc\.cluster\.local"
 assert_contains "$TEST_TEMPORAL_UPSTREAM_SVC" "test: temporal-ui-upstream service port=8080" \
   "port: 8080"
 
@@ -556,8 +556,8 @@ assert_contains "$TEST_TEMPORAL_UPSTREAM_SVC" "test: temporal-ui-upstream servic
 TEST_GRAFANA_UPSTREAM_SVC=$(awk 'BEGIN{RS="---\n"; ORS=""} /kind: Service/ && /grafana-admin-upstream/' <<<"$TEST_ADMIN")
 assert_contains "$TEST_GRAFANA_UPSTREAM_SVC" "test: grafana-upstream service type=ExternalName" \
   "type: ExternalName"
-assert_contains "$TEST_GRAFANA_UPSTREAM_SVC" "test: grafana-upstream externalName=observability-grafana.wynne-observability.svc.cluster.local" \
-  "externalName: .*observability-grafana\.wynne-observability\.svc\.cluster\.local"
+assert_contains "$TEST_GRAFANA_UPSTREAM_SVC" "test: grafana-upstream externalName=observability-grafana.dia-observability.svc.cluster.local" \
+  "externalName: .*observability-grafana\.dia-observability\.svc\.cluster\.local"
 assert_contains "$TEST_GRAFANA_UPSTREAM_SVC" "test: grafana-upstream service port=80" \
   "port: 80"
 
@@ -565,8 +565,8 @@ assert_contains "$TEST_GRAFANA_UPSTREAM_SVC" "test: grafana-upstream service por
 TEST_STUDIO_UPSTREAM_SVC=$(awk 'BEGIN{RS="---\n"; ORS=""} /kind: Service/ && /studio-admin-upstream/' <<<"$TEST_ADMIN")
 assert_contains "$TEST_STUDIO_UPSTREAM_SVC" "test: studio-upstream service type=ExternalName" \
   "type: ExternalName"
-assert_contains "$TEST_STUDIO_UPSTREAM_SVC" "test: studio-upstream externalName=supabase-supabase-studio.wynne-supabase.svc.cluster.local" \
-  "externalName: .*supabase-supabase-studio\.wynne-supabase\.svc\.cluster\.local"
+assert_contains "$TEST_STUDIO_UPSTREAM_SVC" "test: studio-upstream externalName=supabase-supabase-studio.dia-supabase.svc.cluster.local" \
+  "externalName: .*supabase-supabase-studio\.dia-supabase\.svc\.cluster\.local"
 assert_contains "$TEST_STUDIO_UPSTREAM_SVC" "test: studio-upstream service port=3000" \
   "port: 3000"
 
@@ -574,8 +574,8 @@ assert_contains "$TEST_STUDIO_UPSTREAM_SVC" "test: studio-upstream service port=
 TEST_PROMETHEUS_UPSTREAM_SVC=$(awk 'BEGIN{RS="---\n"; ORS=""} /kind: Service/ && /prometheus-admin-upstream/' <<<"$TEST_ADMIN")
 assert_contains "$TEST_PROMETHEUS_UPSTREAM_SVC" "test: prometheus-upstream service type=ExternalName" \
   "type: ExternalName"
-assert_contains "$TEST_PROMETHEUS_UPSTREAM_SVC" "test: prometheus-upstream externalName=observability-kube-prometheus-stack-prometheus.wynne-observability.svc.cluster.local" \
-  "externalName: .*observability-kube-prometheus-stack-prometheus\.wynne-observability\.svc\.cluster\.local"
+assert_contains "$TEST_PROMETHEUS_UPSTREAM_SVC" "test: prometheus-upstream externalName=observability-kube-prometheus-stack-prometheus.dia-observability.svc.cluster.local" \
+  "externalName: .*observability-kube-prometheus-stack-prometheus\.dia-observability\.svc\.cluster\.local"
 assert_contains "$TEST_PROMETHEUS_UPSTREAM_SVC" "test: prometheus-upstream service port=9090" \
   "port: 9090"
 
@@ -583,8 +583,8 @@ assert_contains "$TEST_PROMETHEUS_UPSTREAM_SVC" "test: prometheus-upstream servi
 TEST_ALERTMANAGER_UPSTREAM_SVC=$(awk 'BEGIN{RS="---\n"; ORS=""} /kind: Service/ && /alertmanager-admin-upstream/' <<<"$TEST_ADMIN")
 assert_contains "$TEST_ALERTMANAGER_UPSTREAM_SVC" "test: alertmanager-upstream service type=ExternalName" \
   "type: ExternalName"
-assert_contains "$TEST_ALERTMANAGER_UPSTREAM_SVC" "test: alertmanager-upstream externalName=observability-kube-prometheus-stack-alertmanager.wynne-observability.svc.cluster.local" \
-  "externalName: .*observability-kube-prometheus-stack-alertmanager\.wynne-observability\.svc\.cluster\.local"
+assert_contains "$TEST_ALERTMANAGER_UPSTREAM_SVC" "test: alertmanager-upstream externalName=observability-kube-prometheus-stack-alertmanager.dia-observability.svc.cluster.local" \
+  "externalName: .*observability-kube-prometheus-stack-alertmanager\.dia-observability\.svc\.cluster\.local"
 assert_contains "$TEST_ALERTMANAGER_UPSTREAM_SVC" "test: alertmanager-upstream service port=9093" \
   "port: 9093"
 
@@ -718,7 +718,7 @@ for ENV_NAME in dev test prod; do
     ' "$WORKFLOW_FILE")
   fi
   HELM_UPGRADE_STEP=$(awk '
-    /^      - name: Helm upgrade \(wynne-'$ENV_NAME'\)/{capturing=1; print; next}
+    /^      - name: Helm upgrade \(dia-'$ENV_NAME'\)/{capturing=1; print; next}
     capturing && (/^  [a-z]/ || /^      - name: /){capturing=0}
     capturing{print}
   ' "$WORKFLOW_FILE")
@@ -841,14 +841,14 @@ done
 echo ""
 echo "=== deploy/k8s/rbac-nonprod.yaml ==="
 RBAC_NONPROD="deploy/k8s/rbac-nonprod.yaml"
-DEV_DEPLOYER_ROLE=$(awk 'BEGIN{RS="---\n"; ORS=""} /kind: Role/ && /namespace: wynne-dev/ && /name: gha-deployer/' "$RBAC_NONPROD")
-TEST_DEPLOYER_ROLE=$(awk 'BEGIN{RS="---\n"; ORS=""} /kind: Role/ && /namespace: wynne-test/ && /name: gha-deployer/' "$RBAC_NONPROD")
-assert_contains "$DEV_DEPLOYER_ROLE" "rbac: wynne-dev gha-deployer can read pod logs and events" 'resources: \["pods/log", "events"\]'
-assert_contains "$DEV_DEPLOYER_ROLE" "rbac: wynne-dev gha-deployer diagnostics are read-only" 'verbs: \["get", "list", "watch"\]'
-assert_contains "$TEST_DEPLOYER_ROLE" "rbac: wynne-test gha-deployer can read pod logs and events" 'resources: \["pods/log", "events"\]'
-assert_contains "$TEST_DEPLOYER_ROLE" "rbac: wynne-test gha-deployer diagnostics are read-only" 'verbs: \["get", "list", "watch"\]'
-assert_contains "$DEV_DEPLOYER_ROLE"  "rbac: wynne-dev gha-deployer can manage ExternalSecrets (ADR-0100)"  'externalsecrets'
-assert_contains "$TEST_DEPLOYER_ROLE" "rbac: wynne-test gha-deployer can manage ExternalSecrets (ADR-0100)" 'externalsecrets'
+DEV_DEPLOYER_ROLE=$(awk 'BEGIN{RS="---\n"; ORS=""} /kind: Role/ && /namespace: dia-dev/ && /name: gha-deployer/' "$RBAC_NONPROD")
+TEST_DEPLOYER_ROLE=$(awk 'BEGIN{RS="---\n"; ORS=""} /kind: Role/ && /namespace: dia-test/ && /name: gha-deployer/' "$RBAC_NONPROD")
+assert_contains "$DEV_DEPLOYER_ROLE" "rbac: dia-dev gha-deployer can read pod logs and events" 'resources: \["pods/log", "events"\]'
+assert_contains "$DEV_DEPLOYER_ROLE" "rbac: dia-dev gha-deployer diagnostics are read-only" 'verbs: \["get", "list", "watch"\]'
+assert_contains "$TEST_DEPLOYER_ROLE" "rbac: dia-test gha-deployer can read pod logs and events" 'resources: \["pods/log", "events"\]'
+assert_contains "$TEST_DEPLOYER_ROLE" "rbac: dia-test gha-deployer diagnostics are read-only" 'verbs: \["get", "list", "watch"\]'
+assert_contains "$DEV_DEPLOYER_ROLE"  "rbac: dia-dev gha-deployer can manage ExternalSecrets (ADR-0100)"  'externalsecrets'
+assert_contains "$TEST_DEPLOYER_ROLE" "rbac: dia-test gha-deployer can manage ExternalSecrets (ADR-0100)" 'externalsecrets'
 
 # ── External Secrets Operator (ESO) template assertions ──────────────────────
 # Guard: externalSecrets.enabled=false (default) must not render any ExternalSecret.
@@ -904,11 +904,11 @@ assert_not_contains "$ESO_ON" "eso enabled: no property line when properties uns
 ESO_PROP=$(helm template "$RELEASE" "$CHART" \
   --set "externalSecrets.enabled=true" \
   --set "externalSecrets.secretStore.name=openbao-test" \
-  --set "externalSecrets.keys.supabaseAnonKey=wynne/x/runtime" \
-  --set "externalSecrets.keys.supabaseServiceRoleKey=wynne/x/runtime" \
+  --set "externalSecrets.keys.supabaseAnonKey=dia/x/runtime" \
+  --set "externalSecrets.keys.supabaseServiceRoleKey=dia/x/runtime" \
   --set "externalSecrets.properties.supabaseAnonKey=anon-key" \
   --set "externalSecrets.properties.supabaseServiceRoleKey=service-role-key")
-assert_contains "$ESO_PROP" "eso property: shared path key=wynne/x/runtime"          "key: \"wynne/x/runtime\""
+assert_contains "$ESO_PROP" "eso property: shared path key=dia/x/runtime"          "key: \"dia/x/runtime\""
 assert_contains "$ESO_PROP" "eso property: frontend field=anon-key"                  "property: \"anon-key\""
 assert_contains "$ESO_PROP" "eso property: worker field=service-role-key"            "property: \"service-role-key\""
 
@@ -928,14 +928,14 @@ assert_contains "$ESO_ACR" "eso acr: acr-pull remoteRef=my-acr-pull-json"       
 ESO_DEV=$(helm template "$RELEASE" "$CHART" -f "$CHART/values-dev.yaml" \
   --set "externalSecrets.enabled=true" \
   --set "externalSecrets.secretStore.name=test-store")
-assert_contains "$ESO_DEV" "eso dev: frontend target=frontend-secrets-wynne-dev"    "frontend-secrets-wynne-dev"
-assert_contains "$ESO_DEV" "eso dev: worker target=temporal-worker-secrets-wynne-dev" "temporal-worker-secrets-wynne-dev"
-assert_contains "$ESO_DEV" "eso dev: runtime secrets share OpenBao path wynne/dev/runtime" "key: \"wynne/dev/runtime\""
+assert_contains "$ESO_DEV" "eso dev: frontend target=frontend-secrets-dia-dev"    "frontend-secrets-dia-dev"
+assert_contains "$ESO_DEV" "eso dev: worker target=temporal-worker-secrets-dia-dev" "temporal-worker-secrets-dia-dev"
+assert_contains "$ESO_DEV" "eso dev: runtime secrets share OpenBao path dia/dev/runtime" "key: \"dia/dev/runtime\""
 assert_contains "$ESO_DEV" "eso dev: frontend field property=anon-key"              "property: \"anon-key\""
 assert_contains "$ESO_DEV" "eso dev: worker field property=service-role-key"        "property: \"service-role-key\""
-# dev provisions a scoped ACR pull token at wynne/dev/acr-pull (field: dockerconfigjson).
+# dev provisions a scoped ACR pull token at dia/dev/acr-pull (field: dockerconfigjson).
 assert_contains "$ESO_DEV" "eso dev: acr-pull ExternalSecret rendered"              "acr-pull-eso"
-assert_contains "$ESO_DEV" "eso dev: acr-pull path=wynne/dev/acr-pull"              "key: \"wynne/dev/acr-pull\""
+assert_contains "$ESO_DEV" "eso dev: acr-pull path=dia/dev/acr-pull"              "key: \"dia/dev/acr-pull\""
 assert_contains "$ESO_DEV" "eso dev: acr-pull field property=dockerconfigjson"      "property: \"dockerconfigjson\""
 
 # Partial oauth2-proxy keys: only clientId set — must NOT render oauth2-proxy ExternalSecret.
@@ -1014,7 +1014,7 @@ fi
 
 # ── promotion preflight gate-confirmed guard (ADR-0062) ───────────────────────
 # Both deploy-test and deploy-prod must hard-fail when K8S is enabled but the
-# corresponding WYNNE_{ENV}_GATE_CONFIRMED variable is not set to 'true', so
+# corresponding DIA_{ENV}_GATE_CONFIRMED variable is not set to 'true', so
 # promotion cannot proceed on an unprotected GitHub Environment by accident.
 echo ""
 echo "=== promotion preflight gate-confirmed guard ==="
@@ -1028,8 +1028,8 @@ for ENV_NAME in test prod; do
 
   # Explicit mapping — avoids fragile runtime string transforms.
   case "$ENV_NAME" in
-    test) GATE_VAR="WYNNE_TEST_GATE_CONFIRMED" ;;
-    prod) GATE_VAR="WYNNE_PROD_GATE_CONFIRMED" ;;
+    test) GATE_VAR="DIA_TEST_GATE_CONFIRMED" ;;
+    prod) GATE_VAR="DIA_PROD_GATE_CONFIRMED" ;;
   esac
 
   # Extracts the '- id: gate' step block (6-space YAML indent matching the rest of
@@ -1044,10 +1044,10 @@ for ENV_NAME in test prod; do
     fail "gate-guard: deploy-${ENV_NAME} preflight gate step extracted"
   else
     pass "gate-guard: deploy-${ENV_NAME} preflight gate step extracted"
-    # Expected: GATE_CONFIRMED: ${{ vars.WYNNE_TEST_GATE_CONFIRMED }}
+    # Expected: GATE_CONFIRMED: ${{ vars.DIA_TEST_GATE_CONFIRMED }}
     assert_contains "$PREFLIGHT_STEP" "gate-guard: deploy-${ENV_NAME} reads GATE_CONFIRMED from vars.${GATE_VAR}" \
       "GATE_CONFIRMED: \\\${{ vars\\.${GATE_VAR} }}"
-    # Expected: ::error::WYNNE_TEST_GATE_CONFIRMED is not set to 'true'. ...
+    # Expected: ::error::DIA_TEST_GATE_CONFIRMED is not set to 'true'. ...
     assert_contains "$PREFLIGHT_STEP" "gate-guard: deploy-${ENV_NAME} hard-fails when gate not confirmed" \
       "::error::${GATE_VAR}"
     # Expected: if [[ "$GATE_CONFIRMED" != "true" ]]; then

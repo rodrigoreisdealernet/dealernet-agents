@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Bootstrap all factory labels for Volaris-AI/wynne-lvl-3
+# Bootstrap all factory labels for Volaris-AI/dia
 # Usage: GH_TOKEN=<pat> ./scripts/bootstrap-labels.sh [owner/repo]
 set -euo pipefail
 

@@ -26,7 +26,7 @@ class _FakePersistenceClient:
                     "enabled": True,
                     "settings": {
                         "api_base_url": "https://tenant.coupahost.com",
-                        "tenant_slug": "wynne-rental",
+                        "tenant_slug": "dia-rental",
                         "enabled_scopes": ["requisitions", "purchase_orders", "suppliers", "invoices"],
                         "healthcheck_timeout_seconds": 5,
                     },

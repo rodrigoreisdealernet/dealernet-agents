@@ -1,7 +1,7 @@
 apiVersion: v2
 name: monitoring
 description: >
-  Grafana dashboard provisioning for Wynne Systems — deploys
+  Grafana dashboard provisioning for Dealernet — deploys
   datasource and dashboard ConfigMaps consumed by the
   kube-prometheus-stack Grafana sidecar.  Install
   kube-prometheus-stack separately (see values-kube-prometheus-stack.yaml)

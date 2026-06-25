@@ -66,7 +66,7 @@ function mergeBranding(
   fallbackName: string | undefined,
 ): CommercialDocumentBranding {
   return {
-    companyName: asString(branding?.company_name) || fallbackName || 'Wynne Systems',
+    companyName: asString(branding?.company_name) || fallbackName || 'Dealernet',
     eyebrow: asString(branding?.eyebrow) || 'Equipment Rental',
     supportEmail: asString(branding?.support_email),
     supportPhone: asString(branding?.support_phone),

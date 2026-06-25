@@ -1,8 +1,8 @@
-# Isolated Temporal + Operations Factory stack for local Wynne demo.
-# Project name: wynne-ops  (does NOT collide with other running compose projects)
+# Isolated Temporal + Operations Factory stack for local Dealernet demo.
+# Project name: dia-ops  (does NOT collide with other running compose projects)
 # Worker/ops-api talk to the isolated Supabase stack on the host via host.docker.internal:54331.
 services:
-  wynne-temporal-db:
+  dia-temporal-db:
     image: postgres:15-alpine
     restart: unless-stopped
     environment:
@@ -15,46 +15,46 @@ services:
       timeout: 5s
       retries: 5
 
-  wynne-temporal:
+  dia-temporal:
     image: temporalio/auto-setup:1.21.3
     restart: unless-stopped
     depends_on:
-      wynne-temporal-db:
+      dia-temporal-db:
         condition: service_healthy
     environment:
       - DB=postgresql
       - DB_PORT=5432
       - POSTGRES_USER=temporal
       - POSTGRES_PWD=temporal
-      - POSTGRES_SEEDS=wynne-temporal-db
+      - POSTGRES_SEEDS=dia-temporal-db
       - TEMPORAL_CLI_ADDRESS=localhost:7233
     ports:
       - "7244:7233"
 
-  wynne-temporal-ui:
+  dia-temporal-ui:
     image: temporalio/ui:2.21.2
     restart: unless-stopped
     depends_on:
-      wynne-temporal:
+      dia-temporal:
         condition: service_started
     environment:
-      - TEMPORAL_ADDRESS=wynne-temporal:7233
+      - TEMPORAL_ADDRESS=dia-temporal:7233
       - TEMPORAL_CORS_ORIGINS=http://localhost:3010
     ports:
       - "8088:8080"
 
-  wynne-temporal-worker:
+  dia-temporal-worker:
     build:
       context: ./temporal
       dockerfile: Dockerfile.local
-    image: wynne-ops-app:local
+    image: dia-ops-app:local
     restart: unless-stopped
     depends_on:
-      wynne-temporal:
+      dia-temporal:
         condition: service_started
     environment:
       - PYTHONHTTPSVERIFY=0
-      - TEMPORAL_ADDRESS=wynne-temporal:7233
+      - TEMPORAL_ADDRESS=dia-temporal:7233
       - TEMPORAL_NAMESPACE=default
       - TEMPORAL_TASK_QUEUE=main
       - SUPABASE_URL=http://host.docker.internal:54331
@@ -66,19 +66,19 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-  wynne-ops-api:
+  dia-ops-api:
     build:
       context: ./temporal
       dockerfile: Dockerfile.local
-    image: wynne-ops-app:local
+    image: dia-ops-app:local
     restart: unless-stopped
     depends_on:
-      wynne-temporal:
+      dia-temporal:
         condition: service_started
     command: ["python", "-m", "src.ops_api"]
     environment:
       - PYTHONHTTPSVERIFY=0
-      - TEMPORAL_ADDRESS=wynne-temporal:7233
+      - TEMPORAL_ADDRESS=dia-temporal:7233
       - TEMPORAL_NAMESPACE=default
       - TEMPORAL_TASK_QUEUE=main
       - SUPABASE_URL=http://host.docker.internal:54331

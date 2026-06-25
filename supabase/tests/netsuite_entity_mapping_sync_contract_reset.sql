@@ -126,7 +126,7 @@ declare
   v_tenant_key text := 'tenant-netsuite-reset-9214';
   v_integration_id uuid;
   v_alias_id uuid;
-  v_wynne_entity_id uuid := '40000000-0000-0000-0000-000000009214';
+  v_dia_entity_id uuid := '40000000-0000-0000-0000-000000009214';
   v_delivery_id uuid;
   v_count int;
   v_blocked boolean;
@@ -164,7 +164,7 @@ begin
       direction, scope_key, source_of_truth, idempotency_key, status, request_payload
     ) values (
       v_integration_id, v_tenant_id, 'netsuite', 'erp_finance',
-      'outbound', 'invoice_sync', 'wynne', 'ns-reset-inv-001', 'pending',
+      'outbound', 'invoice_sync', 'dia', 'ns-reset-inv-001', 'pending',
       jsonb_build_object('entity_type', 'invoice', 'entity_id', 'inv-r01')
     );
   exception
@@ -183,7 +183,7 @@ begin
     direction, scope_key, source_of_truth, idempotency_key, status, request_payload
   ) values (
     v_integration_id, v_tenant_id, 'netsuite', 'erp_finance',
-    'outbound', 'invoice_sync', 'wynne', 'ns-reset-inv-002', 'pending',
+    'outbound', 'invoice_sync', 'dia', 'ns-reset-inv-002', 'pending',
     jsonb_build_object(
       'external_id', 'NS-RESET-INV-1002', 'entity_type', 'invoice',
       'entity_id', 'inv-r02'
@@ -202,7 +202,7 @@ begin
     direction, scope_key, source_of_truth, idempotency_key, status, request_payload
   ) values (
     v_integration_id, v_tenant_id, 'netsuite', 'erp_finance',
-    'outbound', 'invoice_sync', 'wynne', 'ns-reset-inv-002', 'sent',
+    'outbound', 'invoice_sync', 'dia', 'ns-reset-inv-002', 'sent',
     jsonb_build_object(
       'external_id', 'NS-RESET-INV-1002', 'entity_type', 'invoice',
       'entity_id', 'inv-r02'
@@ -227,10 +227,10 @@ begin
   -- 6. external_id_map: external_id immutability guard and stable-id replay ───
   insert into public.external_id_map (
     tenant_id, connector_key, provider, exchange_key,
-    entity_type, entity_id, wynne_entity_id, external_id, external_system, metadata
+    entity_type, entity_id, dia_entity_id, external_id, external_system, metadata
   ) values (
     v_tenant_id, 'netsuite', 'netsuite', 'erp_finance',
-    'invoice', 'inv-r02', v_wynne_entity_id, 'NS-RESET-INV-1002', 'netsuite',
+    'invoice', 'inv-r02', v_dia_entity_id, 'NS-RESET-INV-1002', 'netsuite',
     jsonb_build_object('source', 'initial')
   )
   returning id into v_alias_id;
@@ -253,10 +253,10 @@ begin
 
   insert into public.external_id_map (
     tenant_id, connector_key, provider, exchange_key,
-    entity_type, entity_id, wynne_entity_id, external_id, external_system, metadata
+    entity_type, entity_id, dia_entity_id, external_id, external_system, metadata
   ) values (
     v_tenant_id, 'netsuite', 'netsuite', 'erp_finance',
-    'invoice', 'inv-r02', v_wynne_entity_id, 'NS-RESET-INV-1002', 'netsuite',
+    'invoice', 'inv-r02', v_dia_entity_id, 'NS-RESET-INV-1002', 'netsuite',
     jsonb_build_object('source', 'replay')
   )
   on conflict (tenant_id, connector_key, exchange_key, entity_type, entity_id)

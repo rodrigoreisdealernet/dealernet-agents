@@ -1,4 +1,4 @@
-# DEV-GRADE OpenBao for the Wynne dev secret pipeline (ADR-0100).
+# DEV-GRADE OpenBao for the Dealernet dev secret pipeline (ADR-0100).
 #
 # ⚠️  NOT production secret custody. This is `bao server -dev`: in-memory storage,
 #     auto-unsealed, single replica, HTTP (no TLS). A pod restart loses all data and
@@ -8,40 +8,40 @@
 # Bootstrap (cluster-admin, out-of-band — the namespace-scoped gha-deployer cannot do this):
 #
 #   1. Apply this manifest:
-#        kubectl apply -f deploy/k8s/wynne-vault/openbao-dev.yaml
+#        kubectl apply -f deploy/k8s/dia-vault/openbao-dev.yaml
 #   2. Create the dev root token (value generated, never committed):
-#        kubectl -n wynne-vault create secret generic openbao-dev-root \
+#        kubectl -n dia-vault create secret generic openbao-dev-root \
 #          --from-literal=root-token="$(openssl rand -hex 20)"
-#        kubectl -n wynne-vault rollout restart deploy/openbao
+#        kubectl -n dia-vault rollout restart deploy/openbao
 #   3. Configure KV-v2 + Kubernetes auth (exec into the pod):
-#        POD=$(kubectl -n wynne-vault get pod -l app.kubernetes.io/name=openbao -o name)
-#        kubectl -n wynne-vault exec -i "$POD" -- sh -c '
+#        POD=$(kubectl -n dia-vault get pod -l app.kubernetes.io/name=openbao -o name)
+#        kubectl -n dia-vault exec -i "$POD" -- sh -c '
 #          export BAO_ADDR=http://127.0.0.1:8200 BAO_TOKEN=$BAO_DEV_ROOT_TOKEN_ID
 #          bao auth enable kubernetes
 #          bao write auth/kubernetes/config \
 #            kubernetes_host="https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT" \
 #            kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
 #            token_reviewer_jwt=@/var/run/secrets/kubernetes.io/serviceaccount/token
-#          printf "path \"secret/data/wynne/dev/*\" { capabilities = [\"read\"] }\npath \"secret/metadata/wynne/dev/*\" { capabilities = [\"read\"] }\n" | bao policy write wynne-ro -
-#          bao write auth/kubernetes/role/wynne-eso \
+#          printf "path \"secret/data/dia/dev/*\" { capabilities = [\"read\"] }\npath \"secret/metadata/dia/dev/*\" { capabilities = [\"read\"] }\n" | bao policy write dia-ro -
+#          bao write auth/kubernetes/role/dia-eso \
 #            bound_service_account_names=eso-vault-auth \
-#            bound_service_account_namespaces=wynne-dev \
-#            policies=wynne-ro ttl=1h'
+#            bound_service_account_namespaces=dia-dev \
+#            policies=dia-ro ttl=1h'
 #   4. Provision the secret values — see docs/runbooks/secret-operations.md (Migration / Cutover).
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: wynne-vault
+  name: dia-vault
   labels:
-    app.kubernetes.io/part-of: wynne
-    wynne.io/grade: dev-non-prod
+    app.kubernetes.io/part-of: dia
+    dia.io/grade: dev-non-prod
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: openbao
-  namespace: wynne-vault
+  namespace: dia-vault
 ---
 # OpenBao validates incoming Kubernetes-auth JWTs via the TokenReview API,
 # which requires the system:auth-delegator role.
@@ -50,7 +50,7 @@ kind: ClusterRoleBinding
 metadata:
   name: openbao-tokenreview
   labels:
-    app.kubernetes.io/part-of: wynne
+    app.kubernetes.io/part-of: dia
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -58,17 +58,17 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: openbao
-    namespace: wynne-vault
+    namespace: dia-vault
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: openbao
-  namespace: wynne-vault
+  namespace: dia-vault
   labels:
     app.kubernetes.io/name: openbao
-    app.kubernetes.io/part-of: wynne
-    wynne.io/grade: dev-non-prod
+    app.kubernetes.io/part-of: dia
+    dia.io/grade: dev-non-prod
 spec:
   replicas: 1
   selector:
@@ -78,7 +78,7 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: openbao
-        app.kubernetes.io/part-of: wynne
+        app.kubernetes.io/part-of: dia
     spec:
       serviceAccountName: openbao
       containers:
@@ -114,7 +114,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: openbao
-  namespace: wynne-vault
+  namespace: dia-vault
   labels:
     app.kubernetes.io/name: openbao
 spec:

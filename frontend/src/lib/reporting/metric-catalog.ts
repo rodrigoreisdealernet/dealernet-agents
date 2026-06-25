@@ -265,7 +265,7 @@ export interface SavedDashboard {
   updatedAt: string;
 }
 
-const STORAGE_KEY = 'wynne_saved_dashboards';
+const STORAGE_KEY = 'dia_saved_dashboards';
 
 export function loadSavedDashboards(): SavedDashboard[] {
   try {

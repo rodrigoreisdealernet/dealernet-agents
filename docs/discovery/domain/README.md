@@ -62,7 +62,7 @@ living document experts co-author.
 
 A confidently-hallucinated operating model is worse than none — it *looks* authoritative.
 Every task must carry ≥1 evidence reference, and `add-evidence` rejects records without a real
-source URL + a verbatim excerpt. Sources, by value: **real Wynne users / SME interviews** >
+source URL + a verbatim excerpt. Sources, by value: **real Dealernet users / SME interviews** >
 role postings & industry/association material > competitor docs > general web. The decomposition
 (capability areas, roles) is *design* and may be authored directly; the **tasks** beneath it are
 *empirical claims* and must be evidenced.
@@ -171,4 +171,4 @@ runs it each pass so the shareable roadmap stays current.
 
 | Vertical | Segment | Status |
 |----------|---------|--------|
-| [`equipment-rental-enterprise`](./equipment-rental-enterprise/operating-model.md) | Enterprise multi-branch + contractor/project (Wynne ICP) | seeded — roles scaffolded, tasks + ROI pending cartographer |
+| [`equipment-rental-enterprise`](./equipment-rental-enterprise/operating-model.md) | Enterprise multi-branch + contractor/project (Dealernet ICP) | seeded — roles scaffolded, tasks + ROI pending cartographer |

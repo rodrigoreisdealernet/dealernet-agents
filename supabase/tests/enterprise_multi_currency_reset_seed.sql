@@ -250,7 +250,7 @@ begin
   perform 1
   from v_enterprise_financial_reporting_lines
   where source_record_id = 'demo-baseline-invoice-002'
-    and company_scope_name = 'Wynne Industrial Rentals'
+    and company_scope_name = 'Dealernet Industrial Rentals'
     and region_scope_name = 'Gulf Coast'
     and branch_scope_name = 'Houston Central'
     and transaction_currency_code = 'CAD'
@@ -299,7 +299,7 @@ begin
     into v_company_tx_currency_count
   from v_enterprise_financial_reporting_rollups
   where scope_type = 'company'
-    and scope_name = 'Wynne Industrial Rentals'
+    and scope_name = 'Dealernet Industrial Rentals'
     and source_entity_type = 'invoice';
 
   if v_company_tx_currency_count <> 3 then

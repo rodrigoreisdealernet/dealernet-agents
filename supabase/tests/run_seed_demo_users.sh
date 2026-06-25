@@ -97,7 +97,7 @@ echo "PASS Test 1: $(echo "$autodetect_output" | grep 'Seeding demo users')"
 echo "Test 2: auth stub compatibility"
 user_count="$(
   docker exec "$container_name" psql -v ON_ERROR_STOP=1 -U postgres -d postgres -At \
-    -c "SELECT count(*) FROM auth.users WHERE email LIKE '%@wynne-rental.dev'"
+    -c "SELECT count(*) FROM auth.users WHERE email LIKE '%@dia-rental.dev'"
 )"
 if [[ "$user_count" -lt 4 ]]; then
   echo "FAIL Test 2: Expected >= 4 rows in auth.users, got ${user_count}" >&2
@@ -107,7 +107,7 @@ identity_count="$(
   docker exec "$container_name" psql -v ON_ERROR_STOP=1 -U postgres -d postgres -At \
     -c "SELECT count(*) FROM auth.identities i
         JOIN auth.users u ON u.id = i.user_id
-        WHERE u.email LIKE '%@wynne-rental.dev' AND i.provider = 'email'"
+        WHERE u.email LIKE '%@dia-rental.dev' AND i.provider = 'email'"
 )"
 if [[ "$identity_count" -lt 4 ]]; then
   echo "FAIL Test 2: Expected >= 4 identity rows in auth.identities, got ${identity_count}" >&2

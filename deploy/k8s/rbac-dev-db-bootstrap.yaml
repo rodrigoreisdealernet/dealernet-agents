@@ -2,27 +2,27 @@
 # Apply with: kubectl apply -f deploy/k8s/rbac-dev-db-bootstrap.yaml
 #
 # Scope:
-# - Namespace: wynne-supabase only
+# - Namespace: dia-supabase only
 # - GitHub bootstrap identity (`gha-db-bootstrap`) may only manage bootstrap Job/ConfigMap
 #   lifecycle and read pod logs.
-# - In-cluster bootstrap runner identity (`wynne-db-bootstrap`) may only resolve the DB pod
+# - In-cluster bootstrap runner identity (`dia-db-bootstrap`) may only resolve the DB pod
 #   and exec into it (pods/exec) for SQL apply/assertion.
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: gha-db-bootstrap
-  namespace: wynne-supabase
+  namespace: dia-supabase
   labels:
-    app.kubernetes.io/part-of: wynne-rental-erp
+    app.kubernetes.io/part-of: dia-rental-erp
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: gha-db-bootstrap
-  namespace: wynne-supabase
+  namespace: dia-supabase
   labels:
-    app.kubernetes.io/part-of: wynne-rental-erp
+    app.kubernetes.io/part-of: dia-rental-erp
 rules:
   - apiGroups: ["batch"]
     resources: ["jobs"]
@@ -41,9 +41,9 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: gha-db-bootstrap
-  namespace: wynne-supabase
+  namespace: dia-supabase
   labels:
-    app.kubernetes.io/part-of: wynne-rental-erp
+    app.kubernetes.io/part-of: dia-rental-erp
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -51,23 +51,23 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: gha-db-bootstrap
-    namespace: wynne-supabase
+    namespace: dia-supabase
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: wynne-db-bootstrap
-  namespace: wynne-supabase
+  name: dia-db-bootstrap
+  namespace: dia-supabase
   labels:
-    app.kubernetes.io/part-of: wynne-rental-erp
+    app.kubernetes.io/part-of: dia-rental-erp
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: wynne-db-bootstrap
-  namespace: wynne-supabase
+  name: dia-db-bootstrap
+  namespace: dia-supabase
   labels:
-    app.kubernetes.io/part-of: wynne-rental-erp
+    app.kubernetes.io/part-of: dia-rental-erp
 rules:
   - apiGroups: [""]
     resources: ["pods"]
@@ -79,15 +79,15 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: wynne-db-bootstrap
-  namespace: wynne-supabase
+  name: dia-db-bootstrap
+  namespace: dia-supabase
   labels:
-    app.kubernetes.io/part-of: wynne-rental-erp
+    app.kubernetes.io/part-of: dia-rental-erp
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: wynne-db-bootstrap
+  name: dia-db-bootstrap
 subjects:
   - kind: ServiceAccount
-    name: wynne-db-bootstrap
-    namespace: wynne-supabase
+    name: dia-db-bootstrap
+    namespace: dia-supabase

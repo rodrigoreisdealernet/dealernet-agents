@@ -83,9 +83,9 @@ describe('root app shell branding', () => {
     getSessionMock.mockResolvedValue({ data: { session: null } });
   });
 
-  it('renders "Wynne Systems" as the header wordmark', () => {
+  it('renders "Dealernet" as the header wordmark', () => {
     render(<RootComponent />);
-    expect(screen.getByText('Wynne Systems')).toBeInTheDocument();
+    expect(screen.getByText('Dealernet')).toBeInTheDocument();
   });
 
   it('does not render the old internal framework name "JSON UI Engine"', () => {
@@ -100,10 +100,10 @@ describe('root app shell navigation', () => {
     locationState.search = '';
     authState.profile = {
       id: 'u-nav',
-      email: 'manager@wynne-rental.dev',
+      email: 'manager@dia-rental.dev',
       displayName: 'Demo Manager',
       role: 'branch_manager',
-      tenant: 'wynne-demo',
+      tenant: 'dia-demo',
     };
     getSessionMock.mockResolvedValue({ data: { session: null } });
   });
@@ -263,10 +263,10 @@ describe('root app shell navigation', () => {
   it('hides General Ledger link for read-only users', () => {
     authState.profile = {
       id: 'u-ro',
-      email: 'readonly@wynne-rental.dev',
+      email: 'readonly@dia-rental.dev',
       displayName: 'Read Only User',
       role: 'read_only',
-      tenant: 'wynne-demo',
+      tenant: 'dia-demo',
     };
 
     render(<RootComponent />);
@@ -304,7 +304,7 @@ describe('build footer', () => {
     expect(shaLink).toHaveTextContent(sha.slice(0, 7));
     expect(shaLink).toHaveAttribute(
       'href',
-      `https://github.com/Volaris-AI/wynne-lvl-3/commit/${sha}`,
+      `https://github.com/Volaris-AI/dia/commit/${sha}`,
     );
     expect(shaLink).toHaveAttribute('target', '_blank');
 
@@ -333,10 +333,10 @@ describe('header — auth state', () => {
   it('shows user display name, role badge, and sign-out button when authenticated', () => {
     authState.profile = {
       id: 'u1',
-      email: 'admin@wynne-rental.dev',
+      email: 'admin@dia-rental.dev',
       displayName: 'Demo Admin',
       role: 'admin',
-      tenant: 'wynne-demo',
+      tenant: 'dia-demo',
     };
 
     render(<RootComponent />);
@@ -350,10 +350,10 @@ describe('header — auth state', () => {
   it('shows role badge for field_operator', () => {
     authState.profile = {
       id: 'u2',
-      email: 'operator@wynne-rental.dev',
+      email: 'operator@dia-rental.dev',
       displayName: 'Demo Operator',
       role: 'field_operator',
-      tenant: 'wynne-demo',
+      tenant: 'dia-demo',
     };
 
     render(<RootComponent />);
@@ -422,7 +422,7 @@ describe('sidebar — quote builder role gating', () => {
 
   it('shows Quote Builder link for admin', () => {
     authState.profile = {
-      id: 'u1', email: 'admin@wynne-rental.dev', displayName: 'Admin', role: 'admin', tenant: 'test',
+      id: 'u1', email: 'admin@dia-rental.dev', displayName: 'Admin', role: 'admin', tenant: 'test',
     };
     render(<RootComponent />);
     expect(screen.getByRole('link', { name: 'Quote Builder' })).toBeInTheDocument();
@@ -431,7 +431,7 @@ describe('sidebar — quote builder role gating', () => {
 
   it('shows Quote Builder link for branch_manager', () => {
     authState.profile = {
-      id: 'u2', email: 'mgr@wynne-rental.dev', displayName: 'Manager', role: 'branch_manager', tenant: 'test',
+      id: 'u2', email: 'mgr@dia-rental.dev', displayName: 'Manager', role: 'branch_manager', tenant: 'test',
     };
     render(<RootComponent />);
     expect(screen.getByRole('link', { name: 'Quote Builder' })).toBeInTheDocument();
@@ -439,7 +439,7 @@ describe('sidebar — quote builder role gating', () => {
 
   it('hides Quote Builder link for field_operator', () => {
     authState.profile = {
-      id: 'u3', email: 'op@wynne-rental.dev', displayName: 'Operator', role: 'field_operator', tenant: 'test',
+      id: 'u3', email: 'op@dia-rental.dev', displayName: 'Operator', role: 'field_operator', tenant: 'test',
     };
     render(<RootComponent />);
     expect(screen.queryByRole('link', { name: 'Quote Builder' })).not.toBeInTheDocument();
@@ -447,7 +447,7 @@ describe('sidebar — quote builder role gating', () => {
 
   it('hides Quote Builder link for read_only', () => {
     authState.profile = {
-      id: 'u4', email: 'ro@wynne-rental.dev', displayName: 'Read Only', role: 'read_only', tenant: 'test',
+      id: 'u4', email: 'ro@dia-rental.dev', displayName: 'Read Only', role: 'read_only', tenant: 'test',
     };
     render(<RootComponent />);
     expect(screen.queryByRole('link', { name: 'Quote Builder' })).not.toBeInTheDocument();
@@ -466,10 +466,10 @@ describe('mobile nav drawer', () => {
     locationState.search = '';
     authState.profile = {
       id: 'u-mob',
-      email: 'manager@wynne-rental.dev',
+      email: 'manager@dia-rental.dev',
       displayName: 'Demo Manager',
       role: 'branch_manager',
-      tenant: 'wynne-demo',
+      tenant: 'dia-demo',
     };
     getSessionMock.mockResolvedValue({ data: { session: null } });
   });
@@ -557,10 +557,10 @@ describe('accounting export config nav visibility', () => {
   it('shows Export Configuration nav link for admin', () => {
     authState.profile = {
       id: 'u-admin',
-      email: 'admin@wynne-rental.dev',
+      email: 'admin@dia-rental.dev',
       displayName: 'Admin User',
       role: 'admin',
-      tenant: 'wynne-demo',
+      tenant: 'dia-demo',
     };
     render(<RootComponent />);
     expect(screen.getByRole('link', { name: 'Export Configuration' })).toHaveAttribute(
@@ -572,10 +572,10 @@ describe('accounting export config nav visibility', () => {
   it('hides Export Configuration nav link for branch_manager', () => {
     authState.profile = {
       id: 'u-mgr',
-      email: 'manager@wynne-rental.dev',
+      email: 'manager@dia-rental.dev',
       displayName: 'Branch Manager',
       role: 'branch_manager',
-      tenant: 'wynne-demo',
+      tenant: 'dia-demo',
     };
     render(<RootComponent />);
     expect(screen.queryByRole('link', { name: 'Export Configuration' })).not.toBeInTheDocument();
@@ -584,10 +584,10 @@ describe('accounting export config nav visibility', () => {
   it('hides Export Configuration nav link for field_operator', () => {
     authState.profile = {
       id: 'u-op',
-      email: 'op@wynne-rental.dev',
+      email: 'op@dia-rental.dev',
       displayName: 'Field Op',
       role: 'field_operator',
-      tenant: 'wynne-demo',
+      tenant: 'dia-demo',
     };
     render(<RootComponent />);
     expect(screen.queryByRole('link', { name: 'Export Configuration' })).not.toBeInTheDocument();

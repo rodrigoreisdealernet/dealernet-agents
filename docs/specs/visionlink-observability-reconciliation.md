@@ -9,7 +9,7 @@ Define the VisionLink-specific operational surface so that support teams can:
 
 - Monitor tenant-safe sync health for VisionLink telemetry ingestion.
 - Quarantine/replay failed sync work and disable noisy failing scopes without direct SQL edits.
-- Diagnose drift between Wynne telematics state and VisionLink state for supported signals.
+- Diagnose drift between Dealernet telematics state and VisionLink state for supported signals.
 
 ## Data model
 
@@ -18,7 +18,7 @@ Define the VisionLink-specific operational surface so that support teams can:
 - `visionlink_sync_events` — one row per VisionLink sync attempt, including tenant/provider/asset/signal context, retry counters, and lag.
 - `visionlink_dead_letter_queue` — operator queue for quarantined or exhausted failures with replay audit metadata.
 - `visionlink_sync_controls` — scoped disable controls by tenant + asset + signal.
-- `visionlink_reconciliation_results` — drift diagnostics comparing Wynne and VisionLink values.
+- `visionlink_reconciliation_results` — drift diagnostics comparing Dealernet and VisionLink values.
 
 ### Supported signal scopes
 

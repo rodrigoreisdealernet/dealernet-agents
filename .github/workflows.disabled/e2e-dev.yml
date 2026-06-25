@@ -26,7 +26,7 @@ jobs:
       contents: write  # git push to releases-ledger (Stamp known-good release step)
     env:
       # Public URL of the deployed dev frontend. Override via repo variable.
-      E2E_BASE_URL: ${{ vars.E2E_BASE_URL || 'https://wynne-app-a4bde4gwecdnfpfb.a02.azurefd.net/' }}
+      E2E_BASE_URL: ${{ vars.E2E_BASE_URL || 'https://dia-app-a4bde4gwecdnfpfb.a02.azurefd.net/' }}
       E2E_AUTH_EMAIL: ${{ secrets.E2E_AUTH_EMAIL }}
       E2E_AUTH_PASSWORD: ${{ secrets.E2E_AUTH_PASSWORD }}
       E2E_READONLY_EMAIL: ${{ secrets.E2E_READONLY_EMAIL }}
@@ -39,7 +39,7 @@ jobs:
       # gating specs (e.g. branch-counts.spec.ts).  The URL defaults to the
       # known dev API front-door so existing vars.E2E_BASE_URL deployments work
       # without setting a separate variable.
-      E2E_SUPABASE_URL: ${{ vars.E2E_SUPABASE_URL || 'https://wynne-api-fvd0fcfubfb2drcy.a02.azurefd.net' }}
+      E2E_SUPABASE_URL: ${{ vars.E2E_SUPABASE_URL || 'https://dia-api-fvd0fcfubfb2drcy.a02.azurefd.net' }}
       E2E_SUPABASE_SERVICE_KEY: ${{ secrets.E2E_SUPABASE_SERVICE_KEY }}
     steps:
       - uses: actions/checkout@v4
@@ -111,7 +111,7 @@ jobs:
       contents: read
       issues: write
     env:
-      E2E_BASE_URL: ${{ vars.E2E_BASE_URL || 'https://wynne-app-a4bde4gwecdnfpfb.a02.azurefd.net/' }}
+      E2E_BASE_URL: ${{ vars.E2E_BASE_URL || 'https://dia-app-a4bde4gwecdnfpfb.a02.azurefd.net/' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -177,7 +177,7 @@ jobs:
     permissions:
       contents: read
     env:
-      E2E_BASE_URL: ${{ vars.E2E_BASE_URL || 'https://wynne-app-a4bde4gwecdnfpfb.a02.azurefd.net/' }}
+      E2E_BASE_URL: ${{ vars.E2E_BASE_URL || 'https://dia-app-a4bde4gwecdnfpfb.a02.azurefd.net/' }}
       E2E_AUTH_EMAIL: ${{ secrets.E2E_AUTH_EMAIL }}
       E2E_AUTH_PASSWORD: ${{ secrets.E2E_AUTH_PASSWORD }}
     steps:
@@ -240,7 +240,7 @@ jobs:
     # signal to file UX-improvement tickets — they never block or page.
     continue-on-error: true
     env:
-      E2E_BASE_URL: ${{ vars.E2E_BASE_URL || 'https://wynne-app-a4bde4gwecdnfpfb.a02.azurefd.net/' }}
+      E2E_BASE_URL: ${{ vars.E2E_BASE_URL || 'https://dia-app-a4bde4gwecdnfpfb.a02.azurefd.net/' }}
       E2E_AUTH_EMAIL: ${{ secrets.E2E_AUTH_EMAIL }}
       E2E_AUTH_PASSWORD: ${{ secrets.E2E_AUTH_PASSWORD }}
       E2E_SUPABASE_ANON_KEY: ${{ secrets.E2E_SUPABASE_ANON_KEY }}
@@ -250,7 +250,7 @@ jobs:
       E2E_OPERATOR_PASSWORD: ${{ secrets.E2E_OPERATOR_PASSWORD }}
       E2E_READONLY_EMAIL: ${{ secrets.E2E_READONLY_EMAIL }}
       E2E_READONLY_PASSWORD: ${{ secrets.E2E_READONLY_PASSWORD }}
-      E2E_SUPABASE_URL: ${{ vars.E2E_SUPABASE_URL || 'https://wynne-api-fvd0fcfubfb2drcy.a02.azurefd.net' }}
+      E2E_SUPABASE_URL: ${{ vars.E2E_SUPABASE_URL || 'https://dia-api-fvd0fcfubfb2drcy.a02.azurefd.net' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -364,7 +364,7 @@ jobs:
     permissions:
       contents: write
     env:
-      E2E_BASE_URL: ${{ vars.E2E_BASE_URL || 'https://wynne-app-a4bde4gwecdnfpfb.a02.azurefd.net/' }}
+      E2E_BASE_URL: ${{ vars.E2E_BASE_URL || 'https://dia-app-a4bde4gwecdnfpfb.a02.azurefd.net/' }}
     steps:
       # Check out main only to get the record/render scripts + the index.html template
       # + the SLO targets file (for the Targets section in the README).

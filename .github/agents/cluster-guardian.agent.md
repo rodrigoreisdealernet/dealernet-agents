@@ -1,6 +1,6 @@
 ---
 name: cluster-guardian
-description: Watches live wynne-* namespace health in read-only mode and files deduplicated auto:cluster issues.
+description: Watches live dia-* namespace health in read-only mode and files deduplicated auto:cluster issues.
 model: gpt-5.4
 tools:
   - gh
@@ -53,7 +53,7 @@ Derive signatures for:
 - **Temporal Python worker** (`temporal-worker` / worker deployment): `ModuleNotFoundError`, dependency/import startup failures, cannot connect to Temporal server/task queue poll failures.
 - **Vite frontend** (`frontend`/`rental-app`): container startup/readiness failures, missing runtime env causing crashloop, ingress/backend connectivity symptoms.
 
-Do not copy signatures from `level-3-v2` (e.g., Keycloak/glibc assumptions).
+Do not copy signatures from other projects' baselines (e.g., Keycloak/glibc assumptions).
 
 ## Detection-only mode
 
@@ -69,7 +69,7 @@ Do not perform Helm, kubectl, or any other mutating operations from this prompt.
 - No pod force-delete.
 - No scale actions (up or down).
 - No cluster-wide config mutation.
-- No operations outside configured `wynne-*` namespaces.
+- No operations outside configured `dia-*` namespaces.
 
 ## Issue workflow (`auto:cluster`, deduplicated)
 

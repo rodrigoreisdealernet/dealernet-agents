@@ -5,7 +5,7 @@ delivery (ADR-0039 established the OpenBao + ESO path; this runbook covers runni
 real). All steps are **cluster-admin / platform-bootstrap** — the namespace-scoped
 `gha-deployer` cannot perform them.
 
-> Dev tier (`deploy/k8s/wynne-vault/openbao-dev.yaml`, PR #856) is `bao server -dev` and is
+> Dev tier (`deploy/k8s/dia-vault/openbao-dev.yaml`, PR #856) is `bao server -dev` and is
 > NOT covered here — it has no HA/persistence/audit and must not be used for production.
 
 ## 1. Install / bootstrap
@@ -20,7 +20,7 @@ helm repo add openbao https://openbao.github.io/openbao-helm
 bash deploy/openbao/validate-networkpolicy.sh
 
 kubectl apply -f deploy/openbao/certificate.yaml          # TLS
-helm upgrade --install openbao openbao/openbao -n wynne-vault -f deploy/openbao/values-ha.yaml
+helm upgrade --install openbao openbao/openbao -n dia-vault -f deploy/openbao/values-ha.yaml
 kubectl apply -f deploy/openbao/networkpolicy.yaml
 kubectl apply -f deploy/openbao/snapshot-cronjob.yaml
 ```
@@ -31,7 +31,7 @@ The committed production runtime uses the scoped Azure Key Vault seal from
 `deploy/openbao/values-ha.yaml`; there is no manual-unseal steady state.
 
 ```bash
-kubectl -n wynne-vault exec -it openbao-0 -- bao operator init \
+kubectl -n dia-vault exec -it openbao-0 -- bao operator init \
   -recovery-shares=5 -recovery-threshold=3
 ```
 
@@ -41,7 +41,7 @@ emergency reseal.
 
 **After init:** enable audit, configure auth, then **revoke the initial root token**:
 ```bash
-kubectl -n wynne-vault exec -it openbao-0 -- sh -c '
+kubectl -n dia-vault exec -it openbao-0 -- sh -c '
   bao audit enable file file_path=/openbao/audit/audit.log     # auditStorage PVC
   bao secrets enable -path=secret -version=2 kv                 # if not already present
   bao auth enable kubernetes
@@ -65,11 +65,11 @@ bao token revoke <initial-root-token>
 ## 4. AuthZ — least privilege, per env
 
 ```bash
-printf 'path "secret/data/wynne/prod/*" { capabilities = ["read"] }\n' | bao policy write wynne-prod-ro -
-bao write auth/kubernetes/role/wynne-prod \
+printf 'path "secret/data/dia/prod/*" { capabilities = ["read"] }\n' | bao policy write dia-prod-ro -
+bao write auth/kubernetes/role/dia-prod \
   bound_service_account_names=eso-vault-auth \
-  bound_service_account_namespaces=wynne-prod \
-  policies=wynne-prod-ro ttl=1h
+  bound_service_account_namespaces=dia-prod \
+  policies=dia-prod-ro ttl=1h
 ```
 One role + policy per environment; paths never overlap across envs.
 
@@ -79,15 +79,15 @@ One role + policy per environment; paths never overlap across envs.
   token in secret `openbao-snapshot-token`). Off-cluster encrypted upload is a TODO.
 - **Restore drill** (exercise on a cadence, in a scratch namespace — never blind on prod):
   ```bash
-  kubectl -n wynne-vault cp <snapshot>.snap openbao-0:/tmp/restore.snap
-  kubectl -n wynne-vault exec -it openbao-0 -- bao operator raft snapshot restore /tmp/restore.snap
+  kubectl -n dia-vault cp <snapshot>.snap openbao-0:/tmp/restore.snap
+  kubectl -n dia-vault exec -it openbao-0 -- bao operator raft snapshot restore /tmp/restore.snap
   ```
 
 ## 6. Certificate rotation
 
 cert-manager auto-rotates `openbao-tls` 15d before expiry (`renewBefore`). After rotation,
 roll the StatefulSet so peers pick up the new cert:
-`kubectl -n wynne-vault rollout restart statefulset/openbao` (one pod at a time; quorum-safe).
+`kubectl -n dia-vault rollout restart statefulset/openbao` (one pod at a time; quorum-safe).
 
 ## 7. Upgrades
 
@@ -104,9 +104,9 @@ ESO delivery once OpenBao is healthy. Rotate any value exposed during break-glas
 ## 9. Health checks
 
 ```bash
-kubectl -n wynne-vault exec openbao-0 -- bao status                 # Sealed=false, HA mode
-kubectl -n wynne-vault exec openbao-0 -- bao operator raft list-peers
-kubectl -n wynne-vault get pods,pvc
+kubectl -n dia-vault exec openbao-0 -- bao status                 # Sealed=false, HA mode
+kubectl -n dia-vault exec openbao-0 -- bao operator raft list-peers
+kubectl -n dia-vault get pods,pvc
 kubectl get externalsecrets -A                                       # all Ready=True
 ```
 Alerts (see ADR-0040 §observability): sealed, no-leader/quorum, peer loss, storage near-full,

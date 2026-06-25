@@ -12,7 +12,7 @@ Define the Coupa-specific observability, reconciliation, and operator recovery s
 - See tenant-scoped sync status, retry state, and dead-letter outcomes for Coupa requisitions, purchase orders, suppliers, and invoices.
 - Replay eligible failures after the underlying Coupa or mapping issue is fixed.
 - Disable and later re-enable a failing object scope without direct database edits.
-- Inspect reconciliation drift between Wynne records and Coupa state by supported object type.
+- Inspect reconciliation drift between Dealernet records and Coupa state by supported object type.
 
 ---
 

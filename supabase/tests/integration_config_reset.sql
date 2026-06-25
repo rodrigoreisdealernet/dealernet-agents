@@ -110,7 +110,7 @@ insert into public.integration_config (
   'coupa',
   'client_credentials',
   true,
-  '{"api_base_url":"https://tenant.coupahost.com","tenant_slug":"wynne-rental-a","enabled_scopes":["requisitions","purchase_orders"],"healthcheck_path":"/api/health","healthcheck_timeout_seconds":5}'::jsonb,
+  '{"api_base_url":"https://tenant.coupahost.com","tenant_slug":"dia-rental-a","enabled_scopes":["requisitions","purchase_orders"],"healthcheck_path":"/api/health","healthcheck_timeout_seconds":5}'::jsonb,
   '{"requisition_mapping_profile":{"requisition_id_field":"id"},"purchase_order_mapping_profile":{"purchase_order_id_field":"id"},"supplier_mapping_profile":{"supplier_id_field":"id"},"invoice_mapping_profile":{"invoice_id_field":"id"}}'::jsonb,
   '{"client_id_secret_ref":"secret://integrations/coupa/client_id-a","client_secret_secret_ref":"secret://integrations/coupa/client_secret-a"}'::jsonb,
   '{}'::jsonb
@@ -122,7 +122,7 @@ insert into public.integration_config (
   'coupa',
   'client_credentials',
   true,
-  '{"api_base_url":"https://tenant-b.coupahost.com","tenant_slug":"wynne-rental-b","enabled_scopes":["suppliers"]}'::jsonb,
+  '{"api_base_url":"https://tenant-b.coupahost.com","tenant_slug":"dia-rental-b","enabled_scopes":["suppliers"]}'::jsonb,
   '{"supplier_mapping_profile":{"supplier_id_field":"id"}}'::jsonb,
   '{"client_id_secret_ref":"secret://integrations/coupa/client_id-b","client_secret_secret_ref":"secret://integrations/coupa/client_secret-b"}'::jsonb,
   '{}'::jsonb
@@ -183,7 +183,7 @@ begin
   end if;
 
   update public.integration_config
-     set settings = settings || jsonb_build_object('tenant_slug', 'wynne-rental-a-v2')
+     set settings = settings || jsonb_build_object('tenant_slug', 'dia-rental-a-v2')
    where tenant_id = '11111111-1111-1111-1111-111111111111'::uuid
      and connector_key = 'coupa';
 
@@ -197,7 +197,7 @@ begin
    where tenant_id = '11111111-1111-1111-1111-111111111111'::uuid
      and connector_key = 'coupa';
 
-  if v_coupa_tenant_slug is distinct from 'wynne-rental-a-v2' then
+  if v_coupa_tenant_slug is distinct from 'dia-rental-a-v2' then
     raise exception 'FAIL reset 7c: Coupa tenant_slug update should persist (got %)', v_coupa_tenant_slug;
   end if;
 

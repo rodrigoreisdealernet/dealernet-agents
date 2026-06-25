@@ -54,12 +54,12 @@ begin
     insert into public.integration_sync_state
         (integration_id, tenant_id, scope_key, source_of_truth)
     values
-        (v_config_a_id, v_tenant_a_id, 'rental_contract_snapshot', 'wynne'),
-        (v_config_b_id, v_tenant_b_id, 'rental_contract_snapshot', 'wynne');
+        (v_config_a_id, v_tenant_a_id, 'rental_contract_snapshot', 'dia'),
+        (v_config_b_id, v_tenant_b_id, 'rental_contract_snapshot', 'dia');
 
     -- Seed external_id_map rows
     insert into public.external_id_map
-        (tenant_id, provider, entity_type, wynne_entity_id, external_id, external_system)
+        (tenant_id, provider, entity_type, dia_entity_id, external_id, external_system)
     values
         (v_tenant_a_id, 'mulesoft', 'contract', gen_random_uuid(), 'EXT-A-001', 'mulesoft'),
         (v_tenant_b_id, 'mulesoft', 'contract', gen_random_uuid(), 'EXT-B-001', 'mulesoft');
@@ -364,7 +364,7 @@ begin
 
     -- 5a. service_role INSERT on external_id_map
     insert into public.external_id_map
-        (tenant_id, provider, entity_type, wynne_entity_id, external_id, external_system)
+        (tenant_id, provider, entity_type, dia_entity_id, external_id, external_system)
     values
         (v_tenant_a_id, 'mulesoft', 'asset', gen_random_uuid(), 'SVC-ROLE-ASSET-001', 'mulesoft')
     returning id into v_new_id;

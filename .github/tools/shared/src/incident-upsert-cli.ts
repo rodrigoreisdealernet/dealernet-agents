@@ -28,7 +28,7 @@
  *
  * Required environment:
  *   GH_TOKEN or GITHUB_TOKEN  — GitHub token with issues:write
- *   GITHUB_REPOSITORY         — owner/repo (e.g. Volaris-AI/wynne-lvl-3)
+ *   GITHUB_REPOSITORY         — owner/repo (e.g. Volaris-AI/dia)
  */
 
 import {

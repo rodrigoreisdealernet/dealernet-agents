@@ -45,28 +45,28 @@ begin
 
   -- ── 3. Group → role mapping (affirmative cases) ──────────────────────────────
 
-  -- wynne-admin → admin
-  v_role := public.keycloak_groups_to_role('["wynne-admin"]'::jsonb);
+  -- dia-admin → admin
+  v_role := public.keycloak_groups_to_role('["dia-admin"]'::jsonb);
   if v_role <> 'admin' then
-    raise exception 'wynne-admin group should map to admin, got %', v_role;
+    raise exception 'dia-admin group should map to admin, got %', v_role;
   end if;
 
-  -- wynne-branch-manager → branch_manager
-  v_role := public.keycloak_groups_to_role('["wynne-branch-manager"]'::jsonb);
+  -- dia-branch-manager → branch_manager
+  v_role := public.keycloak_groups_to_role('["dia-branch-manager"]'::jsonb);
   if v_role <> 'branch_manager' then
-    raise exception 'wynne-branch-manager group should map to branch_manager, got %', v_role;
+    raise exception 'dia-branch-manager group should map to branch_manager, got %', v_role;
   end if;
 
-  -- wynne-field-operator → field_operator
-  v_role := public.keycloak_groups_to_role('["wynne-field-operator"]'::jsonb);
+  -- dia-field-operator → field_operator
+  v_role := public.keycloak_groups_to_role('["dia-field-operator"]'::jsonb);
   if v_role <> 'field_operator' then
-    raise exception 'wynne-field-operator group should map to field_operator, got %', v_role;
+    raise exception 'dia-field-operator group should map to field_operator, got %', v_role;
   end if;
 
-  -- wynne-read-only → read_only
-  v_role := public.keycloak_groups_to_role('["wynne-read-only"]'::jsonb);
+  -- dia-read-only → read_only
+  v_role := public.keycloak_groups_to_role('["dia-read-only"]'::jsonb);
   if v_role <> 'read_only' then
-    raise exception 'wynne-read-only group should map to read_only, got %', v_role;
+    raise exception 'dia-read-only group should map to read_only, got %', v_role;
   end if;
 
   -- ── 4. Edge cases ────────────────────────────────────────────────────────────
@@ -84,13 +84,13 @@ begin
   end if;
 
   -- most-privileged wins: admin takes priority over branch_manager
-  v_role := public.keycloak_groups_to_role('["wynne-branch-manager","wynne-admin"]'::jsonb);
+  v_role := public.keycloak_groups_to_role('["dia-branch-manager","dia-admin"]'::jsonb);
   if v_role <> 'admin' then
     raise exception 'admin group should win over branch_manager, got %', v_role;
   end if;
 
   -- most-privileged wins: branch_manager takes priority over field_operator
-  v_role := public.keycloak_groups_to_role('["wynne-field-operator","wynne-branch-manager"]'::jsonb);
+  v_role := public.keycloak_groups_to_role('["dia-field-operator","dia-branch-manager"]'::jsonb);
   if v_role <> 'branch_manager' then
     raise exception 'branch_manager should win over field_operator, got %', v_role;
   end if;
@@ -122,7 +122,7 @@ begin
     v_uid,
     'kc-admin@test.invalid',
     '{"provider":"keycloak","providers":["keycloak"]}'::jsonb,
-    '{"groups":["wynne-admin"],"tenant":"acme"}'::jsonb
+    '{"groups":["dia-admin"],"tenant":"acme"}'::jsonb
   );
 
   select role, tenant into v_role, v_tenant
@@ -142,7 +142,7 @@ begin
     v_uid,
     'kc-bm@test.invalid',
     '{"provider":"keycloak"}'::jsonb,
-    '{"groups":["wynne-branch-manager"],"tenant":"branch-co"}'::jsonb
+    '{"groups":["dia-branch-manager"],"tenant":"branch-co"}'::jsonb
   );
 
   select role into v_role from public.profiles where id = v_uid;
@@ -157,7 +157,7 @@ begin
     v_uid,
     'kc-fo@test.invalid',
     '{"provider":"keycloak"}'::jsonb,
-    '{"groups":["wynne-field-operator"],"tenant":"field-co"}'::jsonb
+    '{"groups":["dia-field-operator"],"tenant":"field-co"}'::jsonb
   );
 
   select role into v_role from public.profiles where id = v_uid;
@@ -172,7 +172,7 @@ begin
     v_uid,
     'kc-ro@test.invalid',
     '{"provider":"keycloak"}'::jsonb,
-    '{"groups":["wynne-read-only"],"tenant":"ro-co"}'::jsonb
+    '{"groups":["dia-read-only"],"tenant":"ro-co"}'::jsonb
   );
 
   select role into v_role from public.profiles where id = v_uid;
@@ -204,7 +204,7 @@ begin
     v_uid,
     'kc-tenant-priority@test.invalid',
     '{"provider":"keycloak","tenant":"app-tenant"}'::jsonb,
-    '{"groups":["wynne-admin"],"tenant":"user-tenant"}'::jsonb
+    '{"groups":["dia-admin"],"tenant":"user-tenant"}'::jsonb
   );
 
   select tenant into v_tenant from public.profiles where id = v_uid;
@@ -219,7 +219,7 @@ begin
     v_uid,
     'kc-tenant-app-fallback@test.invalid',
     '{"provider":"keycloak","tenant":"app-co"}'::jsonb,
-    '{"groups":["wynne-admin"]}'::jsonb
+    '{"groups":["dia-admin"]}'::jsonb
   );
 
   select tenant into v_tenant from public.profiles where id = v_uid;
@@ -234,7 +234,7 @@ begin
     v_uid,
     'kc-tenant-default@test.invalid',
     '{"provider":"keycloak"}'::jsonb,
-    '{"groups":["wynne-admin"]}'::jsonb
+    '{"groups":["dia-admin"]}'::jsonb
   );
 
   select tenant into v_tenant from public.profiles where id = v_uid;
@@ -287,7 +287,7 @@ begin
     v_uid,
     'kc-backfill@test.invalid',
     '{"provider":"keycloak","providers":["email","keycloak"]}'::jsonb,
-    '{"groups":["wynne-branch-manager"],"tenant":"backfill-co"}'::jsonb
+    '{"groups":["dia-branch-manager"],"tenant":"backfill-co"}'::jsonb
   );
 
   select raw_app_meta_data into v_app_meta from auth.users where id = v_uid;
@@ -312,7 +312,7 @@ begin
       v_uid,
       'kc-recursion@test.invalid',
       '{"provider":"keycloak"}'::jsonb,
-      '{"groups":["wynne-field-operator"],"tenant":"recursion-co"}'::jsonb
+      '{"groups":["dia-field-operator"],"tenant":"recursion-co"}'::jsonb
     );
 
     select role, tenant into v_role, v_tenant from public.profiles where id = v_uid;

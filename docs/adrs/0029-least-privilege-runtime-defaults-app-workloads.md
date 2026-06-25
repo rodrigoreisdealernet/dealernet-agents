@@ -36,7 +36,7 @@ paths rather than relying on a writable root filesystem.
   tamper/write surface and weaken runtime hardening.
 
 ## Evidence
-- PR [#517](https://github.com/Volaris-AI/wynne-lvl-3/pull/517): **Harden frontend and temporal-worker deployments with non-root, read-only, least-privilege runtime defaults**.
+- PR [#517](https://github.com/Volaris-AI/dia/pull/517): **Harden frontend and temporal-worker deployments with non-root, read-only, least-privilege runtime defaults**.
 - `charts/app/values.yaml`
 - `charts/app/templates/frontend-deployment.yaml`
 - `charts/app/templates/temporal-worker-deployment.yaml`

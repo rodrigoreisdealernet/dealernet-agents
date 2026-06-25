@@ -147,9 +147,9 @@ function buildStorefrontQuoteDocumentModel({
     issuedAtLabel: formatDocumentDate(new Date().toISOString()),
     rentalPeriodLabel: `${startDate} – ${endDate}`,
     branding: {
-      companyName: 'Wynne Systems',
+      companyName: 'Dealernet',
       eyebrow: 'Equipment Rental',
-      supportEmail: 'quotes@wynne.example',
+      supportEmail: 'quotes@dia.example',
       supportPhone: '+1 (800) 555-0199',
     },
     customer: {
@@ -501,7 +501,7 @@ export function StorefrontScreen() {
           <Truck className="h-5 w-5 text-primary-foreground" aria-hidden="true" />
         </div>
         <div>
-          <h1 className="text-lg font-bold leading-tight">Wynne Systems</h1>
+          <h1 className="text-lg font-bold leading-tight">Dealernet</h1>
           <p className="text-xs text-muted-foreground">Equipment Rental</p>
         </div>
       </header>

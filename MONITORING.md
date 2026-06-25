@@ -1,7 +1,7 @@
 # Factory Monitoring Handoff
 
 > **Purpose:** Written for the human owner or an AI agent watching the
-> `Volaris-AI/wynne-lvl-3` autonomous software factory. It explains what the
+> `Volaris-AI/dia` autonomous software factory. It explains what the
 > factory is, how to read its health in 60 seconds, the recurring **and
 > structural** failure patterns, and exactly how to unblock each one.
 >
@@ -88,7 +88,7 @@ terminal verdict the Project Manager consumes to merge.
 `pipeline-hourly.yml` is split into explicit lanes:
 
 - **Public lane (`ubuntu-latest`)**: Factory Architect → QA Manager → `operations-manager` with `OPS_CHECK_SCOPE=public`.
-- **Private lane (self-hosted/private-access runner)**: `operations-manager` with `OPS_CHECK_SCOPE=private` → `cluster-guardian` (read-only `wynne-*`).
+- **Private lane (self-hosted/private-access runner)**: `operations-manager` with `OPS_CHECK_SCOPE=private` → `cluster-guardian` (read-only `dia-*`).
 
 ### What is **not** monitored when private lane is degraded
 
@@ -150,7 +150,7 @@ any other PR. Strip the void labels and route it to normal review. **Use the RES
 labels API, not `gh pr edit`** — `gh pr edit` currently fails with a Projects-classic
 GraphQL deprecation error:
 ```bash
-REPO=Volaris-AI/wynne-lvl-3
+REPO=Volaris-AI/dia
 gh api -X DELETE "repos/$REPO/issues/<pr-number>/labels/queue:architecture"
 gh api -X DELETE "repos/$REPO/issues/<pr-number>/labels/needs-design"
 gh api -X POST   "repos/$REPO/issues/<pr-number>/labels" -f 'labels[]=queue:review'
@@ -325,7 +325,7 @@ gh pr list --state open --label "shared-file-overlap" --json number,title,files
 #    consumer, migration before worker, etc.)
 
 # 3. Unlock the first PR to merge
-gh api -X DELETE repos/Volaris-AI/wynne-lvl-3/issues/<first-number>/labels/shared-file-overlap
+gh api -X DELETE repos/Volaris-AI/dia/issues/<first-number>/labels/shared-file-overlap
 
 # 4. Let it merge, then rebase the second PR to auto-clear its label
 gh pr update-branch <second-number>

@@ -7,7 +7,7 @@
 
 ## Context
 
-Issue #578 (child of #437) requires that posted accounting data from the Wynne rental ERP can be
+Issue #578 (child of #437) requires that posted accounting data from the Dealernet rental ERP can be
 exported for downstream import into Xero or Sage Intacct, and that this export path works
 independently of any live provider OAuth connection.
 
@@ -47,7 +47,7 @@ backed by:
    - **Sage Intacct GL journal CSV** — `JOURNALSYMBOL`, `BATCH_DATE`, `BATCH_TITLE`,
      `ACCOUNTNO`, `TR_TYPE`, `TRX_AMOUNT`, `CURRENCY`, `DESCRIPTION`, `REFERENCE` layout
      (Sage Intacct GL journal import format).
-   - **Export-only CSV** — canonical Wynne ledger CSV (same layout as the existing GL export in
+   - **Export-only CSV** — canonical Dealernet ledger CSV (same layout as the existing GL export in
      the frontend, extended with audit metadata) for accountant hand-off.
 4. `POST /api/ops/accounting/export/configure` — admin endpoint to save export mode config.
 5. `POST /api/ops/accounting/export/trigger` — operator endpoint to generate a period-bounded

@@ -134,7 +134,7 @@ recurring entrypoint.
 
 Runtime monitoring for the live dev cluster is executed by `pipeline-hourly.yml` in two explicit lanes:
 - **Public lane (GitHub-hosted):** `operations-manager` with `OPS_CHECK_SCOPE=public` (public/posture checks only).
-- **Private lane (self-hosted/private-access runner):** `operations-manager` with `OPS_CHECK_SCOPE=private` and `cluster-guardian` for read-only `wynne-*` cluster health.
+- **Private lane (self-hosted/private-access runner):** `operations-manager` with `OPS_CHECK_SCOPE=private` and `cluster-guardian` for read-only `dia-*` cluster health.
 
 If private prerequisites are missing, the hourly workflow reports **degraded monitoring** as a failing result instead of a success-shaped skip.
 

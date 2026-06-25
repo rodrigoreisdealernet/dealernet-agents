@@ -909,7 +909,7 @@ def test_samsara_observability_reconciliation_reset_validation() -> None:
 
 @pytest.fixture(scope="session")
 def postgres_container() -> str:
-    container_name = f"wynne_lvl_3_rental_pytest_{uuid.uuid4().hex[:8]}"
+    container_name = f"dia_rental_pytest_{uuid.uuid4().hex[:8]}"
     # Allows local or CI runs to pin a different disposable Postgres image when needed.
     postgres_image = os.environ.get("POSTGRES_IMAGE", DEFAULT_POSTGRES_IMAGE)
 

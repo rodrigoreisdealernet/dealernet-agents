@@ -98,9 +98,9 @@ by preference (see [Which band?](#which-band-the-placement-rule) and [Naming con
 | `architecture-audit.yml` | PR (wiring paths) · daily `0 6` | **CI gate** | **Workflow-security gate (blocks merge)** on `pull_request_target`+secrets / `write-all`; whole-repo wiring audit (report-only) feeds reviewer agents |
 | `build-images.yml` | PR (build-only), push `main` (build+push) | **Build** | Builds frontend + temporal-worker images; pushes to ACR on `main`; emits **digest** artifacts |
 | `mirror-temporal-ui-image.yml` | push (mirror config) · `17 */6` · manual | **Build** | Mirrors the upstream Temporal UI image into ACR (deterministic infra; needs registry creds) |
-| `deploy-dev.yml` | on **Build Images** success (`main`) · manual | **Deploy** | Helm deploy + optional DB bootstrap → `wynne-dev` |
-| `deploy-test.yml` | manual `workflow_dispatch` | **Deploy** | Helm deploy → `wynne-test` (promote a specific build) |
-| `deploy-prod.yml` | manual + **protected env `prod`** | **Deploy** | Helm deploy → `wynne-prod` (human approval) |
+| `deploy-dev.yml` | on **Build Images** success (`main`) · manual | **Deploy** | Helm deploy + optional DB bootstrap → `dia-dev` |
+| `deploy-test.yml` | manual `workflow_dispatch` | **Deploy** | Helm deploy → `dia-test` (promote a specific build) |
+| `deploy-prod.yml` | manual + **protected env `prod`** | **Deploy** | Helm deploy → `dia-prod` (human approval) |
 | `e2e-dev.yml` | hourly `17 * * * *` · on Deploy Dev · manual | **Verify** | Playwright smoke vs deployed dev; records E2E trend history |
 | `code-quality.yml` | nightly `0 4` · manual | **Verify** | CodeQL + Semgrep + Trivy + dep-audits → `quality` metric on `ci-history`; `code-quality-reviewer` files deduped tickets (non-gating, report-only → ratchet) |
 | `visual-ux.yml` | daily `0 5` · manual | **Verify** | Screenshot capture (desktop+mobile) + axe; vision-model UX critique → deduped `ux` tickets (non-gating) |
@@ -455,7 +455,7 @@ healthy when its prerequisites are missing:
 ### `agent-cluster-guardian` — detection always, mutation only with approval
 
 At :45 (offset from hourly's :30): preflight (kubernetes-app profile enabled,
-namespace allowlist is non-empty and all `wynne-*`, guardian runner online) →
+namespace allowlist is non-empty and all `dia-*`, guardian runner online) →
 **detect** (read-only `cluster-guardian` agent on the self-hosted runner, files
 deduped `auto:cluster` issues). The **remediate** job (`cluster-remediator`:
 helm rollback, force-delete stuck pods, scale-to-0) has four independent gates:
@@ -490,7 +490,7 @@ protected environment. A scheduled run can *never* mutate the cluster.
 | **factory-architect** | hourly · public 1 | 5.4 | 12 m | Turn epics into specs/ADRs + decomposed stories |
 | **qa-manager** | hourly · public 2 | 5.4 | 20 m | Coverage gaps on merged PRs, E2E-history regressions, UX bar; files `needs-tests` |
 | **operations-manager** | hourly · public 3 + private 1 | 5.4 | 18 m each | Public: posture checks (`OPS_CHECK_SCOPE=public`). Private: runtime env health, cert/secret expiry, backups, Azure/AKS |
-| **cluster-guardian** | hourly · private 2 **and** `agent-cluster-guardian` detect (:45) | 5.4 | 18 m | Read-only `wynne-*` namespace health; files deduped `auto:cluster` |
+| **cluster-guardian** | hourly · private 2 **and** `agent-cluster-guardian` detect (:45) | 5.4 | 18 m | Read-only `dia-*` namespace health; files deduped `auto:cluster` |
 | **cluster-remediator** | `agent-cluster-guardian` remediate (manual + env approval) | 5.4 | 18 m | Namespace-scoped remediation: helm rollback, force-delete stuck pods, scale-to-0 |
 | **docs-improver** | daily · 1 | 5.4 | 12 m | Dev/factory docs drift → `queue:docs` (only on proven repeated gaps) |
 | **user-docs-manager** | daily · 2 | 5.4 | 12 m | End-user docs under `docs/user-guide/`; watermark tracker issue |
@@ -630,14 +630,14 @@ flowchart TB
     build -->|digest.txt artifacts| dig[/"image-digest-*"/]
 
     build ==>|workflow_run: success| dev["deploy-dev.yml<br/><b>AUTOMATIC</b>"]
-    dev --> devns["ns: wynne-dev<br/>1 replica · no ingress"]
+    dev --> devns["ns: dia-dev<br/>1 replica · no ingress"]
     dev --> e2e["e2e-dev smoke"]
 
     dev -.->|"manual dispatch<br/>build_run_id ="| test["deploy-test.yml<br/><b>MANUAL</b>"]
-    test --> testns["ns: wynne-test<br/>2 replicas · nginx ingress"]
+    test --> testns["ns: dia-test<br/>2 replicas · nginx ingress"]
 
     test -.->|"manual dispatch<br/>+ env approval"| prod["deploy-prod.yml<br/><b>MANUAL + PROTECTED</b>"]
-    prod --> prodns["ns: wynne-prod<br/>3 replicas · nginx ingress"]
+    prod --> prodns["ns: dia-prod<br/>3 replicas · nginx ingress"]
 
     classDef auto fill:#dfd,stroke:#4a4;
     classDef man fill:#fdd,stroke:#a44;
@@ -650,9 +650,9 @@ flowchart TB
 | Stage | Trigger | Gate | Target | Concurrency |
 |-------|---------|------|--------|-------------|
 | **build-images** | PR (build-only) · push `main` (build+push) | ACR push only on `main` *and* when `ACR_*` creds present (else clean skip, no red) | ACR + digest artifacts | per-ref |
-| **deploy-dev** | `workflow_run: Build Images == success` on `main` · manual | preflight: `K8S_DEPLOY_ENABLED` + `WYNNE_DEV_NAMESPACE` + `KUBE_CONFIG_DEV` | `wynne-dev` | `cancel-in-progress: false` — in-flight deploy completes; GitHub keeps only the newest pending run |
-| **deploy-test** (UAT) | manual `workflow_dispatch` (`sha` preferred; `build_run_id` legacy) | preflight + **GitHub Environment `test` reviewer approval** (configure reviewers) | `wynne-test` | `cancel-in-progress: false` |
-| **deploy-prod** | manual `workflow_dispatch` (`sha` preferred; `build_run_id` legacy) | preflight + **GitHub Environment `prod` reviewer approval** | `wynne-prod` | `cancel-in-progress: false` |
+| **deploy-dev** | `workflow_run: Build Images == success` on `main` · manual | preflight: `K8S_DEPLOY_ENABLED` + `DIA_DEV_NAMESPACE` + `KUBE_CONFIG_DEV` | `dia-dev` | `cancel-in-progress: false` — in-flight deploy completes; GitHub keeps only the newest pending run |
+| **deploy-test** (UAT) | manual `workflow_dispatch` (`sha` preferred; `build_run_id` legacy) | preflight + **GitHub Environment `test` reviewer approval** (configure reviewers) | `dia-test` | `cancel-in-progress: false` |
+| **deploy-prod** | manual `workflow_dispatch` (`sha` preferred; `build_run_id` legacy) | preflight + **GitHub Environment `prod` reviewer approval** | `dia-prod` | `cancel-in-progress: false` |
 
 All three deploys run `helm upgrade --install rental-app charts/app -f
 charts/app/values-<env>.yaml` with `--wait --timeout 10m`, pinning
@@ -674,9 +674,9 @@ two images are built).
   never ran. GitHub queues only the single newest pending run, so dev is at most
   one deploy behind and a deploy, once started, always finishes.
 - **DB bootstrap runs in-cluster, least-privilege.** When enabled, a Kubernetes Job
-  (pinned `kubectl` image) under the scoped `wynne-db-bootstrap` service account
+  (pinned `kubectl` image) under the scoped `dia-db-bootstrap` service account
   applies `supabase/migrations/` then the idempotent demo seed (two passes), in
-  the `wynne-supabase` namespace, and self-cleans its ConfigMaps/Job.
+  the `dia-supabase` namespace, and self-cleans its ConfigMaps/Job.
 - **Test and prod never auto-promote, and you promote a *known-good* commit — not HEAD.**
   When `e2e-dev` smoke passes on a build dev just shipped, that commit is stamped on the
   orphan **`releases-ledger`** branch (`known-good.jsonl` + `latest-known-good.txt`). A
@@ -688,7 +688,7 @@ two images are built).
   [ADR-0062](../adrs/0062-gated-promotion-known-good-digest-per-env-data-isolation.md) and
   the [promotion runbook](../runbooks/promotion.md).
 - **Data is isolated per environment** (ADR-0062): each env uses its own database/schema —
-  not the shared dev `wynne-supabase` — so a promotion gate actually means something. This
+  not the shared dev `dia-supabase` — so a promotion gate actually means something. This
   must be in place before prod carries real data.
 - **`deploy-dev` self-heals stuck Helm.** It clears `pending-upgrade` /
   `pending-install` / `pending-rollback` release states before upgrading — the

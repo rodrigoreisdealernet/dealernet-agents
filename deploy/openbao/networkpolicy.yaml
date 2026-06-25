@@ -5,7 +5,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: openbao-default-deny-ingress
-  namespace: wynne-vault
+  namespace: dia-vault
 spec:
   podSelector:
     matchLabels:
@@ -17,7 +17,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: openbao-allow-eso-and-peers
-  namespace: wynne-vault
+  namespace: dia-vault
 spec:
   podSelector:
     matchLabels:

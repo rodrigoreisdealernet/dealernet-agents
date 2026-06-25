@@ -266,7 +266,7 @@ export function PortalSignInPanel({ onSignInSuccess }: PortalSignInPanelProps) {
       </Button>
 
       <p className="text-xs text-muted-foreground text-center">
-        Portal access is for verified customer contacts only. Contact your Wynne Systems account manager if you need access.
+        Portal access is for verified customer contacts only. Contact your Dealernet account manager if you need access.
       </p>
     </form>
   );

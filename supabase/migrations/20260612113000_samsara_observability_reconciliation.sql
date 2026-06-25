@@ -279,7 +279,7 @@ create table if not exists public.samsara_reconciliation_results (
   signal_type           text          not null,
   drift_status          text          not null,
   lag_seconds           integer       not null default 0,
-  wynne_value           jsonb         not null default '{}'::jsonb,
+  dia_value           jsonb         not null default '{}'::jsonb,
   provider_value        jsonb         not null default '{}'::jsonb,
   diagnostic_summary    text,
   compared_at           timestamptz   not null default now(),
@@ -301,7 +301,7 @@ create table if not exists public.samsara_reconciliation_results (
       'lagging',
       'mismatch',
       'missing_in_provider',
-      'missing_in_wynne'
+      'missing_in_dia'
     )),
 
   constraint samsara_recon_lag_seconds_chk
@@ -770,7 +770,7 @@ select
   r.signal_type,
   r.drift_status,
   r.lag_seconds,
-  r.wynne_value,
+  r.dia_value,
   r.provider_value,
   r.diagnostic_summary,
   r.compared_at,

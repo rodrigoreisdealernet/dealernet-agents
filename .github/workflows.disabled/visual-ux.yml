@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
-      E2E_BASE_URL: ${{ vars.E2E_BASE_URL || 'https://wynne-app-a4bde4gwecdnfpfb.a02.azurefd.net/' }}
+      E2E_BASE_URL: ${{ vars.E2E_BASE_URL || 'https://dia-app-a4bde4gwecdnfpfb.a02.azurefd.net/' }}
       UX_ARTIFACT_DIR: ${{ github.workspace }}/visual-artifacts
     steps:
       - uses: actions/checkout@v4

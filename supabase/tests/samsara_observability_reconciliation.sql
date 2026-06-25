@@ -39,11 +39,11 @@ begin
 
   insert into public.samsara_reconciliation_results (
     tenant_id, asset_external_id, signal_type, drift_status, lag_seconds,
-    diagnostic_summary, wynne_value, provider_value
+    diagnostic_summary, dia_value, provider_value
   ) values
     (
       v_tenant_a, 'CAT-100', 'gps', 'mismatch', 300,
-      'Wynne position differs from Samsara payload',
+      'Dealernet position differs from Samsara payload',
       jsonb_build_object('lat', 51.501, 'lng', -0.141),
       jsonb_build_object('lat', 51.492, 'lng', -0.130)
     ),

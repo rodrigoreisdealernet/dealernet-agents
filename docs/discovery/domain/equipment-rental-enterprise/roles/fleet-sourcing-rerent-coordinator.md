@@ -20,37 +20,37 @@ last_reviewed: '2026-06-20'
 ## Identity & context
 This is the execution-tier sourcing desk that sits between branch demand and outside supply: the
 person or small team that hunts for equipment when the owned fleet or normal branch transfer paths
-cannot cover an upcoming reservation. Wynne's IntelliSource origin story describes this role
+cannot cover an upcoming reservation. Dealernet's IntelliSource origin story describes this role
 directly as the in-house "problem solver" branches turn to when other coordinators cannot find
-equipment. Sources: [Wynne IntelliSource](https://wynnesystems.com/rentalman/intellisource/),
-[Wynne inventory management](https://wynnesystems.com/rentalman/inventory-management/).
+equipment. Sources: [Dealernet IntelliSource](https://dealernet.com.br/rentalman/intellisource/),
+[Dealernet inventory management](https://dealernet.com.br/rentalman/inventory-management/).
 
 In enterprise rental businesses this work is often centralized enough to see multiple branches and
 vendors at once, but still operational rather than executive. This dossier is intentionally framed
 as a sourcing/re-rent coordinator rather than a strategic procurement executive because the cited
 evidence is strongest on day-to-day vendor coordination, PO routing, and shortage response. Sources:
-[Wynne Re-Rentals](https://wynnesystems.com/products/re-rentals/),
+[Dealernet Re-Rentals](https://dealernet.com.br/products/re-rentals/),
 [Texada purchase-order approvals](https://texadasoftware.com/blog/texada-introduces-purchase-order-approval-process/).
 
 ## Goals & motivations
 Their goal is to keep customer and branch commitments intact when the normal fleet plan breaks:
 find viable equipment fast, move the request into a controlled vendor workflow, and avoid turning a
 shortage into a missed delivery or margin surprise. Sources:
-[Wynne Re-Rentals](https://wynnesystems.com/products/re-rentals/),
-[Wynne inventory management](https://wynnesystems.com/rentalman/inventory-management/).
+[Dealernet Re-Rentals](https://dealernet.com.br/products/re-rentals/),
+[Dealernet inventory management](https://dealernet.com.br/rentalman/inventory-management/).
 
 The second motivation is control. This role is trying to reduce the back-and-forth of vendor calls,
 manual confirmations, and duplicate entry while still keeping spend inside approval limits and
 making finance's downstream work cleaner. Sources:
-[Wynne Re-Rentals](https://wynnesystems.com/products/re-rentals/),
+[Dealernet Re-Rentals](https://dealernet.com.br/products/re-rentals/),
 [Texada purchase-order approvals](https://texadasoftware.com/blog/texada-introduces-purchase-order-approval-process/).
 
 ## A day / week in the life
 The daily rhythm is exception-driven. Upcoming reservations surface sourcing gaps; the coordinator
 checks internal-transfer options, calls or portals into vendors, converts approved requests into
 quotes and POs, then keeps the outside rental moving until the unit is received cleanly. Sources:
-[Wynne IntelliSource](https://wynnesystems.com/rentalman/intellisource/),
-[Wynne Re-Rentals](https://wynnesystems.com/products/re-rentals/).
+[Dealernet IntelliSource](https://dealernet.com.br/rentalman/intellisource/),
+[Dealernet Re-Rentals](https://dealernet.com.br/products/re-rentals/).
 
 The weekly rhythm is more comparative: shortage briefs, demand-pattern review, supplier lead times,
 and cleanup of vendor invoice/receipt mismatches before they become finance noise. Shortage periods
@@ -59,14 +59,14 @@ shift this role from reactive fulfillment toward earlier planning. Sources:
 [Texada fleet shortages](https://texadasoftware.com/blog/optimize-fleet-management-in-shortages/).
 
 ## Frustrations & pains
-The loudest pain is manual vendor coordination. Wynne spells it out: many firms still rely on
+The loudest pain is manual vendor coordination. Dealernet spells it out: many firms still rely on
 emails, PDFs, and vendor calls to manage re-rents, which is exactly the sort of friction this role
-absorbs all day. Source: [Wynne Re-Rentals](https://wynnesystems.com/products/re-rentals/).
+absorbs all day. Source: [Dealernet Re-Rentals](https://dealernet.com.br/products/re-rentals/).
 
 The second pain is ambiguity under time pressure. IntelliSource exists because some branches
 effectively end up with one sourcing "problem solver" who everyone turns to when equipment cannot be
 found quickly enough through normal channels. Source:
-[Wynne IntelliSource](https://wynnesystems.com/rentalman/intellisource/).
+[Dealernet IntelliSource](https://dealernet.com.br/rentalman/intellisource/).
 
 The third pain is shortage volatility. When categories, manufacturers, and lead times move around,
 the coordinator has to shift plans early enough to protect revenue without overcommitting spend or
@@ -78,20 +78,20 @@ stock. Sources:
 The tool stack is a mix of system and workaround: sourcing queues, availability dashboards, vendor
 portals, phone and email, PO approval workflows, and receipt or invoice records that have to stay
 aligned across operations and finance. Sources:
-[Wynne Re-Rentals](https://wynnesystems.com/products/re-rentals/),
+[Dealernet Re-Rentals](https://dealernet.com.br/products/re-rentals/),
 [Texada purchase-order approvals](https://texadasoftware.com/blog/texada-introduces-purchase-order-approval-process/).
 
 This role also leans on inventory and demand signals rather than one perfect control tower. They
 need visibility into upcoming reservations, interbranch options, automated purchasing, and emerging
 demand patterns, then still have to act through vendor-specific channels. Sources:
-[Wynne inventory management](https://wynnesystems.com/rentalman/inventory-management/),
+[Dealernet inventory management](https://dealernet.com.br/rentalman/inventory-management/),
 [Renttix demand forecasting](https://www.renttix.com/en-us/guides/forecast-demand-seasonal-inventory-rental).
 
 ## Decisions they own
 This role decides which sourcing path to put in front of the business first, which vendor option is
 credible enough to route for approval, which purchase requests fit delegated authority, and whether
 a mismatch is a receiving problem, a vendor billing issue, or a true exception. Sources:
-[Wynne Re-Rentals](https://wynnesystems.com/products/re-rentals/),
+[Dealernet Re-Rentals](https://dealernet.com.br/products/re-rentals/),
 [Texada purchase-order approvals](https://texadasoftware.com/blog/texada-introduces-purchase-order-approval-process/).
 
 That decision profile is why nearly every task here is `assist`: the system can gather options,
@@ -123,12 +123,12 @@ finance sees them.
 - **Upcoming shortage triage** — strongest `assist` opportunity. Surface the sourcing gaps that
   actually threaten customer commitments and pre-rank internal-transfer vs. vendor options before
   the coordinator starts calling around. Evidence:
-  [Wynne IntelliSource](https://wynnesystems.com/rentalman/intellisource/),
-  [Wynne inventory management](https://wynnesystems.com/rentalman/inventory-management/).
+  [Dealernet IntelliSource](https://dealernet.com.br/rentalman/intellisource/),
+  [Dealernet inventory management](https://dealernet.com.br/rentalman/inventory-management/).
 - **Re-rent workflow copilot** — strong `assist` opportunity. Keep quote, PO, contract, receipt,
   and vendor-invoice steps in one scoped thread so the coordinator is supervising exceptions instead
   of reconstructing the case from email. Evidence:
-  [Wynne Re-Rentals](https://wynnesystems.com/products/re-rentals/),
+  [Dealernet Re-Rentals](https://dealernet.com.br/products/re-rentals/),
   [Texada purchase-order approvals](https://texadasoftware.com/blog/texada-introduces-purchase-order-approval-process/).
 - **Weekly shortage and lead-time brief** — strongest `automate` candidate. Assemble a forward view
   of demand, supplier risk, and category pressure from historical rentals plus market inputs so the
@@ -139,6 +139,6 @@ finance sees them.
 ## Domain-expert review
 _For SMEs / real operators: what's right, what's wrong, what's missing, where to scope._
 - [ ] Reviewed by: _&lt;name, date&gt;_
-- **Draft synthesis to validate:** whether Wynne's target accounts staff this as a central fleet
+- **Draft synthesis to validate:** whether Dealernet's target accounts staff this as a central fleet
   sourcing desk, branch-level super-user, or procurement team function, and where the line is drawn
   between this role, service parts buying, and executive procurement/capex ownership.

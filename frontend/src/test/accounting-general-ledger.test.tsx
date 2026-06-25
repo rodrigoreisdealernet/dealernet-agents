@@ -420,7 +420,7 @@ describe('GeneralLedgerScreen', () => {
         new Response('col1,col2\nval1,val2', {
           status: 200,
           headers: {
-            'Content-Disposition': 'attachment; filename="wynne-export-2026-06-01-2026-06-30.csv"',
+            'Content-Disposition': 'attachment; filename="dia-export-2026-06-01-2026-06-30.csv"',
             'X-Export-Mode': 'xero',
             'X-Export-Row-Count': '42',
           },

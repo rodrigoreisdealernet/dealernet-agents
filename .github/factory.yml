@@ -1,6 +1,6 @@
 repository:
   owner: Volaris-AI
-  name: wynne-lvl-3
+  name: dia
   default_branch: main
   project_owner: Volaris-AI
   project_number: 15
@@ -37,16 +37,16 @@ stack:
 
 cluster_guardian:
   allowed_namespaces:
-    - wynne-dev
-    - wynne-test
+    - dia-dev
+    - dia-test
   issue_label: auto:cluster
 
 ops:
-  namespace_prefix: wynne-
+  namespace_prefix: dia-
   aks_cluster_nonprod: aks-selfheal-staging
   aks_resource_group_nonprod: rg-selfheal-staging
   acr_name_nonprod: acrselfhealstg
-  supabase_namespace: wynne-supabase
+  supabase_namespace: dia-supabase
   supabase_backup_target: supabase-postgres
 
 commands:

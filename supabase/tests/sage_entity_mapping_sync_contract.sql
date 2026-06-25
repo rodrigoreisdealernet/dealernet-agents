@@ -9,7 +9,7 @@ declare
   v_integration_id uuid;
   v_other_integration_id uuid;
   v_alias_id uuid;
-  v_wynne_entity_id uuid := '40000000-0000-0000-0000-000000001367';
+  v_dia_entity_id uuid := '40000000-0000-0000-0000-000000001367';
   v_delivery_id uuid;
   v_count int;
   v_blocked boolean;
@@ -169,7 +169,7 @@ begin
       'erp_finance',
       'outbound',
       'invoice_sync',
-      'wynne',
+      'dia',
       'sage-invoice-001',
       'pending',
       jsonb_build_object('entity_type', 'invoice', 'entity_id', 'inv-001', 'posting_state', 'posted')
@@ -200,7 +200,7 @@ begin
     'erp_finance',
     'outbound',
     'invoice_sync',
-    'wynne',
+    'dia',
     'sage-invoice-002',
     'pending',
     jsonb_build_object(
@@ -236,7 +236,7 @@ begin
     'erp_finance',
     'outbound',
     'invoice_sync',
-    'wynne',
+    'dia',
     'sage-invoice-002',
     'sent',
     jsonb_build_object(
@@ -269,7 +269,7 @@ begin
     exchange_key,
     entity_type,
     entity_id,
-    wynne_entity_id,
+    dia_entity_id,
     external_id,
     external_system,
     metadata
@@ -280,7 +280,7 @@ begin
     'erp_finance',
     'invoice',
     'inv-002',
-    v_wynne_entity_id,
+    v_dia_entity_id,
     'SG-INV-1002',
     'sage',
     jsonb_build_object('source', 'initial')
@@ -312,7 +312,7 @@ begin
     exchange_key,
     entity_type,
     entity_id,
-    wynne_entity_id,
+    dia_entity_id,
     external_id,
     external_system,
     metadata
@@ -323,7 +323,7 @@ begin
     'erp_finance',
     'invoice',
     'inv-002',
-    v_wynne_entity_id,
+    v_dia_entity_id,
     'SG-INV-1002',
     'sage',
     jsonb_build_object('source', 'replay')
@@ -362,7 +362,7 @@ begin
     'sage',
     'erp_finance',
     'invoice:inv-002',
-    'wynne',
+    'dia',
     'outbound',
     'cursor-1',
     now(),
@@ -391,7 +391,7 @@ begin
     'sage',
     'erp_finance',
     'invoice:inv-002',
-    'wynne',
+    'dia',
     'outbound',
     'cursor-2',
     now(),

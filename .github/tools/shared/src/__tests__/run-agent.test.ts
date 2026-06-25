@@ -27,7 +27,7 @@ describe("run-agent helpers", () => {
     const systemPrompt = "Line one\nLine two";
     const prompt = buildRunPrompt(
       "project-manager",
-      { owner: "Volaris-AI", repo: "wynne-lvl-3" },
+      { owner: "Volaris-AI", repo: "dia" },
       systemPrompt,
       "2026-01-01T00:00:00.000Z"
     );
@@ -86,8 +86,8 @@ describe("buildTemplateVars", () => {
     const vars = buildTemplateVars(
       {
         owner: "Volaris-AI",
-        repo: "wynne-lvl-3",
-        runUrl: "https://github.com/Volaris-AI/wynne-lvl-3/actions/runs/1",
+        repo: "dia",
+        runUrl: "https://github.com/Volaris-AI/dia/actions/runs/1",
       },
       {
         repository: { default_branch: "main" },
@@ -97,8 +97,8 @@ describe("buildTemplateVars", () => {
 
     expect(vars).toMatchObject({
       owner: "Volaris-AI",
-      repo: "wynne-lvl-3",
-      run_url: "https://github.com/Volaris-AI/wynne-lvl-3/actions/runs/1",
+      repo: "dia",
+      run_url: "https://github.com/Volaris-AI/dia/actions/runs/1",
       max_open_copilot_prs: 3,
       default_branch: "main",
     });

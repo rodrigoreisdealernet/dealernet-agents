@@ -9,7 +9,7 @@
 The `deploy-dev.yml` bootstrap job transfers Supabase migrations to an in-cluster pod via a Kubernetes ConfigMap. As of 2026-06-17 the migrations directory contains 155 SQL files totalling 1.9 MB. The Kubernetes ConfigMap data limit is 1 MiB. Every bootstrap run therefore fails with:
 
 ```
-ConfigMap "wynne-db-bootstrap-...-migrations" is invalid: []: Too long: may not be more than 1048576 bytes
+ConfigMap "dia-db-bootstrap-...-migrations" is invalid: []: Too long: may not be more than 1048576 bytes
 ```
 
 Because bootstrap never completes, the dev database is never seeded. This caused the two audit-trail E2E tests (`ops recent activity drill-down preserves audit context after reload`, `audit history journey — finding context to persisted ops timeline`) to skip permanently — no audit data exists in the dev environment.

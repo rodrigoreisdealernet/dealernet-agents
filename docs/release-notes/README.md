@@ -1,7 +1,7 @@
 # Release Notes
 
 > **What this is:** the human-readable, end-user-facing record of *what was recently
-> added to the Wynne rental platform*. It is the front door for the question "what's new,
+> added to the Dealernet rental platform*. It is the front door for the question "what's new,
 > and how do I use it?" — written for the people who operate the system (admin,
 > branch_manager, field_operator, read_only), not for engineers.
 >

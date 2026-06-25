@@ -372,8 +372,8 @@ def _apply_coupa_mapping(
 ) -> dict[str, Any]:
     """Apply a scope-specific mapping profile to a raw Coupa record.
 
-    Returns a Wynne-side field dict. Profile keys follow the convention
-    ``<wynne_concept>_field`` naming the source Coupa field. Falls back to
+    Returns a Dealernet-side field dict. Profile keys follow the convention
+    ``<dia_concept>_field`` naming the source Coupa field. Falls back to
     scope-specific defaults when a key is absent.
     """
     profile = dict(mapping_profile)
@@ -566,10 +566,10 @@ def coupa_persist_procurement_batch(
     """Persist a batch of Coupa procurement records idempotently.
 
     For each record:
-    - Upsert an external_id_map row (alias between Coupa ID and Wynne tenant scope)
+    - Upsert an external_id_map row (alias between Coupa ID and Dealernet tenant scope)
     - Upsert an integration_delivery_log row (deduplication via idempotency key)
       - request_payload: raw provider record
-      - response_payload: Wynne-side mapped record (from scope mapping profile)
+      - response_payload: Dealernet-side mapped record (from scope mapping profile)
 
     Returns counts of upserted and duplicate records.
     """

@@ -43,7 +43,7 @@ Coverage targets (51 tests total):
        - One open issue per fingerprinted problem
        - Issues always carry auto:ops and queue:ops labels
   5. Factory config scope:
-       - ops: block present with wynne- namespace prefix and nonprod AKS target
+       - ops: block present with dia- namespace prefix and nonprod AKS target
 """
 from __future__ import annotations
 
@@ -598,7 +598,7 @@ def test_agent_prompt_prohibits_autonomous_secret_rotation() -> None:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 9. Factory config: ops block present and wynne-* scoped
+# 9. Factory config: ops block present and dia-* scoped
 # ──────────────────────────────────────────────────────────────────────────────
 
 
@@ -609,15 +609,15 @@ def test_factory_config_ops_block_exists() -> None:
     )
 
 
-def test_factory_config_ops_namespace_prefix_is_wynne() -> None:
+def test_factory_config_ops_namespace_prefix_is_dia() -> None:
     text = _factory_text()
-    # namespace_prefix must be wynne- so the agent reads the correct targets.
+    # namespace_prefix must be dia- so the agent reads the correct targets.
     assert "namespace_prefix" in text
     match = re.search(r"namespace_prefix:\s*(\S+)", text)
     assert match is not None, "namespace_prefix not found in factory.yml"
     value = match.group(1).strip('"').strip("'")
-    assert value.startswith("wynne-"), (
-        f"namespace_prefix '{value}' must start with 'wynne-'; the agent reads this "
+    assert value.startswith("dia-"), (
+        f"namespace_prefix '{value}' must start with 'dia-'; the agent reads this "
         "value to scope its checks."
     )
 

@@ -139,7 +139,7 @@ stack descriptor, and ops targets (AKS cluster, ACR, Supabase namespace).
 | `pr-validation.yml` | PR / push main | frontend lint+build, Temporal pytest, Helm lint, Supabase seed + write-RPC guard contracts |
 | `pr-enrichment.yml` | PR opened/sync | risk classification, scope-anomaly detection, specialist-lane labels |
 | `build-images.yml` | PR / push main | builds frontend + temporal-worker images; ACR push on main only ([ADR-0010](../adrs/0010-immutable-images-push-gating-digest-promotion.md)) |
-| `deploy-dev.yml` | on Build Images success | Helm deploy + DB bootstrap to `wynne-dev` |
+| `deploy-dev.yml` | on Build Images success | Helm deploy + DB bootstrap to `dia-dev` |
 | `e2e-dev.yml` | hourly + post-deploy | Playwright smoke vs deployed dev; auto-files deduped incidents ([ADR-0018](../adrs/0018-real-environment-e2e.md)) |
 | `k8s-render-validate.yml` | charts/* changes | Helm render + kubeconform (static, no cluster) ([ADR-0011](../adrs/0011-k8s-manifest-validation-in-ci.md)) |
 | `architecture-audit.yml` | daily + PR | whole-repo wiring audits; consulted by Security/Tech reviewers ([ADR-0027](../adrs/0027-standing-architecture-audits-and-behavioral-review.md)) |

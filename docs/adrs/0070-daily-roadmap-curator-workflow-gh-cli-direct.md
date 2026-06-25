@@ -49,7 +49,7 @@ The PAT is scoped to project + issues only — no code push, secrets, or admin s
 
 ### Mutation scope (what the agent is permitted to do)
 
-- **Read:** all open issues in `Volaris-AI/wynne-lvl-3`, all items in org Project #15.
+- **Read:** all open issues in `Volaris-AI/dia`, all items in org Project #15.
 - **Write — issues:** create `Initiative:` and `Epic:` issues in the repo (capped ~6/run).
 - **Write — project:** add issues to Project #15 (`gh project item-add`), set single-select
   fields (`Status: Triage`, `Queue Owner`, `Phase`, `Risk`) on newly added items.

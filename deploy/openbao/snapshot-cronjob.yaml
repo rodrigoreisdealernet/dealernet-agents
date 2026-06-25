@@ -9,7 +9,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: openbao-snapshots
-  namespace: wynne-vault
+  namespace: dia-vault
 spec:
   accessModes: ["ReadWriteOnce"]
   storageClassName: managed-csi-premium
@@ -21,7 +21,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: openbao-raft-snapshot
-  namespace: wynne-vault
+  namespace: dia-vault
 spec:
   schedule: "0 */6 * * *"        # every 6h
   concurrencyPolicy: Forbid
@@ -53,7 +53,7 @@ spec:
                   #     --name "openbao-${TS}.snap" --file "/snapshots/openbao-${TS}.snap"
               env:
                 - name: BAO_ADDR
-                  value: "https://openbao.wynne-vault.svc:8200"
+                  value: "https://openbao.dia-vault.svc:8200"
                 - name: BAO_CACERT
                   value: "/openbao/userconfig/openbao-tls/ca.crt"
                 - name: BAO_TOKEN

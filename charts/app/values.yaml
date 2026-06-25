@@ -352,7 +352,7 @@ adminAccess:
       port: 4180
     oidc:
       # -- Keycloak issuer URL (must match env realm endpoint)
-      issuerUrl: "https://keycloak.example.com/realms/wynne"
+      issuerUrl: "https://keycloak.example.com/realms/dia"
       # -- Public callback URL for oauth2-proxy
       redirectUrl: "https://temporal-ui.example.com/oauth2/callback"
       # -- OIDC groups claim
@@ -399,10 +399,10 @@ adminAccess:
       # -- Enable Grafana native OIDC authentication against Keycloak.
       #    When enabled, the Grafana ingress routes directly to the upstream (no oauth2-proxy hop).
       #    The GF_AUTH_GENERIC_OAUTH_* ConfigMap is rendered by the observability chart in the
-      #    wynne-observability namespace where Grafana (kube-prometheus-stack) runs.
+      #    dia-observability namespace where Grafana (kube-prometheus-stack) runs.
       enabled: false
-      # -- Keycloak realm issuer URL (https://keycloak.example.com/realms/wynne)
-      issuerUrl: "https://keycloak.example.com/realms/wynne"
+      # -- Keycloak realm issuer URL (https://keycloak.example.com/realms/dia)
+      issuerUrl: "https://keycloak.example.com/realms/dia"
       # -- Public redirect URL registered in Keycloak for the Grafana OIDC client.
       #    Must match grafana.ingress.hosts[*].host + /login/generic_oauth
       redirectUrl: "https://grafana.example.com/login/generic_oauth"
@@ -433,7 +433,7 @@ adminAccess:
     # -- Enable external Supabase Studio route (gated via dedicated oauth2-proxy).
     enabled: false
     # -- Cluster DNS name of Supabase Studio service.
-    upstreamHost: "supabase-supabase-studio.wynne-supabase.svc.cluster.local"
+    upstreamHost: "supabase-supabase-studio.dia-supabase.svc.cluster.local"
     upstreamPort: 3000
     oauth2Proxy:
       # -- Enable oauth2-proxy boundary in front of Supabase Studio ingress.
@@ -465,7 +465,7 @@ adminAccess:
     # -- Enable external Prometheus route (gated via dedicated oauth2-proxy).
     enabled: false
     # -- Cluster DNS name of Prometheus service.
-    upstreamHost: "observability-kube-prometheus-stack-prometheus.wynne-observability.svc.cluster.local"
+    upstreamHost: "observability-kube-prometheus-stack-prometheus.dia-observability.svc.cluster.local"
     upstreamPort: 9090
     oauth2Proxy:
       # -- Enable oauth2-proxy boundary in front of Prometheus ingress.
@@ -497,7 +497,7 @@ adminAccess:
     # -- Enable external Alertmanager route (gated via dedicated oauth2-proxy).
     enabled: false
     # -- Cluster DNS name of Alertmanager service.
-    upstreamHost: "observability-kube-prometheus-stack-alertmanager.wynne-observability.svc.cluster.local"
+    upstreamHost: "observability-kube-prometheus-stack-alertmanager.dia-observability.svc.cluster.local"
     upstreamPort: 9093
     oauth2Proxy:
       # -- Enable oauth2-proxy boundary in front of Alertmanager ingress.
@@ -602,7 +602,7 @@ observability:
     enabled: false
     # -- Labels added to ServiceMonitor resources so Prometheus discovers them.
     #    Must match the serviceMonitorSelector on your Prometheus instance.
-    #    For the wynne-observability release: release: observability
+    #    For the dia-observability release: release: observability
     additionalLabels: {}
     # release: observability
     # -- Scrape interval
@@ -615,7 +615,7 @@ observability:
     #    Requires kube-prometheus-stack (or compatible Prometheus Operator).
     enabled: false
     # -- Labels added to PrometheusRule resources so Prometheus picks them up.
-    #    For the wynne-observability release: release: observability
+    #    For the dia-observability release: release: observability
     additionalLabels: {}
     # release: observability
 
@@ -627,7 +627,7 @@ observability:
       label: "grafana_dashboard"
       labelValue: "1"
       # -- Namespace label for Grafana multi-namespace sidecar; usually matches the Grafana namespace.
-      folder: "wynne"
+      folder: "dia"
 
 # ---------------------------------------------------------------------------
 # Prometheus alerting rules and Alertmanager routing
@@ -735,7 +735,7 @@ externalSecrets:
 
   # -- OpenBao secret PATHS mapped to each Kubernetes secret key.  For a KV-v2 mount, the
   #    path is relative to the store's configured mount (e.g. store path "secret" + key
-  #    "wynne/runtime").  Set these to match the paths provisioned for this environment.
+  #    "dia/runtime").  Set these to match the paths provisioned for this environment.
   keys:
     # -- OpenBao path whose field (see properties.supabaseAnonKey) becomes VITE_SUPABASE_ANON_KEY.
     supabaseAnonKey: "supabase-anon-key"

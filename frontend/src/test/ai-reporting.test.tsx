@@ -103,7 +103,7 @@ function sampleRows(): AiReportingRow[] {
       region_scope_id: 'region-gulf',
       region_scope_name: 'Gulf Coast',
       company_scope_id: 'company-1',
-      company_scope_name: 'Wynne Industrial',
+      company_scope_name: 'Dealernet Industrial',
       transaction_currency_code: 'USD',
       reporting_currency_code: 'USD',
       transaction_total_amount: 1000,
@@ -125,7 +125,7 @@ function sampleRows(): AiReportingRow[] {
       region_scope_id: 'region-north',
       region_scope_name: 'North Texas',
       company_scope_id: 'company-1',
-      company_scope_name: 'Wynne Industrial',
+      company_scope_name: 'Dealernet Industrial',
       transaction_currency_code: 'USD',
       reporting_currency_code: 'USD',
       transaction_total_amount: 1200,
@@ -628,8 +628,8 @@ describe('AiReportingScreen drilldown', () => {
     );
 
     await screen.findByTestId('ai-report-chart');
-    // Click the Wynne Industrial drilldown button (company-1)
-    await user.click(screen.getByRole('button', { name: /Drilldown: Wynne Industrial/i }));
+    // Click the Dealernet Industrial drilldown button (company-1)
+    await user.click(screen.getByRole('button', { name: /Drilldown: Dealernet Industrial/i }));
 
     expect(onFiltersChange).toHaveBeenCalledWith(
       expect.objectContaining({ scopeId: 'company-1', view: 'table' }),

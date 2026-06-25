@@ -24,7 +24,7 @@ def _config_snapshot(
         ],
         "settings": {
             "api_base_url": "https://tenant.coupahost.com",
-            "tenant_slug": "wynne-rental",
+            "tenant_slug": "dia-rental",
         },
         "mappings": {
             "requisition_mapping_profile": {"requisition_id_field": "id"},

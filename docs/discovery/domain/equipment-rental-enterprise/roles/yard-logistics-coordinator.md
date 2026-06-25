@@ -30,18 +30,18 @@ In a multi-branch contractor/project segment, this role rarely owns only one yar
 deliveries, pickups, transfers, and maintenance collections across a defined geography where timing,
 load capacity, and equipment readiness all interact. The work is operationally central even if the
 title sounds administrative. Sources: [Renttix dispatch guide](https://www.renttix.com/en-us/guides/equipment-rental-dispatch-management),
-[Wynne Logistics Solution](https://wynnesystems.com/products/logistics-solution/).
+[Dealernet Logistics Solution](https://dealernet.com.br/products/logistics-solution/).
 
 ## Goals & motivations
 Their job is to keep equipment moving on time without wasting trucks, driver hours, or customer
 goodwill. That means prompt delivery, clean pickups, low driver-on-yard time, and early detection
 of availability conflicts before a promised move fails. Sources: [Market Logistics Dispatcher](https://builtin.com/job/market-logistics-dispatcher/4220117),
-[Wynne Logistics Solution](https://wynnesystems.com/products/logistics-solution/).
+[Dealernet Logistics Solution](https://dealernet.com.br/products/logistics-solution/).
 
 The motivation underneath that is simple: dispatch failures leak money quietly. Late deliveries
 create re-runs, extra fuel, overtime, idle jobsites, and lost trust; good dispatch improves load
 utilization, team productivity, and outside-haul spend. Sources: [MCS dispatch blog](https://www.mcsrentalsoftware.com/us/resources/blog/dispatch-and-delivery-rental-business/),
-[Wynne Logistics Solution](https://wynnesystems.com/products/logistics-solution/).
+[Dealernet Logistics Solution](https://dealernet.com.br/products/logistics-solution/).
 
 ## A day / week in the life
 The day starts with today's board: what must go out, what must come back, what is late, what is
@@ -79,14 +79,14 @@ The third pain is constant coordination overhead: calling branches, checking ins
 staging updates, and recovering from paperwork or data quality misses before a truck leaves the
 yard. This is exactly where bounded, disposition-ready assistance has leverage. Sources:
 [Market Logistics Coordinator](https://builtin.com/job/market-logistics-coordinator/4195284),
-[Wynne Logistics Solution](https://wynnesystems.com/products/logistics-solution/).
+[Dealernet Logistics Solution](https://dealernet.com.br/products/logistics-solution/).
 
 ## Tools today
 The core toolset is rental software plus a logistics layer: contract and availability records,
 dispatch/scheduler views, GPS maps, driver logs, DVIR and repair reports, and mobile driver
-workflows. Wynne positions this as visual timelines, real-time GPS, auto-routing, and driver-app
-handoffs tied back to RentalMan or RentalResult. Sources: [Wynne Logistics Solution](https://wynnesystems.com/products/logistics-solution/),
-[RentalMan](https://www.wynnesystems.com/solutions/rentalman/).
+workflows. Dealernet positions this as visual timelines, real-time GPS, auto-routing, and driver-app
+handoffs tied back to RentalMan or RentalResult. Sources: [Dealernet Logistics Solution](https://dealernet.com.br/products/logistics-solution/),
+[RentalMan](https://www.dealernet.com.br/solutions/rentalman/).
 
 In practice the coordinator still lives in swivel-chair mode across phone calls, branch messages,
 third-party hauler contacts, and yard staging boards. The value is not just system-of-record data;
@@ -135,12 +135,12 @@ they should not have to manually build the day's exception queue from scattered 
 - **Conflict-aware dispatch lookout** — strongest `assist` candidate. Continuously watch late
   returns, future orders, ETAs, and route slippage, then propose which pickup to accelerate, which
   branch to warn, and when outside haulage is likely justified. Evidence: [Renttix dispatch guide](https://www.renttix.com/en-us/guides/equipment-rental-dispatch-management),
-  [Wynne Logistics Solution](https://wynnesystems.com/products/logistics-solution/),
+  [Dealernet Logistics Solution](https://dealernet.com.br/products/logistics-solution/),
   [MCS dispatch blog](https://www.mcsrentalsoftware.com/us/resources/blog/dispatch-and-delivery-rental-business/).
 
 ## Domain-expert review
 _For SMEs / real operators: what's right, what's wrong, what's missing, where to scope._
 - [ ] Reviewed by: _&lt;name, date&gt;_
 - **Draft synthesis to validate:** whether this role is primarily branch-owned or market-owned in
-  Wynne's target accounts, and whether transport compliance review sits here or with a dedicated
+  Dealernet's target accounts, and whether transport compliance review sits here or with a dedicated
   fleet/safety function in larger organizations.
