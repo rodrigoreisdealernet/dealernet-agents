@@ -9,7 +9,7 @@
   .sub{color:#9ca3af;font-size:13px;margin-bottom:16px}
   .sub a{color:#60a5fa;text-decoration:none}
   .bar{height:8px;background:#1f2937;border-radius:99px;overflow:hidden;margin:12px 0 20px}
-  .bar>i{display:block;height:100%;background:#16a34a;width:43%}
+  .bar>i{display:block;height:100%;background:#16a34a;width:86%}
   .banner{background:#7c2d12;color:#fed7aa;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:14px}
   table{width:100%;border-collapse:collapse}
   td{padding:12px 8px;border-top:1px solid #1f2937;vertical-align:top}
@@ -24,9 +24,9 @@
   .foot{color:#6b7280;font-size:12px;margin-top:20px}
 </style></head><body><div class="wrap">
 <h1>ship-issue #10 — feat: Venda de Peças — entidade transacional + CRUD com baixa de estoque</h1>
-<div class="sub"><a href="https://github.com/rodrigoreisdealernet/dealernet-agents/issues/10">issue</a> · branch <code>feature/10-feat-venda-de-pecas-entidade</code>  · 43% complete</div>
+<div class="sub"><a href="https://github.com/rodrigoreisdealernet/dealernet-agents/issues/10">issue</a> · branch <code>feature/10-feat-venda-de-pecas-entidade</code> · <a href="https://github.com/rodrigoreisdealernet/dealernet-agents/pull/30">PR #30</a> · 86% complete</div>
 <div class="bar"><i></i></div>
-
+<div class="banner">🚧 Waiting on human gate: <b>merge</b></div>
 <table><tbody><tr class="done">
         <td class="ic" style="color:#16a34a">●</td>
         <td class="lbl">01 · Spec<div class="st" style="color:#16a34a">done</div></td>
@@ -51,38 +51,38 @@
           <div class="arts"><a href="../../supabase/migrations/20260626120000_dia_part_sale_entity_crud.sql">Migration</a></div>
           
         </td>
-      </tr><tr class="running">
-        <td class="ic" style="color:#2563eb">◐</td>
-        <td class="lbl">04 · Tests<div class="st" style="color:#2563eb">running</div></td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">04 · Tests<div class="st" style="color:#16a34a">done</div></td>
         <td class="meta">
-          
+          <div class="sum">11 contract tests (decrement, status transitions, over-stock reject, restock, idempotent cancel, validation, RLS 42501); draft PR opened</div>
           
           
         </td>
-      </tr><tr class="pending">
-        <td class="ic" style="color:#9ca3af">○</td>
-        <td class="lbl">05 · Test review<div class="st" style="color:#9ca3af">pending</div></td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">05 · Test review<div class="st" style="color:#16a34a">done</div></td>
         <td class="meta">
-          
+          <div class="sum">Test suite audited: 11 scenarios, strong assertions, no blocking gaps</div>
           
           
         </td>
-      </tr><tr class="pending">
-        <td class="ic" style="color:#9ca3af">○</td>
-        <td class="lbl">06 · Code review<div class="st" style="color:#9ca3af">pending</div></td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">06 · Code review<div class="st" style="color:#16a34a">done</div></td>
         <td class="meta">
-          
+          <div class="sum">Approved (no blocking). Atomicity/no-negative-stock, SCD2, idempotent cancel, RLS 42501, view grants all verified. PR ready.</div>
           
           
         </td>
-      </tr><tr class="pending">
-        <td class="ic" style="color:#9ca3af">○</td>
-        <td class="lbl">Merge (human gate)<div class="st" style="color:#9ca3af">pending</div></td>
+      </tr><tr class="waiting">
+        <td class="ic" style="color:#d97706">⏸</td>
+        <td class="lbl">Merge (human gate)<div class="st" style="color:#d97706">waiting</div></td>
         <td class="meta">
-          
+          <div class="sum">Awaiting human merge gate</div>
           
           
         </td>
       </tr></tbody></table>
-<div class="foot">auto-refreshes every 5s · last update 2026-06-25T19:19:50.466Z</div>
+<div class="foot">auto-refreshes every 5s · last update 2026-06-25T19:25:50.815Z</div>
 </div></body></html>
