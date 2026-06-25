@@ -4,9 +4,9 @@
   "slug": "feat-frontend-dashboard-vendas-vn",
   "branch": "feature/16-feat-frontend-dashboard-vendas-vn",
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/16",
-  "pr": null,
-  "prUrl": null,
-  "updatedAt": "2026-06-25T19:15:47.309Z",
+  "pr": "28",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/28",
+  "updatedAt": "2026-06-25T19:16:09.087Z",
   "steps": [
     {
       "id": "spec",
@@ -45,15 +45,20 @@
       "label": "04 · Tests",
       "status": "done",
       "summary": "verify-sales-dashboard.mjs: 15/15 verde (suite total 40/40)",
-      "artifacts": [],
+      "artifacts": [
+        {
+          "label": "PR",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/28"
+        }
+      ],
       "notes": [],
       "gate": null
     },
     {
       "id": "test-review",
       "label": "05 · Test review",
-      "status": "pending",
-      "summary": "",
+      "status": "running",
+      "summary": "Auditoria do suite de testes",
       "artifacts": [],
       "notes": [],
       "gate": null
