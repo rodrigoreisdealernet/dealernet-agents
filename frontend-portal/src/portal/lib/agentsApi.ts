@@ -893,8 +893,8 @@ export async function getSalesTrend(): Promise<SalesTrendRow[]> {
 
 export interface InventorySummaryRow {
   age_band: string
-  brand: string
-  store: string
+  brand: string | null
+  store: string | null
   vehicles_count: number
   inventory_value: number
   floor_plan_cost: number

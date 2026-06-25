@@ -144,6 +144,16 @@ const MOCK_MENU: MenuItem[] = [
         icon: 'fa-cog',
         spec: { title: 'Peças (Fast BI)', kind: 'component', componentKey: 'dia-parts-bi' },
       },
+      {
+        id: 'fastbi-vehicle-inventory',
+        text: 'Estoque de Veículos',
+        icon: 'fa-car',
+        spec: {
+          title: 'Estoque de Veículos (Fast BI)',
+          kind: 'component',
+          componentKey: 'dia-vehicle-inventory',
+        },
+      },
     ],
   },
   // DIA dealership domain (issue #4) — cadastro de estoque de veículos.
