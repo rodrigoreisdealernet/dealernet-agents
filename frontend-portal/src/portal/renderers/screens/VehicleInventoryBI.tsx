@@ -11,7 +11,7 @@ import {
   type VehicleRow,
 } from '@/portal/lib/agentsApi'
 import { ChartCard } from './ChartCard'
-import { formatBRL, formatBRLKpi } from './format'
+import { formatBRLKpi } from './format'
 import { KpiCard, ScreenShell } from './ui'
 
 const AGE_BANDS = ['0-30', '31-60', '61-90', '90+']
@@ -167,7 +167,7 @@ export default function VehicleInventoryBI() {
                     {vehicle.days_in_stock ?? '—'}
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums">
-                    {formatBRL(vehicle.floor_plan_cost ?? 0)}
+                    {formatBRLKpi(vehicle.floor_plan_cost ?? 0)}
                   </td>
                   <td className="px-3 py-2">{vehicle.store ?? '—'}</td>
                 </tr>

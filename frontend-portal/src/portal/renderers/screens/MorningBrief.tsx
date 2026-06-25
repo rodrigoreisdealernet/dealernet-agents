@@ -6,7 +6,7 @@
 // Responsiva: mobile = cards empilhados (protótipo v7 mobile); desktop = cockpit
 // tabela + rail de ações (protótipo v7 desktop). Usa useBreakpoint p/ alternar.
 //
-// Dados do DIA ANTERIOR vêm das views v_dia_owner_brief_by_brand / _by_store
+// Dados do MÊS ATUAL (month-to-date) vêm das views v_dia_owner_brief_by_brand / _by_store
 // (getOwnerBriefByBrand/Store). Ações vêm da fila de findings existente
 // (getFindings/decideFinding) — não inventamos backend novo. Sem % de meta nesta
 // fase (só valores absolutos); setores sem dado renderizam "—".
@@ -23,22 +23,22 @@ import {
 } from '@/portal/lib/agentsApi'
 import { useBreakpoint } from '@/hooks/use-breakpoint'
 import { cn } from '@/lib/utils'
-import { formatBRL, formatBRLKpi } from './format'
+import { formatBRLKpi } from './format'
 
 // ── Helpers de formatação dos setores (valores absolutos; "—" quando sem dado) ──
 function fmtUnits(n: number | null | undefined): string {
   return typeof n === 'number' && Number.isFinite(n) ? `${n} un` : '—'
 }
 function fmtMoney(n: number | null | undefined): string {
-  return typeof n === 'number' && Number.isFinite(n) ? formatBRL(n) : '—'
+  return typeof n === 'number' && Number.isFinite(n) ? formatBRLKpi(n) : '—'
 }
-// Valor monetário enxuto para os cards (sem R$/centavos, issue #54); a tabela
-// cockpit do desktop mantém fmtMoney (formatBRL). A denominação fica na legenda.
+// Valor monetário enxuto (sem R$/centavos, issue #54); aplicado em toda a tela —
+// cards E tabela cockpit do desktop. A denominação R$ fica na legenda "Valores em R$".
 function fmtMoneyKpi(n: number | null | undefined): string {
   return typeof n === 'number' && Number.isFinite(n) ? formatBRLKpi(n) : '—'
 }
 function fmtMargin(n: number | null | undefined): string | null {
-  return typeof n === 'number' && Number.isFinite(n) ? `margem ${formatBRL(n)}` : null
+  return typeof n === 'number' && Number.isFinite(n) ? `margem ${formatBRLKpi(n)}` : null
 }
 
 interface SectorCell {
@@ -66,7 +66,11 @@ function sectorCells(r: OwnerBriefBaseRow): SectorCell[] {
   ]
 }
 
-// Soma as marcas no card "Grupo Total" (mesma forma de OwnerBriefBrandRow).
+// Consolida as marcas no card "Grupo Total" (mesma forma de OwnerBriefBrandRow).
+// Novos/Usados/FP somam por marca. Peças/AT são GROUP-WIDE (o mesmo valor é
+// repetido em cada linha de marca pelas views) → devem ser tomados UMA vez, nunca
+// somados (senão multiplicam pelo nº de marcas). O resultado por marca já é só
+// Novos+Usados (atribuível); o resultado do grupo soma isso + Peças/AT do grupo.
 function groupTotal(brands: OwnerBriefBrandRow[]): OwnerBriefBrandRow {
   const sum = (pick: (b: OwnerBriefBrandRow) => number | null) =>
     brands.reduce((acc, b) => acc + (pick(b) ?? 0), 0)
@@ -74,6 +78,13 @@ function groupTotal(brands: OwnerBriefBrandRow[]): OwnerBriefBrandRow {
     brands.some((b) => typeof pick(b) === 'number' && Number.isFinite(pick(b) as number))
   const sumOrNull = (pick: (b: OwnerBriefBrandRow) => number | null) =>
     anyNonNull(pick) ? sum(pick) : null
+  // Valor group-wide: toma o primeiro não-nulo (todas as marcas carregam o mesmo).
+  const once = (pick: (b: OwnerBriefBrandRow) => number | null) => {
+    const v = brands.map(pick).find((x) => typeof x === 'number' && Number.isFinite(x as number))
+    return (v ?? null) as number | null
+  }
+  const pecasOnce = once((b) => b.pecas_value)
+  const atOnce = once((b) => b.at_value)
   return {
     brand_name: 'Grupo Total',
     brand_id: null,
@@ -84,15 +95,16 @@ function groupTotal(brands: OwnerBriefBrandRow[]): OwnerBriefBrandRow {
     usados_units: sumOrNull((b) => b.usados_units),
     usados_value: sumOrNull((b) => b.usados_value),
     usados_margin: sumOrNull((b) => b.usados_margin),
-    pecas_value: sumOrNull((b) => b.pecas_value),
-    pecas_margin: sumOrNull((b) => b.pecas_margin),
-    at_value: sumOrNull((b) => b.at_value),
-    at_margin: sumOrNull((b) => b.at_margin),
+    pecas_value: pecasOnce,
+    pecas_margin: once((b) => b.pecas_margin),
+    at_value: atOnce,
+    at_margin: once((b) => b.at_margin),
     fp_units: sum((b) => b.fp_units),
     fp_value: sum((b) => b.fp_value),
     fp_units_at_risk: sum((b) => b.fp_units_at_risk),
     fp_value_at_risk: sum((b) => b.fp_value_at_risk),
-    resultado: sum((b) => b.resultado),
+    // resultado por marca = Novos+Usados; grupo = soma + Peças/AT do grupo (uma vez).
+    resultado: sum((b) => b.resultado) + (pecasOnce ?? 0) + (atOnce ?? 0),
   }
 }
 
@@ -275,7 +287,7 @@ function ActionsSection({
               </div>
               <div className="mb-1 text-sm font-bold text-foreground">{label}</div>
               {typeof f.delta === 'number' && (
-                <div className="mb-3 text-xs text-muted-foreground">Δ {formatBRL(f.delta)}</div>
+                <div className="mb-3 text-xs text-muted-foreground">Δ {formatBRLKpi(f.delta)}</div>
               )}
               <div className="flex items-center gap-2">
                 <button
@@ -427,9 +439,8 @@ function indexStores(stores: OwnerBriefStoreRow[]): Record<string, OwnerBriefSto
 }
 
 function briefDateLabel(): string {
-  const d = new Date()
-  d.setDate(d.getDate() - 1)
-  return d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' })
+  // Conceito do painel = MÊS ATUAL (month-to-date); rótulo é o mês corrente.
+  return new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
 }
 
 export default function MorningBrief() {
@@ -506,7 +517,7 @@ export default function MorningBrief() {
                 Morning Brief
               </div>
               <div className="mt-0.5 flex items-baseline justify-between">
-                <div className="text-xl font-extrabold capitalize text-foreground">Ontem</div>
+                <div className="text-xl font-extrabold capitalize text-foreground">Mês atual</div>
                 <div className="text-xs capitalize text-muted-foreground">{dateLabel}</div>
               </div>
               <div className="mt-0.5 text-[11px] font-medium text-muted-foreground">Valores em R$</div>
@@ -516,7 +527,7 @@ export default function MorningBrief() {
             </div>
             <div className="flex flex-col gap-2.5">
               {brands.length === 0 && (
-                <p className="text-sm text-muted-foreground">Sem dados do dia anterior.</p>
+                <p className="text-sm text-muted-foreground">Sem dados do mês.</p>
               )}
               {brands.map((b) => (
                 <BrandCard key={b.brand_name} b={b} onOpen={() => setOpenBrand(b.brand_name)} />
@@ -544,7 +555,7 @@ export default function MorningBrief() {
           <div className="text-[11px] font-extrabold uppercase tracking-widest text-muted-foreground">
             Morning Brief · Portal DIA
           </div>
-          <div className="text-xl font-extrabold text-foreground">Resultado por marca e loja · ontem</div>
+          <div className="text-xl font-extrabold text-foreground">Resultado por marca e loja · mês atual</div>
           <div className="mt-0.5 text-[11px] font-medium text-muted-foreground">Valores em R$</div>
         </div>
         <div className="text-right text-xs capitalize text-muted-foreground">{dateLabel}</div>
@@ -553,7 +564,7 @@ export default function MorningBrief() {
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <div className="min-w-0 flex-1 overflow-auto p-6">
           {brands.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sem dados do dia anterior.</p>
+            <p className="text-sm text-muted-foreground">Sem dados do mês.</p>
           ) : (
             <CockpitTable brands={brands} storesByBrand={storesByBrand} total={total} />
           )}

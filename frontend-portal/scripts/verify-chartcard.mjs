@@ -138,19 +138,22 @@ test('AC: usa xKey como eixo de categorias e desenha uma serie por item', () => 
   )
 })
 
-// AC: Formatação de valores — reaproveita formatBRL/formatPct.
-test('AC: reaproveita formatBRL/formatPct e trata currency/percent/number', () => {
+// AC: Formatação de valores — reaproveita formatBRLKpi/formatPct.
+// Issue clean-currency-grids: tooltips/eixos de gráfico passaram a usar
+// formatBRLKpi (sem R$/decimais), igual aos KPI cards. A legenda "Valores em R$"
+// fica na tela.
+test('AC: reaproveita formatBRLKpi/formatPct e trata currency/percent/number', () => {
   const src = read(CHART_CARD_PATH)
   assert.match(
     src,
-    /import\s*\{[^}]*\bformatBRL\b[^}]*\bformatPct\b[^}]*\}\s*from\s*['"]\.\/format['"]/,
-    'ChartCard.tsx deve importar formatBRL e formatPct de ./format',
+    /import\s*\{[^}]*\bformatBRLKpi\b[^}]*\bformatPct\b[^}]*\}\s*from\s*['"]\.\/format['"]/,
+    'ChartCard.tsx deve importar formatBRLKpi e formatPct de ./format',
   )
-  // currency -> formatBRL, percent -> formatPct.
+  // currency -> formatBRLKpi, percent -> formatPct.
   assert.match(
     src,
-    /fmt\s*===\s*['"]currency['"][\s\S]*?formatBRL/,
-    "valueFormat 'currency' deve usar formatBRL",
+    /fmt\s*===\s*['"]currency['"][\s\S]*?formatBRLKpi/,
+    "valueFormat 'currency' deve usar formatBRLKpi",
   )
   assert.match(
     src,
