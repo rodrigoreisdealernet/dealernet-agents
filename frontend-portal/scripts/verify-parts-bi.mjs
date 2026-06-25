@@ -129,6 +129,34 @@ test('AC3: a tela renderiza KpiCard com valor de estoque, criticas/zeradas e ven
     /formatBRL\(\s*monthSales\.revenue/,
     'deve exibir a receita do mes em R$ via formatBRL(monthSales.revenue)',
   )
+  // O KPI de vendas do mes deve ser ESCOPADO ao mes corrente — nao um total
+  // de todo o periodo. A useMemo monthSales (PartsBI.tsx l.72-79) deriva o
+  // prefixo ano-mes de hoje com new Date()/getFullYear()/getMonth() e filtra
+  // salesRows por period_month.slice(0, 7) === prefixo. Assertamos essa
+  // matematica de data para que o teste FALHE se alguem trocar o filtro por
+  // uma soma all-time.
+  assert.match(
+    src,
+    /new Date\(\)/,
+    'monthSales deve derivar a data corrente via new Date() (PartsBI.tsx l.73)',
+  )
+  assert.match(
+    src,
+    /getFullYear\(\)/,
+    'monthSales deve usar getFullYear() para o prefixo ano-mes (l.74)',
+  )
+  assert.match(
+    src,
+    /getMonth\(\)/,
+    'monthSales deve usar getMonth() para o prefixo ano-mes (l.74)',
+  )
+  // O filtro deve comparar o prefixo YYYY-MM de period_month (.slice(0, 7))
+  // contra o prefixo corrente — isto e o que escopa o KPI ao mes atual (l.75).
+  assert.match(
+    src,
+    /period_month[\s\S]{0,40}?\)\s*\.slice\(\s*0\s*,\s*7\s*\)\s*===\s*prefix/,
+    "monthSales deve filtrar salesRows por period_month.slice(0, 7) === prefix (l.75)",
+  )
 })
 
 // AC4: a tela renderiza os graficos exigidos via ChartCard.
@@ -182,11 +210,17 @@ test('AC5: chama getCriticalParts e renderiza uma lista de pecas criticas por li
     src.includes('Badge'),
     'cada linha critica deve exibir o estado de estoque via Badge',
   )
-  // Deve referenciar campos identificadores da peca (numero/descricao).
+  // Deve referenciar AMBOS os campos identificadores da peca — a tela renderiza
+  // o part_number (l.157) E a description (l.158) em cada linha critica.
   assert.match(
     src,
-    /part_number|description/,
-    'a lista critica deve exibir identificador/descricao da peca',
+    /r\.part_number/,
+    'cada linha critica deve exibir r.part_number (PartsBI.tsx l.157)',
+  )
+  assert.match(
+    src,
+    /r\.description/,
+    'cada linha critica deve exibir r.description (PartsBI.tsx l.158)',
   )
 })
 
@@ -249,6 +283,19 @@ test('AC: agentsApi expoe getPartsSummary (v_dia_parts_summary) e getDiaOwnerKpi
     /export\s+interface\s+PartsSummaryRow/,
     'agentsApi deve declarar a interface PartsSummaryRow',
   )
+  // PartsSummaryRow deve declarar os campos de VENDA que o KPI de vendas do mes
+  // e o grafico de linha consomem (period_month, units_sold, revenue), alem dos
+  // campos de inventario. Ancoramos no bloco da interface (agentsApi.ts l.636-642).
+  const partsRowBlock =
+    src.match(/export\s+interface\s+PartsSummaryRow\s*\{[\s\S]*?\}/)?.[0] ?? ''
+  assert.ok(partsRowBlock, 'nao foi possivel localizar o corpo da interface PartsSummaryRow')
+  for (const field of ['period_month', 'units_sold', 'revenue']) {
+    assert.match(
+      partsRowBlock,
+      new RegExp(`\\b${field}\\b`),
+      `PartsSummaryRow deve declarar o campo de venda '${field}'`,
+    )
+  }
   // getDiaOwnerKpis le v_dia_owner_kpis.
   assert.match(
     src,

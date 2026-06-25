@@ -4,9 +4,9 @@
   "slug": "feat-frontend-dashboard-estoque-pecas",
   "branch": "feature/18-feat-frontend-dashboard-estoque-pecas",
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/18",
-  "pr": null,
-  "prUrl": null,
-  "updatedAt": "2026-06-25T19:13:36.897Z",
+  "pr": "29",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/29",
+  "updatedAt": "2026-06-25T19:16:32.450Z",
   "steps": [
     {
       "id": "spec",
@@ -43,17 +43,22 @@
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "running",
-      "summary": "Writing structural node --test for the dashboard",
-      "artifacts": [],
+      "status": "done",
+      "summary": "Structural test verify-parts-bi.mjs: 9 pass; full suite 34/34. Draft PR #29 opened.",
+      "artifacts": [
+        {
+          "label": "PR #29",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/29"
+        }
+      ],
       "notes": [],
       "gate": null
     },
     {
       "id": "test-review",
       "label": "05 · Test review",
-      "status": "pending",
-      "summary": "",
+      "status": "running",
+      "summary": "Reviewer auditing the test suite",
       "artifacts": [],
       "notes": [],
       "gate": null
