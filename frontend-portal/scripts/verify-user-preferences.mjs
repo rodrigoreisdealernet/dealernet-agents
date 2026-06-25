@@ -175,9 +175,9 @@ test('AC4: migracao legada copia chaves globais sem sobrescrever preferencias ex
     accent: 'green',
     hex: '#445566',
   })
-  assert.equal(storage.getItem(prefs.LEGACY_MODE_KEY), null)
-  assert.equal(storage.getItem(prefs.LEGACY_ACCENT_KEY), null)
-  assert.equal(storage.getItem(prefs.LEGACY_HEX_KEY), null)
+  assert.equal(storage.getItem(prefs.LEGACY_MODE_KEY), 'dark')
+  assert.equal(storage.getItem(prefs.LEGACY_ACCENT_KEY), 'green')
+  assert.equal(storage.getItem(prefs.LEGACY_HEX_KEY), '#445566')
 
   storage = installMemoryStorage()
   const usuarioComPrefs = 'legado.existente'
@@ -194,6 +194,36 @@ test('AC4: migracao legada copia chaves globais sem sobrescrever preferencias ex
     accent: 'navy',
     hex: '#ABCDEF',
   })
+})
+
+test('AC4 + AC2: migracao legada sequencial preserva chaves globais para cada usuario', async () => {
+  const storage = installMemoryStorage()
+  const prefs = await importUserPreferences('ac4-ac2-sequencial')
+  const usuarioA = 'legacy.userA'
+  const usuarioB = 'legacy.userB'
+  const expected = { themeMode: 'dark', accent: 'green', hex: '#445566' }
+
+  storage.setItem(prefs.LEGACY_MODE_KEY, expected.themeMode)
+  storage.setItem(prefs.LEGACY_ACCENT_KEY, expected.accent)
+  storage.setItem(prefs.LEGACY_HEX_KEY, expected.hex)
+
+  setAuth(storage, prefs.AUTH_STORAGE_KEY, usuarioA)
+  assert.deepEqual(prefs.getUserPrefs(), expected)
+  assert.deepEqual(storedJson(storage, prefs.userPrefsKey(usuarioA)), expected)
+  assert.equal(storage.getItem(prefs.LEGACY_MODE_KEY), expected.themeMode)
+  assert.equal(storage.getItem(prefs.LEGACY_ACCENT_KEY), expected.accent)
+  assert.equal(storage.getItem(prefs.LEGACY_HEX_KEY), expected.hex)
+
+  setAuth(storage, prefs.AUTH_STORAGE_KEY, usuarioB)
+  assert.deepEqual(prefs.getUserPrefs(), expected)
+  assert.deepEqual(storedJson(storage, prefs.userPrefsKey(usuarioB)), expected)
+
+  assert.notEqual(prefs.userPrefsKey(usuarioA), prefs.userPrefsKey(usuarioB))
+  assert.deepEqual(storedJson(storage, prefs.userPrefsKey(usuarioA)), expected)
+  assert.deepEqual(storedJson(storage, prefs.userPrefsKey(usuarioB)), expected)
+  assert.equal(storage.getItem(prefs.LEGACY_MODE_KEY), expected.themeMode)
+  assert.equal(storage.getItem(prefs.LEGACY_ACCENT_KEY), expected.accent)
+  assert.equal(storage.getItem(prefs.LEGACY_HEX_KEY), expected.hex)
 })
 
 test('AC5: localStorage ausente ou JSON invalido retorna defaults seguros sem excecao', async () => {
