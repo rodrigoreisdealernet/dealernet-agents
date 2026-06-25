@@ -4,9 +4,9 @@
   "slug": "feat-frontend-dashboard-visao-do",
   "branch": "feature/15-feat-frontend-dashboard-visao-do",
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/15",
-  "pr": null,
-  "prUrl": null,
-  "updatedAt": "2026-06-25T19:15:32.974Z",
+  "pr": "27",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/27",
+  "updatedAt": "2026-06-25T19:15:58.353Z",
   "steps": [
     {
       "id": "spec",
@@ -49,7 +49,7 @@
       "id": "tests",
       "label": "04 · Tests",
       "status": "done",
-      "summary": "Structural verifier verify-owner-overview.mjs (8 tests, all green); wired into npm test",
+      "summary": "Structural verifier (8 tests green) + DRAFT PR #27 opened",
       "artifacts": [
         {
           "label": "Test",
