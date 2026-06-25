@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="iso-8859-1" />
+    <title>Cadastro de Lead (mock ASPX)</title>
+    <style>
+      body { font-family: Tahoma, Verdana, sans-serif; font-size: 12px; margin: 0; background: #f3f3f3; color: #222; }
+      .bar { background: #2b579a; color: #fff; padding: 8px 12px; font-weight: bold; }
+      .form { padding: 16px; display: grid; grid-template-columns: 110px 1fr; gap: 10px 12px; max-width: 520px; }
+      label { align-self: center; }
+      input, select { padding: 5px 6px; border: 1px solid #aaa; border-radius: 3px; font-size: 12px; }
+      .actions { grid-column: 1 / -1; margin-top: 8px; }
+      button { background: #2b579a; color: #fff; border: 0; padding: 7px 16px; border-radius: 3px; cursor: pointer; }
+      .note { padding: 0 16px 16px; color: #777; font-size: 11px; }
+    </style>
+  </head>
+  <body>
+    <div class="bar">Cadastro de Lead &mdash; tela legada (simulada)</div>
+    <div class="form">
+      <label>Nome</label><input type="text" value="" />
+      <label>Empresa</label><input type="text" value="" />
+      <label>Telefone</label><input type="text" value="" />
+      <label>Origem</label>
+      <select><option>Indicação</option><option>Site</option><option>Campanha</option></select>
+      <div class="actions"><button type="button">Gravar</button></div>
+    </div>
+    <p class="note">
+      Este HTML representa uma tela ASPX legada embutida via iframe sandboxed.
+      Charset iso-8859-1 isolado pelo iframe; o shell não acessa seu DOM diretamente.
+    </p>
+  </body>
+</html>

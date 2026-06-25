@@ -1,0 +1,199 @@
+/* =============================================================
+   DealernetSupply — Design Tokens
+   "A Mesa de Operações": densa por necessidade, legível por hierarquia.
+   Estratégia de cor: Restrained — neutros levemente tingidos (hue 258,
+   na direção do azul Dealernet) carregam 92%+ da superfície; o acento
+   entra em ≤8% da tela. Profundidade por tom + borda 1px, não sombra.
+   ============================================================= */
+
+:root {
+  /* ---- Marca (ancorada no logo Dealer.net) ---- */
+  --brand-navy: #15375f;   /* wordmark serifado */
+  --brand-red:  #d32b26;   /* swoosh + ponto — vira o semântico de perigo */
+  --brand-blue: #0a4da6;   /* azul interativo escolhido — acento primário */
+
+  /* ---- Tipografia ---- */
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --text-display: 600 30px/1.15 var(--font-sans);
+  --text-headline: 600 22px/1.25 var(--font-sans);
+  --text-title:   600 16px/1.35 var(--font-sans);
+  --text-body:    400 13.5px/1.5 var(--font-sans);
+  --text-body-strong: 500 13.5px/1.5 var(--font-sans);
+  --text-label:   500 12px/1.35 var(--font-sans);
+  --text-mono:    400 12.5px/1.5 var(--font-mono);
+
+  --tracking-label: 0.04em;  /* só rótulos uppercase ≤4 palavras */
+
+  /* ---- Espaçamento (base 4px) ---- */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px;
+  --sp-12: 48px; --sp-16: 64px;
+
+  /* ---- Raio ---- */
+  --radius-xs: 3px;   /* chips, badges */
+  --radius-sm: 5px;   /* inputs, botões */
+  --radius-md: 8px;   /* cartões, painéis */
+  --radius-lg: 12px;  /* modais */
+  --radius-full: 999px;
+
+  /* ---- Altura de controle (denso, teclado-first) ---- */
+  --control-sm: 28px;
+  --control-md: 32px;
+  --control-lg: 38px;
+  --row-h: 40px;       /* linha de tabela densa, mas respirável */
+
+  /* ---- Duração (motion = feedback de estado) ---- */
+  --dur-fast: 90ms;
+  --dur-base: 150ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* =============================================================
+   TEMA CLARO (padrão)
+   ============================================================= */
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* superfícies — neutros tingidos (croma ~0.004–0.01 em hue 258) */
+  --bg:          oklch(0.984 0.004 258);  /* fundo da aplicação */
+  --surface:     oklch(1 0 0);            /* cartões / painéis */
+  --surface-2:   oklch(0.972 0.005 258);  /* faixa sutil, hover de linha */
+  --surface-3:   oklch(0.955 0.006 258);  /* cabeçalho de tabela, well */
+  --overlay:     oklch(1 0 0);            /* dropdown / modal */
+
+  /* bordas / divisores */
+  --border:        oklch(0.916 0.007 258);
+  --border-strong: oklch(0.852 0.011 258);
+  --border-focus:  var(--brand-blue);
+
+  /* tinta */
+  --ink:    oklch(0.27 0.022 258);  /* corpo + títulos (AA garantido) */
+  --ink-2:  oklch(0.448 0.02 258);  /* secundário */
+  --ink-3:  oklch(0.572 0.016 258); /* metadados, placeholder */
+  --ink-inv: oklch(0.99 0.002 258);
+
+  /* primário (acento raro) */
+  --primary:        var(--brand-blue);
+  --primary-hover:  oklch(0.41 0.15 258);
+  --primary-active: oklch(0.36 0.14 258);
+  --primary-tint:   oklch(0.955 0.03 258);   /* fundo selecionado/nav ativo */
+  --primary-tint-2: oklch(0.93 0.045 258);
+  --on-primary:     #ffffff;
+  --ring:           color-mix(in oklch, var(--brand-blue) 38%, transparent);
+
+  /* status — cor SEMPRE acompanhada de ícone + rótulo */
+  --success:      oklch(0.52 0.12 152);
+  --success-tint: oklch(0.955 0.035 152);
+  --success-border: oklch(0.86 0.07 152);
+
+  --warning:      oklch(0.56 0.115 70);
+  --warning-tint: oklch(0.96 0.05 80);
+  --warning-border: oklch(0.85 0.09 75);
+
+  --danger:       oklch(0.51 0.18 25);   /* alinhado ao vermelho de marca */
+  --danger-hover: oklch(0.46 0.18 25);
+  --danger-tint:  oklch(0.955 0.03 25);
+  --danger-border: oklch(0.85 0.08 25);
+
+  --info:      var(--brand-blue);
+  --info-tint: var(--primary-tint);
+  --info-border: oklch(0.84 0.06 258);
+
+  --neutral-tint: var(--surface-3);
+  --neutral-fg:   var(--ink-2);
+
+  /* elevação — só para o que flutua sobre o conteúdo */
+  --shadow-pop: 0 1px 2px oklch(0.27 0.02 258 / 0.06),
+                0 8px 24px oklch(0.27 0.02 258 / 0.12);
+  --shadow-modal: 0 4px 12px oklch(0.27 0.02 258 / 0.1),
+                  0 24px 64px oklch(0.27 0.02 258 / 0.22);
+}
+
+/* =============================================================
+   TEMA ESCURO
+   ============================================================= */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg:          oklch(0.195 0.012 258);
+  --surface:     oklch(0.235 0.014 258);
+  --surface-2:   oklch(0.27 0.015 258);
+  --surface-3:   oklch(0.3 0.016 258);
+  --overlay:     oklch(0.265 0.015 258);
+
+  --border:        oklch(0.33 0.016 258);
+  --border-strong: oklch(0.42 0.02 258);
+  --border-focus:  oklch(0.7 0.13 258);
+
+  --ink:    oklch(0.945 0.006 258);
+  --ink-2:  oklch(0.76 0.013 258);
+  --ink-3:  oklch(0.62 0.015 258);
+  --ink-inv: oklch(0.2 0.02 258);
+
+  --primary:        oklch(0.66 0.14 258);
+  --primary-hover:  oklch(0.72 0.14 258);
+  --primary-active: oklch(0.6 0.14 258);
+  --primary-tint:   oklch(0.32 0.05 258);
+  --primary-tint-2: oklch(0.38 0.07 258);
+  --on-primary:     oklch(0.16 0.03 258);
+  --ring:           color-mix(in oklch, oklch(0.7 0.13 258) 50%, transparent);
+
+  --success:      oklch(0.72 0.13 152);
+  --success-tint: oklch(0.32 0.05 152);
+  --success-border: oklch(0.45 0.08 152);
+
+  --warning:      oklch(0.78 0.13 80);
+  --warning-tint: oklch(0.34 0.05 75);
+  --warning-border: oklch(0.5 0.09 75);
+
+  --danger:       oklch(0.68 0.16 25);
+  --danger-hover: oklch(0.74 0.16 25);
+  --danger-tint:  oklch(0.33 0.07 25);
+  --danger-border: oklch(0.48 0.11 25);
+
+  --info:      oklch(0.66 0.14 258);
+  --info-tint: var(--primary-tint);
+  --info-border: oklch(0.45 0.08 258);
+
+  --neutral-tint: var(--surface-3);
+  --neutral-fg:   var(--ink-2);
+
+  --shadow-pop: 0 1px 2px oklch(0 0 0 / 0.4),
+                0 8px 24px oklch(0 0 0 / 0.5);
+  --shadow-modal: 0 4px 12px oklch(0 0 0 / 0.5),
+                  0 24px 64px oklch(0 0 0 / 0.6);
+}
+
+/* =============================================================
+   Base
+   ============================================================= */
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: var(--text-body);
+  font-feature-settings: "tnum" 1, "cv05" 1;  /* numeral tabular por padrão */
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Numeral tabular em tudo que alinha (regra do design system) */
+.tnum, td, th, input, .metric-value, .mono { font-variant-numeric: tabular-nums; }
+.mono { font: var(--text-mono); }
+
+:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
