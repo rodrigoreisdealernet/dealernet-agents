@@ -78,6 +78,8 @@ export default function ServiceDashboard() {
       const ref = referenceDate(r)
       if (!ref || !isSameMonth(ref, now)) continue
       if (r.status === 'concluida') closedThisMonth += 1
+      // OS canceladas não entram no faturamento, mesmo que tenham receita preenchida.
+      if (r.status === 'cancelada') continue
       revenueThisMonth += r.revenue ?? 0
     }
 
@@ -109,6 +111,8 @@ export default function ServiceDashboard() {
     for (const r of rows) {
       const ref = referenceDate(r)
       if (!ref) continue
+      // OS canceladas não compõem o faturamento da série temporal.
+      if (r.status === 'cancelada') continue
       const key = monthKey(ref)
       byMonth.set(key, (byMonth.get(key) ?? 0) + (r.revenue ?? 0))
     }
