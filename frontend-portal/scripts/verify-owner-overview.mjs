@@ -102,6 +102,14 @@ test('AC: agentsApi.ts exporta getOwnerKpis/getSalesTrend/getInventorySummary le
       `o .select de KPIs deve incluir a coluna '${col}'`,
     )
   }
+  // As views de tendencia/estoque tambem precisam das colunas consumidas pelos
+  // graficos (pega regressao que remova units_sold/vehicles_count do .select).
+  for (const col of ['sale_date', 'units_sold', 'revenue', 'age_band', 'vehicles_count', 'inventory_value']) {
+    assert.ok(
+      api.includes(col),
+      `o .select das views de tendencia/estoque deve incluir a coluna '${col}'`,
+    )
+  }
 })
 
 // AC: Banda de KpiCards cobre as metricas obrigatorias, ligadas a kpis?.<campo>.
@@ -147,6 +155,16 @@ test('AC: DiaOverview usa >=2 ChartCards: line/sale_date e bar/age_band', () => 
     /<ChartCard\b[\s\S]*?type="bar"[\s\S]*?xKey="age_band"|<ChartCard\b[\s\S]*?xKey="age_band"[\s\S]*?type="bar"/,
     'deve haver um ChartCard type="bar" com xKey="age_band" (estoque por faixa de idade)',
   )
+  // As `series` devem apontar para campos REAIS das views (pega renome de key para
+  // coluna inexistente): tendencia usa revenue/units_sold; estoque usa
+  // vehicles_count/inventory_value.
+  for (const key of ['revenue', 'units_sold', 'vehicles_count', 'inventory_value']) {
+    assert.match(
+      src,
+      new RegExp(`key:\\s*['"]${key}['"]`),
+      `as series dos ChartCards devem incluir key: '${key}' (campo real das views)`,
+    )
+  }
 })
 
 // AC: Reaproveita widgets/formatters e os helpers de dados (sem reimplementar).
