@@ -1,0 +1,85 @@
+{
+  "issue": "17",
+  "title": "feat(frontend): dashboard Oficina (Fast BI)",
+  "slug": "feat-frontend-dashboard-oficina-fast",
+  "branch": "feature/17-feat-frontend-dashboard-oficina-fast",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/17",
+  "pr": "26",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/26",
+  "updatedAt": "2026-06-25T19:22:49.131Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "Spec written + posted as issue comment",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "../specs/17-feat-frontend-dashboard-oficina-fast.md"
+        }
+      ],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Auto-approved (batch)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": "ServiceDashboard.tsx + registry + menu (commit ad70030)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "done",
+      "summary": "9 testes estruturais verdes (verify-service-dashboard.mjs)",
+      "artifacts": [
+        {
+          "label": "PR #26",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/26"
+        }
+      ],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "done",
+      "summary": "Test audit: 3 findings fixed (10 testes verdes)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "done",
+      "summary": "Code review LGTM; 1 fix aplicado (exclui canceladas do faturamento)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "waiting",
+      "summary": "Aguardando gate de merge humano",
+      "artifacts": [],
+      "notes": [],
+      "gate": "merge"
+    }
+  ]
+}
