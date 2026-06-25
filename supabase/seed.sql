@@ -2560,3 +2560,80 @@ END
 $$;
 
 commit;
+
+-- ===========================================================================
+-- DIA dealership domain — demo service orders / Oficina (issue #7)
+-- Idempotent namespace: source_record_id LIKE 'demo-dia-service-%'.
+-- 10 orders across statuses, spread over the current and previous month.
+-- At least 2 'concluida' with closed_at set so turnaround_hours populates.
+-- Reuses rental_upsert_entity_current_state (the generic SCD2 upsert) under
+-- the service_role write guard.
+-- ===========================================================================
+
+begin;
+set local request.jwt.claim.role = 'service_role';
+
+DO $$
+DECLARE
+  v_now timestamptz := now();
+  -- open_days = days ago the order was opened; turn_h = hours to close (null = open).
+  v_orders jsonb := jsonb_build_array(
+    jsonb_build_object('sr','demo-dia-service-001','order_number','OS-2026-001','customer','Maria Souza','vehicle','BRA2E19','description','Revisão de 10.000 km','status','concluida','open_days',55,'turn_h',6,'revenue',850.00,'technician','Carlos'),
+    jsonb_build_object('sr','demo-dia-service-002','order_number','OS-2026-002','customer','João Lima','vehicle','RIO3F45','description','Troca de pastilhas de freio','status','concluida','open_days',40,'turn_h',3,'revenue',520.00,'technician','Ana'),
+    jsonb_build_object('sr','demo-dia-service-003','order_number','OS-2026-003','customer','Pedro Alves','vehicle','SAO7G88','description','Alinhamento e balanceamento','status','concluida','open_days',20,'turn_h',2,'revenue',280.00,'technician','Carlos'),
+    jsonb_build_object('sr','demo-dia-service-004','order_number','OS-2026-004','customer','Lucas Reis','vehicle','BHZ1H22','description','Diagnóstico eletrônico','status','em_andamento','open_days',5,'turn_h',null,'revenue',150.00,'technician','Ana'),
+    jsonb_build_object('sr','demo-dia-service-005','order_number','OS-2026-005','customer','Fernanda Dias','vehicle','POA9J33','description','Troca de óleo e filtros','status','em_andamento','open_days',3,'turn_h',null,'revenue',420.00,'technician','Bruno'),
+    jsonb_build_object('sr','demo-dia-service-006','order_number','OS-2026-006','customer','Roberto Nunes','vehicle','CWB4K11','description','Reparo do ar-condicionado','status','aberta','open_days',2,'turn_h',null,'revenue',null,'technician',null),
+    jsonb_build_object('sr','demo-dia-service-007','order_number','OS-2026-007','customer','Camila Rocha','vehicle','REC6L77','description','Substituição de embreagem','status','aberta','open_days',1,'turn_h',null,'revenue',null,'technician','Bruno'),
+    jsonb_build_object('sr','demo-dia-service-008','order_number','OS-2026-008','customer','Tiago Melo','vehicle','SSA2M55','description','Revisão geral pré-viagem','status','aberta','open_days',0,'turn_h',null,'revenue',null,'technician',null),
+    jsonb_build_object('sr','demo-dia-service-009','order_number','OS-2026-009','customer','Juliana Castro','vehicle','FOR8N99','description','Troca de bateria','status','em_andamento','open_days',7,'turn_h',null,'revenue',680.00,'technician','Carlos'),
+    jsonb_build_object('sr','demo-dia-service-010','order_number','OS-2026-010','customer','Marcelo Pinto','vehicle','VIX5P44','description','Reparo na suspensão','status','aberta','open_days',1,'turn_h',null,'revenue',null,'technician','Ana')
+  );
+  v_item jsonb;
+  v_opened timestamptz;
+  v_data jsonb;
+BEGIN
+  PERFORM set_config('request.jwt.claim.role', 'service_role', true);
+
+  -- Idempotent: drop prior demo service orders, then recreate.
+  DELETE FROM entities
+  WHERE entity_type = 'service_order'
+    AND source_record_id LIKE 'demo-dia-service-%';
+
+  FOR v_item IN SELECT * FROM jsonb_array_elements(v_orders)
+  LOOP
+    v_opened := v_now - ((v_item ->> 'open_days')::int || ' days')::interval;
+
+    v_data := jsonb_build_object(
+      'name', concat_ws(' - ', v_item ->> 'order_number', v_item ->> 'customer'),
+      'order_number', v_item ->> 'order_number',
+      'customer', v_item ->> 'customer',
+      'vehicle', v_item ->> 'vehicle',
+      'description', v_item ->> 'description',
+      'status', v_item ->> 'status',
+      'opened_at', to_char(v_opened, 'YYYY-MM-DD"T"HH24:MI:SSOF'),
+      'technician', v_item ->> 'technician',
+      'source_record_id', v_item ->> 'sr'
+    );
+
+    IF nullif(v_item ->> 'revenue', '') IS NOT NULL THEN
+      v_data := v_data || jsonb_build_object('revenue', (v_item ->> 'revenue')::numeric);
+    END IF;
+
+    IF nullif(v_item ->> 'turn_h', '') IS NOT NULL THEN
+      v_data := v_data || jsonb_build_object(
+        'closed_at',
+        to_char(v_opened + ((v_item ->> 'turn_h')::int || ' hours')::interval, 'YYYY-MM-DD"T"HH24:MI:SSOF')
+      );
+    END IF;
+
+    PERFORM rental_upsert_entity_current_state(
+      p_entity_type => 'service_order',
+      p_source_record_id => v_item ->> 'sr',
+      p_data => v_data
+    );
+  END LOOP;
+END
+$$;
+
+commit;

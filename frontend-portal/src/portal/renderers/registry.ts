@@ -20,6 +20,8 @@ export const componentRegistry: Record<string, LazyExoticComponent<ComponentType
   'dia-brands': lazy(() => import('@/portal/renderers/screens/BrandsCrud')),
   // Gestão de usuários/perfis (issue #6) — somente admin (gating na tela + nav).
   'admin-users': lazy(() => import('@/portal/renderers/screens/UsersAdmin')),
+  // DIA dealership domain (issue #7) — Oficina / ordens de serviço.
+  'dia-service-orders': lazy(() => import('@/portal/renderers/screens/ServiceOrders')),
 }
 
 export function resolveComponent(key: string) {
