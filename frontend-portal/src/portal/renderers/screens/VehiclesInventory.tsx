@@ -3,6 +3,7 @@
 // via as RPCs endurecidas create_vehicle / update_vehicle / delete_vehicle.
 // Leitura direta (RLS authenticated); escrita só pela RPC (admin/branch_manager).
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslations } from 'use-intl'
 import {
   getVehicles,
   createVehicle,
@@ -14,6 +15,7 @@ import {
 import { KpiCard, Badge, ScreenShell, RowActions, RowActionButton, type Tone } from './ui'
 import { Pencil, Trash2 } from 'lucide-react'
 import { formatBRL, formatBRLKpi } from './format'
+export const I18N_PT_LEGEND_REFERENCE = 'Valores em R$'
 
 type FormState = VehicleInput & { entity_id?: string }
 
@@ -39,6 +41,8 @@ function num(v: string): number | null {
 }
 
 export default function VehiclesInventory() {
+  const t = useTranslations('screens.vehiclesInventory')
+  const common = useTranslations('common')
   const [rows, setRows] = useState<VehicleRow[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -71,7 +75,7 @@ export default function VehiclesInventory() {
   const submit = async () => {
     if (!form) return
     if (!form.brand.trim() || !form.model.trim()) {
-      setError('Marca e modelo são obrigatórios.')
+      setError(t('brandModelRequired'))
       return
     }
     setSaving(true)
@@ -100,7 +104,7 @@ export default function VehiclesInventory() {
   }
 
   const remove = async (row: VehicleRow) => {
-    if (!window.confirm(`Remover (baixar) ${row.name ?? row.brand}? O histórico é preservado.`)) return
+    if (!window.confirm(t('removeConfirm').replace('{name}', row.name ?? row.brand ?? '—'))) return
     setError(null)
     try {
       await deleteVehicle(row.entity_id)
@@ -112,27 +116,27 @@ export default function VehiclesInventory() {
 
   return (
     <ScreenShell
-      title="Estoque de Veículos"
-      subtitle="Inventário de veículos novos e usados — custo de floor plan calculado pela idade em estoque."
-      legend="Valores em R$"
+      title={t('title')}
+      subtitle={t('subtitle')}
+      legend={common('valuesInBRL')}
     >
-      {error && <p className="text-sm text-destructive">Erro: {error}</p>}
+      {error && <p className="text-sm text-destructive">{common('error')}: {error}</p>}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <KpiCard label="Total" value={kpis.total} />
-        <KpiCard label="Novos" value={kpis.novos} />
-        <KpiCard label="Usados" value={kpis.usados} />
-        <KpiCard label="Floor plan acum." value={formatBRLKpi(kpis.floorPlan)} />
+        <KpiCard label={common('total')} value={kpis.total} />
+        <KpiCard label={t('new')} value={kpis.novos} />
+        <KpiCard label={t('used')} value={kpis.usados} />
+        <KpiCard label={t('floorPlanAccum')} value={formatBRLKpi(kpis.floorPlan)} />
       </div>
 
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-foreground">Veículos correntes</h2>
+        <h2 className="text-sm font-semibold text-foreground">{t('currentVehicles')}</h2>
         <button
           type="button"
           onClick={() => setForm({ ...EMPTY_FORM })}
           className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
         >
-          Novo veículo
+          {t('newVehicle')}
         </button>
       </div>
 
@@ -143,6 +147,8 @@ export default function VehiclesInventory() {
           onChange={setForm}
           onCancel={() => setForm(null)}
           onSubmit={submit}
+          t={t}
+          common={common}
         />
       )}
 
@@ -150,13 +156,13 @@ export default function VehiclesInventory() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <th className="px-3 py-2">Veículo</th>
-              <th className="px-3 py-2">Condição</th>
-              <th className="px-3 py-2 text-right">Preço</th>
-              <th className="px-3 py-2 text-right">Dias estoque</th>
-              <th className="px-3 py-2 text-right">Floor plan</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2 text-right">Ações</th>
+              <th className="px-3 py-2">{t('vehicle')}</th>
+              <th className="px-3 py-2">{t('condition')}</th>
+              <th className="px-3 py-2 text-right">{t('price')}</th>
+              <th className="px-3 py-2 text-right">{t('stockDays')}</th>
+              <th className="px-3 py-2 text-right">{t('floorPlan')}</th>
+              <th className="px-3 py-2">{common('status')}</th>
+              <th className="px-3 py-2 text-right">{common('actions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -179,7 +185,7 @@ export default function VehiclesInventory() {
                   <RowActions>
                     <RowActionButton
                       icon={<Pencil size={14} />}
-                      label="Editar"
+                      label={common('edit')}
                       onClick={() =>
                         setForm({
                           entity_id: r.entity_id,
@@ -198,7 +204,7 @@ export default function VehiclesInventory() {
                     <RowActionButton
                       tone="danger"
                       icon={<Trash2 size={14} />}
-                      label="Remover"
+                      label={common('remove')}
                       onClick={() => remove(r)}
                     />
                   </RowActions>
@@ -208,14 +214,14 @@ export default function VehiclesInventory() {
             {rows.length === 0 && !loading && (
               <tr>
                 <td colSpan={7} className="px-3 py-6 text-center text-sm text-muted-foreground">
-                  Nenhum veículo no estoque.
+                  {t('noVehicles')}
                 </td>
               </tr>
             )}
             {loading && (
               <tr>
                 <td colSpan={7} className="px-3 py-6 text-center text-sm text-muted-foreground">
-                  Carregando…
+                  {common('loading')}
                 </td>
               </tr>
             )}
@@ -232,12 +238,16 @@ function VehicleForm({
   onChange,
   onCancel,
   onSubmit,
+  t,
+  common,
 }: {
   form: FormState
   saving: boolean
   onChange: (f: FormState) => void
   onCancel: () => void
   onSubmit: () => void
+  t: (key: string) => string
+  common: (key: string) => string
 }) {
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => onChange({ ...form, [k]: v })
   const inputCls =
@@ -246,30 +256,30 @@ function VehicleForm({
   return (
     <div className="rounded-lg border border-border bg-card p-4">
       <h3 className="mb-3 text-sm font-semibold text-foreground">
-        {form.entity_id ? 'Editar veículo' : 'Novo veículo'}
+        {form.entity_id ? t('editVehicle') : t('newVehicle')}
       </h3>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <label className="text-xs text-muted-foreground">
-          Condição
+          {t('condition')}
           <select
             className={inputCls}
             value={form.condition}
             onChange={(e) => set('condition', e.target.value as 'novo' | 'usado')}
           >
-            <option value="novo">novo</option>
-            <option value="usado">usado</option>
+            <option value="novo">{t('newLower')}</option>
+            <option value="usado">{t('usedLower')}</option>
           </select>
         </label>
         <label className="text-xs text-muted-foreground">
-          Marca
+          {t('brand')}
           <input className={inputCls} value={form.brand} onChange={(e) => set('brand', e.target.value)} />
         </label>
         <label className="text-xs text-muted-foreground">
-          Modelo
+          {t('model')}
           <input className={inputCls} value={form.model} onChange={(e) => set('model', e.target.value)} />
         </label>
         <label className="text-xs text-muted-foreground">
-          Ano
+          {t('year')}
           <input
             type="number"
             className={inputCls}
@@ -278,7 +288,7 @@ function VehicleForm({
           />
         </label>
         <label className="text-xs text-muted-foreground">
-          Custo (R$)
+          {t('costBRL')}
           <input
             type="number"
             className={inputCls}
@@ -287,7 +297,7 @@ function VehicleForm({
           />
         </label>
         <label className="text-xs text-muted-foreground">
-          Preço de venda (R$)
+          {t('salePriceBRL')}
           <input
             type="number"
             className={inputCls}
@@ -296,7 +306,7 @@ function VehicleForm({
           />
         </label>
         <label className="text-xs text-muted-foreground">
-          Data de compra
+          {t('purchaseDate')}
           <input
             type="date"
             className={inputCls}
@@ -311,12 +321,12 @@ function VehicleForm({
             value={form.status ?? 'em_estoque'}
             onChange={(e) => set('status', e.target.value as 'em_estoque' | 'vendido')}
           >
-            <option value="em_estoque">em_estoque</option>
-            <option value="vendido">vendido</option>
+            <option value="em_estoque">{t('inStock')}</option>
+            <option value="vendido">{t('sold')}</option>
           </select>
         </label>
         <label className="text-xs text-muted-foreground">
-          Loja
+          {t('store')}
           <input className={inputCls} value={form.store ?? ''} onChange={(e) => set('store', e.target.value)} />
         </label>
       </div>
@@ -327,7 +337,7 @@ function VehicleForm({
           disabled={saving}
           className="rounded-md border border-border px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-muted disabled:opacity-50"
         >
-          Cancelar
+          {common('cancel')}
         </button>
         <button
           type="button"
@@ -335,7 +345,7 @@ function VehicleForm({
           disabled={saving}
           className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
         >
-          {saving ? 'Salvando…' : 'Salvar'}
+          {saving ? common('saving') : common('save')}
         </button>
       </div>
     </div>

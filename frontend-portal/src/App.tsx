@@ -1,4 +1,5 @@
 import { AuthProvider, useAuth } from '@/hooks/use-auth'
+import { LocaleProvider } from '@/i18n/LocaleProvider'
 import { Login } from '@/portal/components/Login'
 import { PortalShell } from '@/portal/PortalShell'
 
@@ -9,8 +10,10 @@ function Gate() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Gate />
-    </AuthProvider>
+    <LocaleProvider>
+      <AuthProvider>
+        <Gate />
+      </AuthProvider>
+    </LocaleProvider>
   )
 }

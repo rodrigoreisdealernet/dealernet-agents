@@ -6,6 +6,7 @@
 // Ver docs/portal-mdi-arquitetura §5; design/18-bridge-sso-telas-legadas.
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'use-intl'
 import { sandboxFor, isMessageTrusted, isOriginAllowed, precisaBridge, telaDoWF, engineDoSrc, precisaTokenSpa, comToken, telaDoSrcSpa } from '@/portal/lib/security'
 import { portalApi } from '@/portal/lib/portalApi'
 import type { WindowKind } from '@/portal/types'
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export function SandboxedFrame({ src, kind, title, allowedOrigins }: Props) {
+  const t = useTranslations('shell.frame')
   // URL efetiva do iframe. Telas do WF (Bridge) e fronts SPA próprios (token) são
   // resolvidas async (geram token de sessão antes de montar o iframe).
   const [resolvedSrc, setResolvedSrc] = useState<string | null>(
@@ -54,21 +56,21 @@ export function SandboxedFrame({ src, kind, title, allowedOrigins }: Props) {
       .then((r) => {
         if (!vivo) return
         if (!r.ok) {
-          setBridgeError(r.mensagem || 'Não foi possível abrir a tela.')
+          setBridgeError(r.mensagem || t('openErrorSentence'))
           return
         }
         if (ehSpa) {
           // Front SPA próprio: usa a PRÓPRIA URL (localhost:5175/?tela=…) + token,
           // não a URL aspx da Bridge. O SPA troca o token por sessão (/bridge/validar).
           if (r.token) setResolvedSrc(comToken(src, r.token))
-          else setBridgeError('Token de sessão não retornado.')
+          else setBridgeError(t('missingSessionToken'))
         } else if (r.url) {
           setResolvedSrc(r.url)
         } else {
-          setBridgeError('Não foi possível abrir a tela.')
+          setBridgeError(t('openErrorSentence'))
         }
       })
-      .catch(() => vivo && setBridgeError('Falha de comunicação ao abrir a tela.'))
+      .catch(() => vivo && setBridgeError(t('communicationFailure')))
     return () => {
       vivo = false
     }
@@ -80,10 +82,10 @@ export function SandboxedFrame({ src, kind, title, allowedOrigins }: Props) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center">
         <span className="text-3xl">🔒</span>
-        <p className="text-sm font-medium">Origem bloqueada pela política de segurança</p>
+        <p className="text-sm font-medium">{t('blockedOrigin')}</p>
         <p className="max-w-xs text-xs text-muted-foreground break-all">{src}</p>
         <p className="text-xs text-muted-foreground">
-          Adicione o domínio à allowlist (config.allowedOrigins) para liberar.
+          {t('allowlistHint')}
         </p>
       </div>
     )
@@ -93,7 +95,7 @@ export function SandboxedFrame({ src, kind, title, allowedOrigins }: Props) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center">
         <span className="text-3xl">⚠️</span>
-        <p className="text-sm font-medium">Não foi possível abrir a tela</p>
+        <p className="text-sm font-medium">{t('openError')}</p>
         <p className="max-w-xs text-xs text-muted-foreground">{bridgeError}</p>
       </div>
     )
@@ -103,7 +105,7 @@ export function SandboxedFrame({ src, kind, title, allowedOrigins }: Props) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
         <div className="h-7 w-7 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        <span className="text-sm">Abrindo tela…</span>
+        <span className="text-sm">{t('opening')}</span>
       </div>
     )
   }

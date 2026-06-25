@@ -1,12 +1,7 @@
 // Filtro de coluna texto: operador + valor com debounce 300ms (spec §3).
 
 import { useEffect, useRef, useState } from 'react'
-
-const OPS = [
-  { value: 'contains', label: 'Contém' },
-  { value: 'startsWith', label: 'Começa com' },
-  { value: 'eq', label: 'Igual a' },
-]
+import { useTranslations } from 'use-intl'
 
 export default function FilterText({
   value,
@@ -16,6 +11,12 @@ export default function FilterText({
   value: string
   onChange: (v: string) => void
 }) {
+  const t = useTranslations('common.grid')
+  const ops = [
+    { value: 'contains', label: t('contains') },
+    { value: 'startsWith', label: t('startsWith') },
+    { value: 'eq', label: t('equals') },
+  ]
   const sep = value.indexOf(':')
   const [op, setOp] = useState(sep > 0 ? value.slice(0, sep) : 'contains')
   const [texto, setTexto] = useState(sep > 0 ? value.slice(sep + 1) : '')
@@ -42,7 +43,7 @@ export default function FilterText({
         }}
         className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs outline-none focus:border-primary"
       >
-        {OPS.map((o) => (
+        {ops.map((o) => (
           <option key={o.value} value={o.value}>
             {o.label}
           </option>
@@ -55,7 +56,7 @@ export default function FilterText({
           setTexto(e.target.value)
           emit(op, e.target.value)
         }}
-        placeholder="Filtrar…"
+        placeholder={t('filterPlaceholder')}
         className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm outline-none focus:border-primary"
       />
     </div>

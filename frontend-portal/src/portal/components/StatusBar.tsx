@@ -4,9 +4,13 @@
 import { useState } from 'react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { Check, ChevronDown, Layers, Plus, Save, Trash2 } from 'lucide-react'
+import { useTranslations } from 'use-intl'
 import { usePortalStore } from '@/portal/store/portalStore'
+import { translateBookmarkTitle, translateWindowTitle } from '@/i18n/menu'
 
 export function StatusBar() {
+  const t = useTranslations('shell')
+  const tMenu = useTranslations('menu')
   const workspaces = usePortalStore((s) => s.workspaces)
   const activeWorkspaceId = usePortalStore((s) => s.activeWorkspaceId)
   const loadWorkspace = usePortalStore((s) => s.loadWorkspace)
@@ -29,19 +33,19 @@ export function StatusBar() {
 
   const onSave = async () => {
     await saveCurrentWorkspace()
-    showFlash('Workspace salvo')
+    showFlash(t('workspaceSaved'))
   }
   const onNew = async () => {
-    const name = window.prompt('Nome do novo workspace:')
+    const name = window.prompt(t('newWorkspacePrompt'))
     if (!name?.trim()) return
     await createWorkspace(name.trim())
-    showFlash('Workspace criado')
+    showFlash(t('workspaceCreated'))
   }
   const onDelete = async () => {
     if (!activeWs) return
-    if (!window.confirm(`Excluir o workspace "${activeWs.name}"?`)) return
+    if (!window.confirm(t('deleteWorkspaceConfirm').replace('{name}', activeWs.name))) return
     await deleteCurrentWorkspace()
-    showFlash('Workspace excluído')
+    showFlash(t('workspaceDeleted'))
   }
 
   return (
@@ -50,7 +54,7 @@ export function StatusBar() {
       <DropdownMenu.Root>
         <DropdownMenu.Trigger data-tour="workspaces" className="flex items-center gap-1.5 rounded px-2 py-1 outline-none hover:bg-secondary data-[state=open]:bg-secondary">
           <Layers size={13} className="text-muted-foreground" />
-          <span className="text-muted-foreground">Workspace:</span>
+          <span className="text-muted-foreground">{t('workspace')}:</span>
           <span className="font-medium text-foreground">{activeWs?.name ?? '—'}</span>
           <ChevronDown size={12} className="opacity-60" />
         </DropdownMenu.Trigger>
@@ -62,7 +66,7 @@ export function StatusBar() {
             className="z-[9999] min-w-52 rounded-lg border bg-card p-1 shadow-xl"
           >
             <DropdownMenu.Label className="px-3 py-1.5 text-xs font-semibold text-muted-foreground">
-              Trocar workspace
+              {t('switchWorkspace')}
             </DropdownMenu.Label>
             {workspaces.map((w) => (
               <DropdownMenu.Item
@@ -82,13 +86,13 @@ export function StatusBar() {
 
       {/* Ações de workspace */}
       <div className="flex items-center gap-0.5">
-        <WsBtn title="Salvar workspace atual" onClick={onSave} disabled={!activeWs}>
+        <WsBtn title={t('saveWorkspace')} onClick={onSave} disabled={!activeWs}>
           <Save size={13} />
         </WsBtn>
-        <WsBtn title="Novo workspace (com as janelas atuais)" onClick={onNew}>
+        <WsBtn title={t('newWorkspace')} onClick={onNew}>
           <Plus size={13} />
         </WsBtn>
-        <WsBtn title="Excluir workspace atual" onClick={onDelete} disabled={!activeWs} danger>
+        <WsBtn title={t('deleteWorkspace')} onClick={onDelete} disabled={!activeWs} danger>
           <Trash2 size={13} />
         </WsBtn>
       </div>
@@ -98,7 +102,7 @@ export function StatusBar() {
       {/* Minimizadas */}
       <DropdownMenu.Root>
         <DropdownMenu.Trigger className="rounded px-2 py-1 outline-none hover:bg-secondary data-[state=open]:bg-secondary">
-          Minimizadas ({minimized.length})
+          {t('minimized')} ({minimized.length})
         </DropdownMenu.Trigger>
         <DropdownMenu.Portal>
           <DropdownMenu.Content
@@ -107,7 +111,7 @@ export function StatusBar() {
             className="z-[9999] min-w-48 rounded-lg border bg-card p-1 shadow-xl"
           >
             {minimized.length === 0 && (
-              <div className="px-3 py-2 text-xs text-muted-foreground">Nenhuma</div>
+              <div className="px-3 py-2 text-xs text-muted-foreground">{t('none')}</div>
             )}
             {minimized.map((w) => (
               <DropdownMenu.Item
@@ -115,7 +119,7 @@ export function StatusBar() {
                 onSelect={() => restoreWindow(w.id)}
                 className="cursor-pointer truncate rounded-md px-3 py-2 text-sm outline-none data-[highlighted]:bg-secondary"
               >
-                {w.title}
+                {translateWindowTitle(w, tMenu)}
               </DropdownMenu.Item>
             ))}
           </DropdownMenu.Content>
@@ -127,7 +131,7 @@ export function StatusBar() {
       {/* Favoritos */}
       <DropdownMenu.Root>
         <DropdownMenu.Trigger data-tour="favoritos" className="rounded px-2 py-1 outline-none hover:bg-secondary data-[state=open]:bg-secondary">
-          Favoritos ({bookmarks.length})
+          {t('favorites')} ({bookmarks.length})
         </DropdownMenu.Trigger>
         <DropdownMenu.Portal>
           <DropdownMenu.Content
@@ -136,7 +140,7 @@ export function StatusBar() {
             className="z-[9999] min-w-48 rounded-lg border bg-card p-1 shadow-xl"
           >
             {bookmarks.length === 0 && (
-              <div className="px-3 py-2 text-xs text-muted-foreground">Nenhum</div>
+              <div className="px-3 py-2 text-xs text-muted-foreground">{t('noneMasc')}</div>
             )}
             {bookmarks.map((b) => (
               <DropdownMenu.Item
@@ -144,7 +148,7 @@ export function StatusBar() {
                 onSelect={() => openWindow(b.spec)}
                 className="cursor-pointer truncate rounded-md px-3 py-2 text-sm outline-none data-[highlighted]:bg-secondary"
               >
-                ⭐ {b.text}
+                ⭐ {translateBookmarkTitle(b, tMenu)}
               </DropdownMenu.Item>
             ))}
           </DropdownMenu.Content>
@@ -154,7 +158,7 @@ export function StatusBar() {
       {/* Mensagem transitória + contador */}
       <div className="ml-auto flex items-center gap-3">
         {flash && <span className="text-emerald-600 dark:text-emerald-400">{flash}</span>}
-        <span className="text-muted-foreground">{windows.length} janela(s) aberta(s)</span>
+        <span className="text-muted-foreground">{t('openWindows').replace('{count}', String(windows.length))}</span>
       </div>
     </footer>
   )

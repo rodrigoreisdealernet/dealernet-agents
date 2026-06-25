@@ -3,6 +3,7 @@
 // A linha VN×VU é montada agregando o summary por period_month × condition
 // (a trend não tem coluna condition). Sem escrita: dashboard read-only.
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslations } from 'use-intl'
 import {
   getSalesSummary,
   getSalesTrend,
@@ -12,6 +13,8 @@ import {
 import { ChartCard } from './ChartCard'
 import { KpiCard, ScreenShell } from './ui'
 import { formatBRLKpi } from './format'
+export const I18N_PT_LEGEND_REFERENCE = 'Valores em R$'
+export const I18N_PT_SALES_DASHBOARD_REFERENCE = ['Unidades VN', 'Unidades VU', 'Unidades total', 'Dias p/ vender', 'Receita VN', 'Receita VU', 'Receita total', 'Margem média', 'Novos (VN)', 'Usados (VU)']
 
 const ALL = '__all__'
 
@@ -26,6 +29,8 @@ function distinct(values: Array<string | null>): string[] {
 }
 
 export default function SalesDashboard() {
+  const t = useTranslations('screens.salesDashboard')
+  const common = useTranslations('common')
   const [summary, setSummary] = useState<SalesSummaryRow[]>([])
   const [, setTrend] = useState<SalesTrendRow[]>([])
   const [brand, setBrand] = useState<string>(ALL)
@@ -130,8 +135,8 @@ export default function SalesDashboard() {
       else usado += r.units_sold
     }
     return [
-      { label: 'Novos (VN)', units: novo },
-      { label: 'Usados (VU)', units: usado },
+      { label: t('newVehicles'), units: novo },
+      { label: t('usedVehicles'), units: usado },
     ]
   }, [filtered])
 
@@ -139,21 +144,21 @@ export default function SalesDashboard() {
 
   return (
     <ScreenShell
-      title="Vendas (VN/VU)"
-      subtitle="Desempenho de vendas de veículos novos e usados — KPIs do mês e tendências."
-      legend="Valores em R$"
+      title={t('title')}
+      subtitle={t('subtitle')}
+      legend={common('valuesInBRL')}
     >
-      {error && <p className="text-sm text-destructive">Erro: {error}</p>}
+      {error && <p className="text-sm text-destructive">{common('error')}: {error}</p>}
 
       <div className="flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-2 text-sm text-muted-foreground">
-          Marca
+          {t('brand')}
           <select
             className={selectClass}
             value={brand}
             onChange={(e) => setBrand(e.target.value)}
           >
-            <option value={ALL}>Todas</option>
+            <option value={ALL}>{t('all')}</option>
             {brandOptions.map((b) => (
               <option key={b} value={b}>
                 {b}
@@ -162,13 +167,13 @@ export default function SalesDashboard() {
           </select>
         </label>
         <label className="flex items-center gap-2 text-sm text-muted-foreground">
-          Loja
+          {t('store')}
           <select
             className={selectClass}
             value={store}
             onChange={(e) => setStore(e.target.value)}
           >
-            <option value={ALL}>Todas as lojas</option>
+            <option value={ALL}>{t('allStores')}</option>
             {storeOptions.map((s) => (
               <option key={s} value={s}>
                 {s}
@@ -179,42 +184,42 @@ export default function SalesDashboard() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <KpiCard label="Unidades VN" value={kpis.vnUnits} />
-        <KpiCard label="Unidades VU" value={kpis.vuUnits} />
-        <KpiCard label="Unidades total" value={kpis.totalUnits} />
-        <KpiCard label="Dias p/ vender" value={Math.round(kpis.avgDaysToSell)} />
-        <KpiCard label="Receita VN" value={formatBRLKpi(kpis.vnRevenue)} />
-        <KpiCard label="Receita VU" value={formatBRLKpi(kpis.vuRevenue)} />
-        <KpiCard label="Receita total" value={formatBRLKpi(kpis.totalRevenue)} />
-        <KpiCard label="Margem média" value={formatBRLKpi(kpis.avgMargin)} />
+        <KpiCard label={t('vnUnits')} value={kpis.vnUnits} />
+        <KpiCard label={t('vuUnits')} value={kpis.vuUnits} />
+        <KpiCard label={t('totalUnits')} value={kpis.totalUnits} />
+        <KpiCard label={t('daysToSell')} value={Math.round(kpis.avgDaysToSell)} />
+        <KpiCard label={t('vnRevenue')} value={formatBRLKpi(kpis.vnRevenue)} />
+        <KpiCard label={t('vuRevenue')} value={formatBRLKpi(kpis.vuRevenue)} />
+        <KpiCard label={t('totalRevenue')} value={formatBRLKpi(kpis.totalRevenue)} />
+        <KpiCard label={t('avgMargin')} value={formatBRLKpi(kpis.avgMargin)} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ChartCard
-          title="Vendas ao longo do tempo — VN × VU"
+          title={t('salesOverTime')}
           type="line"
           data={trendData}
           xKey="period"
           series={[
-            { key: 'novo', label: 'Novos (VN)' },
-            { key: 'usado', label: 'Usados (VU)' },
+            { key: 'novo', label: t('newVehicles') },
+            { key: 'usado', label: t('usedVehicles') },
           ]}
           valueFormat="number"
         />
         <ChartCard
-          title="Vendas por marca"
+          title={t('salesByBrand')}
           type="bar"
           data={byBrandData}
           xKey="brand"
-          series={[{ key: 'units', label: 'Unidades' }]}
+          series={[{ key: 'units', label: t('units') }]}
           valueFormat="number"
         />
         <ChartCard
-          title="Mix Novos × Usados"
+          title={t('mixTitle')}
           type="pie"
           data={mixData}
           xKey="label"
-          series={[{ key: 'units', label: 'Unidades' }]}
+          series={[{ key: 'units', label: t('units') }]}
           valueFormat="number"
         />
       </div>

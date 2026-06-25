@@ -30,6 +30,7 @@
     "react-rnd": "^10.4.13",
     "recharts": "^2.13.0",
     "tailwind-merge": "^2.6.0",
+    "use-intl": "^3.26.5",
     "zod": "^4.4.3",
     "zustand": "^5.0.2"
   },

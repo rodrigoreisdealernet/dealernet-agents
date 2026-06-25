@@ -2,6 +2,7 @@
 // Paridade com createWindow do W5Portal.js legado (doc §4.2).
 
 import { useState } from 'react'
+import { useTranslations } from 'use-intl'
 import { Rnd } from 'react-rnd'
 import { motion } from 'framer-motion'
 import { Maximize2, Minimize2, Minus, RefreshCw, Star, X } from 'lucide-react'
@@ -10,11 +11,14 @@ import { WindowBody } from '@/portal/components/WindowBody'
 import { moduleColor } from '@/portal/lib/moduleTheme'
 import { MenuIcon } from '@/portal/lib/menuIcon'
 import { cn } from '@/lib/utils'
+import { translateWindowTitle } from '@/i18n/menu'
 import type { PortalWindow } from '@/portal/types'
 
 const TOOLBAR_H = 40
 
 export function Window({ win, allowedOrigins }: { win: PortalWindow; allowedOrigins: string[] }) {
+  const tShell = useTranslations('shell')
+  const tMenu = useTranslations('menu')
   const {
     activeWindowId,
     focusWindow,
@@ -26,6 +30,7 @@ export function Window({ win, allowedOrigins }: { win: PortalWindow; allowedOrig
     addBookmark,
     removeBookmark,
   } = usePortalStore()
+  const title = translateWindowTitle(win, tMenu)
   const bookmarked = usePortalStore((s) => s.bookmarks.some((b) => b.text === win.title))
 
   // Recarrega só o conteúdo desta janela (remonta o body) — não o portal inteiro.
@@ -39,7 +44,7 @@ export function Window({ win, allowedOrigins }: { win: PortalWindow; allowedOrig
     if (bookmarked) {
       removeBookmark(win.title)
     } else {
-      addBookmark({ title: win.title, kind: win.kind, src: win.src, componentKey: win.componentKey }, win.title)
+      addBookmark({ title: win.title, titleKey: win.titleKey, kind: win.kind, src: win.src, componentKey: win.componentKey }, win.title)
     }
   }
 
@@ -104,28 +109,28 @@ export function Window({ win, allowedOrigins }: { win: PortalWindow; allowedOrig
               active ? 'font-semibold text-foreground' : 'font-medium text-muted-foreground',
             )}
           >
-            {win.title}
+            {title}
           </span>
-          <ToolButton title="Atualizar" onClick={() => setReloadKey((k) => k + 1)}>
+          <ToolButton title={tShell('refresh')} onClick={() => setReloadKey((k) => k + 1)}>
             <RefreshCw size={14} />
           </ToolButton>
           <ToolButton
-            title={bookmarked ? 'Remover dos favoritos' : 'Favoritar'}
+            title={bookmarked ? tShell('removeFavorite') : tShell('favorite')}
             active={bookmarked}
             onClick={toggleBookmark}
           >
             <Star size={14} fill={bookmarked ? 'currentColor' : 'none'} />
           </ToolButton>
-          <ToolButton title="Minimizar" onClick={() => minimizeWindow(win.id)}>
+          <ToolButton title={tShell('minimize')} onClick={() => minimizeWindow(win.id)}>
             <Minus size={14} />
           </ToolButton>
           <ToolButton
-            title={win.maximized ? 'Restaurar' : 'Maximizar'}
+            title={win.maximized ? tShell('restore') : tShell('maximize')}
             onClick={() => toggleMaximize(win.id)}
           >
             {win.maximized ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
           </ToolButton>
-          <ToolButton title="Fechar" danger onClick={() => closeWindow(win.id)}>
+          <ToolButton title={tShell('close')} danger onClick={() => closeWindow(win.id)}>
             <X size={14} />
           </ToolButton>
         </div>

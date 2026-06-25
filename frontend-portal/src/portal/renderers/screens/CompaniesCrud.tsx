@@ -3,6 +3,7 @@
 // via as RPCs endurecidas create_company / update_company / delete_company.
 // Leitura direta (RLS authenticated); escrita só pela RPC (admin/branch_manager).
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslations } from 'use-intl'
 import {
   getCompanies,
   createCompany,
@@ -33,6 +34,8 @@ function statusTone(s: string | null | undefined): Tone {
 }
 
 export default function CompaniesCrud() {
+  const t = useTranslations('screens.companiesCrud')
+  const common = useTranslations('common')
   const [rows, setRows] = useState<CompanyRow[]>([])
   const [brands, setBrands] = useState<BrandRow[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -66,7 +69,7 @@ export default function CompaniesCrud() {
   const submit = async () => {
     if (!form) return
     if (!form.legal_name.trim() || !form.cnpj.trim()) {
-      setError('Razão social e CNPJ são obrigatórios.')
+      setError(t('legalNameCnpjRequired'))
       return
     }
     setSaving(true)
@@ -93,7 +96,7 @@ export default function CompaniesCrud() {
   }
 
   const remove = async (row: CompanyRow) => {
-    if (!window.confirm(`Inativar ${row.name ?? row.legal_name}? O histórico é preservado.`)) return
+    if (!window.confirm(t('inactivateConfirm').replace('{name}', row.name ?? row.legal_name ?? '—'))) return
     setError(null)
     try {
       await deleteCompany(row.entity_id)
@@ -105,25 +108,25 @@ export default function CompaniesCrud() {
 
   return (
     <ScreenShell
-      title="Empresas"
-      subtitle="Cadastro de empresas/concessionárias — razão social, CNPJ e situação."
+      title={t('title')}
+      subtitle={t('subtitle')}
     >
-      {error && <p className="text-sm text-destructive">Erro: {error}</p>}
+      {error && <p className="text-sm text-destructive">{common('error')}: {error}</p>}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-        <KpiCard label="Total" value={kpis.total} />
-        <KpiCard label="Ativas" value={kpis.ativos} />
-        <KpiCard label="Estados" value={kpis.estados} />
+        <KpiCard label={common('total')} value={kpis.total} />
+        <KpiCard label={t('activeCompanies')} value={kpis.ativos} />
+        <KpiCard label={t('states')} value={kpis.estados} />
       </div>
 
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-foreground">Empresas correntes</h2>
+        <h2 className="text-sm font-semibold text-foreground">{t('currentCompanies')}</h2>
         <button
           type="button"
           onClick={() => setForm({ ...EMPTY_FORM })}
           className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
         >
-          Nova empresa
+          {t('newCompany')}
         </button>
       </div>
 
@@ -135,6 +138,8 @@ export default function CompaniesCrud() {
           onChange={setForm}
           onCancel={() => setForm(null)}
           onSubmit={submit}
+          t={t}
+          common={common}
         />
       )}
 
@@ -142,12 +147,12 @@ export default function CompaniesCrud() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <th className="px-3 py-2">Empresa</th>
-              <th className="px-3 py-2">CNPJ</th>
-              <th className="px-3 py-2">Cidade/UF</th>
-              <th className="px-3 py-2">Marca</th>
-              <th className="px-3 py-2">Situação</th>
-              <th className="px-3 py-2 text-right">Ações</th>
+              <th className="px-3 py-2">{t('company')}</th>
+              <th className="px-3 py-2">{t('cnpj')}</th>
+              <th className="px-3 py-2">{t('cityState')}</th>
+              <th className="px-3 py-2">{t('brand')}</th>
+              <th className="px-3 py-2">{common('status')}</th>
+              <th className="px-3 py-2 text-right">{common('actions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -167,7 +172,7 @@ export default function CompaniesCrud() {
                   <RowActions>
                     <RowActionButton
                       icon={<Pencil size={14} />}
-                      label="Editar"
+                      label={common('edit')}
                       onClick={() =>
                         setForm({
                           entity_id: r.entity_id,
@@ -184,7 +189,7 @@ export default function CompaniesCrud() {
                     <RowActionButton
                       tone="danger"
                       icon={<Trash2 size={14} />}
-                      label="Inativar"
+                      label={common('inactivate')}
                       onClick={() => remove(r)}
                     />
                   </RowActions>
@@ -194,14 +199,14 @@ export default function CompaniesCrud() {
             {rows.length === 0 && !loading && (
               <tr>
                 <td colSpan={6} className="px-3 py-6 text-center text-sm text-muted-foreground">
-                  Nenhuma empresa cadastrada.
+                  {t('noCompanies')}
                 </td>
               </tr>
             )}
             {loading && (
               <tr>
                 <td colSpan={6} className="px-3 py-6 text-center text-sm text-muted-foreground">
-                  Carregando…
+                  {common('loading')}
                 </td>
               </tr>
             )}
@@ -219,6 +224,8 @@ function CompanyForm({
   onChange,
   onCancel,
   onSubmit,
+  t,
+  common,
 }: {
   form: FormState
   brands: BrandRow[]
@@ -226,6 +233,8 @@ function CompanyForm({
   onChange: (f: FormState) => void
   onCancel: () => void
   onSubmit: () => void
+  t: (key: string) => string
+  common: (key: string) => string
 }) {
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => onChange({ ...form, [k]: v })
   const inputCls =
@@ -234,15 +243,15 @@ function CompanyForm({
   return (
     <div className="rounded-lg border border-border bg-card p-4">
       <h3 className="mb-3 text-sm font-semibold text-foreground">
-        {form.entity_id ? 'Editar empresa' : 'Nova empresa'}
+        {form.entity_id ? t('editCompany') : t('newCompany')}
       </h3>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <label className="text-xs text-muted-foreground">
-          Razão social
+          {t('legalName')}
           <input className={inputCls} value={form.legal_name} onChange={(e) => set('legal_name', e.target.value)} />
         </label>
         <label className="text-xs text-muted-foreground">
-          Nome fantasia
+          {t('tradeName')}
           <input className={inputCls} value={form.trade_name ?? ''} onChange={(e) => set('trade_name', e.target.value)} />
         </label>
         <label className="text-xs text-muted-foreground">
@@ -250,32 +259,32 @@ function CompanyForm({
           <input className={inputCls} value={form.cnpj} onChange={(e) => set('cnpj', e.target.value)} />
         </label>
         <label className="text-xs text-muted-foreground">
-          Cidade
+          {t('city')}
           <input className={inputCls} value={form.city ?? ''} onChange={(e) => set('city', e.target.value)} />
         </label>
         <label className="text-xs text-muted-foreground">
-          Estado (UF)
+          {t('stateUf')}
           <input className={inputCls} value={form.state ?? ''} onChange={(e) => set('state', e.target.value)} />
         </label>
         <label className="text-xs text-muted-foreground">
-          Situação
+          {common('status')}
           <select
             className={inputCls}
             value={form.status ?? 'ativo'}
             onChange={(e) => set('status', e.target.value as 'ativo' | 'inativo')}
           >
-            <option value="ativo">ativo</option>
-            <option value="inativo">inativo</option>
+            <option value="ativo">{common('active')}</option>
+            <option value="inativo">{common('inactive')}</option>
           </select>
         </label>
         <label className="text-xs text-muted-foreground">
-          Marca
+          {t('brand')}
           <select
             className={inputCls}
             value={form.brand_id ?? ''}
             onChange={(e) => set('brand_id', e.target.value || null)}
           >
-            <option value="">— sem marca —</option>
+            <option value="">{t('noBrandOption')}</option>
             {brands.map((b) => (
               <option key={b.entity_id} value={b.entity_id}>
                 {b.name ?? b.entity_id}
@@ -291,7 +300,7 @@ function CompanyForm({
           disabled={saving}
           className="rounded-md border border-border px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-muted disabled:opacity-50"
         >
-          Cancelar
+          {common('cancel')}
         </button>
         <button
           type="button"
@@ -299,7 +308,7 @@ function CompanyForm({
           disabled={saving}
           className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
         >
-          {saving ? 'Salvando…' : 'Salvar'}
+          {saving ? common('saving') : common('save')}
         </button>
       </div>
     </div>

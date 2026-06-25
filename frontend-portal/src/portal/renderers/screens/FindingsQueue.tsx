@@ -2,6 +2,7 @@
 // Usa a DataTable corporativa (modo client) sobre ops_findings_view. "Revisar" abre
 // o finding-detail. Aceita params.agentKey p/ pré-filtrar quando aberta do Dashboard.
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslations } from 'use-intl'
 import DataTable from '@/portal/components/datatable/DataTable'
 import type { CrudListApi, DnColumn } from '@/portal/components/datatable/types'
 import { gridStorage } from '@/portal/lib/gridStateApi'
@@ -22,40 +23,43 @@ interface FindingRowVM {
   status: string
 }
 
-const COLUNAS: DnColumn<FindingRowVM>[] = [
-  {
-    key: 'severidade',
-    label: 'Severidade',
-    tipo: 'badge',
-    enumOptions: [
-      { value: 'critical', label: 'Crítica' },
-      { value: 'high', label: 'Alta' },
-      { value: 'medium', label: 'Média' },
-      { value: 'low', label: 'Baixa' },
-    ],
-  },
-  { key: 'agente', label: 'Agente', tipo: 'texto' },
-  { key: 'tipo', label: 'Tipo', tipo: 'texto' },
-  { key: 'cliente', label: 'Cliente / Contrato', tipo: 'texto' },
-  { key: 'delta', label: 'Δ (R$)', tipo: 'numero' },
-  { key: 'confianca', label: 'Confiança %', tipo: 'numero' },
-  {
-    key: 'status',
-    label: 'Status',
-    tipo: 'badge',
-    enumOptions: [
-      { value: 'pending_approval', label: 'Pendente' },
-      { value: 'approved', label: 'Aprovado' },
-      { value: 'rejected', label: 'Rejeitado' },
-      { value: 'informational', label: 'Informativo' },
-    ],
-  },
-]
-
 export default function FindingsQueue({ params }: ScreenProps) {
+  const t = useTranslations('screens.findingsQueue')
   const agentKey = params?.agentKey as string | undefined
   const openWindow = usePortalStore((s) => s.openWindow)
   const [reloadKey, setReloadKey] = useState(0)
+  const colunas = useMemo<DnColumn<FindingRowVM>[]>(
+    () => [
+      {
+        key: 'severidade',
+        label: t('severity'),
+        tipo: 'badge',
+        enumOptions: [
+          { value: 'critical', label: t('critical') },
+          { value: 'high', label: t('high') },
+          { value: 'medium', label: t('medium') },
+          { value: 'low', label: t('low') },
+        ],
+      },
+      { key: 'agente', label: t('agent'), tipo: 'texto' },
+      { key: 'tipo', label: t('type'), tipo: 'texto' },
+      { key: 'cliente', label: t('customerContract'), tipo: 'texto' },
+      { key: 'delta', label: t('delta'), tipo: 'numero' },
+      { key: 'confianca', label: t('confidence'), tipo: 'numero' },
+      {
+        key: 'status',
+        label: t('status'),
+        tipo: 'badge',
+        enumOptions: [
+          { value: 'pending_approval', label: t('pending') },
+          { value: 'approved', label: t('approved') },
+          { value: 'rejected', label: t('rejected') },
+          { value: 'informational', label: t('informational') },
+        ],
+      },
+    ],
+    [t],
+  )
 
   // Estável: evita recriar columnDefs no DataTable a cada poll (10s) — sem isso a
   // tabela remonta as linhas e pode engolir o clique no "Revisar".
@@ -67,16 +71,16 @@ export default function FindingsQueue({ params }: ScreenProps) {
           openWindow({
             kind: 'component',
             componentKey: 'finding-detail',
-            title: 'Detalhe do achado',
+            title: t('findingDetailTitle'),
             params: { findingId: f.id },
           })
         }
         className="rounded-md px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/10"
       >
-        Revisar
+        {t('review')}
       </button>
     ),
-    [openWindow],
+    [openWindow, t],
   )
 
   // Polling "vivo" a cada 10s (recarrega a tabela).
@@ -112,15 +116,15 @@ export default function FindingsQueue({ params }: ScreenProps) {
   return (
     <div className="flex h-full flex-col gap-3 overflow-hidden p-4">
       <div>
-        <h1 className="text-lg font-semibold text-foreground">Morning Queue — Findings</h1>
+        <h1 className="text-lg font-semibold text-foreground">{t('title')}</h1>
         <p className="text-sm text-muted-foreground">
-          Achados que a IA empurrou para revisão, ordenados por Δ R$
-          {agentKey ? ` · agente ${agentKey}` : ''}. Clique em “Revisar” para aprovar/rejeitar.
+          {t('subtitle')}
+          {agentKey ? ` · ${t('agentLower')} ${agentKey}` : ''}. {t('reviewHint')}
         </p>
       </div>
       <div className="min-h-0 flex-1">
         <DataTable<FindingRowVM>
-          colunas={COLUNAS}
+          colunas={colunas}
           api={api}
           storage={gridStorage}
           screenKey="ai-findings"

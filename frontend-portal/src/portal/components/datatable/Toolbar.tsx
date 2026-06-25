@@ -3,6 +3,7 @@
 import { forwardRef } from 'react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { Check, Columns3, FilterX, Search } from 'lucide-react'
+import { useTranslations } from 'use-intl'
 import type { DnColumn } from './types'
 
 interface ToolbarProps<T> {
@@ -19,6 +20,7 @@ function ToolbarInner<T>(
   { busca, onBusca, colunas, hidden, onToggleColumn, temFiltros, onLimparFiltros }: ToolbarProps<T>,
   searchRef: React.ForwardedRef<HTMLInputElement>,
 ) {
+  const t = useTranslations('common.grid')
   return (
     <div className="flex items-center gap-2 px-5 py-3">
       <div className="relative min-w-0 flex-1">
@@ -30,7 +32,7 @@ function ToolbarInner<T>(
           ref={searchRef}
           value={busca}
           onChange={(e) => onBusca(e.target.value)}
-          placeholder="Buscar…  ( / )"
+          placeholder={t('searchPlaceholder')}
           className="w-full rounded-lg border border-input bg-background py-2 pl-8 pr-3 text-sm outline-none focus:border-primary"
         />
       </div>
@@ -41,7 +43,7 @@ function ToolbarInner<T>(
           onClick={onLimparFiltros}
           className="inline-flex items-center gap-1.5 rounded-lg border border-input px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
-          <FilterX size={15} /> Limpar filtros
+          <FilterX size={15} /> {t('clearFilters')}
         </button>
       )}
 
@@ -49,10 +51,10 @@ function ToolbarInner<T>(
         <DropdownMenu.Trigger asChild>
           <button
             type="button"
-            title="Colunas visíveis"
+            title={t('visibleColumns')}
             className="inline-flex items-center gap-1.5 rounded-lg border border-input px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
-            <Columns3 size={15} /> Colunas
+            <Columns3 size={15} /> {t('columns')}
           </button>
         </DropdownMenu.Trigger>
         <DropdownMenu.Portal>

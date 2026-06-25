@@ -4,6 +4,7 @@
 import * as AlertDialog from '@radix-ui/react-alert-dialog'
 import { Loader2 } from 'lucide-react'
 import { type ReactNode } from 'react'
+import { useTranslations } from 'use-intl'
 import { cn } from '@/lib/utils'
 
 export interface ConfirmDialogProps {
@@ -24,13 +25,14 @@ export default function ConfirmDialog({
   open,
   title,
   children,
-  confirmLabel = 'Confirmar',
-  cancelLabel = 'Cancelar',
+  confirmLabel,
+  cancelLabel,
   destructive = false,
   busy = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const common = useTranslations('common')
   return (
     <AlertDialog.Root open={open} onOpenChange={(o) => !o && !busy && onCancel()}>
       <AlertDialog.Portal>
@@ -49,7 +51,7 @@ export default function ConfirmDialog({
                 disabled={busy}
                 className="rounded-lg border border-input px-3 py-2 text-sm font-medium transition-colors hover:bg-muted disabled:opacity-60"
               >
-                {cancelLabel}
+                {cancelLabel ?? common('cancel')}
               </button>
             </AlertDialog.Cancel>
             <AlertDialog.Action asChild>
@@ -66,7 +68,7 @@ export default function ConfirmDialog({
                 )}
               >
                 {busy && <Loader2 className="animate-spin" size={15} />}
-                {confirmLabel}
+                {confirmLabel ?? common('confirm')}
               </button>
             </AlertDialog.Action>
           </div>

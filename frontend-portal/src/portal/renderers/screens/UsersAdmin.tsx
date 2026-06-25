@@ -3,6 +3,7 @@
 // nome/role e inativar/reativar (RPC admin_update_profile). Toda escrita é só
 // para admin: a UI esconde os controles para não-admins (RLS/RPC reforçam no DB).
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslations } from 'use-intl'
 import {
   getProfiles,
   getMyRole,
@@ -16,13 +17,6 @@ import { Badge, ScreenShell, RowActions, RowActionButton, type Tone } from './ui
 import { Pencil, Power, PowerOff } from 'lucide-react'
 
 const ROLES: AppRole[] = ['admin', 'branch_manager', 'field_operator', 'read_only']
-
-const ROLE_LABEL: Record<string, string> = {
-  admin: 'Administrador',
-  branch_manager: 'Gerente',
-  field_operator: 'Operador',
-  read_only: 'Somente leitura',
-}
 
 type CreateForm = CreateUserInput
 type EditForm = { id: string; display_name: string; role: AppRole | string; is_active: boolean }
@@ -43,6 +37,8 @@ function roleTone(r: string): Tone {
 }
 
 export default function UsersAdmin() {
+  const t = useTranslations('screens.usersAdmin')
+  const common = useTranslations('common')
   const [rows, setRows] = useState<ProfileRow[]>([])
   const [role, setRole] = useState<string>('read_only')
   const [error, setError] = useState<string | null>(null)
@@ -78,7 +74,7 @@ export default function UsersAdmin() {
   const submitCreate = async () => {
     if (!createForm) return
     if (!createForm.email.trim() || !createForm.password) {
-      setError('E-mail e senha são obrigatórios.')
+      setError(t('emailPasswordRequired'))
       return
     }
     setSaving(true)
@@ -122,7 +118,7 @@ export default function UsersAdmin() {
   // Toggle is_active preservando nome/role atuais (RPC exige todos os campos).
   const toggleActive = async (row: ProfileRow) => {
     const next = !row.is_active
-    if (!window.confirm(`${next ? 'Reativar' : 'Inativar'} ${row.display_name ?? row.id}?`)) return
+    if (!window.confirm(`${next ? common('reactivate') : common('inactivate')} ${row.display_name ?? row.id}?`)) return
     setError(null)
     try {
       await updateProfile(row.id, {
@@ -138,32 +134,32 @@ export default function UsersAdmin() {
 
   return (
     <ScreenShell
-      title="Usuários"
-      subtitle="Gestão de usuários e perfis (papel + ativação). Criação e edição restritas a administradores."
+      title={t('title')}
+      subtitle={t('subtitle')}
     >
-      {error && <p className="text-sm text-destructive">Erro: {error}</p>}
+      {error && <p className="text-sm text-destructive">{common('error')}: {error}</p>}
 
       {!isAdmin && !loading && (
         <p className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-          Você está em modo somente leitura. Apenas administradores podem criar, editar ou inativar usuários.
+          {t('readOnlyNotice')}
         </p>
       )}
 
       <div className="grid grid-cols-3 gap-4">
-        <Stat label="Total" value={counts.total} />
-        <Stat label="Ativos" value={counts.ativos} />
-        <Stat label="Inativos" value={counts.inativos} />
+        <Stat label={common('total')} value={counts.total} />
+        <Stat label={common('activePlural')} value={counts.ativos} />
+        <Stat label={common('inactivePlural')} value={counts.inativos} />
       </div>
 
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-foreground">Usuários</h2>
+        <h2 className="text-sm font-semibold text-foreground">{t('title')}</h2>
         {isAdmin && (
           <button
             type="button"
             onClick={() => setCreateForm({ ...EMPTY_CREATE })}
             className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Novo usuário
+            {t('newUser')}
           </button>
         )}
       </div>
@@ -175,6 +171,9 @@ export default function UsersAdmin() {
           onChange={setCreateForm}
           onCancel={() => setCreateForm(null)}
           onSubmit={submitCreate}
+          t={t}
+          common={common}
+          roleLabel={roleLabel}
         />
       )}
 
@@ -185,6 +184,9 @@ export default function UsersAdmin() {
           onChange={setEditForm}
           onCancel={() => setEditForm(null)}
           onSubmit={submitEdit}
+          t={t}
+          common={common}
+          roleLabel={roleLabel}
         />
       )}
 
@@ -192,11 +194,11 @@ export default function UsersAdmin() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <th className="px-3 py-2">Nome</th>
-              <th className="px-3 py-2">Role</th>
-              <th className="px-3 py-2">Tenant</th>
-              <th className="px-3 py-2">Ativo</th>
-              {isAdmin && <th className="px-3 py-2 text-right">Ações</th>}
+              <th className="px-3 py-2">{common('name')}</th>
+              <th className="px-3 py-2">{t('role')}</th>
+              <th className="px-3 py-2">{t('tenant')}</th>
+              <th className="px-3 py-2">{common('active')}</th>
+              {isAdmin && <th className="px-3 py-2 text-right">{common('actions')}</th>}
             </tr>
           </thead>
           <tbody>
@@ -207,18 +209,18 @@ export default function UsersAdmin() {
                   <div className="text-xs text-muted-foreground">{r.id}</div>
                 </td>
                 <td className="px-3 py-2">
-                  <Badge tone={roleTone(r.role)}>{ROLE_LABEL[r.role] ?? r.role}</Badge>
+                  <Badge tone={roleTone(r.role)}>{roleLabel(r.role)}</Badge>
                 </td>
                 <td className="px-3 py-2 text-muted-foreground">{r.tenant}</td>
                 <td className="px-3 py-2">
-                  <Badge tone={r.is_active ? 'success' : 'neutral'}>{r.is_active ? 'Ativo' : 'Inativo'}</Badge>
+                  <Badge tone={r.is_active ? 'success' : 'neutral'}>{r.is_active ? common('active') : common('inactive')}</Badge>
                 </td>
                 {isAdmin && (
                   <td className="px-3 py-2 text-right">
                     <RowActions>
                       <RowActionButton
                         icon={<Pencil size={14} />}
-                        label="Editar"
+                        label={common('edit')}
                         onClick={() =>
                           setEditForm({
                             id: r.id,
@@ -231,7 +233,7 @@ export default function UsersAdmin() {
                       <RowActionButton
                         tone={r.is_active ? 'danger' : 'default'}
                         icon={r.is_active ? <PowerOff size={14} /> : <Power size={14} />}
-                        label={r.is_active ? 'Inativar' : 'Reativar'}
+                        label={r.is_active ? common('inactivate') : common('reactivate')}
                         onClick={() => toggleActive(r)}
                       />
                     </RowActions>
@@ -242,14 +244,14 @@ export default function UsersAdmin() {
             {rows.length === 0 && !loading && (
               <tr>
                 <td colSpan={isAdmin ? 5 : 4} className="px-3 py-6 text-center text-sm text-muted-foreground">
-                  Nenhum usuário visível.
+                  {t('noUsers')}
                 </td>
               </tr>
             )}
             {loading && (
               <tr>
                 <td colSpan={isAdmin ? 5 : 4} className="px-3 py-6 text-center text-sm text-muted-foreground">
-                  Carregando…
+                  {common('loading')}
                 </td>
               </tr>
             )}
@@ -278,17 +280,23 @@ function CreateUserForm({
   onChange,
   onCancel,
   onSubmit,
+  t,
+  common,
+  roleLabel,
 }: {
   form: CreateForm
   saving: boolean
   onChange: (f: CreateForm) => void
   onCancel: () => void
   onSubmit: () => void
+  t: (key: string) => string
+  common: (key: string) => string
+  roleLabel: (role: string) => string
 }) {
   const set = <K extends keyof CreateForm>(k: K, v: CreateForm[K]) => onChange({ ...form, [k]: v })
   return (
     <div className="rounded-lg border border-border bg-card p-4">
-      <h3 className="mb-3 text-sm font-semibold text-foreground">Novo usuário</h3>
+      <h3 className="mb-3 text-sm font-semibold text-foreground">{t('newUser')}</h3>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <label className="text-xs text-muted-foreground">
           E-mail
@@ -300,7 +308,7 @@ function CreateUserForm({
           />
         </label>
         <label className="text-xs text-muted-foreground">
-          Senha
+          {t('password')}
           <input
             type="password"
             className={inputCls}
@@ -309,7 +317,7 @@ function CreateUserForm({
           />
         </label>
         <label className="text-xs text-muted-foreground">
-          Nome
+          {common('name')}
           <input
             className={inputCls}
             value={form.display_name}
@@ -321,22 +329,22 @@ function CreateUserForm({
           <select className={inputCls} value={form.role} onChange={(e) => set('role', e.target.value as AppRole)}>
             {ROLES.map((r) => (
               <option key={r} value={r}>
-                {ROLE_LABEL[r]}
+                {roleLabel(r)}
               </option>
             ))}
           </select>
         </label>
         <label className="text-xs text-muted-foreground">
-          Tenant (opcional)
+          {t('tenantOptional')}
           <input
             className={inputCls}
             value={form.tenant ?? ''}
             onChange={(e) => set('tenant', e.target.value)}
-            placeholder="herda do admin"
+            placeholder={t('inheritsAdmin')}
           />
         </label>
       </div>
-      <FormActions saving={saving} onCancel={onCancel} onSubmit={onSubmit} />
+      <FormActions saving={saving} onCancel={onCancel} onSubmit={onSubmit} common={common} />
     </div>
   )
 }
@@ -347,20 +355,26 @@ function EditUserForm({
   onChange,
   onCancel,
   onSubmit,
+  t,
+  common,
+  roleLabel,
 }: {
   form: EditForm
   saving: boolean
   onChange: (f: EditForm) => void
   onCancel: () => void
   onSubmit: () => void
+  t: (key: string) => string
+  common: (key: string) => string
+  roleLabel: (role: string) => string
 }) {
   const set = <K extends keyof EditForm>(k: K, v: EditForm[K]) => onChange({ ...form, [k]: v })
   return (
     <div className="rounded-lg border border-border bg-card p-4">
-      <h3 className="mb-3 text-sm font-semibold text-foreground">Editar usuário</h3>
+      <h3 className="mb-3 text-sm font-semibold text-foreground">{t('editUser')}</h3>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <label className="text-xs text-muted-foreground">
-          Nome
+          {common('name')}
           <input
             className={inputCls}
             value={form.display_name}
@@ -372,7 +386,7 @@ function EditUserForm({
           <select className={inputCls} value={form.role} onChange={(e) => set('role', e.target.value as AppRole)}>
             {ROLES.map((r) => (
               <option key={r} value={r}>
-                {ROLE_LABEL[r]}
+                {roleLabel(r)}
               </option>
             ))}
           </select>
@@ -383,10 +397,10 @@ function EditUserForm({
             checked={form.is_active}
             onChange={(e) => set('is_active', e.target.checked)}
           />
-          Ativo
+          {common('active')}
         </label>
       </div>
-      <FormActions saving={saving} onCancel={onCancel} onSubmit={onSubmit} />
+      <FormActions saving={saving} onCancel={onCancel} onSubmit={onSubmit} common={common} />
     </div>
   )
 }
@@ -395,10 +409,12 @@ function FormActions({
   saving,
   onCancel,
   onSubmit,
+  common,
 }: {
   saving: boolean
   onCancel: () => void
   onSubmit: () => void
+  common: (key: string) => string
 }) {
   return (
     <div className="mt-4 flex justify-end gap-2">
@@ -408,7 +424,7 @@ function FormActions({
         disabled={saving}
         className="rounded-md border border-border px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-muted disabled:opacity-50"
       >
-        Cancelar
+        {common('cancel')}
       </button>
       <button
         type="button"
@@ -416,8 +432,17 @@ function FormActions({
         disabled={saving}
         className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
       >
-        {saving ? 'Salvando…' : 'Salvar'}
+        {saving ? common('saving') : common('save')}
       </button>
     </div>
   )
 }
+  const roleLabel = (appRole: string) => {
+    const labels: Record<string, string> = {
+      admin: t('roleAdmin'),
+      branch_manager: t('roleManager'),
+      field_operator: t('roleOperator'),
+      read_only: t('roleReadOnly'),
+    }
+    return labels[appRole] ?? appRole
+  }

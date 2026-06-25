@@ -6,6 +6,7 @@
 // código em tom muted, badge de situação, linha inativa esmaecida.
 
 import { useMemo, useRef, useState, type ReactNode } from 'react'
+import { useTranslations } from 'use-intl'
 import {
   flexRender,
   getCoreRowModel,
@@ -42,18 +43,7 @@ export interface DataTableProps<T extends DataTableBase> {
   reloadKey: number
 }
 
-const ATIVO_COL = {
-  key: 'ativo',
-  label: 'Situação',
-  tipo: 'badge',
-  enumOptions: [
-    { value: 'true', label: 'Ativo' },
-    { value: 'false', label: 'Inativo' },
-  ],
-  serverParam: 'FiltroAtivo',
-} as const
-
-function renderCell<T extends DataTableBase>(col: DnColumn<T>, item: T): ReactNode {
+function renderCell<T extends DataTableBase>(col: DnColumn<T>, item: T, common: (key: string) => string): ReactNode {
   const valor = (item as Record<string, unknown>)[col.key]
   switch (col.tipo) {
     case 'badge': {
@@ -65,7 +55,7 @@ function renderCell<T extends DataTableBase>(col: DnColumn<T>, item: T): ReactNo
               item.ativo ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground',
             )}
           >
-            {item.ativo ? 'Ativo' : 'Inativo'}
+            {item.ativo ? common('active') : common('inactive')}
           </span>
         )
       }
@@ -77,7 +67,7 @@ function renderCell<T extends DataTableBase>(col: DnColumn<T>, item: T): ReactNo
       )
     }
     case 'bool':
-      return <span className="text-muted-foreground">{valor === true ? 'Sim' : 'Não'}</span>
+      return <span className="text-muted-foreground">{valor === true ? common('yes') : common('no')}</span>
     case 'codigo':
       return <span className="tabular-nums text-muted-foreground">{String(valor ?? '')}</span>
     case 'numero':
@@ -96,9 +86,24 @@ export default function DataTable<T extends DataTableBase>({
   renderAcoes,
   reloadKey,
 }: DataTableProps<T>) {
+  const common = useTranslations('common')
+  const gridT = useTranslations('common.grid')
+  const ativoCol = useMemo(
+    () => ({
+      key: 'ativo',
+      label: common('status'),
+      tipo: 'badge',
+      enumOptions: [
+        { value: 'true', label: common('active') },
+        { value: 'false', label: common('inactive') },
+      ],
+      serverParam: 'FiltroAtivo',
+    }) as const,
+    [common],
+  )
   const colunasFull = useMemo(
-    () => [...colunas, ATIVO_COL as unknown as DnColumn<T>],
-    [colunas],
+    () => [...colunas, ativoCol as unknown as DnColumn<T>],
+    [colunas, ativoCol],
   )
 
   const grid = useGridState(screenKey, colunasFull, storage)
@@ -124,20 +129,20 @@ export default function DataTable<T extends DataTableBase>({
         (c): ColumnDef<T> => ({
           id: c.key,
           header: c.label,
-          cell: ({ row }) => renderCell(c, row.original),
+          cell: ({ row }) => renderCell(c, row.original, common),
           meta: c,
         }),
       ),
       {
         id: '__acoes',
-        header: 'Ações',
+        header: common('actions'),
         cell: ({ row }) => (
           <div className="flex items-center justify-end gap-1">{renderAcoes(row.original)}</div>
         ),
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [visiveis.map((c) => c.key).join('|'), renderAcoes],
+    [visiveis.map((c) => c.key).join('|'), renderAcoes, common],
   )
 
   const table = useReactTable({
@@ -179,7 +184,7 @@ export default function DataTable<T extends DataTableBase>({
             onClick={() => setRetry((r) => r + 1)}
             className="ml-auto rounded-md border border-destructive/40 px-2 py-0.5 text-xs hover:bg-destructive/10"
           >
-            Tentar novamente
+            {gridT('tryAgain')}
           </button>
         </div>
       )}
@@ -252,17 +257,17 @@ export default function DataTable<T extends DataTableBase>({
           <div className="flex flex-col items-center gap-2 py-12 text-sm text-muted-foreground">
             {temFiltros ? (
               <>
-                <span>Nenhum resultado para os filtros aplicados.</span>
+                <span>{gridT('noFilterResults')}</span>
                 <button
                   type="button"
                   onClick={grid.limparFiltros}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-input px-3 py-1.5 text-sm transition-colors hover:bg-muted"
                 >
-                  <FilterX size={14} /> Limpar filtros
+                  <FilterX size={14} /> {gridT('clearFilters')}
                 </button>
               </>
             ) : (
-              <span>Nenhum registro encontrado.</span>
+              <span>{gridT('noRecords')}</span>
             )}
           </div>
         )}

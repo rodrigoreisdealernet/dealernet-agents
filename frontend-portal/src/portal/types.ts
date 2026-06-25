@@ -6,6 +6,7 @@ export type WindowKind = 'iframe-aspx' | 'iframe-external' | 'component'
 export interface PortalWindow {
   id: string
   title: string
+  titleKey?: string
   kind: WindowKind
   /** Nome do ícone da tela (vindo do menu, ex. Font Awesome "fas fa-users"). */
   icon?: string
@@ -29,6 +30,7 @@ export interface PortalWindow {
 /** Especificação para abrir uma janela (posição/tamanho/z são preenchidos pelo store). */
 export interface WindowSpec {
   title: string
+  titleKey?: string
   kind: WindowKind
   /** Nome do ícone da tela (do menu); herdado pela janela/aba. */
   icon?: string
@@ -42,12 +44,14 @@ export interface WindowSpec {
 
 export interface Bookmark {
   text: string
+  textKey?: string
   spec: WindowSpec
 }
 
 export interface MenuItem {
   id: string
   text: string
+  labelKey?: string
   icon?: string
   spec?: WindowSpec
   children?: MenuItem[]

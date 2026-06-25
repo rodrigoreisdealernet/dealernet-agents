@@ -30,6 +30,7 @@ import type {
   WorkspaceMeta,
 } from '@/portal/types'
 import type { ListQuery, ListResult } from '@/portal/components/datatable/types'
+import { applyMenuTranslationKeys } from '@/i18n/menuKeys'
 import { portalApiReal } from '@/portal/lib/portalApiReal'
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? '/rest/api/v1'
@@ -77,7 +78,7 @@ const MOCK_EMPRESAS: Empresa[] = [
 // (docs/PRD-portal-dms-frontend-acoplamento.md §8). Ícones em Font Awesome (fa-*) —
 // formato canônico que o backend envia — resolvidos por menuIcon.tsx (resolveMenuIcon).
 // Cada folha repete o ícone no `spec` para a aba/janela herdar o mesmo ícone do menu.
-const MOCK_MENU: MenuItem[] = [
+const MOCK_MENU: MenuItem[] = applyMenuTranslationKeys([
   // 1) IA proativa — Operations Factory (cidadã de 1ª classe, no topo).
   {
     id: 'ai-ops',
@@ -254,7 +255,7 @@ const MOCK_MENU: MenuItem[] = [
       },
     ],
   },
-]
+])
 
 const delay = <T>(value: T) => new Promise<T>((r) => setTimeout(() => r(value), 120))
 

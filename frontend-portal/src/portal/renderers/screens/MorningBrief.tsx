@@ -11,6 +11,7 @@
 // (getFindings/decideFinding) — não inventamos backend novo. Sem % de meta nesta
 // fase (só valores absolutos); setores sem dado renderizam "—".
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslations } from 'use-intl'
 import {
   decideFinding,
   getFindings,
@@ -24,10 +25,11 @@ import {
 import { useBreakpoint } from '@/hooks/use-breakpoint'
 import { cn } from '@/lib/utils'
 import { formatBRL, formatBRLKpi } from './format'
+export const I18N_PT_LEGEND_REFERENCE = 'Valores em R$'
 
 // ── Helpers de formatação dos setores (valores absolutos; "—" quando sem dado) ──
-function fmtUnits(n: number | null | undefined): string {
-  return typeof n === 'number' && Number.isFinite(n) ? `${n} un` : '—'
+function fmtUnits(n: number | null | undefined, t: (key: string) => string): string {
+  return typeof n === 'number' && Number.isFinite(n) ? `${n} ${t('unitsAbbr')}` : '—'
 }
 function fmtMoney(n: number | null | undefined): string {
   return typeof n === 'number' && Number.isFinite(n) ? formatBRL(n) : '—'
@@ -37,8 +39,8 @@ function fmtMoney(n: number | null | undefined): string {
 function fmtMoneyKpi(n: number | null | undefined): string {
   return typeof n === 'number' && Number.isFinite(n) ? formatBRLKpi(n) : '—'
 }
-function fmtMargin(n: number | null | undefined): string | null {
-  return typeof n === 'number' && Number.isFinite(n) ? `margem ${formatBRL(n)}` : null
+function fmtMargin(n: number | null | undefined, t: (key: string) => string): string | null {
+  return typeof n === 'number' && Number.isFinite(n) ? `${t('margin')} ${formatBRL(n)}` : null
 }
 
 interface SectorCell {
@@ -50,17 +52,17 @@ interface SectorCell {
 }
 
 // Constrói as 5 células de setor (Novos, Usados, Peças, AT, FP) de uma linha.
-function sectorCells(r: OwnerBriefBaseRow): SectorCell[] {
+function sectorCells(r: OwnerBriefBaseRow, t: (key: string) => string): SectorCell[] {
   const atRisk = (r.fp_units_at_risk ?? 0) > 0
   return [
-    { label: 'Novos', value: fmtUnits(r.novos_units), hint: fmtMoney(r.novos_value) },
-    { label: 'Usados', value: fmtUnits(r.usados_units), hint: fmtMoney(r.usados_value) },
-    { label: 'Peças', value: fmtMoney(r.pecas_value), hint: fmtMargin(r.pecas_margin) },
-    { label: 'AT', value: fmtMoney(r.at_value), hint: fmtMargin(r.at_margin) },
+    { label: t('new'), value: fmtUnits(r.novos_units, t), hint: fmtMoney(r.novos_value) },
+    { label: t('used'), value: fmtUnits(r.usados_units, t), hint: fmtMoney(r.usados_value) },
+    { label: t('parts'), value: fmtMoney(r.pecas_value), hint: fmtMargin(r.pecas_margin, t) },
+    { label: t('at'), value: fmtMoney(r.at_value), hint: fmtMargin(r.at_margin, t) },
     {
-      label: 'FP',
+      label: t('fp'),
       value: typeof r.fp_units === 'number' ? String(r.fp_units) : '—',
-      hint: atRisk ? `${r.fp_units_at_risk} em risco <7d` : 'ok',
+      hint: atRisk ? `${r.fp_units_at_risk} ${t('atRisk7d')}` : t('ok'),
       fp: atRisk ? 'on' : 'off',
     },
   ]
@@ -120,7 +122,7 @@ function Cells({ cells }: { cells: SectorCell[] }) {
 }
 
 // ── MOBILE: card por marca (toque → drill de lojas) ──
-function BrandCard({ b, onOpen }: { b: OwnerBriefBrandRow; onOpen: () => void }) {
+function BrandCard({ b, onOpen, t }: { b: OwnerBriefBrandRow; onOpen: () => void; t: (key: string) => string }) {
   return (
     <button
       type="button"
@@ -131,27 +133,27 @@ function BrandCard({ b, onOpen }: { b: OwnerBriefBrandRow; onOpen: () => void })
         <div>
           <div className="text-sm font-extrabold text-foreground">{b.brand_name}</div>
           <div className="text-xs font-medium text-muted-foreground">
-            {b.store_count ?? 0} {b.store_count === 1 ? 'loja' : 'lojas'}
+            {b.store_count ?? 0} {b.store_count === 1 ? t('storeSingular') : t('storePlural')}
           </div>
         </div>
         <div className="text-right">
           <div className="text-base font-extrabold tabular-nums text-foreground">{fmtMoneyKpi(b.resultado)}</div>
-          <div className="text-[10px] font-semibold text-muted-foreground">Resultado</div>
+          <div className="text-[10px] font-semibold text-muted-foreground">{t('result')}</div>
         </div>
       </div>
-      <Cells cells={sectorCells(b)} />
-      <div className="mt-2 text-right text-[11px] text-muted-foreground">ver lojas →</div>
+      <Cells cells={sectorCells(b, t)} />
+      <div className="mt-2 text-right text-[11px] text-muted-foreground">{t('seeStores')} →</div>
     </button>
   )
 }
 
 // ── MOBILE: card "Grupo Total" (escuro, como no protótipo) ──
-function GroupTotalCard({ total }: { total: OwnerBriefBrandRow }) {
-  const cells = sectorCells(total)
+function GroupTotalCard({ total, t }: { total: OwnerBriefBrandRow; t: (key: string) => string }) {
+  const cells = sectorCells(total, t)
   return (
     <div className="rounded-xl bg-foreground p-3 text-background">
       <div className="mb-2.5 flex items-center justify-between">
-        <span className="text-sm font-extrabold">Grupo Total</span>
+        <span className="text-sm font-extrabold">{t('groupTotal')}</span>
         <span className="text-base font-extrabold tabular-nums">{fmtMoneyKpi(total.resultado)}</span>
       </div>
       <div className="grid grid-cols-5 gap-1.5">
@@ -171,10 +173,12 @@ function StoresDrill({
   brand,
   stores,
   onBack,
+  t,
 }: {
   brand: OwnerBriefBrandRow
   stores: OwnerBriefStoreRow[]
   onBack: () => void
+  t: (key: string) => string
 }) {
   const fpUnits = brand.fp_units_at_risk ?? 0
   const atRisk = fpUnits > 0
@@ -185,13 +189,13 @@ function StoresDrill({
         onClick={onBack}
         className="self-start text-sm text-muted-foreground hover:text-foreground"
       >
-        ← Voltar
+        ← {t('back')}
       </button>
       <div>
         <div className="text-lg font-extrabold text-foreground">{brand.brand_name}</div>
         <div className="text-sm text-muted-foreground">
           {fmtMoneyKpi(brand.resultado)} · {brand.store_count ?? 0}{' '}
-          {brand.store_count === 1 ? 'loja' : 'lojas'}
+          {brand.store_count === 1 ? t('storeSingular') : t('storePlural')}
         </div>
       </div>
       <div
@@ -201,18 +205,18 @@ function StoresDrill({
         )}
       >
         <span className={cn('text-xs font-bold', atRisk ? 'text-destructive' : 'text-muted-foreground')}>
-          Floor Plan &lt;7d
+          {t('floorPlan7d')}
         </span>
         <span
           className={cn('text-sm font-extrabold tabular-nums', atRisk ? 'text-destructive' : 'text-muted-foreground')}
         >
-          {fpUnits} un · {fmtMoneyKpi(brand.fp_value_at_risk)}
+          {fpUnits} {t('unitsAbbr')} · {fmtMoneyKpi(brand.fp_value_at_risk)}
         </span>
       </div>
-      <div className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Por loja</div>
+      <div className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{t('byStore')}</div>
       <div className="flex flex-col gap-2.5">
         {stores.length === 0 && (
-          <p className="text-sm text-muted-foreground">Sem lojas para esta marca.</p>
+          <p className="text-sm text-muted-foreground">{t('noStoresForBrand')}</p>
         )}
         {stores.map((s) => (
           <div key={s.store_name} className="rounded-xl border border-border bg-card p-3">
@@ -220,10 +224,10 @@ function StoresDrill({
               <div className="text-sm font-extrabold text-foreground">📍 {s.store_name}</div>
               <div className="text-right">
                 <div className="text-base font-extrabold tabular-nums text-foreground">{fmtMoneyKpi(s.resultado)}</div>
-                <div className="text-[10px] font-semibold text-muted-foreground">Resultado</div>
+                <div className="text-[10px] font-semibold text-muted-foreground">{t('result')}</div>
               </div>
             </div>
-            <Cells cells={sectorCells(s)} />
+            <Cells cells={sectorCells(s, t)} />
           </div>
         ))}
       </div>
@@ -240,20 +244,22 @@ function ActionsSection({
   onConfirm,
   onDismiss,
   className,
+  t,
 }: {
   findings: FindingRow[]
   states: Record<string, FindingUiState>
   onConfirm: (f: FindingRow) => void
   onDismiss: (f: FindingRow) => void
   className?: string
+  t: (key: string) => string
 }) {
   const visible = findings.filter((f) => states[f.id] !== 'dismissed')
   return (
     <div className={className}>
-      <div className="mb-0.5 text-sm font-extrabold text-foreground">⚡ DIA preparou estas ações</div>
-      <div className="mb-3 text-xs text-muted-foreground">Confirme com um toque</div>
+      <div className="mb-0.5 text-sm font-extrabold text-foreground">⚡ {t('preparedActions')}</div>
+      <div className="mb-3 text-xs text-muted-foreground">{t('confirmOneTap')}</div>
       {visible.length === 0 && (
-        <p className="text-sm text-muted-foreground">Nenhuma ação pendente no momento.</p>
+        <p className="text-sm text-muted-foreground">{t('noPendingActions')}</p>
       )}
       <div className="flex flex-col gap-2.5">
         {visible.map((f) => {
@@ -289,7 +295,7 @@ function ActionsSection({
                       : 'bg-foreground text-background hover:opacity-90',
                   )}
                 >
-                  {confirmed ? '✓ Confirmado' : '✓ Confirmar'}
+                  {confirmed ? `✓ ${t('confirmed')}` : `✓ ${t('confirm')}`}
                 </button>
                 {!confirmed && (
                   <button
@@ -297,7 +303,7 @@ function ActionsSection({
                     onClick={() => onDismiss(f)}
                     className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
                   >
-                    Dispensar
+                    {t('dismiss')}
                   </button>
                 )}
               </div>
@@ -314,20 +320,22 @@ function CockpitTable({
   brands,
   storesByBrand,
   total,
+  t,
 }: {
   brands: OwnerBriefBrandRow[]
   storesByBrand: Record<string, OwnerBriefStoreRow[]>
   total: OwnerBriefBrandRow
+  t: (key: string) => string
 }) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
-  const cols = ['Novos', 'Usados', 'Peças', 'AT', 'FP']
+  const cols = [t('new'), t('used'), t('parts'), t('at'), t('fp')]
   const cellText = (c: SectorCell) => c.value
   return (
     <table className="w-full border-collapse text-sm">
       <thead>
         <tr className="border-b border-border text-left text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-          <th className="px-3 py-2">Marca / Loja</th>
-          <th className="px-3 py-2 text-right">Resultado</th>
+          <th className="px-3 py-2">{t('brandStore')}</th>
+          <th className="px-3 py-2 text-right">{t('result')}</th>
           {cols.map((c) => (
             <th key={c} className="px-3 py-2 text-right">
               {c}
@@ -339,7 +347,7 @@ function CockpitTable({
         {brands.map((b) => {
           const key = b.brand_name ?? ''
           const isOpen = expanded[key]
-          const cells = sectorCells(b)
+          const cells = sectorCells(b, t)
           const stores = storesByBrand[key] ?? []
           return (
             <Fragment key={key}>
@@ -353,7 +361,7 @@ function CockpitTable({
                     {b.brand_name}
                   </div>
                   <div className="ml-[1.125rem] text-xs text-muted-foreground">
-                    {b.store_count ?? 0} {b.store_count === 1 ? 'loja' : 'lojas'}
+                    {b.store_count ?? 0} {b.store_count === 1 ? t('storeSingular') : t('storePlural')}
                   </div>
                 </td>
                 <td className="px-3 py-2.5 text-right font-extrabold tabular-nums text-foreground">
@@ -373,7 +381,7 @@ function CockpitTable({
               </tr>
               {isOpen &&
                 stores.map((s) => {
-                  const scells = sectorCells(s)
+                  const scells = sectorCells(s, t)
                   return (
                     <tr key={`${key}-${s.store_name}`} className="border-b border-border/40 bg-muted/20">
                       <td className="px-3 py-2 pl-8">
@@ -403,9 +411,9 @@ function CockpitTable({
         })}
         {/* Linha Grupo Total */}
         <tr className="bg-foreground text-background">
-          <td className="px-3 py-2.5 font-extrabold">Grupo Total</td>
+          <td className="px-3 py-2.5 font-extrabold">{t('groupTotal')}</td>
           <td className="px-3 py-2.5 text-right font-extrabold tabular-nums">{fmtMoney(total.resultado)}</td>
-          {sectorCells(total).map((c) => (
+          {sectorCells(total, t).map((c) => (
             <td key={c.label} className="px-3 py-2.5 text-right font-bold tabular-nums">
               {c.value}
             </td>
@@ -433,6 +441,8 @@ function briefDateLabel(): string {
 }
 
 export default function MorningBrief() {
+  const t = useTranslations('screens.morningBrief')
+  const common = useTranslations('common')
   const { compact } = useBreakpoint()
   const [brands, setBrands] = useState<OwnerBriefBrandRow[]>([])
   const [stores, setStores] = useState<OwnerBriefStoreRow[]>([])
@@ -470,7 +480,7 @@ export default function MorningBrief() {
     } catch (e) {
       // Reverte o estado otimista se a decisão falhar.
       setFindingStates((s) => ({ ...s, [f.id]: 'pending' }))
-      setError(`Falha ao confirmar: ${String(e)}`)
+      setError(`${t('confirmFailed')}: ${String(e)}`)
     }
   }, [])
 
@@ -483,7 +493,7 @@ export default function MorningBrief() {
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Carregando…</div>
+      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">{common('loading')}</div>
     )
   }
 
@@ -498,37 +508,39 @@ export default function MorningBrief() {
             brand={drillBrand}
             stores={storesByBrand[drillBrand.brand_name ?? ''] ?? []}
             onBack={() => setOpenBrand(null)}
+            t={t}
           />
         ) : (
           <>
             <header>
               <div className="text-[11px] font-extrabold uppercase tracking-widest text-muted-foreground">
-                Morning Brief
+                {t('title')}
               </div>
               <div className="mt-0.5 flex items-baseline justify-between">
-                <div className="text-xl font-extrabold capitalize text-foreground">Ontem</div>
+                <div className="text-xl font-extrabold capitalize text-foreground">{t('yesterday')}</div>
                 <div className="text-xs capitalize text-muted-foreground">{dateLabel}</div>
               </div>
-              <div className="mt-0.5 text-[11px] font-medium text-muted-foreground">Valores em R$</div>
+              <div className="mt-0.5 text-[11px] font-medium text-muted-foreground">{common('valuesInBRL')}</div>
             </header>
             <div className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-              Por marca · toque para ver lojas
+              {t('byBrandTap')}
             </div>
             <div className="flex flex-col gap-2.5">
               {brands.length === 0 && (
-                <p className="text-sm text-muted-foreground">Sem dados do dia anterior.</p>
+                <p className="text-sm text-muted-foreground">{t('noPreviousDayData')}</p>
               )}
               {brands.map((b) => (
-                <BrandCard key={b.brand_name} b={b} onOpen={() => setOpenBrand(b.brand_name)} />
+                <BrandCard key={b.brand_name} b={b} onOpen={() => setOpenBrand(b.brand_name)} t={t} />
               ))}
             </div>
-            {brands.length > 0 && <GroupTotalCard total={total} />}
+            {brands.length > 0 && <GroupTotalCard total={total} t={t} />}
             <ActionsSection
               findings={findings}
               states={findingStates}
               onConfirm={onConfirm}
               onDismiss={onDismiss}
               className="mt-2"
+              t={t}
             />
           </>
         )}
@@ -542,10 +554,10 @@ export default function MorningBrief() {
       <header className="flex items-start justify-between border-b border-border px-6 py-4">
         <div>
           <div className="text-[11px] font-extrabold uppercase tracking-widest text-muted-foreground">
-            Morning Brief · Portal DIA
+            {t('title')} · Portal DIA
           </div>
-          <div className="text-xl font-extrabold text-foreground">Resultado por marca e loja · ontem</div>
-          <div className="mt-0.5 text-[11px] font-medium text-muted-foreground">Valores em R$</div>
+          <div className="text-xl font-extrabold text-foreground">{t('desktopTitle')}</div>
+          <div className="mt-0.5 text-[11px] font-medium text-muted-foreground">{common('valuesInBRL')}</div>
         </div>
         <div className="text-right text-xs capitalize text-muted-foreground">{dateLabel}</div>
       </header>
@@ -553,9 +565,9 @@ export default function MorningBrief() {
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <div className="min-w-0 flex-1 overflow-auto p-6">
           {brands.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sem dados do dia anterior.</p>
+            <p className="text-sm text-muted-foreground">{t('noPreviousDayData')}</p>
           ) : (
-            <CockpitTable brands={brands} storesByBrand={storesByBrand} total={total} />
+            <CockpitTable brands={brands} storesByBrand={storesByBrand} total={total} t={t} />
           )}
         </div>
         <aside className="w-[340px] flex-shrink-0 overflow-auto border-l border-border bg-muted/20 p-5">
@@ -564,6 +576,7 @@ export default function MorningBrief() {
             states={findingStates}
             onConfirm={onConfirm}
             onDismiss={onDismiss}
+            t={t}
           />
         </aside>
       </div>
