@@ -64,8 +64,8 @@ test("AC2: portalApi.ts tem item 'Pecas' -> componentKey 'dia-parts-bi' na secao
   // A secao Insights deve estar rotulada como 'Fast BI'.
   assert.match(
     src,
-    /id:\s*['"]insights['"][\s\S]*?text:\s*['"]Fast BI['"]/,
-    "a secao 'insights' do MOCK_MENU deve ter text 'Fast BI'",
+    /id:\s*['"]fast-bi['"][\s\S]*?text:\s*['"]Fast BI['"]/,
+    "a secao 'fast-bi' do MOCK_MENU deve ter text 'Fast BI'",
   )
   // Deve existir um item de menu com texto 'Pecas' (com cedilha) ...
   assert.match(
@@ -86,19 +86,19 @@ test("AC2: portalApi.ts tem item 'Pecas' -> componentKey 'dia-parts-bi' na secao
     /text:\s*['"]Peças['"][\s\S]{0,300}?kind:\s*['"]component['"]/,
     "o item 'Peças' deve ter kind 'component'",
   )
-  // E deve estar DENTRO da secao Fast BI (entre o inicio da secao insights e a
+  // E deve estar DENTRO da secao Fast BI (entre o inicio da secao fast-bi e a
   // proxima secao 'dealership'), nao em outro lugar do menu.
-  const insightsStart = src.indexOf("id: 'insights'")
+  const biStart = src.indexOf("id: 'fast-bi'")
   const dealershipStart = src.indexOf("id: 'dealership'")
   assert.ok(
-    insightsStart !== -1 && dealershipStart !== -1 && insightsStart < dealershipStart,
-    'as secoes insights e dealership devem existir nessa ordem',
+    biStart !== -1 && dealershipStart !== -1 && biStart < dealershipStart,
+    'as secoes fast-bi e dealership devem existir nessa ordem',
   )
-  const insightsBlock = src.slice(insightsStart, dealershipStart)
+  const biBlock = src.slice(biStart, dealershipStart)
   assert.match(
-    insightsBlock,
+    biBlock,
     /componentKey:\s*['"]dia-parts-bi['"]/,
-    "o item 'dia-parts-bi' deve estar dentro da secao Fast BI/Insights",
+    "o item 'dia-parts-bi' deve estar dentro da secao Fast BI",
   )
 })
 

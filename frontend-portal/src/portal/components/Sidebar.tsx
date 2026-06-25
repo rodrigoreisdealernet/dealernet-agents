@@ -7,45 +7,24 @@ import { useMemo, useState } from 'react'
 import * as Tooltip from '@radix-ui/react-tooltip'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import {
-  ArrowLeftRight,
-  BarChart3,
   ChevronDown,
   ChevronLeft,
-  FileText,
-  GitBranch,
-  LineChart,
-  Palette,
   PanelLeft,
   Search,
-  ShoppingCart,
-  Tag,
-  Users,
-  UserPlus,
   X,
-  type LucideIcon,
 } from 'lucide-react'
 import { usePortalStore } from '@/portal/store/portalStore'
 import { useBreakpoint } from '@/hooks/use-breakpoint'
 import { filterMenu, filterMenuByRole } from '@/portal/lib/menuFilter'
+import { resolveMenuIcon } from '@/portal/lib/menuIcon'
 import { cn } from '@/lib/utils'
 import type { MenuItem, WindowSpec } from '@/portal/types'
 
-// Mapa nome->ícone (o backend manda só o nome em MenuItem.icon).
-const ICONS: Record<string, LucideIcon> = {
-  Users,
-  UserPlus,
-  GitBranch,
-  BarChart3,
-  LineChart,
-  ShoppingCart,
-  FileText,
-  Tag,
-  Palette,
-  ArrowLeftRight,
-}
-function iconOf(name?: string): LucideIcon | null {
-  return name ? (ICONS[name] ?? null) : null
-}
+// Ícone do item: resolvedor COMPARTILHADO (menuIcon.tsx) — o mesmo usado por abas/janelas.
+// Aceita tokens Font Awesome (fa-*) e nomes lucide diretos; fallback = AppWindow. Antes a
+// Sidebar mantinha um mapa local paralelo (duplicado) que só conhecia ~10 nomes lucide e
+// ignorava todos os ícones fa-*; unificar remove essa duplicidade e padroniza o portal.
+const iconOf = resolveMenuIcon
 
 const EXPANDED_W = 240
 const COLLAPSED_W = 56

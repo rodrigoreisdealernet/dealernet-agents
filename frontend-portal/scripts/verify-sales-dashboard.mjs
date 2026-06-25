@@ -33,12 +33,12 @@ function read(relPath) {
   return readFileSync(full, 'utf8')
 }
 
-// ── AC1: Menu "Vendas" no grupo Insights apontando para chave registrada ──────
-test('AC1: portalApi.ts tem item de menu insights-sales -> componentKey dia-sales', () => {
+// ── AC1: Menu "Vendas" no grupo Fast BI apontando para chave registrada ───────
+test('AC1: portalApi.ts tem item de menu fast-bi-sales -> componentKey dia-sales', () => {
   const src = read(PORTAL_API_PATH)
   assert.ok(
-    src.includes("id: 'insights-sales'"),
-    "portalApi.ts deve ter um item de menu com id 'insights-sales'",
+    src.includes("id: 'fast-bi-sales'"),
+    "portalApi.ts deve ter um item de menu com id 'fast-bi-sales'",
   )
   assert.match(
     src,
@@ -51,18 +51,18 @@ test('AC1: portalApi.ts tem item de menu insights-sales -> componentKey dia-sale
   )
 })
 
-test('AC1: o item insights-sales fica DENTRO do grupo Insights', () => {
+test('AC1: o item fast-bi-sales fica DENTRO do grupo Fast BI', () => {
   const src = read(PORTAL_API_PATH)
-  const insightsGroupIdx = src.indexOf("id: 'insights'")
-  const salesItemIdx = src.indexOf("id: 'insights-sales'")
-  // O proximo grupo top-level apos Insights e 'dealership'.
+  const biGroupIdx = src.indexOf("id: 'fast-bi'")
+  const salesItemIdx = src.indexOf("id: 'fast-bi-sales'")
+  // O proximo grupo top-level apos Fast BI e 'dealership' (Concessionaria).
   const nextGroupIdx = src.indexOf("id: 'dealership'")
-  assert.ok(insightsGroupIdx !== -1, "deve existir a declaracao do grupo id: 'insights'")
-  assert.ok(salesItemIdx !== -1, "deve existir o item id: 'insights-sales'")
+  assert.ok(biGroupIdx !== -1, "deve existir a declaracao do grupo id: 'fast-bi'")
+  assert.ok(salesItemIdx !== -1, "deve existir o item id: 'fast-bi-sales'")
   assert.ok(nextGroupIdx !== -1, "deve existir o proximo grupo top-level id: 'dealership'")
   assert.ok(
-    salesItemIdx > insightsGroupIdx && salesItemIdx < nextGroupIdx,
-    "'insights-sales' deve aparecer apos o grupo 'insights' e antes do proximo grupo 'dealership' (i.e. dentro de Insights)",
+    salesItemIdx > biGroupIdx && salesItemIdx < nextGroupIdx,
+    "'fast-bi-sales' deve aparecer apos o grupo 'fast-bi' e antes do proximo grupo 'dealership' (i.e. dentro de Fast BI)",
   )
 })
 
