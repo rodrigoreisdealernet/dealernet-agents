@@ -18,6 +18,8 @@ export const componentRegistry: Record<string, LazyExoticComponent<ComponentType
   // DIA dealership domain (issue #5) — dados mestres empresa/marca com CRUD.
   'dia-companies': lazy(() => import('@/portal/renderers/screens/CompaniesCrud')),
   'dia-brands': lazy(() => import('@/portal/renderers/screens/BrandsCrud')),
+  // Gestão de usuários/perfis (issue #6) — somente admin (gating na tela + nav).
+  'admin-users': lazy(() => import('@/portal/renderers/screens/UsersAdmin')),
 }
 
 export function resolveComponent(key: string) {

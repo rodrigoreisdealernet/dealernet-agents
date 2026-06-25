@@ -51,6 +51,8 @@ export interface MenuItem {
   icon?: string
   spec?: WindowSpec
   children?: MenuItem[]
+  /** Role mínima (app_role) exigida para ver o item; ausente = visível a todos. */
+  requiredRole?: string
 }
 
 export interface WorkspaceMeta {

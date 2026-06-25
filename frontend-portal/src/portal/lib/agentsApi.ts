@@ -449,6 +449,79 @@ export async function deleteBrand(entityId: string): Promise<void> {
   unwrap(res)
 }
 
+// ── Usuários / Perfis (gestão admin, issue #6) ──────────────────────────────
+// Leitura direta de profiles (RLS: admin vê todos; demais veem só o próprio).
+// Criação via Edge Function admin-create-user (service_role server-side);
+// edição/inativação via RPC endurecida admin_update_profile (somente admin).
+
+export type AppRole = 'admin' | 'branch_manager' | 'field_operator' | 'read_only'
+
+export interface ProfileRow {
+  id: string
+  display_name: string | null
+  role: AppRole | string
+  tenant: string
+  is_active: boolean
+}
+
+/** Campos do formulário de criação (Edge Function admin-create-user). */
+export interface CreateUserInput {
+  email: string
+  password: string
+  display_name: string
+  role: AppRole
+  tenant?: string
+}
+
+/** Campos editáveis de um perfil existente (RPC admin_update_profile). */
+export interface ProfileUpdateInput {
+  display_name: string | null
+  role: AppRole | string
+  is_active: boolean
+}
+
+const PROFILE_COLS = 'id, display_name, role, tenant, is_active'
+
+export async function getProfiles(): Promise<ProfileRow[]> {
+  const res = (await supabase
+    .from('profiles')
+    .select(PROFILE_COLS)
+    .order('display_name', { ascending: true })) as PgResponse<ProfileRow[]>
+  return unwrap(res) ?? []
+}
+
+/** Role do usuário corrente (via JWT) — usado para gating da UI. */
+export async function getMyRole(): Promise<string> {
+  const res = (await supabase.rpc('get_my_role')) as PgResponse<string>
+  return unwrap(res) ?? 'read_only'
+}
+
+export async function createUser(input: CreateUserInput): Promise<{ user_id: string }> {
+  const { data, error } = await supabase.functions.invoke('admin-create-user', {
+    body: {
+      email: input.email,
+      password: input.password,
+      display_name: input.display_name,
+      role: input.role,
+      tenant: input.tenant,
+    },
+  })
+  if (error) throw new Error(error.message)
+  const payload = data as { user_id?: string; error?: string }
+  if (payload?.error) throw new Error(payload.error)
+  return { user_id: payload?.user_id ?? '' }
+}
+
+export async function updateProfile(userId: string, input: ProfileUpdateInput): Promise<void> {
+  const res = (await supabase.rpc('admin_update_profile', {
+    p_user_id: userId,
+    p_display_name: input.display_name,
+    p_role: input.role,
+    p_is_active: input.is_active,
+  })) as PgResponse<unknown>
+  unwrap(res)
+}
+
 // ── Decisão (escrita) via ops-api — POST /api/ops/findings/decision (ver PRD §6.4) ──
 const OPS_API_URL = ENV.VITE_OPS_API_URL || '/api/ops'
 

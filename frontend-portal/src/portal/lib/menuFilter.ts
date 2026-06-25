@@ -51,6 +51,20 @@ function filterNodes(nodes: MenuItem[], q: string): MenuItem[] {
   return result
 }
 
+/**
+ * Remove (em profundidade) itens cujo `requiredRole` o usuário corrente não atende.
+ * Regra simples da POC: só `admin` satisfaz `requiredRole === 'admin'`; itens sem
+ * requiredRole são visíveis a todos. Grupos que ficam sem filhos são descartados.
+ */
+export function filterMenuByRole(menu: MenuItem[], role: string | null): MenuItem[] {
+  return menu
+    .filter((node) => !node.requiredRole || node.requiredRole === role)
+    .map((node) =>
+      node.children ? { ...node, children: filterMenuByRole(node.children, role) } : node,
+    )
+    .filter((node) => !node.children || node.children.length > 0 || !!node.spec)
+}
+
 /** Total de itens-folha (telas) na árvore, em PROFUNDIDADE — para mensagens de resultado. */
 export function countLeaves(menu: MenuItem[]): number {
   let n = 0

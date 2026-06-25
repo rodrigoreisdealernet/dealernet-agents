@@ -1,0 +1,75 @@
+{
+  "issue": "6",
+  "title": "feat: Usuários — gestão + CRUD (profiles/roles)",
+  "slug": "feat-usuarios-gestao-crud-profiles",
+  "branch": "feature/6-feat-usuarios-gestao-crud-profiles",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/6",
+  "pr": "25",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/25",
+  "updatedAt": "2026-06-25T18:46:01.938Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "Spec written and posted to issue #6",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Auto-approved (batch)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": "Coder: migration + edge fn + UsersAdmin screen + nav gating + seed",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "done",
+      "summary": "11 SQL tests green; draft PR #25 opened",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "done",
+      "summary": "tests:PASS diff:APPROVE; review follow-up (app_metadata sync) applied + tested; 15 tests green",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "waiting",
+      "summary": "PR #25 ready for review; awaiting human merge",
+      "artifacts": [],
+      "notes": [],
+      "gate": "merge"
+    }
+  ]
+}
