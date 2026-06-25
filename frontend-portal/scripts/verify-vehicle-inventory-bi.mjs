@@ -157,8 +157,8 @@ test('AC brand/store chart: ChartCard bar xKey brand_store ordena floor_plan_cos
   )
   assert.match(
     src,
-    /\.sort\(\s*\(?\s*\w+\s*,\s*\w+\s*\)?\s*=>\s*\w+\.floor_plan_cost\s*-\s*\w+\.floor_plan_cost\s*,?\s*\)/,
-    'linhas por marca/loja devem ser ordenadas DESC por floor_plan_cost',
+    /\.sort\(\s*\(?\s*([A-Za-z_$][\w$]*)\s*,\s*([A-Za-z_$][\w$]*)\s*\)?\s*=>\s*\2\.floor_plan_cost\s*-\s*\1\.floor_plan_cost\s*,?\s*\)/,
+    'linhas por marca/loja devem ser ordenadas DESC por floor_plan_cost (segundo parametro - primeiro parametro)',
   )
 })
 
@@ -178,8 +178,8 @@ test('AC oldest-vehicles list: filtra em_estoque, ordena por floor_plan_cost des
   )
   assert.match(
     src,
-    /\.sort\(\s*\(?\s*\w+\s*,\s*\w+\s*\)?\s*=>\s*\(\s*\w+\.floor_plan_cost\s*\?\?\s*0\s*\)\s*-\s*\(\s*\w+\.floor_plan_cost\s*\?\?\s*0\s*\)\s*,?\s*\)/,
-    'lista deve ordenar por floor_plan_cost DESC com fallback ?? 0',
+    /\.sort\(\s*\(?\s*([A-Za-z_$][\w$]*)\s*,\s*([A-Za-z_$][\w$]*)\s*\)?\s*=>\s*\(\s*\2\.floor_plan_cost\s*\?\?\s*0\s*\)\s*-\s*\(\s*\1\.floor_plan_cost\s*\?\?\s*0\s*\)\s*,?\s*\)/,
+    'lista deve ordenar por floor_plan_cost DESC com fallback ?? 0 (segundo parametro - primeiro parametro)',
   )
   assert.match(src, /vehicle\.days_in_stock/, 'linhas devem renderizar days_in_stock')
   assert.match(
@@ -233,6 +233,15 @@ test('AC data layer: agentsApi exporta inventory summary, owner kpis e vehicles 
     /getOwnerKpis[\s\S]*?\.from\(\s*['"]v_dia_owner_kpis['"]\s*\)/,
     "getOwnerKpis deve ler a view 'v_dia_owner_kpis'",
   )
+  const ownerKpisBlock = src.match(/export\s+interface\s+OwnerKpis\s*\{[\s\S]*?\}/)?.[0] ?? ''
+  assert.ok(ownerKpisBlock, 'nao foi possivel localizar OwnerKpis')
+  for (const field of ['inventory_vehicle_value', 'floor_plan_total', 'avg_days_in_stock']) {
+    assert.match(
+      ownerKpisBlock,
+      new RegExp(`\\b${field}\\b`),
+      `OwnerKpis deve declarar '${field}'`,
+    )
+  }
   assert.match(
     src,
     /export\s+async\s+function\s+getVehicles\s*\(/,
