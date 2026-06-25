@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/15",
   "pr": null,
   "prUrl": null,
-  "updatedAt": "2026-06-25T19:10:09.891Z",
+  "updatedAt": "2026-06-25T19:13:21.637Z",
   "steps": [
     {
       "id": "spec",
@@ -34,9 +34,14 @@
     {
       "id": "code",
       "label": "03 · Code",
-      "status": "pending",
-      "summary": "",
-      "artifacts": [],
+      "status": "done",
+      "summary": "DiaOverview screen + registry + Fast BI nav + agentsApi helpers (commit 31a0549)",
+      "artifacts": [
+        {
+          "label": "Screen",
+          "href": "frontend-portal/src/portal/renderers/screens/DiaOverview.tsx"
+        }
+      ],
       "notes": [],
       "gate": null
     },
