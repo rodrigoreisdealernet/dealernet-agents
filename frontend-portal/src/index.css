@@ -1,0 +1,102 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import 'tailwindcss';
+
+/* =============================================================
+   Design System Dealernet (gerado pelo Claude Design).
+   FONTE DA VERDADE: ./design-system/tokens.css — reexportável.
+   Aqui só fazemos a PONTE para os nomes que o Tailwind v4 espera.
+   ============================================================= */
+@import './design-system/tokens.css';
+
+/* Tema escuro segue a estratégia do tokens.css: atributo [data-theme="dark"].
+   Alinhamos a variante `dark:` do Tailwind ao mesmo seletor. */
+@custom-variant dark (&:is([data-theme='dark'], [data-theme='dark'] *));
+
+/* Ponte Claude Design → Tailwind. `inline` mantém as referências var() vivas:
+   a troca de tema (que redefine --bg/--ink/... no tokens.css) propaga sozinha. */
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--ink);
+
+  --color-card: var(--surface);
+  --color-card-foreground: var(--ink);
+  --color-popover: var(--overlay);
+  --color-popover-foreground: var(--ink);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--on-primary);
+  --color-secondary: var(--surface-2);
+  --color-secondary-foreground: var(--ink);
+  --color-muted: var(--surface-3);
+  --color-muted-foreground: var(--ink-2);
+  --color-accent: var(--surface-2);
+  --color-accent-foreground: var(--ink);
+  --color-destructive: var(--danger);
+  --color-destructive-foreground: #ffffff;
+
+  --color-border: var(--border);
+  --color-input: var(--border-strong);
+  --color-ring: var(--ring);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+
+  /* Chrome colorido (sidebar/header). --chrome é definido pelo use-theme conforme a
+     COR escolhida (accent/marca); fallback p/ navy do DS quando não há tema aplicado. */
+  --color-sidebar: var(--chrome, var(--brand-navy));
+  --color-sidebar-foreground: #ffffff;
+  --color-sidebar-muted: color-mix(in oklch, #ffffff 64%, var(--chrome, var(--brand-navy)));
+  --color-sidebar-accent: color-mix(in oklch, var(--primary) 70%, white);
+  --color-sidebar-border: color-mix(in oklch, #ffffff 16%, transparent);
+  --color-header: var(--chrome, var(--brand-navy));
+  --color-header-foreground: #ffffff;
+  --color-header-border: color-mix(in oklch, #ffffff 16%, transparent);
+
+  --radius: var(--radius-md);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-background text-foreground;
+}
+
+/* Tailwind v4 usa currentColor como cor de borda default (mudança do v3).
+   Recriamos o comportamento esperado: borda usa o token --border do DS. */
+@layer base {
+  *,
+  ::after,
+  ::before {
+    border-color: var(--border);
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-3);
+}
+
+/* Fundo da área MDI: grid sutil de pontos. */
+.mdi-canvas {
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--border) 1px, transparent 1px);
+  background-size: 22px 22px;
+  background-position: -1px -1px;
+}

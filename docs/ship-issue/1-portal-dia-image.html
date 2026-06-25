@@ -1,0 +1,88 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta http-equiv="refresh" content="5">
+<title>ship-issue #1 — Imagem do Portal</title>
+<style>
+  :root{font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  body{margin:0;background:#0b0e14;color:#e5e7eb;padding:24px}
+  .wrap{max-width:860px;margin:0 auto}
+  h1{font-size:18px;margin:0 0 4px}
+  .sub{color:#9ca3af;font-size:13px;margin-bottom:16px}
+  .sub a{color:#60a5fa;text-decoration:none}
+  .bar{height:8px;background:#1f2937;border-radius:99px;overflow:hidden;margin:12px 0 20px}
+  .bar>i{display:block;height:100%;background:#16a34a;width:86%}
+  .banner{background:#7c2d12;color:#fed7aa;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:14px}
+  table{width:100%;border-collapse:collapse}
+  td{padding:12px 8px;border-top:1px solid #1f2937;vertical-align:top}
+  .ic{font-size:18px;width:28px;text-align:center}
+  .lbl{font-weight:600;width:200px}
+  .st{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
+  .sum{font-size:14px;color:#d1d5db}
+  .arts{margin-top:6px;font-size:13px}
+  .arts a{color:#60a5fa;text-decoration:none}
+  .notes{margin:8px 0 0;padding-left:18px;color:#9ca3af;font-size:12px}
+  tr.running{background:#0f1b33}
+  .foot{color:#6b7280;font-size:12px;margin-top:20px}
+</style></head><body><div class="wrap">
+<h1>ship-issue #1 — Imagem do Portal</h1>
+<div class="sub"><a href="https://github.com/rodrigoreisdealernet/dealernet-agents/issues/1">issue</a> · branch <code>feature/1-portal-dia-image</code> · <a href="https://github.com/rodrigoreisdealernet/dealernet-agents/pull/2">PR #2</a> · 86% complete</div>
+<div class="bar"><i></i></div>
+<div class="banner">🚧 Waiting on human gate: <b>merge</b></div>
+<table><tbody><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">01 · Spec<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">6 critérios de aceitação; 9 pontos de branding mapeados</div>
+          <div class="arts"><a href="../../docs/specs/1-portal-dia-image.md">Spec</a></div>
+          <ul class="notes"><li>Iniciando investigação do branding e logos no portal</li><li>Mapeando pontos de branding: HTML title, favicon, Login logo, Sidebar logo (2 locais), TopBar portalName</li><li>Análise completa: 6 pontos de branding identificados. Redação da spec em andamento.</li><li>Spec redigida com 6 acceptance criteria. Pronta para revisão.</li></ul>
+        </td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">02 · Approve (human gate)<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">Spec aprovada pelo humano</div>
+          
+          
+        </td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">03 · Code<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">SVG DIA criado + 6 arquivos rebrandeados; build OK (commit f6aa37d)</div>
+          <div class="arts"><a href="https://github.com/rodrigoreisdealernet/dealernet-agents/commit/f6aa37d">Commit</a></div>
+          <ul class="notes"><li>Lendo arquivos-alvo e spec; vou gerar o SVG da marca DIA e aplicar o rebrand no frontend-portal</li><li>SVG dia-logo.svg criado em public/; aplicando edits em index.html, Sidebar.tsx, TopBar.tsx, portalApi.ts e portalApiReal.ts</li><li>Edits aplicados; rodando npm run build (tsc -b &amp;&amp; vite build) e npm run lint no frontend-portal</li><li>Rebrand DIA aplicado; build (tsc -b &amp;&amp; vite build) OK; lint indisponivel no ambiente (eslint nao instalado); commit f6aa37d na branch feature/1-portal-dia-image (sem push/PR)</li></ul>
+        </td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">04 · Tests<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">8 asserts dependency-free, verdes (commit 72fcb6e)</div>
+          
+          <ul class="notes"><li>Escrevendo teste de verificacao dependency-free (node:test) para os criterios de aceite do rebrand DIA</li><li>Teste verde: 8/8 passando (node --test). Commitando testes e abrindo PR draft</li><li>PR draft #2 aberto (base main); testes 8/8 verdes commitados em 72fcb6e</li></ul>
+        </td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">05 · Test review<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">Aprovado após 1 iteração (AC2 coberto, 9 testes verdes)</div>
+          
+          <ul class="notes"><li>Achado bloqueante: AC2 (TopBar.tsx) não tem teste. Veredito: PRECISA-CORRIGIR</li><li>Iteração 1: bloqueante AC2 (TopBar sem teste) devolvido ao tester</li><li>loop correcao 1/2: adicionando caso de teste AC2 (TopBar) ao verify-dia-branding.mjs</li><li>9 testes verdes: AC2 (TopBar) coberto + AC3 endurecido (ramo collapsed). Commitando.</li><li>RE-REVIEW: AC2 bloqueante resolvido via commit 1664113; 9 testes passando, nenhuma fragilidade detectada</li></ul>
+        </td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">06 · Code review<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">Pronto para merge: corretude/segurança/regressão OK</div>
+          <div class="arts"><a href="https://github.com/rodrigoreisdealernet/dealernet-agents/pull/2">Review</a></div>
+          <ul class="notes"><li>Review posted to PR #2. All AC verified and passing. No blockers.</li></ul>
+        </td>
+      </tr><tr class="waiting">
+        <td class="ic" style="color:#d97706">⏸</td>
+        <td class="lbl">Merge (human gate)<div class="st" style="color:#d97706">waiting</div></td>
+        <td class="meta">
+          <div class="sum">Aguardando merge humano (gate #2)</div>
+          
+          
+        </td>
+      </tr></tbody></table>
+<div class="foot">auto-refreshes every 5s · last update 2026-06-25T15:43:05.897Z</div>
+</div></body></html>

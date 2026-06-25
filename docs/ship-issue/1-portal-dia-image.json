@@ -1,0 +1,113 @@
+{
+  "issue": "1",
+  "title": "Imagem do Portal",
+  "slug": "portal-dia-image",
+  "branch": "feature/1-portal-dia-image",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/1",
+  "pr": "2",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/2",
+  "updatedAt": "2026-06-25T15:43:05.897Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "6 critérios de aceitação; 9 pontos de branding mapeados",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "../../docs/specs/1-portal-dia-image.md"
+        }
+      ],
+      "notes": [
+        "Iniciando investigação do branding e logos no portal",
+        "Mapeando pontos de branding: HTML title, favicon, Login logo, Sidebar logo (2 locais), TopBar portalName",
+        "Análise completa: 6 pontos de branding identificados. Redação da spec em andamento.",
+        "Spec redigida com 6 acceptance criteria. Pronta para revisão."
+      ],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec aprovada pelo humano",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": "SVG DIA criado + 6 arquivos rebrandeados; build OK (commit f6aa37d)",
+      "artifacts": [
+        {
+          "label": "Commit",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/commit/f6aa37d"
+        }
+      ],
+      "notes": [
+        "Lendo arquivos-alvo e spec; vou gerar o SVG da marca DIA e aplicar o rebrand no frontend-portal",
+        "SVG dia-logo.svg criado em public/; aplicando edits em index.html, Sidebar.tsx, TopBar.tsx, portalApi.ts e portalApiReal.ts",
+        "Edits aplicados; rodando npm run build (tsc -b && vite build) e npm run lint no frontend-portal",
+        "Rebrand DIA aplicado; build (tsc -b && vite build) OK; lint indisponivel no ambiente (eslint nao instalado); commit f6aa37d na branch feature/1-portal-dia-image (sem push/PR)"
+      ],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "done",
+      "summary": "8 asserts dependency-free, verdes (commit 72fcb6e)",
+      "artifacts": [],
+      "notes": [
+        "Escrevendo teste de verificacao dependency-free (node:test) para os criterios de aceite do rebrand DIA",
+        "Teste verde: 8/8 passando (node --test). Commitando testes e abrindo PR draft",
+        "PR draft #2 aberto (base main); testes 8/8 verdes commitados em 72fcb6e"
+      ],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "done",
+      "summary": "Aprovado após 1 iteração (AC2 coberto, 9 testes verdes)",
+      "artifacts": [],
+      "notes": [
+        "Auditando cobertura de testes (AC1-AC6 vs spec)",
+        "Achado bloqueante: AC2 (TopBar.tsx) não tem teste. Veredito: PRECISA-CORRIGIR",
+        "Iteração 1: bloqueante AC2 (TopBar sem teste) devolvido ao tester",
+        "loop correcao 1/2: adicionando caso de teste AC2 (TopBar) ao verify-dia-branding.mjs",
+        "9 testes verdes: AC2 (TopBar) coberto + AC3 endurecido (ramo collapsed). Commitando.",
+        "RE-REVIEW: AC2 bloqueante resolvido via commit 1664113; 9 testes passando, nenhuma fragilidade detectada"
+      ],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "done",
+      "summary": "Pronto para merge: corretude/segurança/regressão OK",
+      "artifacts": [
+        {
+          "label": "Review",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/2"
+        }
+      ],
+      "notes": [
+        "Review posted to PR #2. All AC verified and passing. No blockers."
+      ],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "waiting",
+      "summary": "Aguardando merge humano (gate #2)",
+      "artifacts": [],
+      "notes": [],
+      "gate": "merge"
+    }
+  ]
+}
