@@ -11,7 +11,7 @@
 //   node --test supabase/tests/dia_fast_bi_analytics.test.mjs
 // Pre-requisito: container Postgres do Supabase no ar E a migration aplicada:
 //   docker exec -i supabase_db_dealernet-agents psql -U postgres -d postgres -c "select 1"
-//   migration: supabase/migrations/20260625150000_dia_fast_bi_analytics.sql
+//   migration: supabase/migrations/20260625170000_dia_fast_bi_analytics.sql
 //
 // ESTRATEGIA DE ASSERCAO:
 //   As views foram escritas contra dados de seed REAIS de veiculos (12 veiculos,
