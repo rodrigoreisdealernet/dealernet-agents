@@ -3,7 +3,7 @@
 ## Project Structure & Module Organization
 - Docs live at the repo root (`README.md`, `Guide_for_agents_using_supabase_template.md`, `DATABASE.md`, `Generalisable_schema.md`) and are the fastest way to understand the schema and roadmap. Reusable doc templates live under `doc_templates/`.
 - Supabase assets sit in `supabase/`: `config.toml` (CLI config), `migrations/*.sql` (ordered by timestamp), and `seed.sql` (loads after migrations).
-- Application code is checked in: `frontend/` (Vite + React + TanStack, JSON-driven UI engine under `src/engine/`) and `temporal/` (Python Temporal worker under `src/`).
+- Application code is checked in: `frontend-portal/` (the DIA Portal DMS shell — React 18 + Vite + Tailwind, MDI window manager, native screens under `src/portal/renderers/screens/`) and `temporal/` (Python Temporal worker under `src/`). The legacy `frontend/` (dia-frontend, JSON-driven UI engine over the Wynne rental domain) was removed alongside the Wynne-domain schema prune.
 - Migrations follow a modular pattern (`core` model first, `analytics` next). Keep new domain-specific tables in new migration files rather than editing shipped ones.
 
 ## Build, Test, and Development Commands

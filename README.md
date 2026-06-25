@@ -42,7 +42,7 @@ Where things live, at a glance:
 
 | Path | What's there |
 |------|--------------|
-| [`frontend/`](./frontend/) | React app, the JSON-driven UI engine (`src/engine/`), and Playwright E2E (`e2e/`) |
+| [`frontend-portal/`](./frontend-portal/) | DIA **Portal DMS** shell — React 18 + Vite + Tailwind, MDI window manager, native AI-Operations screens (`src/portal/renderers/screens/`) over the Supabase data layer |
 | [`temporal/`](./temporal/) | Python Temporal workers — rental + agentic-ops workflows, activities, and pytest suites |
 | [`supabase/`](./supabase/) | Postgres migrations, seed, and RLS / access-control contract tests |
 | [`charts/`](./charts/) | Helm charts — app, monitoring, observability |
@@ -234,9 +234,9 @@ Temporal gRPC is now available on `localhost:7234`; Supabase Postgres stub on `l
 
 **Step 2 — run the frontend on the host**
 ```bash
-cd frontend
+cd frontend-portal
 npm install
-npm run dev          # Vite dev server → http://localhost:3000
+npm run dev          # Vite dev server → http://localhost:5174
 ```
 
 **Step 3 — run the Temporal worker on the host**
@@ -255,15 +255,11 @@ TEMPORAL_ADDRESS=localhost:7234 python -m src.worker
 
 | Suite | What it covers | Where | Run |
 |------|----------------|-------|-----|
-| **Frontend unit/integration** | Components & data-layer logic (Vitest + React Testing Library) | [`frontend/src/test/`](./frontend/src/test/) | `cd frontend && npm test` |
-| **E2E smoke (gating)** | Core routes load + data layer healthy, against the **deployed** dev app (Playwright) — [ADR-0018](./docs/adrs/0018-real-environment-e2e.md). PR validation also runs the required entity `View` drill-down against deployed dev. | [`smoke.spec.ts`](./frontend/e2e/smoke.spec.ts), [`auth-access-control.spec.ts`](./frontend/e2e/auth-access-control.spec.ts) | `cd frontend && npm run e2e` |
-| **E2E experience (non-gating)** | The "good UX" bar — failures are the UX-improvement backlog, not deploy blockers | [`experience.spec.ts`](./frontend/e2e/experience.spec.ts) | `cd frontend && npx playwright test experience.spec.ts` |
-| **Visual UX review (daily, non-gating)** | Screenshots of the journeys at desktop+mobile breakpoints, critiqued by a vision model → deduped `ux`/accessibility tickets ([`visual-ux.yml`](./.github/workflows/visual-ux.yml)) | [`visual-capture.spec.ts`](./frontend/e2e/visual-capture.spec.ts) | `cd frontend && npm run e2e:visual` |
-| **Static analysis (report-only → ratchet)** | Type/lint/security: `tsc`·`ruff`·`shellcheck`·`hadolint`·`gitleaks` on PRs; CodeQL·Semgrep·Trivy·dep-audits nightly. Non-gating until each check's count holds at its [`qa-targets.json`](./.github/qa-targets.json) ceiling, then promoted to gating. | [`code-quality.yml`](./.github/workflows/code-quality.yml) | `cd frontend && npm run typecheck` |
+| **Frontend Portal (lint, build, test)** | DIA Portal shell — ESLint, type-checked build (`tsc -b && vite build`), and the DIA-branding verification test | [`frontend-portal/`](./frontend-portal/) | `cd frontend-portal && npm run lint && npm run build && npm test` |
 | **Temporal worker** | Rental-operations workflows & activities (pytest) | [`temporal/tests/`](./temporal/tests/) | `python -m pytest temporal/tests/ -v` |
 | **Supabase access-control contract** | RLS / role boundaries on the data layer (details [below](#supabase-api-access-control-contract-tests)) | [`test_supabase_api_access_contract.py`](./temporal/tests/test_supabase_api_access_contract.py) | `python -m pytest temporal/tests/test_supabase_api_access_contract.py -v` |
 
-E2E runs in CI hourly + after each dev deploy ([`.github/workflows/e2e-dev.yml`](./.github/workflows/e2e-dev.yml)); that trusted deployed-dev workflow also runs the required entity `View` drill-down path, and smoke failures auto-file an incident.
+> **Note (2026-06-25):** the inherited Playwright E2E / Visual-UX suites and the heavy CI factory belonged to the removed `frontend/` (dia-frontend) and live under `.github/workflows.disabled/`. The active gate is the slim [`ci.yml`](./.github/workflows/ci.yml) (guard-rails + the `frontend-portal` lint/build/test job). Re-establishing E2E for the Portal is follow-up work.
 
 ### Test trends, coverage & quality (build over build)
 
