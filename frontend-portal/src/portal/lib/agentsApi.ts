@@ -627,6 +627,47 @@ export async function getCriticalParts(): Promise<PartRow[]> {
   return unwrap(res) ?? []
 }
 
+// ── Fast BI de Peças (issue #18) ────────────────────────────────────────────
+// Leitura direta das views agregadas para o dashboard read-only de peças.
+// v_dia_parts_summary é um UNION ALL: linhas de inventário (stock_status +
+// inventory_value, com period_month/units_sold/revenue nulos) e linhas de venda
+// (period_month + units_sold + revenue, com stock_status/inventory_value nulos).
+
+export interface PartsSummaryRow {
+  stock_status: string | null
+  inventory_value: number | null
+  period_month: string | null
+  units_sold: number | null
+  revenue: number | null
+}
+
+const PARTS_SUMMARY_COLS = 'stock_status, inventory_value, period_month, units_sold, revenue'
+
+export async function getPartsSummary(): Promise<PartsSummaryRow[]> {
+  const res = (await supabase
+    .from('v_dia_parts_summary')
+    .select(PARTS_SUMMARY_COLS)) as PgResponse<PartsSummaryRow[]>
+  return unwrap(res) ?? []
+}
+
+// KPIs do dono (v_dia_owner_kpis) — linha única. Selecionamos só o que o Fast BI
+// de peças usa; usamos limit(1)+[0] (igual getFindingKpis) p/ tolerar 0 linhas.
+export interface DiaOwnerKpis {
+  as_of: string | null
+  parts_inventory_value: number | null
+  parts_critical_count: number | null
+}
+
+const DIA_OWNER_KPI_COLS = 'as_of, parts_inventory_value, parts_critical_count'
+
+export async function getDiaOwnerKpis(): Promise<DiaOwnerKpis | null> {
+  const res = (await supabase
+    .from('v_dia_owner_kpis')
+    .select(DIA_OWNER_KPI_COLS)
+    .limit(1)) as PgResponse<DiaOwnerKpis[]>
+  return (unwrap(res) ?? [])[0] ?? null
+}
+
 // Remove chaves undefined/null vazias para não sobrescrever no merge do update.
 function serviceOrderPayload(input: ServiceOrderInput): Record<string, unknown> {
   const p: Record<string, unknown> = {
