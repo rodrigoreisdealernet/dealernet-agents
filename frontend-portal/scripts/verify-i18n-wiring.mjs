@@ -39,6 +39,36 @@ function literalCalls(source, fnName) {
   return [...source.matchAll(re)].map((match) => match[1])
 }
 
+function useTranslationsAliases(source) {
+  const re = /const\s+(\w+)\s*=\s*useTranslations\(\s*['"]([^'"]+)['"]\s*\)/g
+  return [...source.matchAll(re)].map((match) => ({ alias: match[1], namespace: match[2] }))
+}
+
+function extractMenuArraySource(source, constName) {
+  const marker = `const ${constName}: MenuItem[] = applyMenuTranslationKeys([`
+  const start = source.indexOf(marker)
+  assert.ok(start !== -1, `${constName} deve usar applyMenuTranslationKeys([...])`)
+  const callStart = source.indexOf('applyMenuTranslationKeys([', start)
+  assert.ok(callStart !== -1, `${constName} deve chamar applyMenuTranslationKeys([...])`)
+  const bodyStart = source.indexOf('[', callStart)
+  let depth = 0
+  for (let i = bodyStart; i < source.length; i += 1) {
+    const ch = source[i]
+    if (ch === '[') depth += 1
+    else if (ch === ']') {
+      depth -= 1
+      if (depth === 0) return source.slice(bodyStart, i + 1)
+    }
+  }
+  assert.fail(`nao foi possivel encontrar o fim de ${constName}`)
+}
+
+function menuIdsFromSource(source) {
+  const ids = [...source.matchAll(/\bid:\s*['"]([^'"]+)['"]/g)].map((match) => match[1])
+  assert.ok(ids.length > 0, 'esperado encontrar ids de menu')
+  return ids
+}
+
 // AC5: o npm test precisa executar automaticamente as verificacoes i18n.
 test('AC5: package.json registra os scripts verify-i18n no npm test', () => {
   const pkg = JSON.parse(read('package.json'))
@@ -61,6 +91,9 @@ test('AC1/AC3: locale.ts define default pt-BR, locales suportadas e helpers de c
 })
 
 // AC2/AC3/AC4: provider no topo da arvore com IntlProvider e troca imediata.
+// Observacao: o harness do repo e source-text only (sem jsdom/RTL), entao o
+// roundtrip real de DOM/cookie fica fora de escopo; estas assercoes travam o
+// wiring que implementa o comportamento.
 test('AC2/AC3/AC4: LocaleProvider envolve a aplicacao e atualiza cookie + html.lang', () => {
   const provider = read('src/i18n/LocaleProvider.tsx')
   const app = read('src/App.tsx')
@@ -99,6 +132,7 @@ test('AC1/AC4: menus usam labelKey/titleKey e componentes renderizam titulos tra
   const win = read('src/portal/components/Window.tsx')
   const tabs = read('src/portal/components/TabsView.tsx')
   const compact = read('src/portal/components/CompactWindows.tsx')
+  const statusBar = read('src/portal/components/StatusBar.tsx')
 
   assert.match(portalApi, /const MOCK_MENU: MenuItem\[\] = applyMenuTranslationKeys\(\[/, 'MOCK_MENU deve ser decorado com chaves i18n')
   assert.match(portalApiReal, /const EXTRA_MENU: MenuItem\[\] = applyMenuTranslationKeys\(\[/, 'EXTRA_MENU deve ser decorado com chaves i18n')
@@ -110,29 +144,88 @@ test('AC1/AC4: menus usam labelKey/titleKey e componentes renderizam titulos tra
   assert.match(win, /const title = translateWindowTitle\(win, tMenu\)/, 'Window deve traduzir o titulo renderizado')
   assert.match(tabs, /const title = translateWindowTitle\(tab, tMenu\)/, 'TabsView deve traduzir o titulo renderizado')
   assert.match(compact, /translateWindowTitle\(w, tMenu\)/, 'CompactWindows deve traduzir o titulo renderizado')
+  assert.match(statusBar, /translateWindowTitle\(w, tMenu\)/, 'StatusBar deve traduzir janelas minimizadas')
+  assert.match(statusBar, /translateBookmarkTitle\(b, tMenu\)/, 'StatusBar deve traduzir favoritos')
+})
 
-  for (const key of ['menu.ai-ops', 'menu.morning-brief-owner', 'menu.ai-morning-queue', 'menu.compras-requisicoes', 'menu.ev2-feriado']) {
-    assertMessageKey(key)
+// AC1: todo id de MOCK_MENU/EXTRA_MENU vira menu.<id>; se faltar, use-intl
+// exibiria chave crua para o usuario.
+test('AC1/AC4: todas as chaves de menu referenciadas existem em pt-BR e en-US', () => {
+  const mockMenu = extractMenuArraySource(read('src/portal/lib/portalApi.ts'), 'MOCK_MENU')
+  const extraMenu = extractMenuArraySource(read('src/portal/lib/portalApiReal.ts'), 'EXTRA_MENU')
+  const ids = [...new Set([...menuIdsFromSource(mockMenu), ...menuIdsFromSource(extraMenu)])].sort()
+
+  assert.ok(ids.length >= 30, `esperado cobrir menu mock+extra amplo; encontrados ${ids.length}`)
+  for (const id of ids) {
+    assertMessageKey(`menu.${id}`)
   }
 })
 
-// AC1/AC4: telas representativas usam namespace screens.* existente nas duas locales.
-test('AC1/AC4: chaves usadas em telas representativas existem em pt-BR e en-US', () => {
-  const cases = [
-    ['src/portal/renderers/screens/PartsBI.tsx', 'screens.partsBI'],
-    ['src/portal/renderers/screens/MorningBrief.tsx', 'screens.morningBrief'],
+// AC1: os menus ainda mantem texto fallback para compatibilidade, mas o label
+// exibido no Portal vem de menu.<id>. Estes casos eram os literais mistos mais
+// visiveis; em pt-BR eles nao podem ser o texto exibido por default.
+test('AC1: literais legados de menu nao sao os labels exibidos em pt-BR', () => {
+  const legacyLabels = [
+    ['ai-ops', 'AI Operations'],
+    ['morning-brief-owner', 'Morning Brief'],
+    ['ai-morning-queue', 'Fila de Findings'],
   ]
 
-  for (const [relPath, namespace] of cases) {
+  for (const [id, oldLiteral] of legacyLabels) {
+    assertMessageKey(`menu.${id}`)
+    assert.notEqual(pt.menu[id], oldLiteral, `menu.${id} em pt-BR nao deve exibir o literal legado '${oldLiteral}'`)
+  }
+})
+
+// AC4: telas representativas usam useTranslations e todas as t('...')/common('...')
+// estaticas apontam para chaves existentes. Isto captura typos que renderizariam
+// chaves cruas como shell.signOut/screens.foo.bar para o usuario.
+test('AC4: chaves usadas em telas representativas existem em pt-BR e en-US', () => {
+  const screens = [
+    'src/portal/renderers/screens/BrandsCrud.tsx',
+    'src/portal/renderers/screens/PartsBI.tsx',
+    'src/portal/renderers/screens/PartsInventory.tsx',
+    'src/portal/renderers/screens/ServiceDashboard.tsx',
+    'src/portal/renderers/screens/ServiceOrders.tsx',
+    'src/portal/renderers/screens/UsersAdmin.tsx',
+    'src/portal/renderers/screens/MorningBrief.tsx',
+    'src/portal/renderers/screens/CompaniesCrud.tsx',
+    'src/portal/renderers/screens/SalesDashboard.tsx',
+  ]
+
+  for (const relPath of screens) {
     const src = read(relPath)
-    assert.match(src, new RegExp(`useTranslations\\(['\"]${namespace}['\"]\\)`), `${relPath} deve usar ${namespace}`)
-    assertMessageKey(namespace)
-    for (const key of literalCalls(src, 't')) {
-      assertMessageKey(`${namespace}.${key}`)
+    const aliases = useTranslationsAliases(src)
+    assert.ok(aliases.length > 0, `${relPath} deve usar useTranslations(...)`)
+
+    let staticKeyCount = 0
+    for (const { alias, namespace } of aliases) {
+      assertMessageKey(namespace)
+      for (const key of literalCalls(src, alias)) {
+        staticKeyCount += 1
+        assertMessageKey(`${namespace}.${key}`)
+      }
     }
-    for (const key of literalCalls(src, 'common')) {
-      assertMessageKey(`common.${key}`)
-    }
+    assert.ok(staticKeyCount > 0, `${relPath} deve ter chamadas estaticas t('...') verificaveis`)
+  }
+})
+
+// AC4: constantes I18N_PT_* podem existir como referencias/test fixtures, mas nao
+// podem ser usadas diretamente no JSX como texto de UI traduzivel.
+test('AC4: constantes portuguesas de referencia nao sao renderizadas em JSX', () => {
+  const screens = [
+    'src/portal/renderers/screens/PartsBI.tsx',
+    'src/portal/renderers/screens/BrandsCrud.tsx',
+    'src/portal/renderers/screens/PartsInventory.tsx',
+    'src/portal/renderers/screens/ServiceDashboard.tsx',
+    'src/portal/renderers/screens/ServiceOrders.tsx',
+    'src/portal/renderers/screens/UsersAdmin.tsx',
+  ]
+
+  for (const relPath of screens) {
+    const src = read(relPath)
+    const renderedRefs = src.match(/=\{\s*I18N_PT_[A-Z0-9_]+\s*\}|>\s*\{\s*I18N_PT_[A-Z0-9_]+\s*\}\s*</g) ?? []
+    assert.deepEqual(renderedRefs, [], `${relPath} nao deve renderizar constantes I18N_PT_*: ${renderedRefs.join(', ')}`)
   }
 })
 
