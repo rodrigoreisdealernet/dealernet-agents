@@ -106,7 +106,11 @@ class AzureOpenAIChatTransport:
         if temperature is not None:
             payload["temperature"] = temperature
         if max_output_tokens is not None:
-            payload["max_tokens"] = max_output_tokens
+            # Azure's gpt-5.x deployments reject the legacy `max_tokens` param with
+            # HTTP 400 and require `max_completion_tokens` (api-version 2024-09+/
+            # 2025-*). The public kwarg stays `max_output_tokens`; only the wire key
+            # changed. Older deployments on current api-versions accept it too.
+            payload["max_completion_tokens"] = max_output_tokens
 
         last_error: Exception | None = None
         for endpoint_config in self._endpoint_configs:
