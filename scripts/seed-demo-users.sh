@@ -213,12 +213,15 @@ SET
 WHERE email = 'demo@dia-rental.dev';
 
 -- Sync profiles table (trigger covers new rows, but UPDATE above won't fire it).
-INSERT INTO public.profiles (id, display_name, role, tenant)
+-- is_active is set true so seeded demo users are always usable (column added in
+-- 20260625140000_user_management_crud.sql).
+INSERT INTO public.profiles (id, display_name, role, tenant, is_active)
 SELECT
   u.id,
   COALESCE(u.raw_user_meta_data ->> 'display_name', split_part(u.email, '@', 1)),
   (u.raw_app_meta_data ->> 'role')::public.app_role,
-  COALESCE(u.raw_app_meta_data ->> 'tenant', :'demo_tenant')
+  COALESCE(u.raw_app_meta_data ->> 'tenant', :'demo_tenant'),
+  true
 FROM auth.users u
 WHERE u.email IN (
   'admin@dia-rental.dev',
@@ -231,6 +234,7 @@ ON CONFLICT (id) DO UPDATE
   SET role         = EXCLUDED.role,
       tenant       = EXCLUDED.tenant,
       display_name = EXCLUDED.display_name,
+      is_active    = true,
       updated_at   = now();
 
 DO $$

@@ -13,6 +13,7 @@ import type {
   WorkspaceMeta,
 } from '@/portal/types'
 import { portalApi } from '@/portal/lib/portalApi'
+import { getMyRole } from '@/portal/lib/agentsApi'
 import { clampRect, floatingRect, type MdiSize } from '@/portal/lib/layout'
 
 const CASCADE_STEP = 28
@@ -47,6 +48,8 @@ interface PortalState {
   // dados de boot
   config: PortalConfig | null
   menu: MenuItem[]
+  /** app_role do usuário corrente (via Supabase JWT) — gating do menu/telas. */
+  role: string | null
   workspaces: WorkspaceMeta[]
   activeWorkspaceId: string | null
   empresas: Empresa[]
@@ -101,6 +104,7 @@ export const usePortalStore = create<PortalState>()(
     (set, get) => ({
   config: null,
   menu: [],
+  role: null,
   workspaces: [],
   activeWorkspaceId: null,
   empresas: [],
@@ -167,15 +171,18 @@ export const usePortalStore = create<PortalState>()(
         return fallback
       }
     }
-    const [config, menu, workspaces, empresas] = await Promise.all([
+    const [config, menu, workspaces, empresas, role] = await Promise.all([
       safe(portalApi.getConfig(), null as unknown as PortalConfig),
       safe(portalApi.getMenu(), [] as MenuItem[]),
       safe(portalApi.getWorkspaces(), [] as WorkspaceMeta[]),
       safe(portalApi.getEmpresas(), [] as Empresa[]),
+      // Role do Supabase (gating do menu). Sem sessão/erro → null (esconde itens admin).
+      safe(getMyRole(), null as unknown as string),
     ])
     set({
       config,
       menu,
+      role,
       workspaces,
       activeWorkspaceId: workspaces[0]?.id ?? null,
       empresas,

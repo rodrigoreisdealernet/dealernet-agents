@@ -139,6 +139,22 @@ const MOCK_MENU: MenuItem[] = [
       },
     ],
   },
+  // Administração (issue #6) — gestão de usuários/perfis; visível só para admin.
+  {
+    id: 'admin',
+    text: 'Administração',
+    icon: 'Users',
+    requiredRole: 'admin',
+    children: [
+      {
+        id: 'admin-users',
+        text: 'Usuários',
+        icon: 'UserPlus',
+        requiredRole: 'admin',
+        spec: { title: 'Usuários', kind: 'component', componentKey: 'admin-users' },
+      },
+    ],
+  },
 ]
 
 const delay = <T>(value: T) => new Promise<T>((r) => setTimeout(() => r(value), 120))

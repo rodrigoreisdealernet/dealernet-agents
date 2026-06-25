@@ -26,7 +26,7 @@ import {
 } from 'lucide-react'
 import { usePortalStore } from '@/portal/store/portalStore'
 import { useBreakpoint } from '@/hooks/use-breakpoint'
-import { filterMenu } from '@/portal/lib/menuFilter'
+import { filterMenu, filterMenuByRole } from '@/portal/lib/menuFilter'
 import { cn } from '@/lib/utils'
 import type { MenuItem, WindowSpec } from '@/portal/types'
 
@@ -58,11 +58,13 @@ export function Sidebar() {
 // --- Desktop: sidebar fixa colapsável --------------------------------------
 
 function DesktopSidebar() {
-  const menu = usePortalStore((s) => s.menu)
+  const rawMenu = usePortalStore((s) => s.menu)
+  const role = usePortalStore((s) => s.role)
   const collapsed = usePortalStore((s) => s.sidebarCollapsed)
   const toggleSidebar = usePortalStore((s) => s.toggleSidebar)
   const config = usePortalStore((s) => s.config)
 
+  const menu = useMemo(() => filterMenuByRole(rawMenu, role), [rawMenu, role])
   const [query, setQuery] = useState('')
   const filtered = useMemo(() => filterMenu(menu, query), [menu, query])
   const filtering = query.trim().length > 0
@@ -147,10 +149,12 @@ function MenuEmpty({ query }: { query: string }) {
 // --- Compacto: drawer overlay ----------------------------------------------
 
 function DrawerSidebar() {
-  const menu = usePortalStore((s) => s.menu)
+  const rawMenu = usePortalStore((s) => s.menu)
+  const role = usePortalStore((s) => s.role)
   const open = usePortalStore((s) => s.drawerOpen)
   const setDrawerOpen = usePortalStore((s) => s.setDrawerOpen)
 
+  const menu = useMemo(() => filterMenuByRole(rawMenu, role), [rawMenu, role])
   const [query, setQuery] = useState('')
   const filtered = useMemo(() => filterMenu(menu, query), [menu, query])
   const filtering = query.trim().length > 0

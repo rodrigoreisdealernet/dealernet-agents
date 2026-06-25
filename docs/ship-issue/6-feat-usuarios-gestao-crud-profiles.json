@@ -6,13 +6,13 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/6",
   "pr": null,
   "prUrl": null,
-  "updatedAt": "2026-06-25T18:22:40.418Z",
+  "updatedAt": "2026-06-25T18:26:31.218Z",
   "steps": [
     {
       "id": "spec",
       "label": "01 · Spec",
-      "status": "pending",
-      "summary": "",
+      "status": "done",
+      "summary": "Spec written and posted to issue #6",
       "artifacts": [],
       "notes": [],
       "gate": null
@@ -20,8 +20,8 @@
     {
       "id": "approve",
       "label": "02 · Approve (human gate)",
-      "status": "pending",
-      "summary": "",
+      "status": "done",
+      "summary": "Auto-approved (batch)",
       "artifacts": [],
       "notes": [],
       "gate": null
