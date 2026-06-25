@@ -68,6 +68,33 @@ function parseFlags(argv) {
   return { flags, positional };
 }
 
+// ---------- environment guard ----------
+// The whole worktree mechanism breaks if worktrees are created in one path flavor
+// (e.g. WSL `/mnt/c/...`) and then accessed by git from another (Windows `C:\...`):
+// the worktree's .git pointer becomes unresolvable. Refuse to operate when the node
+// process flavor and git's reported repo path disagree, and warn on the slow combo.
+function assertConsistentEnv() {
+  const top = git(["rev-parse", "--show-toplevel"]);
+  const cwd = process.cwd();
+  const isWinPath = (p) => /^[a-zA-Z]:[\\/]/.test(p);
+  if (isWinPath(cwd) !== isWinPath(top)) {
+    throw new Error(
+      "Mixed environment detected — refusing to manage worktrees.\n" +
+        `  node cwd:        ${cwd}\n` +
+        `  git toplevel:    ${top}\n` +
+        "node and git disagree on path flavor (Windows C:\\ vs POSIX /mnt/c). " +
+        "Run /ship-batch and /ship-issue from ONE environment only — either native " +
+        "Windows (PowerShell) or WSL, not both against the same checkout."
+    );
+  }
+  if (process.platform !== "win32" && top.startsWith("/mnt/")) {
+    console.warn(
+      "Warning: running under WSL against a Windows-disk path (/mnt/...). git, npm and " +
+        "supabase will be slow here. For speed, clone the repo inside the WSL filesystem."
+    );
+  }
+}
+
 // ---------- repo geometry ----------
 function repoRoot() {
   return git(["rev-parse", "--show-toplevel"]);
@@ -199,6 +226,7 @@ function buildPlan(issues) {
 
 // ---------- commands ----------
 function cmdPlan(flags) {
+  assertConsistentEnv();
   const state = flags.state || "open";
   const args = ["issue", "list", "--state", state, "--limit", "100", "--json", "number,title,body,labels"];
   if (flags.label) args.push("--label", flags.label);
@@ -266,6 +294,7 @@ function resolveIssue(issue, flags) {
 function cmdAdd(positional, flags) {
   const issue = positional[0];
   if (!issue) throw new Error("usage: add <issue> [--base <ref>]");
+  assertConsistentEnv();
   const it = resolveIssue(issue, flags);
   const base = flags.base || "origin/main";
   const leaf = `${it.number}-${it.slug}`;
