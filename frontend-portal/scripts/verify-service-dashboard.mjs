@@ -83,19 +83,43 @@ test('AC: renderiza os 5 KPIs com seus rotulos pt-BR', () => {
   }
   // Os KPIs devem ser renderizados via o primitivo KpiCard (reuso, nao card custom).
   assert.match(src, /<KpiCard\b/, 'os indicadores devem usar o primitivo KpiCard')
-  // O faturamento do mes deve ser formatado com formatBRL.
+  // Binding label->valor: dentro do MESMO <KpiCard ... /> que tem
+  // label="Faturamento do mês", o valor deve passar por formatBRL. Janela temperada
+  // que nao cruza para o proximo <KpiCard isola este cartao (impede que um formatBRL
+  // de outro cartao satisfaca a asercao).
+  const fatCard = src.match(
+    /<KpiCard\b(?:(?!<KpiCard)[\s\S])*?label="Faturamento do mês"(?:(?!<KpiCard)[\s\S])*?\/>/,
+  )
+  assert.ok(fatCard, 'deve existir um <KpiCard label="Faturamento do mês" .../>')
+  assert.match(
+    fatCard[0],
+    /formatBRL\(/,
+    'o KpiCard "Faturamento do mês" deve formatar seu valor com formatBRL',
+  )
+})
+
+// AC (guard de campos): as derivacoes leem os campos-fonte corretos da view.
+test('AC: ServiceDashboard.tsx referencia os campos-fonte turnaround_hours e closed_at', () => {
+  const src = read(SCREEN_PATH)
   assert.match(
     src,
-    /value=\{\s*formatBRL\(/,
-    'o KPI de faturamento deve usar formatBRL para o valor',
+    /\bturnaround_hours\b/,
+    'a derivacao de turnaround deve ler o campo turnaround_hours',
+  )
+  assert.match(
+    src,
+    /\bclosed_at\b/,
+    'as derivacoes de mes/faturamento devem ler o campo closed_at',
   )
 })
 
 // AC: Grafico 1 — OS por status (ChartCard pie, xKey="status").
 test('AC: grafico de OS por status e um ChartCard type="pie" com xKey="status"', () => {
   const src = read(SCREEN_PATH)
-  // Bloco do ChartCard de status: do <ChartCard ate o />, deve conter pie e status.
-  const pieCard = src.match(/<ChartCard\b[\s\S]*?xKey="status"[\s\S]*?\/>/)
+  // Bloco do ChartCard de status: padrao temperado que NAO cruza para o proximo
+  // <ChartCard, garantindo que a janela cubra um unico cartao (evita falso-positivo
+  // num swap status<->faturamento).
+  const pieCard = src.match(/<ChartCard\b(?:(?!<ChartCard)[\s\S])*?xKey="status"(?:(?!<ChartCard)[\s\S])*?\/>/)
   assert.ok(pieCard, 'deve existir um <ChartCard ... xKey="status" .../>')
   assert.match(
     pieCard[0],
@@ -113,7 +137,9 @@ test('AC: grafico de OS por status e um ChartCard type="pie" com xKey="status"',
 // AC: Grafico 2 — Faturamento no tempo (ChartCard line, xKey="period", currency).
 test('AC: grafico de faturamento e um ChartCard type="line" period/currency', () => {
   const src = read(SCREEN_PATH)
-  const lineCard = src.match(/<ChartCard\b[\s\S]*?xKey="period"[\s\S]*?\/>/)
+  // Padrao temperado: a janela do cartao de faturamento nao pode atravessar para o
+  // proximo <ChartCard, isolando este cartao (um swap line<->pie nao passa).
+  const lineCard = src.match(/<ChartCard\b(?:(?!<ChartCard)[\s\S])*?xKey="period"(?:(?!<ChartCard)[\s\S])*?\/>/)
   assert.ok(lineCard, 'deve existir um <ChartCard ... xKey="period" .../>')
   assert.match(
     lineCard[0],
@@ -140,10 +166,11 @@ test('AC: lista de OS abertas mais antigas (filtra aberta, ordena por opened_at)
     src.includes('OS abertas mais antigas'),
     'a secao deve ter o titulo "OS abertas mais antigas"',
   )
-  // Filtra apenas as OS abertas.
+  // Filtra apenas as OS abertas (contrato significativo, refactor-safe: nao prende
+  // o formato do arrow nem o nome do parametro).
   assert.match(
     src,
-    /\.filter\(\s*\(\s*r\s*\)\s*=>\s*r\.status\s*===\s*'aberta'\s*\)/,
+    /status\s*===\s*'aberta'/,
     "a lista deve filtrar status === 'aberta'",
   )
   // Ordena referenciando opened_at (mais antiga primeiro).
