@@ -113,6 +113,20 @@ const MOCK_MENU: MenuItem[] = [
       },
     ],
   },
+  // DIA Fast BI (issue #15) — dashboard Visão do Dono (views analíticas).
+  {
+    id: 'fast-bi',
+    text: 'Fast BI',
+    icon: 'BarChart3',
+    children: [
+      {
+        id: 'fast-bi-owner-overview',
+        text: 'Visão do Dono',
+        icon: 'BarChart3',
+        spec: { title: 'Visão do Dono', kind: 'component', componentKey: 'dia-overview' },
+      },
+    ],
+  },
   // DIA dealership domain (issue #4) — cadastro de estoque de veículos.
   {
     id: 'dealership',
