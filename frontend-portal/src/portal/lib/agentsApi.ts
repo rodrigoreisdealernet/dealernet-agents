@@ -776,6 +776,72 @@ export async function cancelPartSale(entityId: string): Promise<void> {
   unwrap(res)
 }
 
+// ── Fast BI — Visão do Dono (issue #15) ─────────────────────────────────────
+// Leitura direta das views analíticas (issue #14): v_dia_owner_kpis (linha única),
+// v_dia_sales_trend (90 dias diário) e v_dia_inventory_summary (por faixa de idade).
+// Somente leitura — alimenta a tela DiaOverview (KpiCards + ChartCards).
+
+export interface OwnerKpis {
+  as_of: string | null
+  sales_units_month: number
+  sales_revenue_month: number
+  margin_month: number
+  service_orders_open: number
+  service_revenue_month: number
+  service_avg_turnaround: number
+  inventory_vehicle_value: number
+  floor_plan_total: number
+  avg_days_in_stock: number
+  parts_inventory_value: number
+  parts_critical_count: number
+}
+
+const OWNER_KPI_COLS =
+  'as_of, sales_units_month, sales_revenue_month, margin_month, service_orders_open, service_revenue_month, service_avg_turnaround, inventory_vehicle_value, floor_plan_total, avg_days_in_stock, parts_inventory_value, parts_critical_count'
+
+export async function getOwnerKpis(): Promise<OwnerKpis | null> {
+  const res = (await supabase
+    .from('v_dia_owner_kpis')
+    .select(OWNER_KPI_COLS)
+    .single()) as PgResponse<OwnerKpis>
+  return unwrap(res)
+}
+
+export interface SalesTrendRow {
+  sale_date: string
+  units_sold: number
+  revenue: number
+}
+
+const SALES_TREND_COLS = 'sale_date, units_sold, revenue'
+
+export async function getSalesTrend(): Promise<SalesTrendRow[]> {
+  const res = (await supabase
+    .from('v_dia_sales_trend')
+    .select(SALES_TREND_COLS)
+    .order('sale_date', { ascending: true })) as PgResponse<SalesTrendRow[]>
+  return unwrap(res) ?? []
+}
+
+export interface InventorySummaryRow {
+  age_band: string
+  brand: string
+  store: string
+  vehicles_count: number
+  inventory_value: number
+  floor_plan_cost: number
+}
+
+const INVENTORY_SUMMARY_COLS =
+  'age_band, brand, store, vehicles_count, inventory_value, floor_plan_cost'
+
+export async function getInventorySummary(): Promise<InventorySummaryRow[]> {
+  const res = (await supabase
+    .from('v_dia_inventory_summary')
+    .select(INVENTORY_SUMMARY_COLS)) as PgResponse<InventorySummaryRow[]>
+  return unwrap(res) ?? []
+}
+
 // ── Decisão (escrita) via ops-api — POST /api/ops/findings/decision (ver PRD §6.4) ──
 const OPS_API_URL = ENV.VITE_OPS_API_URL || '/api/ops'
 

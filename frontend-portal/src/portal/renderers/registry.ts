@@ -26,6 +26,8 @@ export const componentRegistry: Record<string, LazyExoticComponent<ComponentType
   'dia-parts': lazy(() => import('@/portal/renderers/screens/PartsInventory')),
   // DIA dealership domain (issue #10) — venda de peças (baixa de estoque).
   'dia-part-sales': lazy(() => import('@/portal/renderers/screens/PartSales')),
+  // DIA Fast BI (issue #15) — dashboard Visão do Dono.
+  'dia-overview': lazy(() => import('@/portal/renderers/screens/DiaOverview')),
 }
 
 export function resolveComponent(key: string) {
