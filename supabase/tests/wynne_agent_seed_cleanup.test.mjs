@@ -7,6 +7,9 @@
 // O arquivo seed.sql contem seus proprios BEGIN/COMMIT; para manter o teste seguro,
 // a harness remove somente essas linhas de controle transacional, envolve o seed
 // inteiro em BEGIN ... ROLLBACK e aplica o seed duas vezes antes das assercoes.
+// O seed nao cria findings de vehicle-aging-analyst; por isso AC3 (findings
+// "permanecem") e' provado com uma fixture inserida antes do replay final, que
+// a limpeza escopada dos agentes Wynne NAO deve apagar.
 //
 // COMO RODAR:
 //   node --test --test-concurrency=1 supabase/tests/wynne_agent_seed_cleanup.test.mjs
@@ -57,6 +60,9 @@ const find = (out, key) => lines(out).find((l) => l.startsWith(`${key}|`))?.spli
 function withSeedReplay(assertionsSql) {
   return psql(`begin;
 ${SEED_IN_ROLLBACK}
+insert into finding (tenant_id, agent_key, finding_type, severity, fingerprint)
+values ((select id from tenants where tenant_key = 'demo-ops-a'),
+        '${VEHICLE_AGENT_KEY}', 'aging', 'medium', 'test-va-fixture-1');
 ${SEED_IN_ROLLBACK}
 ${assertionsSql}
 rollback;
@@ -77,9 +83,10 @@ select 'ops_agent_config_current_vehicle', count(*)
 select 'finding_removed', count(*)
   from finding
   where agent_key in (${REMOVED_AGENT_LIST_SQL});
-select 'finding_vehicle', count(*)
+select 'finding_vehicle_fixture', count(*)
   from finding
-  where agent_key = '${VEHICLE_AGENT_KEY}';
+  where agent_key = '${VEHICLE_AGENT_KEY}'
+    and fingerprint = 'test-va-fixture-1';
 select 'ops_agent_status_view_removed', count(*)
   from ops_agent_status_view
   where agent_key in (${REMOVED_AGENT_LIST_SQL});
@@ -100,9 +107,10 @@ select 'ops_findings_view_removed', count(*)
     `vehicle-aging-analyst deveria permanecer em ops_agent_config_current; saida=${out}`,
   )
   assert.deepEqual(find(out, 'finding_removed'), ['finding_removed', '0'], `finding deveria limpar agentes Wynne; saida=${out}`)
-  assert.ok(
-    Number(find(out, 'finding_vehicle')?.[1] ?? 0) > 0,
-    `findings de vehicle-aging-analyst deveriam permanecer; saida=${out}`,
+  assert.deepEqual(
+    find(out, 'finding_vehicle_fixture'),
+    ['finding_vehicle_fixture', '1'],
+    `fixture de finding vehicle-aging-analyst deveria sobreviver ao replay final do seed; saida=${out}`,
   )
   assert.deepEqual(
     find(out, 'ops_agent_status_view_removed'),
