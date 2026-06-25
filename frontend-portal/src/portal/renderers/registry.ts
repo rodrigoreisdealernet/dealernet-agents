@@ -17,6 +17,7 @@ export const componentRegistry: Record<string, LazyExoticComponent<ComponentType
   'dia-sales': lazy(() => import('@/portal/renderers/screens/SalesDashboard')),
   // Fast BI de Peças (issue #18) — dashboard read-only de estoque/vendas de peças.
   'dia-parts-bi': lazy(() => import('@/portal/renderers/screens/PartsBI')),
+  'dia-vehicle-inventory': lazy(() => import('@/portal/renderers/screens/VehicleInventoryBI')),
   // DIA dealership domain (issue #4) — primeira entidade de negócio com CRUD.
   'dia-vehicles': lazy(() => import('@/portal/renderers/screens/VehiclesInventory')),
   // DIA dealership domain (issue #5) — dados mestres empresa/marca com CRUD.
