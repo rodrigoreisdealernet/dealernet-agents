@@ -57,7 +57,7 @@ const MIGRATION_SQL = [
     'utf8',
   ),
   readFileSync(
-    join(__dirname, '..', 'migrations', '20260625150000_admin_update_profile_sync_app_metadata.sql'),
+    join(__dirname, '..', 'migrations', '20260625150100_admin_update_profile_sync_app_metadata.sql'),
     'utf8',
   ),
 ].join('\n')
