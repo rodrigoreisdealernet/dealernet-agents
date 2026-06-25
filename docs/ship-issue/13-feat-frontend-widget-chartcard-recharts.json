@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/13",
   "pr": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/20",
   "prUrl": null,
-  "updatedAt": "2026-06-25T18:31:37.806Z",
+  "updatedAt": "2026-06-25T18:34:24.355Z",
   "steps": [
     {
       "id": "spec",
@@ -56,8 +56,8 @@
     {
       "id": "code-review",
       "label": "06 · Code review",
-      "status": "pending",
-      "summary": "",
+      "status": "done",
+      "summary": "Tests OK; diff aprovado apos fix do import nao usado (cn). PR pronto.",
       "artifacts": [],
       "notes": [],
       "gate": null
@@ -65,11 +65,11 @@
     {
       "id": "merge",
       "label": "Merge (human gate)",
-      "status": "pending",
-      "summary": "",
+      "status": "waiting",
+      "summary": "Aguardando gate humano de merge",
       "artifacts": [],
       "notes": [],
-      "gate": null
+      "gate": "merge"
     }
   ]
 }
