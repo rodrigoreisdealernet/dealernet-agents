@@ -247,6 +247,11 @@ export const usePortalStore = create<PortalState>()(
     } else {
       rect = floatingRect(mdiSize, count)
     }
+    // Telas de operação/CRUD (kind 'component' sem tamanho explícito) abrem
+    // MAXIMIZADAS por padrão, ocupando a área de trabalho. Diálogos (com
+    // width/height explícito) seguem flutuantes/centralizados. Guarda o rect
+    // flutuante em prevRect para que "restaurar" volte a um tamanho razoável.
+    const openMaximized = spec.kind === 'component' && !explicitSize
     const win: PortalWindow = {
       id: nextId(),
       title: spec.title,
@@ -256,9 +261,10 @@ export const usePortalStore = create<PortalState>()(
       componentKey: spec.componentKey,
       params: spec.params,
       ...rect,
-      maximized: false,
+      maximized: openMaximized,
       minimized: false,
       zIndex: z,
+      ...(openMaximized ? { prevRect: rect } : {}),
     }
     set({ windows: [...windows, win], activeWindowId: win.id, topZ: z })
   },

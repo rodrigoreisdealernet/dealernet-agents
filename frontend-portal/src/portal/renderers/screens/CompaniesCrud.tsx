@@ -8,10 +8,13 @@ import {
   createCompany,
   updateCompany,
   deleteCompany,
+  getBrands,
   type CompanyRow,
   type CompanyInput,
+  type BrandRow,
 } from '@/portal/lib/agentsApi'
-import { KpiCard, Badge, ScreenShell, type Tone } from './ui'
+import { KpiCard, Badge, ScreenShell, RowActions, RowActionButton, type Tone } from './ui'
+import { Pencil, Trash2 } from 'lucide-react'
 
 type FormState = CompanyInput & { entity_id?: string }
 
@@ -22,6 +25,7 @@ const EMPTY_FORM: FormState = {
   city: '',
   state: '',
   status: 'ativo',
+  brand_id: '',
 }
 
 function statusTone(s: string | null | undefined): Tone {
@@ -30,6 +34,7 @@ function statusTone(s: string | null | undefined): Tone {
 
 export default function CompaniesCrud() {
   const [rows, setRows] = useState<CompanyRow[]>([])
+  const [brands, setBrands] = useState<BrandRow[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState<FormState | null>(null)
@@ -37,9 +42,10 @@ export default function CompaniesCrud() {
 
   const load = useCallback(() => {
     setLoading(true)
-    getCompanies()
-      .then((r) => {
+    Promise.all([getCompanies(), getBrands()])
+      .then(([r, b]) => {
         setRows(r)
+        setBrands(b)
         setError(null)
       })
       .catch((e) => setError(String(e)))
@@ -73,6 +79,7 @@ export default function CompaniesCrud() {
         city: form.city?.trim() || null,
         state: form.state?.trim() || null,
         status: form.status ?? 'ativo',
+        brand_id: form.brand_id || null,
       }
       if (form.entity_id) await updateCompany(form.entity_id, payload)
       else await createCompany(payload)
@@ -123,6 +130,7 @@ export default function CompaniesCrud() {
       {form && (
         <CompanyForm
           form={form}
+          brands={brands}
           saving={saving}
           onChange={setForm}
           onCancel={() => setForm(null)}
@@ -137,6 +145,7 @@ export default function CompaniesCrud() {
               <th className="px-3 py-2">Empresa</th>
               <th className="px-3 py-2">CNPJ</th>
               <th className="px-3 py-2">Cidade/UF</th>
+              <th className="px-3 py-2">Marca</th>
               <th className="px-3 py-2">Situação</th>
               <th className="px-3 py-2 text-right">Ações</th>
             </tr>
@@ -150,47 +159,48 @@ export default function CompaniesCrud() {
                 </td>
                 <td className="px-3 py-2 tabular-nums">{r.cnpj ?? '—'}</td>
                 <td className="px-3 py-2">{[r.city, r.state].filter(Boolean).join(' / ') || '—'}</td>
+                <td className="px-3 py-2">{r.brand_name ?? '—'}</td>
                 <td className="px-3 py-2">
                   <Badge tone={statusTone(r.status)}>{r.status}</Badge>
                 </td>
                 <td className="px-3 py-2 text-right">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setForm({
-                        entity_id: r.entity_id,
-                        legal_name: r.legal_name ?? '',
-                        trade_name: r.trade_name ?? '',
-                        cnpj: r.cnpj ?? '',
-                        city: r.city ?? '',
-                        state: r.state ?? '',
-                        status: (r.status as 'ativo' | 'inativo') ?? 'ativo',
-                      })
-                    }
-                    className="mr-2 text-xs font-medium text-primary hover:underline"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => remove(r)}
-                    className="text-xs font-medium text-destructive hover:underline"
-                  >
-                    Inativar
-                  </button>
+                  <RowActions>
+                    <RowActionButton
+                      icon={<Pencil size={14} />}
+                      label="Editar"
+                      onClick={() =>
+                        setForm({
+                          entity_id: r.entity_id,
+                          legal_name: r.legal_name ?? '',
+                          trade_name: r.trade_name ?? '',
+                          cnpj: r.cnpj ?? '',
+                          city: r.city ?? '',
+                          state: r.state ?? '',
+                          status: (r.status as 'ativo' | 'inativo') ?? 'ativo',
+                          brand_id: r.brand_id ?? '',
+                        })
+                      }
+                    />
+                    <RowActionButton
+                      tone="danger"
+                      icon={<Trash2 size={14} />}
+                      label="Inativar"
+                      onClick={() => remove(r)}
+                    />
+                  </RowActions>
                 </td>
               </tr>
             ))}
             {rows.length === 0 && !loading && (
               <tr>
-                <td colSpan={5} className="px-3 py-6 text-center text-sm text-muted-foreground">
+                <td colSpan={6} className="px-3 py-6 text-center text-sm text-muted-foreground">
                   Nenhuma empresa cadastrada.
                 </td>
               </tr>
             )}
             {loading && (
               <tr>
-                <td colSpan={5} className="px-3 py-6 text-center text-sm text-muted-foreground">
+                <td colSpan={6} className="px-3 py-6 text-center text-sm text-muted-foreground">
                   Carregando…
                 </td>
               </tr>
@@ -204,12 +214,14 @@ export default function CompaniesCrud() {
 
 function CompanyForm({
   form,
+  brands,
   saving,
   onChange,
   onCancel,
   onSubmit,
 }: {
   form: FormState
+  brands: BrandRow[]
   saving: boolean
   onChange: (f: FormState) => void
   onCancel: () => void
@@ -254,6 +266,21 @@ function CompanyForm({
           >
             <option value="ativo">ativo</option>
             <option value="inativo">inativo</option>
+          </select>
+        </label>
+        <label className="text-xs text-muted-foreground">
+          Marca
+          <select
+            className={inputCls}
+            value={form.brand_id ?? ''}
+            onChange={(e) => set('brand_id', e.target.value || null)}
+          >
+            <option value="">— sem marca —</option>
+            {brands.map((b) => (
+              <option key={b.entity_id} value={b.entity_id}>
+                {b.name ?? b.entity_id}
+              </option>
+            ))}
           </select>
         </label>
       </div>

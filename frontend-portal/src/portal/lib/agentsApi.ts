@@ -336,6 +336,10 @@ export interface CompanyRow {
   city: string | null
   state: string | null
   status: 'ativo' | 'inativo' | string
+  /** FK opcional → entity_id da marca associada. */
+  brand_id: string | null
+  /** Nome da marca resolvido (left join à versão corrente da marca). */
+  brand_name: string | null
 }
 
 /** Campos editáveis da empresa (payload das RPCs create/update_company). */
@@ -346,10 +350,12 @@ export interface CompanyInput {
   city?: string | null
   state?: string | null
   status?: 'ativo' | 'inativo'
+  /** FK opcional → entity_id da marca; '' ou null desassocia. */
+  brand_id?: string | null
 }
 
 const COMPANY_COLS =
-  'entity_id, source_record_id, name, legal_name, trade_name, cnpj, city, state, status'
+  'entity_id, source_record_id, name, legal_name, trade_name, cnpj, city, state, status, brand_id, brand_name'
 
 export async function getCompanies(): Promise<CompanyRow[]> {
   const res = (await supabase
@@ -368,6 +374,8 @@ function companyPayload(input: CompanyInput): Record<string, unknown> {
   if (input.city) p.city = input.city
   if (input.state) p.state = input.state
   if (input.status) p.status = input.status
+  // brand_id: enviar explicitamente quando definido (inclui '' para desassociar).
+  if (input.brand_id !== undefined) p.brand_id = input.brand_id || null
   return p
 }
 
