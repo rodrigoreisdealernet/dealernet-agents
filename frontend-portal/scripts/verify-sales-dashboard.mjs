@@ -205,6 +205,22 @@ test('AC3: KPI cards de receita VN/VU/total e margem formatados via formatBRL', 
   }
 })
 
+test('AC3: os KPIs sao escopados ao mes atual (currentMonth), nao all-time', () => {
+  const src = read(SCREEN_PATH)
+  // Deve existir o computo do "mes atual".
+  assert.ok(
+    src.includes('currentMonth'),
+    'SalesDashboard.tsx deve computar o mes atual (token currentMonth)',
+  )
+  // E a memo de KPIs deve filtrar pelo mes atual — remover esse filtro (KPIs
+  // all-time) deve quebrar este teste.
+  assert.match(
+    src,
+    /const kpis[\s\S]*?r\.period_month\s*===\s*currentMonth/,
+    'a memo kpis deve filtrar por r.period_month === currentMonth (KPIs do mes, nao all-time)',
+  )
+})
+
 // ── AC4: linha VN×VU agregada do summary por period_month × condition ─────────
 test('AC4: a linha VN×VU e derivada do summary (agrega por period_month x condition), nao da trend', () => {
   const src = read(SCREEN_PATH)
@@ -233,8 +249,8 @@ test('AC4: a linha VN×VU e derivada do summary (agrega por period_month x condi
     'a agregacao deve usar period_month do summary',
   )
   assert.ok(
-    src.includes('isVN(r.condition)') || src.includes('r.condition'),
-    'a agregacao deve ramificar pela coluna condition do summary',
+    src.includes('isVN(r.condition)'),
+    'a agregacao deve ramificar pela coluna condition via isVN(r.condition) — prova o split VN/VU',
   )
   // E o data do grafico de linha deve ser o array agregado trendData, nao a trend crua.
   assert.match(
@@ -253,6 +269,11 @@ test('AC5: ChartCard de barras de vendas por marca', () => {
     src,
     /type="bar"[\s\S]*?data=\{byBrandData\}/,
     'o grafico de barras deve ser alimentado por byBrandData (unidades por marca)',
+  )
+  // Edge case: linhas com brand nulo devem cair num rotulo de fallback.
+  assert.ok(
+    src.includes("'Sem marca'"),
+    "a agregacao por marca deve ter fallback 'Sem marca' quando r.brand e null",
   )
 })
 
