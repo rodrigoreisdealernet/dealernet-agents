@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/18",
   "pr": "29",
   "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/29",
-  "updatedAt": "2026-06-25T19:19:41.592Z",
+  "updatedAt": "2026-06-25T19:22:06.095Z",
   "steps": [
     {
       "id": "spec",
@@ -66,8 +66,8 @@
     {
       "id": "code-review",
       "label": "06 · Code review",
-      "status": "running",
-      "summary": "Reviewer code-reviewing the diff on PR #29",
+      "status": "done",
+      "summary": "Reviewer APPROVED PR #29: ACs met, UNION split + month filter correct, RLS-safe reads. PR marked ready.",
       "artifacts": [],
       "notes": [],
       "gate": null
@@ -75,11 +75,11 @@
     {
       "id": "merge",
       "label": "Merge (human gate)",
-      "status": "pending",
-      "summary": "",
+      "status": "waiting",
+      "summary": "Awaiting human merge gate. PR #29 ready, all checks green (34/34 tests).",
       "artifacts": [],
       "notes": [],
-      "gate": null
+      "gate": "merge"
     }
   ]
 }
