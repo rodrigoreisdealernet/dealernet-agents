@@ -2,13 +2,14 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
+import { getUserPrefs } from './portal/lib/userPreferences.ts'
 
 // Aplica modo (light/dark) e accent salvos ANTES do 1º render, evitando "flash"
 // de tema errado e mantendo o atributo consistente independentemente de qual
 // componente monta o hook useTheme primeiro.
 ;(() => {
   try {
-    const mode = localStorage.getItem('dealernet-portal-theme')
+    const mode = getUserPrefs().themeMode
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
     const theme = mode === 'light' || mode === 'dark' ? mode : prefersDark ? 'dark' : 'light'
     document.documentElement.setAttribute('data-theme', theme)
