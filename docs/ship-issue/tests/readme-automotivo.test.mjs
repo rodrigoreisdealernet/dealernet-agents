@@ -238,13 +238,32 @@ test('AC4: @dia-rental.dev demo accounts are annotated as a legacy placeholder',
   const firstUse = lines.findIndex((l) => l.includes('@dia-rental.dev'))
   assert.ok(firstUse !== -1)
 
-  // A legacy/annotation note must exist (anywhere in the doc, and specifically tying
-  // dia-rental.dev to "legacy"). Calibrated to the committed note wording.
-  const noteRe = /dia-rental\.dev[\s\S]{0,400}legacy|legacy[\s\S]{0,400}dia-rental\.dev/i
+  // The intentional annotation calls the @dia-rental.dev domain a "legacy placeholder"
+  // (the note wraps across a markdown line, so "legacy" and "placeholder" are separated
+  // by "\n> "). We require BOTH (a) that specific two-word marker, and (b) that it sits
+  // tightly next to a @dia-rental.dev mention — so the test is mutation-resistant:
+  //
+  //   - A bare "legacy" near dia-rental.dev is NOT enough: the unrelated "Legacy
+  //     break-glass account" table row (`demo@dia-rental.dev | Legacy break-glass ...`)
+  //     would otherwise satisfy a loose window. It says "Legacy" but never "placeholder".
+  //   - "placeholder" alone is not enough either ("placeholder data" / "Frontend
+  //     placeholder" appear elsewhere with no dia-rental.dev nearby).
+  //
+  // So: "@dia-rental.dev" ... (≤120 chars, allowing the markdown line-wrap) ...
+  // "legacy" + wrap + "placeholder". Deleting the intentional note removes the only
+  // "legacy placeholder" phrase in the file → this assertion flips RED while the demo
+  // emails remain.
+  const legacyPlaceholder = /legacy[\s>*]{0,8}placeholder/i
   assert.match(
     readme,
-    noteRe,
-    'A "legacy placeholder" annotation must accompany the @dia-rental.dev demo emails',
+    legacyPlaceholder,
+    'The @dia-rental.dev annotation must use the "legacy placeholder" marker',
+  )
+  const tiedNoteRe = /@dia-rental\.dev[\s\S]{0,120}?legacy[\s>*]{0,8}placeholder/i
+  assert.match(
+    readme,
+    tiedNoteRe,
+    'A "legacy placeholder" annotation must accompany (and sit beside) the @dia-rental.dev demo emails',
   )
 })
 
@@ -253,11 +272,30 @@ test('AC4: @dia-rental.dev demo accounts are annotated as a legacy placeholder',
 test('AC6: rental-app-frontend service reference, if present, is annotated as legacy', () => {
   if (!readme.includes('rental-app-frontend')) return // acceptable: replaced with frontend-portal
 
-  // Annotation must explain it's the legacy release name and points at the real app.
-  const annotationRe = /rental-app-frontend[\s\S]{0,400}(legacy|frontend-portal|DIA Portal)|(legacy release|frontend-portal)[\s\S]{0,400}rental-app-frontend/i
+  // The intentional annotation is a comment that names "rental-app-frontend" as the
+  // "legacy release name" and ties it to the real app. We anchor on that specific phrase
+  // — "legacy release name" — sitting tightly beside a rental-app-frontend / rental-app
+  // mention. This is mutation-resistant:
+  //
+  //   - The old window matched on bare "legacy", "frontend-portal", or "DIA Portal"
+  //     within 400 chars. That passes even if the annotation comment is deleted, because
+  //     the kubectl command (`svc/rental-app-frontend`) and the repo-map / DIA Portal
+  //     prose mention those terms incidentally nearby. Not a real check.
+  //   - "legacy release name" appears ONLY in the intentional annotation. Deleting the
+  //     annotation comment removes that phrase from the file → this flips RED even though
+  //     the kubectl `rental-app-frontend` reference still remains.
+  const legacyReleaseName = /legacy release name/i
   assert.match(
     readme,
-    annotationRe,
-    'rental-app-frontend must be annotated (legacy release name) and tied to the DIA Portal frontend',
+    legacyReleaseName,
+    'rental-app-frontend must be annotated with the "legacy release name" marker',
+  )
+  // And that marker must sit beside a rental-app(-frontend) mention (the annotation reads
+  // `(legacy release name "rental-app" yields "rental-app-frontend")`), not float free.
+  const tiedAnnotationRe = /legacy release name[\s\S]{0,80}?rental-app/i
+  assert.match(
+    readme,
+    tiedAnnotationRe,
+    'The "legacy release name" annotation must be tied to the rental-app-frontend service name',
   )
 })
