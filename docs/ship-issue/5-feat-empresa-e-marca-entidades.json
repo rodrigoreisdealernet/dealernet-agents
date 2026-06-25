@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/5",
   "pr": null,
   "prUrl": null,
-  "updatedAt": "2026-06-25T18:25:04.837Z",
+  "updatedAt": "2026-06-25T18:29:48.445Z",
   "steps": [
     {
       "id": "spec",
@@ -34,9 +34,14 @@
     {
       "id": "code",
       "label": "03 · Code",
-      "status": "pending",
-      "summary": "",
-      "artifacts": [],
+      "status": "done",
+      "summary": "Migration 20260625150000 (RPCs create/update/delete company+brand, views v_dia_*_current security_invoker, RLS via RPC), telas CompaniesCrud/BrandsCrud + nav, seed idempotente 2 empresas + 3 marcas",
+      "artifacts": [
+        {
+          "label": "Migration",
+          "href": "supabase/migrations/20260625150000_dia_company_brand_entity_crud.sql"
+        }
+      ],
       "notes": [],
       "gate": null
     },
