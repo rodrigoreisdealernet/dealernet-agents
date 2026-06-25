@@ -1,0 +1,75 @@
+{
+  "issue": "8",
+  "title": "feat: Peças — entidade + CRUD",
+  "slug": "feat-pecas-entidade-crud",
+  "branch": "feature/8-feat-pecas-entidade-crud",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/8",
+  "pr": null,
+  "prUrl": null,
+  "updatedAt": "2026-06-25T18:26:03.975Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "Spec escrita: entidade dedicada 'part' (SCD2), RPCs endurecidas, 2 views, tela portal nativo",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Auto-approved (batch)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    }
+  ]
+}
