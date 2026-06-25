@@ -4,9 +4,9 @@
   "slug": "feat-ordem-de-servico-oficina",
   "branch": "feature/7-feat-ordem-de-servico-oficina",
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/7",
-  "pr": null,
+  "pr": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/24",
   "prUrl": null,
-  "updatedAt": "2026-06-25T18:30:11.637Z",
+  "updatedAt": "2026-06-25T18:36:34.634Z",
   "steps": [
     {
       "id": "spec",
@@ -38,8 +38,8 @@
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "pending",
-      "summary": "",
+      "status": "done",
+      "summary": "Contract tests written (commit 47d64b1); draft PR #24",
       "artifacts": [],
       "notes": [],
       "gate": null
@@ -56,8 +56,8 @@
     {
       "id": "code-review",
       "label": "06 · Code review",
-      "status": "pending",
-      "summary": "",
+      "status": "done",
+      "summary": "Reviewer approve-quality: 0 blockers/majors, faithful mirror of vehicle slice",
       "artifacts": [],
       "notes": [],
       "gate": null
@@ -65,11 +65,11 @@
     {
       "id": "merge",
       "label": "Merge (human gate)",
-      "status": "pending",
-      "summary": "",
+      "status": "waiting",
+      "summary": "Ready for human merge gate",
       "artifacts": [],
       "notes": [],
-      "gate": null
+      "gate": "merge"
     }
   ]
 }
