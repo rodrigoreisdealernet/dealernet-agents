@@ -63,21 +63,11 @@ function readPrefs(storage: Storage, usuario: string): UserPreferences {
   }
 }
 
-function writePrefs(storage: Storage, usuario: string, prefs: UserPreferences): boolean {
+function writePrefs(storage: Storage, usuario: string, prefs: UserPreferences): void {
   try {
     storage.setItem(userPrefsKey(usuario), JSON.stringify(prefs))
-    return true
   } catch {
     // localStorage pode estar indisponível ou sem cota; defaults em memória bastam.
-    return false
-  }
-}
-
-function safeRemove(storage: Storage, key: string): void {
-  try {
-    storage.removeItem(key)
-  } catch {
-    // melhor esforço: a migração não pode quebrar o boot.
   }
 }
 
@@ -116,11 +106,7 @@ export function migrateLegacyKeys(usuario?: string | null): void {
   if (!next.themeMode && legacy.themeMode) next.themeMode = legacy.themeMode
   if (!next.accent && legacy.accent) next.accent = legacy.accent
   if (!next.hex && legacy.hex) next.hex = legacy.hex
-  if (writePrefs(storage, targetUsuario, next)) {
-    safeRemove(storage, LEGACY_MODE_KEY)
-    safeRemove(storage, LEGACY_ACCENT_KEY)
-    safeRemove(storage, LEGACY_HEX_KEY)
-  }
+  writePrefs(storage, targetUsuario, next)
 }
 
 export function getUserPrefs(usuario?: string | null): UserPreferences {
