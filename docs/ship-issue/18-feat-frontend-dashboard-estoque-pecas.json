@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/18",
   "pr": "29",
   "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/29",
-  "updatedAt": "2026-06-25T19:16:32.450Z",
+  "updatedAt": "2026-06-25T19:19:41.592Z",
   "steps": [
     {
       "id": "spec",
@@ -57,8 +57,8 @@
     {
       "id": "test-review",
       "label": "05 · Test review",
-      "status": "running",
-      "summary": "Reviewer auditing the test suite",
+      "status": "done",
+      "summary": "Test audit: adequate. Hardened month-sales filter + critical-row fields (commit 5092551). 34/34 green.",
       "artifacts": [],
       "notes": [],
       "gate": null
@@ -66,8 +66,8 @@
     {
       "id": "code-review",
       "label": "06 · Code review",
-      "status": "pending",
-      "summary": "",
+      "status": "running",
+      "summary": "Reviewer code-reviewing the diff on PR #29",
       "artifacts": [],
       "notes": [],
       "gate": null
