@@ -83,6 +83,9 @@ select 'ops_agent_config_current_vehicle', count(*)
 select 'finding_removed', count(*)
   from finding
   where agent_key in (${REMOVED_AGENT_LIST_SQL});
+select 'ops_workflow_run_removed', count(*)
+  from ops_workflow_run
+  where workflow_key in (${REMOVED_AGENT_LIST_SQL});
 select 'finding_vehicle_fixture', count(*)
   from finding
   where agent_key = '${VEHICLE_AGENT_KEY}'
@@ -107,6 +110,11 @@ select 'ops_findings_view_removed', count(*)
     `vehicle-aging-analyst deveria permanecer em ops_agent_config_current; saida=${out}`,
   )
   assert.deepEqual(find(out, 'finding_removed'), ['finding_removed', '0'], `finding deveria limpar agentes Wynne; saida=${out}`)
+  assert.deepEqual(
+    find(out, 'ops_workflow_run_removed'),
+    ['ops_workflow_run_removed', '0'],
+    `ops_workflow_run deveria limpar agentes Wynne; saida=${out}`,
+  )
   assert.deepEqual(
     find(out, 'finding_vehicle_fixture'),
     ['finding_vehicle_fixture', '1'],
