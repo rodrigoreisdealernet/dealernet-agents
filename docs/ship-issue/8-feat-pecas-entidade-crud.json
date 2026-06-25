@@ -4,9 +4,9 @@
   "slug": "feat-pecas-entidade-crud",
   "branch": "feature/8-feat-pecas-entidade-crud",
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/8",
-  "pr": null,
+  "pr": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/22",
   "prUrl": null,
-  "updatedAt": "2026-06-25T18:26:03.975Z",
+  "updatedAt": "2026-06-25T18:36:25.801Z",
   "steps": [
     {
       "id": "spec",
@@ -29,8 +29,8 @@
     {
       "id": "code",
       "label": "03 · Code",
-      "status": "pending",
-      "summary": "",
+      "status": "done",
+      "summary": "Migration 20260625150000 (catálogo+RPCs+2 views), seed 15 peças, tela PartsInventory + wiring portal",
       "artifacts": [],
       "notes": [],
       "gate": null
@@ -38,8 +38,8 @@
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "pending",
-      "summary": "",
+      "status": "done",
+      "summary": "part_crud.test.mjs: RPCs, SCD2, soft-delete, views, stock_status, RLS",
       "artifacts": [],
       "notes": [],
       "gate": null
@@ -56,8 +56,8 @@
     {
       "id": "code-review",
       "label": "06 · Code review",
-      "status": "pending",
-      "summary": "",
+      "status": "done",
+      "summary": "Test-review PASS + code-review APPROVE; sem bloqueios; PR pronto",
       "artifacts": [],
       "notes": [],
       "gate": null
@@ -65,11 +65,11 @@
     {
       "id": "merge",
       "label": "Merge (human gate)",
-      "status": "pending",
-      "summary": "",
+      "status": "waiting",
+      "summary": "Aguardando aprovação humana de merge",
       "artifacts": [],
       "notes": [],
-      "gate": null
+      "gate": "merge"
     }
   ]
 }
