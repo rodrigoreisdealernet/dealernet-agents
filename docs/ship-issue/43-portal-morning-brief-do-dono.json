@@ -1,0 +1,93 @@
+{
+  "issue": "43",
+  "title": "Portal: Morning Brief do Dono - visao por marca, lojas, acoes do agente",
+  "slug": "43-portal-morning-brief-do-dono",
+  "branch": "feature/43-portal-morning-brief-do-dono",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/43",
+  "pr": "48",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/48",
+  "updatedAt": "2026-06-25T21:39:08.797Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "7 criterios de aceite redigidos",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/43-portal-morning-brief-do-dono.md"
+        }
+      ],
+      "notes": [
+        "lendo issue #43, protótipos v7 e código relevante",
+        "spec com 7 critérios de aceite postada na issue #43"
+      ],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec aprovada pelo humano (--approved)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": "migration v_dia_owner_brief_by_brand/by_store + FP<7d; MorningBrief.tsx mobile+desktop; agentsApi; registry+menu; deep-link ?screen=",
+      "artifacts": [],
+      "notes": [
+        "Lendo spec, prototipos e views existentes; iniciando migration + screen",
+        "SQL validado (2 views por marca/loja, prev-day, FP at-risk >=83d). Iniciando agentsApi + tela MorningBrief",
+        "tsc OK; views validadas no DB live; tela+menu+deep-link prontos. Commitando."
+      ],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "done",
+      "summary": "27 testes verdes (12 SQL contrato + 15 wiring)",
+      "artifacts": [],
+      "notes": [
+        "Estudando harness psql/node --test; escrevendo contrato SQL das views owner_brief + wiring frontend",
+        "12 contratos SQL (views/helper, ontem on-the-fly, Sem marca, proxy FP <7d boundary 82/83, setores NULL, drill por loja, security_invoker) + 15 wiring frontend — todos verdes. Commit + draft PR."
+      ],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "running",
+      "summary": "",
+      "artifacts": [],
+      "notes": [
+        "Blocking: FP at-risk drill sums not tested; 4 non-blocking suggestions",
+        "tester: drill agora soma fp_units_at_risk/fp_value_at_risk (iteração 1)"
+      ],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    }
+  ]
+}

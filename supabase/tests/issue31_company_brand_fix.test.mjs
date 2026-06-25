@@ -7,7 +7,7 @@
 //   node --test supabase/tests/issue31_company_brand_fix.test.mjs
 // Pre-requisitos:
 //   * container Postgres no ar: docker exec -i supabase_db_dealernet-agents psql ...
-//   * migration 20260626130000_fix_brand_catalog_company_edit_brand_assoc.sql aplicada
+//   * migration 20260626130001_fix_brand_catalog_company_edit_brand_assoc.sql aplicada
 //     (npx supabase migration up --local).
 //
 // Cobre os criterios de aceite da spec docs/specs/31-portal-cruds-acoes-como-botoes.md:

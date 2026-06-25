@@ -1,0 +1,121 @@
+{
+  "issue": "32",
+  "title": "feat(ops): primeiro agente DIA — Vehicle Stock-Aging Analyst (estoque ~90d) sobre v_dia_vehicle_current",
+  "slug": "feat-ops-primeiro-agente-dia",
+  "branch": "feature/32-feat-ops-primeiro-agente-dia",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/32",
+  "pr": "39",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/39",
+  "updatedAt": "2026-06-25T21:02:07.953Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "6 acceptance criteria drafted; grounded against revrec-analyst pattern",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/32-feat-ops-primeiro-agente-dia.md"
+        },
+        {
+          "label": "Issue comment",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/32#issuecomment-4803635813"
+        }
+      ],
+      "notes": [
+        "Starting spec: reading role file and grounding repo patterns",
+        "Reading revrec pattern and v_dia_vehicle_current view",
+        "Grounding: confirming scope/assess/record_finding/finalize pattern in ops_revrec",
+        "Drafting acceptance criteria — confirmed 12 existing vehicles, 9 qualifying (>=75d em_estoque), revrec pattern confirmed",
+        "Finalising spec — 9 qualifying vehicles confirmed (6 existing + 3 new seeds), revrec pattern verified, approve/reject via POST /findings/decision"
+      ],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec approved by human (aprovado)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": "8 files: agent+activities+workflow+worker reg+manual script+migration+seed (commit 7e428f5)",
+      "artifacts": [
+        {
+          "label": "Commit",
+          "href": "7e428f5"
+        }
+      ],
+      "notes": [
+        "studying revrec reference files + repo layout",
+        "patterns understood (ops_fleet wrappers + fleet workflow); writing files",
+        "worker.py registered; run script created; compiling+importing python",
+        "validated: py_compile+imports+arch-audit clean; migration+seed idempotent via psql ROLLBACK (scoped=9); committing",
+        "committed 7e428f5: agent+activities+workflow+worker reg+migration+seed+run script (8 files, no tests)"
+      ],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "done",
+      "summary": "21 pytest + 5 SQL contract tests green; 73-test regression sweep passed",
+      "artifacts": [],
+      "notes": [
+        "studying tester.agent.md + coder's files",
+        "confirmed test harness; writing temporal/tests/test_ops_vehicle_aging.py",
+        "pytest: 21 passed; now writing SQL contract test",
+        "node --test: 5/5 pass; running ruff + combined pytest",
+        "tests done: pytest 21 + node 5 green; draft PR #39 opened (commit 7960d85)"
+      ],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "done",
+      "summary": "PASS (1 review pass, 0 rework loops); assertions exact, hygiene clean",
+      "artifacts": [
+        {
+          "label": "Test review",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/39#issuecomment-4804067081"
+        }
+      ],
+      "notes": [
+        "Starting test review: reading reviewer role (tests mode) + spec",
+        "Read all test files + code under test; running pytest suite to confirm green",
+        "Suites green (28 py + 5 sql); posting TEST REVIEW verdict PASS on PR #39"
+      ],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "running",
+      "summary": "Reviewing full diff for correctness, security, regression risk",
+      "artifacts": [],
+      "notes": [
+        "Starting diff review: reading role, spec, and PR #39 diff",
+        "Read impl files; now auditing worker.py registration + ops_revrec reference pattern",
+        "Worker reg + severity OK; checking SQL parameterization, migration idempotency, seed SCD2",
+        "All checks pass (tests 21/21, registration complete, severity/scope/migration/seed correct); posting APPROVE review on PR #39"
+      ],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    }
+  ]
+}

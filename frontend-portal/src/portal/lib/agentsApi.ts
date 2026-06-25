@@ -918,6 +918,60 @@ export async function getInventorySummary(): Promise<InventorySummaryRow[]> {
   return unwrap(res) ?? []
 }
 
+// ── Morning Brief do Dono (issue #43) ───────────────────────────────────────
+// Leitura direta das views agregadas v_dia_owner_brief_by_brand /
+// v_dia_owner_brief_by_store (security_invoker → RLS authenticated). SOMENTE
+// leitura — uma linha por marca (e por marca/loja no drill) com os 5 setores do
+// dia anterior. Setores sem dado vêm NULL → a tela renderiza "—".
+
+export interface OwnerBriefBrandRow {
+  brand_name: string | null
+  brand_id: string | null
+  store_count: number | null
+  novos_units: number | null
+  novos_value: number | null
+  novos_margin: number | null
+  usados_units: number | null
+  usados_value: number | null
+  usados_margin: number | null
+  pecas_value: number | null
+  pecas_margin: number | null
+  at_value: number | null
+  at_margin: number | null
+  fp_units: number | null
+  fp_value: number | null
+  fp_units_at_risk: number | null
+  fp_value_at_risk: number | null
+  resultado: number | null
+}
+
+export interface OwnerBriefStoreRow extends OwnerBriefBrandRow {
+  store_name: string | null
+}
+
+const OWNER_BRIEF_BRAND_COLS =
+  'brand_name, brand_id, store_count, novos_units, novos_value, novos_margin, usados_units, usados_value, usados_margin, pecas_value, pecas_margin, at_value, at_margin, fp_units, fp_value, fp_units_at_risk, fp_value_at_risk, resultado'
+
+const OWNER_BRIEF_STORE_COLS = `${OWNER_BRIEF_BRAND_COLS}, store_name`
+
+export async function getOwnerBriefByBrand(): Promise<OwnerBriefBrandRow[]> {
+  const res = (await supabase
+    .from('v_dia_owner_brief_by_brand')
+    .select(OWNER_BRIEF_BRAND_COLS)
+    .order('resultado', { ascending: false })
+    .order('brand_name', { ascending: true })) as PgResponse<OwnerBriefBrandRow[]>
+  return unwrap(res) ?? []
+}
+
+export async function getOwnerBriefByStore(): Promise<OwnerBriefStoreRow[]> {
+  const res = (await supabase
+    .from('v_dia_owner_brief_by_store')
+    .select(OWNER_BRIEF_STORE_COLS)
+    .order('brand_name', { ascending: true })
+    .order('store_name', { ascending: true })) as PgResponse<OwnerBriefStoreRow[]>
+  return unwrap(res) ?? []
+}
+
 // ── Decisão (escrita) via ops-api — POST /api/ops/findings/decision (ver PRD §6.4) ──
 const OPS_API_URL = ENV.VITE_OPS_API_URL || '/api/ops'
 
