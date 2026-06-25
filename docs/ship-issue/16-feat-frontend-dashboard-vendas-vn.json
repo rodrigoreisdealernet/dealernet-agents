@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/16",
   "pr": "28",
   "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/28",
-  "updatedAt": "2026-06-25T19:18:59.026Z",
+  "updatedAt": "2026-06-25T19:22:28.301Z",
   "steps": [
     {
       "id": "spec",
@@ -68,20 +68,22 @@
     {
       "id": "code-review",
       "label": "06 · Code review",
-      "status": "running",
-      "summary": "Code review do diff no PR #28",
+      "status": "done",
+      "summary": "Aprovado no review do diff; 2 nits não-bloqueantes registrados",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "NB-1 (fetch trend não usado) mantido: teste estrutural fixa o import no screen; nit, não defeito"
+      ],
       "gate": null
     },
     {
       "id": "merge",
       "label": "Merge (human gate)",
-      "status": "pending",
-      "summary": "",
+      "status": "waiting",
+      "summary": "PR #28 ready + mergeable; aguardando gate humano de merge",
       "artifacts": [],
       "notes": [],
-      "gate": null
+      "gate": "merge"
     }
   ]
 }
