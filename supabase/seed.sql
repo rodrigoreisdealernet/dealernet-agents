@@ -2710,3 +2710,87 @@ END
 $$;
 
 commit;
+
+-- ===========================================================================
+-- DIA dealership domain — demo part sales (issue #10)
+-- Idempotent namespace: source_record_id LIKE 'demo-dia-part-sale-%'.
+-- ~12 sales referencing the demo parts (demo-dia-part-NNN). Created via the
+-- atomic RPC create_part_sale so the stock decrement is applied consistently:
+-- the parts block above re-seeds parts from scratch each run, so re-running the
+-- whole seed restores stock to its baseline and then applies these sales once
+-- (no double-decrement). The prior DELETE drops cancelled history too.
+-- Quantities are chosen so a few parts reach critico/zerado after the sales:
+--   part-006 (qty 18, min 3) sell 15 -> 3  = critico
+--   part-007 (qty 12, min 5) sell 8  -> 4  = critico
+--   part-010 (qty 3,  min 4) sell 3  -> 0  = zerado
+--   part-012 (qty 1,  min 2) sell 1  -> 0  = zerado
+--   part-008 (qty 9,  min 4, reorder 12) sell 6 -> 3 = critico
+-- ===========================================================================
+
+begin;
+set local request.jwt.claim.role = 'service_role';
+
+DO $$
+DECLARE
+  v_sales jsonb := jsonb_build_array(
+    -- sr, part_sr, qty, unit_price, discount, customer, salesperson, month_offset, day
+    jsonb_build_object('sr','demo-dia-part-sale-001','part_sr','demo-dia-part-001','qty',20,'unit_price',39.90,'discount',0,'customer','Auto Center Vitória','salesperson','Marina Souza','mo',-1,'day',5),
+    jsonb_build_object('sr','demo-dia-part-sale-002','part_sr','demo-dia-part-002','qty',10,'unit_price',74.90,'discount',5.00,'customer','Oficina do Zé','salesperson','Carlos Lima','mo',-1,'day',9),
+    jsonb_build_object('sr','demo-dia-part-sale-003','part_sr','demo-dia-part-003','qty',8,'unit_price',189.90,'discount',0,'customer','Frota Rápida Ltda','salesperson','Marina Souza','mo',-1,'day',14),
+    jsonb_build_object('sr','demo-dia-part-sale-004','part_sr','demo-dia-part-004','qty',30,'unit_price',59.90,'discount',20.00,'customer','Mecânica Central','salesperson','João Pedro','mo',-1,'day',20),
+    jsonb_build_object('sr','demo-dia-part-sale-005','part_sr','demo-dia-part-005','qty',6,'unit_price',49.90,'discount',0,'customer','Cliente Balcão','salesperson','Carlos Lima','mo',-1,'day',24),
+    jsonb_build_object('sr','demo-dia-part-sale-006','part_sr','demo-dia-part-006','qty',15,'unit_price',459.90,'discount',50.00,'customer','TransLog Transportes','salesperson','Marina Souza','mo',0,'day',2),
+    jsonb_build_object('sr','demo-dia-part-sale-007','part_sr','demo-dia-part-007','qty',8,'unit_price',54.90,'discount',0,'customer','Oficina do Zé','salesperson','João Pedro','mo',0,'day',4),
+    jsonb_build_object('sr','demo-dia-part-sale-008','part_sr','demo-dia-part-008','qty',6,'unit_price',98.90,'discount',0,'customer','Auto Center Vitória','salesperson','Carlos Lima','mo',0,'day',6),
+    jsonb_build_object('sr','demo-dia-part-sale-009','part_sr','demo-dia-part-009','qty',5,'unit_price',34.90,'discount',0,'customer','Cliente Balcão','salesperson','Marina Souza','mo',0,'day',8),
+    jsonb_build_object('sr','demo-dia-part-sale-010','part_sr','demo-dia-part-010','qty',3,'unit_price',279.90,'discount',0,'customer','Frota Rápida Ltda','salesperson','João Pedro','mo',0,'day',10),
+    jsonb_build_object('sr','demo-dia-part-sale-011','part_sr','demo-dia-part-012','qty',1,'unit_price',749.90,'discount',30.00,'customer','Mecânica Central','salesperson','Carlos Lima','mo',0,'day',12),
+    jsonb_build_object('sr','demo-dia-part-sale-012','part_sr','demo-dia-part-004','qty',12,'unit_price',59.90,'discount',0,'customer','Cliente Balcão','salesperson','Marina Souza','mo',0,'day',14)
+  );
+  v_item jsonb;
+  v_part_id uuid;
+  v_sale_date text;
+BEGIN
+  PERFORM set_config('request.jwt.claim.role', 'service_role', true);
+
+  -- Idempotent: drop prior demo sales (parts are re-seeded above, so stock is
+  -- back to baseline before these sales re-apply their decrements).
+  DELETE FROM entities
+  WHERE entity_type = 'part_sale'
+    AND source_record_id LIKE 'demo-dia-part-sale-%';
+
+  FOR v_item IN SELECT * FROM jsonb_array_elements(v_sales)
+  LOOP
+    SELECT id INTO v_part_id
+    FROM entities
+    WHERE entity_type = 'part'
+      AND source_record_id = v_item ->> 'part_sr';
+
+    IF v_part_id IS NULL THEN
+      CONTINUE;
+    END IF;
+
+    v_sale_date := to_char(
+      (date_trunc('month', now()) + ((v_item ->> 'mo')::int || ' months')::interval
+        + (((v_item ->> 'day')::int - 1) || ' days')::interval)::date,
+      'YYYY-MM-DD'
+    );
+
+    PERFORM create_part_sale(
+      jsonb_build_object(
+        'part_id', v_part_id::text,
+        'quantity', (v_item ->> 'qty')::numeric,
+        'unit_price', (v_item ->> 'unit_price')::numeric,
+        'discount', (v_item ->> 'discount')::numeric,
+        'sale_date', v_sale_date,
+        'customer', v_item ->> 'customer',
+        'salesperson', v_item ->> 'salesperson',
+        'channel', 'balcao',
+        'source_record_id', v_item ->> 'sr'
+      )
+    );
+  END LOOP;
+END
+$$;
+
+commit;

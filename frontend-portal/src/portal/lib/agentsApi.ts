@@ -703,6 +703,79 @@ export async function deletePart(entityId: string): Promise<void> {
   unwrap(res)
 }
 
+// ── Vendas de peças (DIA dealership domain, issue #10) ───────────────────────
+// Leitura direta da view v_dia_part_sale_current (security_invoker → RLS
+// authenticated). Escrita SEMPRE via RPCs endurecidas (create/cancel_part_sale):
+// a venda é atômica e baixa o estoque da peça; o cancelamento estorna.
+
+export interface PartSaleRow {
+  entity_id: string
+  source_record_id: string | null
+  part_id: string | null
+  part_number: string | null
+  description: string | null
+  quantity: number | null
+  unit_price: number | null
+  discount: number | null
+  total: number | null
+  sale_date: string | null
+  customer: string | null
+  salesperson: string | null
+  channel: string | null
+  status: string
+}
+
+/** Campos do payload da RPC create_part_sale. */
+export interface PartSaleInput {
+  part_id: string
+  quantity: number
+  unit_price: number
+  discount?: number | null
+  sale_date?: string | null
+  customer?: string | null
+  salesperson?: string | null
+  channel?: string | null
+}
+
+const PART_SALE_COLS =
+  'entity_id, source_record_id, part_id, part_number, description, quantity, unit_price, discount, total, sale_date, customer, salesperson, channel, status'
+
+export async function getPartSales(): Promise<PartSaleRow[]> {
+  const res = (await supabase
+    .from('v_dia_part_sale_current')
+    .select(PART_SALE_COLS)
+    .order('sale_date', { ascending: false })) as PgResponse<PartSaleRow[]>
+  return unwrap(res) ?? []
+}
+
+function partSalePayload(input: PartSaleInput): Record<string, unknown> {
+  const p: Record<string, unknown> = {
+    part_id: input.part_id,
+    quantity: input.quantity,
+    unit_price: input.unit_price,
+  }
+  if (input.discount != null) p.discount = input.discount
+  if (input.sale_date) p.sale_date = input.sale_date
+  if (input.customer) p.customer = input.customer
+  if (input.salesperson) p.salesperson = input.salesperson
+  if (input.channel) p.channel = input.channel
+  return p
+}
+
+export async function createPartSale(input: PartSaleInput): Promise<void> {
+  const res = (await supabase.rpc('create_part_sale', {
+    p_data: partSalePayload(input),
+  })) as PgResponse<unknown>
+  unwrap(res)
+}
+
+export async function cancelPartSale(entityId: string): Promise<void> {
+  const res = (await supabase.rpc('cancel_part_sale', {
+    p_entity_id: entityId,
+  })) as PgResponse<unknown>
+  unwrap(res)
+}
+
 // ── Decisão (escrita) via ops-api — POST /api/ops/findings/decision (ver PRD §6.4) ──
 const OPS_API_URL = ENV.VITE_OPS_API_URL || '/api/ops'
 

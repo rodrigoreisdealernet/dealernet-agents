@@ -1,0 +1,80 @@
+{
+  "issue": "10",
+  "title": "feat: Venda de Peças — entidade transacional + CRUD com baixa de estoque",
+  "slug": "feat-venda-de-pecas-entidade",
+  "branch": "feature/10-feat-venda-de-pecas-entidade",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/10",
+  "pr": null,
+  "prUrl": null,
+  "updatedAt": "2026-06-25T19:13:54.974Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "Spec written + posted as issue comment",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "../specs/10-feat-venda-de-pecas-entidade.md"
+        }
+      ],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Auto-approved (batch)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "running",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    }
+  ]
+}

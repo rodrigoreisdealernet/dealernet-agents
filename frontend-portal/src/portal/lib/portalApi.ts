@@ -151,6 +151,13 @@ const MOCK_MENU: MenuItem[] = [
         icon: 'fa-cog',
         spec: { title: 'Estoque de Peças', kind: 'component', componentKey: 'dia-parts' },
       },
+      // DIA dealership domain (issue #10) — Venda de peças (/dia/part-sales).
+      {
+        id: 'dealership-part-sales',
+        text: 'Venda de Peças',
+        icon: 'fa-shopping-cart',
+        spec: { title: 'Venda de Peças', kind: 'component', componentKey: 'dia-part-sales' },
+      },
     ],
   },
   // Administração (issue #6) — gestão de usuários/perfis; visível só para admin.
