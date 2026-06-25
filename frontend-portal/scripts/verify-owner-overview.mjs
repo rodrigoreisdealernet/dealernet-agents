@@ -180,10 +180,11 @@ test('AC: DiaOverview importa ChartCard/KpiCard/ScreenShell/formatBRL e os 3 hel
     /import\s*\{[^}]*\bKpiCard\b[^}]*\bScreenShell\b[^}]*\}\s*from\s*['"]\.\/ui['"]|import\s*\{[^}]*\bScreenShell\b[^}]*\bKpiCard\b[^}]*\}\s*from\s*['"]\.\/ui['"]/,
     "deve importar KpiCard e ScreenShell de './ui'",
   )
+  // Issue #54: os KPI cards passaram a usar formatBRLKpi (sem R$/decimais).
   assert.match(
     src,
-    /import\s*\{[^}]*\bformatBRL\b[^}]*\}\s*from\s*['"]\.\/format['"]/,
-    "deve importar formatBRL de './format'",
+    /import\s*\{[^}]*\bformatBRLKpi\b[^}]*\}\s*from\s*['"]\.\/format['"]/,
+    "deve importar formatBRLKpi de './format' (KPI cards, issue #54)",
   )
   for (const fn of ['getOwnerKpis', 'getSalesTrend', 'getInventorySummary']) {
     assert.ok(

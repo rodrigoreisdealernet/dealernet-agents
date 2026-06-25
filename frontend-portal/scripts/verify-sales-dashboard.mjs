@@ -148,10 +148,11 @@ test('SalesDashboard.tsx importa getSalesSummary/getSalesTrend do agentsApi e os
   assert.ok(src.includes('ChartCard'), 'deve importar/usar ChartCard')
   assert.ok(src.includes('KpiCard'), 'deve importar/usar KpiCard')
   assert.ok(src.includes('ScreenShell'), 'deve importar/usar ScreenShell')
+  // Issue #54: os KPI cards passaram a usar formatBRLKpi (sem R$/decimais).
   assert.match(
     src,
-    /import\s*\{[^}]*\bformatBRL\b[^}]*\}\s*from\s*['"]\.\/format['"]/,
-    'deve importar formatBRL de ./format (formatacao de moeda)',
+    /import\s*\{[^}]*\bformatBRLKpi\b[^}]*\}\s*from\s*['"]\.\/format['"]/,
+    'deve importar formatBRLKpi de ./format (KPI cards, issue #54)',
   )
 })
 
@@ -183,7 +184,7 @@ test('AC3: KPI cards de unidades VN/VU/total + dias para vender', () => {
   }
 })
 
-test('AC3: KPI cards de receita VN/VU/total e margem formatados via formatBRL', () => {
+test('AC3: KPI cards de receita VN/VU/total e margem formatados via formatBRLKpi', () => {
   const src = read(SCREEN_PATH)
   for (const label of ['Receita VN', 'Receita VU', 'Receita total', 'Margem média']) {
     assert.ok(
@@ -191,12 +192,13 @@ test('AC3: KPI cards de receita VN/VU/total e margem formatados via formatBRL', 
       `deve haver um KpiCard com label "${label}"`,
     )
   }
-  // Cada valor monetario/margem deve passar por formatBRL(...).
+  // Issue #54: cada valor monetario/margem de KPI card passa por formatBRLKpi(...)
+  // (sem R$/decimais). Tabelas/tooltips mantem formatBRL.
   for (const expr of [
-    'formatBRL(kpis.vnRevenue)',
-    'formatBRL(kpis.vuRevenue)',
-    'formatBRL(kpis.totalRevenue)',
-    'formatBRL(kpis.avgMargin)',
+    'formatBRLKpi(kpis.vnRevenue)',
+    'formatBRLKpi(kpis.vuRevenue)',
+    'formatBRLKpi(kpis.totalRevenue)',
+    'formatBRLKpi(kpis.avgMargin)',
   ]) {
     assert.ok(
       src.includes(expr),

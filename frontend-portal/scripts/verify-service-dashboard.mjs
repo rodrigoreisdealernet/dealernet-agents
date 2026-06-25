@@ -84,17 +84,18 @@ test('AC: renderiza os 5 KPIs com seus rotulos pt-BR', () => {
   // Os KPIs devem ser renderizados via o primitivo KpiCard (reuso, nao card custom).
   assert.match(src, /<KpiCard\b/, 'os indicadores devem usar o primitivo KpiCard')
   // Binding label->valor: dentro do MESMO <KpiCard ... /> que tem
-  // label="Faturamento do mês", o valor deve passar por formatBRL. Janela temperada
-  // que nao cruza para o proximo <KpiCard isola este cartao (impede que um formatBRL
-  // de outro cartao satisfaca a asercao).
+  // label="Faturamento do mês", o valor de KPI card deve passar por formatBRLKpi
+  // (issue #54: KPI cards sem R$/decimais). Janela temperada que nao cruza para o
+  // proximo <KpiCard isola este cartao (impede que um formatBRLKpi de outro cartao
+  // satisfaca a asercao).
   const fatCard = src.match(
     /<KpiCard\b(?:(?!<KpiCard)[\s\S])*?label="Faturamento do mês"(?:(?!<KpiCard)[\s\S])*?\/>/,
   )
   assert.ok(fatCard, 'deve existir um <KpiCard label="Faturamento do mês" .../>')
   assert.match(
     fatCard[0],
-    /formatBRL\(/,
-    'o KpiCard "Faturamento do mês" deve formatar seu valor com formatBRL',
+    /formatBRLKpi\(/,
+    'o KpiCard "Faturamento do mês" deve formatar seu valor com formatBRLKpi (issue #54)',
   )
 })
 
