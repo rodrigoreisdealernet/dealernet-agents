@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/1",
   "pr": "2",
   "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/2",
-  "updatedAt": "2026-06-25T15:39:28.234Z",
+  "updatedAt": "2026-06-25T15:43:05.897Z",
   "steps": [
     {
       "id": "spec",
@@ -71,35 +71,43 @@
     {
       "id": "test-review",
       "label": "05 · Test review",
-      "status": "running",
-      "summary": "Revisando cobertura e qualidade dos testes",
+      "status": "done",
+      "summary": "Aprovado após 1 iteração (AC2 coberto, 9 testes verdes)",
       "artifacts": [],
       "notes": [
         "Auditando cobertura de testes (AC1-AC6 vs spec)",
         "Achado bloqueante: AC2 (TopBar.tsx) não tem teste. Veredito: PRECISA-CORRIGIR",
         "Iteração 1: bloqueante AC2 (TopBar sem teste) devolvido ao tester",
         "loop correcao 1/2: adicionando caso de teste AC2 (TopBar) ao verify-dia-branding.mjs",
-        "9 testes verdes: AC2 (TopBar) coberto + AC3 endurecido (ramo collapsed). Commitando."
+        "9 testes verdes: AC2 (TopBar) coberto + AC3 endurecido (ramo collapsed). Commitando.",
+        "RE-REVIEW: AC2 bloqueante resolvido via commit 1664113; 9 testes passando, nenhuma fragilidade detectada"
       ],
       "gate": null
     },
     {
       "id": "code-review",
       "label": "06 · Code review",
-      "status": "pending",
-      "summary": "",
-      "artifacts": [],
-      "notes": [],
+      "status": "done",
+      "summary": "Pronto para merge: corretude/segurança/regressão OK",
+      "artifacts": [
+        {
+          "label": "Review",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/2"
+        }
+      ],
+      "notes": [
+        "Review posted to PR #2. All AC verified and passing. No blockers."
+      ],
       "gate": null
     },
     {
       "id": "merge",
       "label": "Merge (human gate)",
-      "status": "pending",
-      "summary": "",
+      "status": "waiting",
+      "summary": "Aguardando merge humano (gate #2)",
       "artifacts": [],
       "notes": [],
-      "gate": null
+      "gate": "merge"
     }
   ]
 }
