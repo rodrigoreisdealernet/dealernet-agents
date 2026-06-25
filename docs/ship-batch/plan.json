@@ -6,7 +6,7 @@
       "title": "feat: Empresa e Marca — entidades + CRUD",
       "slug": "feat-empresa-e-marca-entidades",
       "branch": "feature/5-feat-empresa-e-marca-entidades",
-      "worktree": "C:\\Dev\\AIAccelerator\\dealernet-agents-worktrees\\5-feat-empresa-e-marca-entidades",
+      "worktree": "/mnt/c/Dev/AIAccelerator/dealernet-agents-worktrees/5-feat-empresa-e-marca-entidades",
       "foundation": false,
       "deps": [],
       "labels": [
@@ -21,7 +21,7 @@
       "title": "feat: Usuários — gestão + CRUD (profiles/roles)",
       "slug": "feat-usuarios-gestao-crud-profiles",
       "branch": "feature/6-feat-usuarios-gestao-crud-profiles",
-      "worktree": "C:\\Dev\\AIAccelerator\\dealernet-agents-worktrees\\6-feat-usuarios-gestao-crud-profiles",
+      "worktree": "/mnt/c/Dev/AIAccelerator/dealernet-agents-worktrees/6-feat-usuarios-gestao-crud-profiles",
       "foundation": false,
       "deps": [],
       "labels": [
@@ -36,7 +36,7 @@
       "title": "feat: Ordem de Serviço (Oficina) — entidade + CRUD",
       "slug": "feat-ordem-de-servico-oficina",
       "branch": "feature/7-feat-ordem-de-servico-oficina",
-      "worktree": "C:\\Dev\\AIAccelerator\\dealernet-agents-worktrees\\7-feat-ordem-de-servico-oficina",
+      "worktree": "/mnt/c/Dev/AIAccelerator/dealernet-agents-worktrees/7-feat-ordem-de-servico-oficina",
       "foundation": false,
       "deps": [],
       "labels": [
@@ -51,7 +51,7 @@
       "title": "feat: Peças — entidade + CRUD",
       "slug": "feat-pecas-entidade-crud",
       "branch": "feature/8-feat-pecas-entidade-crud",
-      "worktree": "C:\\Dev\\AIAccelerator\\dealernet-agents-worktrees\\8-feat-pecas-entidade-crud",
+      "worktree": "/mnt/c/Dev/AIAccelerator/dealernet-agents-worktrees/8-feat-pecas-entidade-crud",
       "foundation": false,
       "deps": [],
       "labels": [
@@ -66,7 +66,7 @@
       "title": "feat: Venda de Peças — entidade transacional + CRUD (baixa de estoque)",
       "slug": "feat-venda-de-pecas-entidade",
       "branch": "feature/10-feat-venda-de-pecas-entidade",
-      "worktree": "C:\\Dev\\AIAccelerator\\dealernet-agents-worktrees\\10-feat-venda-de-pecas-entidade",
+      "worktree": "/mnt/c/Dev/AIAccelerator/dealernet-agents-worktrees/10-feat-venda-de-pecas-entidade",
       "foundation": false,
       "deps": [
         8
