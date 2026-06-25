@@ -5,7 +5,7 @@
 This repository holds both the product and the autonomous system that designs, builds, runs, and plans it:
 
 - **The product** — a DMS web app over a self-hosted Supabase data layer, with **Temporal**-orchestrated agentic operations for the automotive dealership domain (vehicles, service orders, parts/inventory, master data, and BI).
-- **The factories that run it** — an autonomous **software factory** (GitHub Actions + role-based agents) that triages, designs, builds, reviews, and ships the product, and an emerging agentic **Operations Factory** (Temporal + Azure OpenAI) that automates tedious dealership back-office work — reporting, reconciliation, and operational audits — for the people who use the software.
+- **The factories that run it** — an autonomous **software factory** (role-based agents under [`.github/agents/`](./.github/agents/), driven through the issue→spec→code→tests→review pipeline) that triages, designs, builds, reviews, and ships the product, and an emerging agentic **Operations Factory** (Temporal + Azure OpenAI) that automates tedious dealership back-office work — reporting, reconciliation, and operational audits — for the people who use the software.
 - **How they decide what to build (and how to build it agentically)** — three layers that feed the factory:
   - an **operating model** ([`docs/discovery/domain/`](./docs/discovery/domain/README.md)) answering *"what does it take to run an X?"* — the target business mapped into roles → real, cited tasks, with a calibrated **coverage % and ROI** (Hubbard-style 90% CIs) and a bridge that turns the highest-value gaps into the backlog as **one epic per role**;
   - a nightly **discovery pipeline** ([`docs/discovery/`](./docs/discovery/README.md)) that researches the market and matures product ideas from raw signal to design-ready;
@@ -13,7 +13,7 @@ This repository holds both the product and the autonomous system that designs, b
 
 > **Start here:** the [architecture overview](./docs/architecture/README.md) has diagrams of the whole system. Decisions are recorded in [`docs/adrs/`](./docs/adrs/) and detailed designs in [`docs/specs/`](./docs/specs/). Read those before making a change so you know which decisions you're working within.
 
-**Jump to:** [Domain](#the-domain) · [Stack](#the-stack) · [Repository map](#repository-map) · [Live dev environment](#live-dev-environment) · [UAT environment](#uat-environment-dia-test) · [Local development](#local-development) · [Testing](#testing) · [Documentation](#documentation)
+**Jump to:** [Domain](#the-domain) · [Stack](#the-stack) · [Repository map](#repository-map) · [Local development](#local-development) · [Testing](#testing) · [Documentation](#documentation)
 
 ## The domain
 
@@ -31,10 +31,10 @@ Full model: see the per-entity design specs under [`docs/specs/`](./docs/specs/)
 | Layer | Choice | Decision |
 |------|--------|----------|
 | Frontend | React 18 + Vite + TanStack Router/Query; **JSON-driven UI engine** (screens are declarative JSON over the entity model) | [ADR-0016](./docs/adrs/0016-json-driven-ui-engine.md), [ADR-0017](./docs/adrs/0017-frontend-data-layer-supabase-anon.md) |
-| Data | **Self-hosted, open-source Supabase** (Postgres + PostgREST + GoTrue + Kong) in-cluster | [ADR-0013](./docs/adrs/0013-self-host-supabase-in-cluster.md) |
+| Data | **Self-hosted, open-source Supabase** (Postgres + PostgREST + GoTrue + Kong) | [ADR-0013](./docs/adrs/0013-self-host-supabase-in-cluster.md) |
 | Workflows | **Temporal** (Python) for dealership operations and agentic ops; human-in-the-loop via signals | [ADR-0003](./docs/adrs/0003-temporal-workflow-orchestration.md), [ADR-0004](./docs/adrs/0004-signal-driven-human-in-the-loop.md) |
 | AI agents | **Azure OpenAI** `chat_with_tools` | [ADR-0005](./docs/adrs/0005-azure-openai-chat-with-tools-adapter.md) |
-| Build & deploy | AKS + Helm (dev/test/prod), images in ACR, **Azure Front Door** edge | [ADR-0012](./docs/adrs/0012-aks-helm-multienv-gated-promotion.md), [ADR-0015](./docs/adrs/0015-azure-front-door-external-edge.md) |
+| Deploy (design) | AKS + Helm, images in ACR, Azure Front Door edge — **decision records only; no cluster is currently running** (see [Local development](#local-development) for how the project actually runs today) | [ADR-0012](./docs/adrs/0012-aks-helm-multienv-gated-promotion.md), [ADR-0015](./docs/adrs/0015-azure-front-door-external-edge.md) |
 | Factories | Software factory (builds the product) + Operations Factory (serves dealership users) | [ADR-0006](./docs/adrs/0006-autonomous-software-factory.md), [ADR-0020](./docs/adrs/0020-operations-factory-agentic-ops.md) |
 
 ## Repository map
@@ -46,156 +46,19 @@ Where things live, at a glance:
 | [`frontend-portal/`](./frontend-portal/) | DIA **Portal DMS** shell — React 18 + Vite + Tailwind, MDI window manager, native AI-Operations screens (`src/portal/renderers/screens/`) over the Supabase data layer |
 | [`temporal/`](./temporal/) | Python Temporal workers — dealership + agentic-ops workflows, activities, and pytest suites |
 | [`supabase/`](./supabase/) | Postgres migrations, seed, and RLS / access-control contract tests |
-| [`charts/`](./charts/) | Helm charts — app, monitoring, observability |
-| [`deploy/`](./deploy/) | Kubernetes + OpenBao deploy surface |
+| [`charts/`](./charts/) | Helm charts — app, monitoring, observability (infra code; no cluster currently running) |
+| [`deploy/`](./deploy/) | Kubernetes + OpenBao deploy surface (infra code; not currently deployed) |
 | [`scripts/`](./scripts/) | Bootstrap & ops scripts (labels, demo-user seeding, discovery/charter publish) |
-| [`.github/`](./.github/) | **The software factory** — role-based agents (`agents/`), cadence pipelines (`workflows/`), shared agent runtime (`tools/shared/`) |
+| [`.github/`](./.github/) | **The software factory** — role-based agents (`agents/`) and shared agent runtime (`tools/shared/`). The only active GitHub Actions workflow is [`ci.yml`](./.github/workflows/ci.yml); the cadence/deploy pipelines are parked under [`workflows.disabled/`](./.github/workflows.disabled/) |
 | [`docs/`](./docs/) | Architecture, ADRs, specs, discovery, runbooks, user guide, release notes (see [Documentation](#documentation)) |
-
-## Live Dev Environment
-
-The DIA Portal DMS MVP is deployed to Kubernetes (`aks-selfheal-staging`) with a fully
-**self-hosted, open-source Supabase** stack in-cluster. Full deploy details:
-[`PHASE2-DEPLOYMENT.md`](./PHASE2-DEPLOYMENT.md).
-
-| What | URL |
-|------|-----|
-| **App (frontend)** | https://dia-app-a4bde4gwecdnfpfb.a02.azurefd.net |
-| **Supabase API** | https://dia-api-fvd0fcfubfb2drcy.a02.azurefd.net |
-
-Both are served through **Azure Front Door** (stable hostname + managed TLS; the
-underlying cluster LoadBalancer IP can change without the URL changing). If a Front
-Door URL 404s briefly after a change, it is still propagating to the edge.
-
-### How to access / sign in
-
-The app now has an in-app **Sign In** button in the header (login dialog). GoTrue
-auto-confirms email sign-ups (no verification step needed).
-
-#### Role model
-
-Four roles control what each user can do — stored in `app_metadata.role` in the JWT
-([ADR-0023](./docs/adrs/0023-user-role-model-profiles.md)):
-
-| Role | Capabilities |
-|------|-------------|
-| `admin` | Full read/write on all tables; manage user profiles |
-| `branch_manager` | Full read/write on operational + entity data |
-| `field_operator` | Read + insert on inspections, contracts, check-ins |
-| `read_only` | Read-only for authenticated sessions |
-
-#### Demo accounts
-
-A standard set of demo users is seeded via `scripts/seed-demo-users.sh`.
-Passwords are **not committed** — they are stored as secrets (`DEMO_ADMIN_PASS`,
-`DEMO_OPERATOR_PASS`) per the secrets workflow (#125). Rotate and invalidate
-demo credentials using the [secret operations runbook](./docs/runbooks/secret-operations.md).
-Contact a maintainer for current environment credentials, or run the seed script
-yourself against a local Supabase instance with passwords of your choosing.
-
-> **Note:** the `@dia-rental.dev` domain on the seeded demo accounts is a **legacy
-> placeholder** carried over from the project's earlier name — it is just a throwaway
-> dev-account label, not the product's business domain (the product is the DIA Portal
-> automotive DMS). The underlying seeded accounts are unchanged; renaming them is
-> follow-up infra work, out of scope for this doc.
-
-| Email | Role |
-|-------|------|
-| `admin@dia-rental.dev` | `admin` |
-| `manager@dia-rental.dev` | `branch_manager` |
-| `operator@dia-rental.dev` | `field_operator` |
-| `readonly@dia-rental.dev` | `read_only` |
-| `demo@dia-rental.dev` | Legacy break-glass account (disabled unless explicitly re-enabled for incident recovery) |
-
-To seed demo users against a local Supabase instance:
-```bash
-SUPABASE_DB_URL=******localhost:54322/postgres \
-DEMO_ADMIN_PASS=<choose> \
-DEMO_OPERATOR_PASS=<choose> \
-bash scripts/seed-demo-users.sh
-```
-
-> ⚠️ Dev-only throwaway credentials in a dev environment with placeholder data.
-> Never rely on long-lived defaults. Follow the credential rotation cadence and
-> rollback/break-glass controls in the [secret operations runbook](./docs/runbooks/secret-operations.md).
-> Do not put real/sensitive data in this environment.
-
-### Admin (Supabase Studio)
-
-Studio is **internal-only** (not public). Reach it via port-forward:
-```bash
-kubectl -n dia-supabase port-forward svc/supabase-supabase-studio 3001:3000
-# then open http://localhost:3001  (dashboard creds: `kubectl get secret supabase-dashboard -n dia-supabase`)
-```
-
-Use temporary credentials only and rotate/rollback via the
-[secret operations runbook](./docs/runbooks/secret-operations.md).
-
-> Hardening of this environment (TLS everywhere, JWT rotation, real auth, secrets
-> management, backups, network policy) is tracked under epic **#130**.
-
-## UAT Environment (`dia-test`)
-
-A human-gated **UAT** environment that mirrors dev but with a **fully isolated data plane** —
-its own self-hosted Supabase + Postgres in the `dia-supabase-test` namespace, sharing **no
-data** with dev ([ADR-0062](./docs/adrs/0062-gated-promotion-known-good-digest-per-env-data-isolation.md)).
-App workloads run in the `dia-test` namespace on the same `aks-selfheal-staging` cluster
-(namespace isolation, to control cost).
-
-| What | URL |
-|------|-----|
-| **App (frontend)** | https://dia-app-test-gtehe0hddtcyf4gq.a02.azurefd.net |
-| **Supabase API** | https://dia-api-test-h5hbdeb8b9fdhedu.a02.azurefd.net |
-
-Served through **Azure Front Door** (managed TLS; a brief 404 right after a change just means
-the edge is still propagating).
-
-For UAT, the Supabase/Kong origin is hardened to allow only Azure Front Door backend source
-ranges (`loadBalancerSourceRanges`), so direct-origin traffic is blocked.
-
-**Promotion is human-gated** — nothing auto-deploys to UAT. A release manager promotes a
-**known-good commit** by dispatching `deploy-test.yml` with a `sha` from the `releases-ledger`
-branch; the immutable image digest is resolved from ACR. See the
-[promotion runbook](./docs/runbooks/promotion.md). (A second-person reviewer-approval gate
-would require GitHub Enterprise; on the current plan the gate is the manual dispatch, which
-GitHub restricts to write-access users.)
-
-**Access / sign-in:** same role model + demo accounts as dev (above). UAT has its **own
-isolated auth**, so demo users must be seeded against the UAT Supabase before sign-in works
-(`scripts/seed-demo-users.sh` pointed at the `dia-supabase-test` database). The schema is
-migrated and the demo **baseline** data is seeded.
-
-**In-cluster fallback** (if Front Door is mid-propagation):
-```bash
-# the in-cluster Service is named "<helm-release>-frontend" (legacy release name "rental-app"
-# yields "rental-app-frontend"); the app it serves is the DIA Portal frontend (frontend-portal/).
-kubectl -n dia-test port-forward svc/rental-app-frontend 8080:80   # → http://localhost:8080
-```
-
-> **Status (2026-06-14):** frontend + ops-api live and public; data plane isolated, schema
-> migrated + demo-baseline seeded. The Temporal **worker is scaled to 0** (no in-cluster
-> Temporal server yet — same as dev). Bring-up / public-exposure tooling:
-> [`scripts/uat-finish-public.sh`](./scripts/uat-finish-public.sh). Same hardening caveat as
-> dev applies — **do not put real/sensitive data here.**
-
-Quick hardening verification:
-```bash
-# discover the Kong origin IP
-kubectl -n dia-supabase-test get svc supabase-supabase-kong -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
-
-# direct origin should fail (expected: curl exits non-zero). If this prints, hardening failed:
-curl --max-time 8 -sS -o /dev/null http://<kong-loadbalancer-ip>/auth/v1/health && echo "unexpected reachable (security issue)"
-
-# Front Door API path must still work
-curl --max-time 20 -sS -o /dev/null -w '%{http_code}\n' https://dia-api-test-h5hbdeb8b9fdhedu.a02.azurefd.net/auth/v1/health
-```
 
 ## Local development
 
-> **Docker Compose is a local development convenience only — it is not the production runtime.**
-> The deployed cluster runs on AKS + Helm with a fully self-hosted Supabase stack in-cluster
-> ([ADR-0013](./docs/adrs/0013-self-host-supabase-in-cluster.md)). Compose is purely for local
-> iteration; never use it to reason about production behaviour.
+> **How the project runs today:** local development is via **Docker Compose**. The AKS/Helm
+> cluster deployment is documented as a design decision ([ADR-0012](./docs/adrs/0012-aks-helm-multienv-gated-promotion.md),
+> [ADR-0013](./docs/adrs/0013-self-host-supabase-in-cluster.md)) but **no environment is
+> currently deployed** — the deploy workflows are parked under `.github/workflows.disabled/`.
+> Use Compose for everything below.
 
 ### Prerequisites
 - Docker Desktop with Compose v2
@@ -260,6 +123,37 @@ TEMPORAL_ADDRESS=localhost:7234 python -m src.worker
 > service name `temporal:7233`. When running on the host, use `localhost:7234` (the port Docker
 > publishes). The `.env.example` file documents both values with inline comments.
 
+### Demo users & roles (local)
+
+Four roles control what each user can do — stored in `app_metadata.role` in the JWT and enforced
+by RLS on the data layer ([ADR-0023](./docs/adrs/0023-user-role-model-profiles.md)):
+
+| Role | Capabilities |
+|------|-------------|
+| `admin` | Full read/write on all tables; manage user profiles |
+| `branch_manager` | Full read/write on operational + entity data |
+| `field_operator` | Read + limited insert on operational records |
+| `read_only` | Read-only for authenticated sessions |
+
+Seed a standard set of demo users against a **local** Supabase instance with passwords of your
+choosing (passwords are never committed):
+
+```bash
+SUPABASE_DB_URL=******localhost:54322/postgres \
+DEMO_ADMIN_PASS=<choose> \
+DEMO_OPERATOR_PASS=<choose> \
+bash scripts/seed-demo-users.sh
+```
+
+> **Note:** the seeded demo emails use a `@dia-rental.dev` domain — a **legacy placeholder**
+> carried over from the project's earlier name. It is just a throwaway dev-account label, not the
+> product's business domain (the product is the DIA Portal automotive DMS). Renaming the seeded
+> accounts is follow-up work.
+
+> ⚠️ Dev-only throwaway credentials for local use. Never rely on long-lived defaults, and do not
+> put real/sensitive data in a dev environment. Credential custody, rotation, and break-glass are
+> covered in the [secret operations runbook](./docs/runbooks/secret-operations.md).
+
 ## Testing
 
 | Suite | What it covers | Where | Run |
@@ -268,18 +162,11 @@ TEMPORAL_ADDRESS=localhost:7234 python -m src.worker
 | **Temporal worker** | Dealership-operations workflows & activities (pytest) | [`temporal/tests/`](./temporal/tests/) | `python -m pytest temporal/tests/ -v` |
 | **Supabase access-control contract** | RLS / role boundaries on the data layer (details [below](#supabase-api-access-control-contract-tests)) | [`test_supabase_api_access_contract.py`](./temporal/tests/test_supabase_api_access_contract.py) | `python -m pytest temporal/tests/test_supabase_api_access_contract.py -v` |
 
-> **Note (2026-06-25):** the inherited Playwright E2E / Visual-UX suites and the heavy CI factory belonged to the removed `frontend/` (dia-frontend) and live under `.github/workflows.disabled/`. The active gate is the slim [`ci.yml`](./.github/workflows/ci.yml) (guard-rails + the `frontend-portal` lint/build/test job). Re-establishing E2E for the Portal is follow-up work.
-
-### Test trends, coverage & quality (build over build)
-
-Where each suite stands across builds — plus **coverage**, **code quality**, and how we're tracking against explicit **SLO targets** ([`.github/qa-targets.json`](./.github/qa-targets.json)) — is recorded on two durable, append-only **orphan branches**. Each has an auto-regenerated dashboard (pass-rate + coverage trend charts, an SLO **Targets** table with ✅/⚠️ breach flags, a **Code quality** section, and recent-runs + flakiness/skip-rate tables) over a machine-readable [`runs.jsonl`](https://github.com/Volaris-AI/dia/blob/e2e-history/runs.jsonl) feed (one record per suite-run, shared schema; `kind:"coverage"`/`"quality"` records carry the metric axes):
-
-| Dashboard | Covers | Cadence | Branch |
-|---|---|---|---|
-| 📊 **[E2E trends →](https://github.com/Volaris-AI/dia/blob/e2e-history/README.md)** | Deployed-env Playwright: smoke + experience; **daily Visual UX** review (vision critique → `ux` tickets) | Hourly + post-deploy; visual daily | [`e2e-history`](https://github.com/Volaris-AI/dia/tree/e2e-history) ([`trend.svg`](https://github.com/Volaris-AI/dia/blob/e2e-history/trend.svg)) |
-| 📊 **[CI test trends →](https://github.com/Volaris-AI/dia/blob/ci-history/README.md)** | Unit · Temporal/contract · Helm · Seed · **Coverage** (e2e screens/journeys + unit) · **Code quality** (tsc/ruff/shellcheck/SAST/deps/secrets) | Per merge to `main`; quality nightly | [`ci-history`](https://github.com/Volaris-AI/dia/tree/ci-history) ([`trend.svg`](https://github.com/Volaris-AI/dia/blob/ci-history/trend.svg)) |
-
-Producers: [`e2e-dev.yml`](./.github/workflows/e2e-dev.yml) + [`visual-ux.yml`](./.github/workflows/visual-ux.yml) (E2E/UX); the `publish-test-history` job in [`pr-validation.yml`](./.github/workflows/pr-validation.yml) + the nightly [`code-quality.yml`](./.github/workflows/code-quality.yml) (CI suites, coverage, quality). The **QA Manager** agent reads both feeds against the SLO targets, publishes a **scorecard**, and drives a deduped ticket for every breached target — covering not just red suites but **coverage growth** (uncovered screens/journeys) and **stability** (flip-flop flakiness, skip-rate). Two specialist reviewers own their lanes: the **code-quality-reviewer** files static-analysis tickets and the **ux-vision-reviewer** files visual tickets. New checks land **report-only and ratchet to gating** once their target holds.
+> **Note:** the inherited Playwright E2E / Visual-UX suites and the heavy CI factory belonged to
+> the removed `frontend/` (dia-frontend) and now live under [`.github/workflows.disabled/`](./.github/workflows.disabled/).
+> The only active gate is the slim [`ci.yml`](./.github/workflows/ci.yml) (guard-rails + the
+> `frontend-portal` lint/build/test job). Re-establishing E2E and the CI/CD factory for the Portal
+> is follow-up work.
 
 ### Supabase API access-control contract tests
 
@@ -325,7 +212,7 @@ ADRs/specs for the depth on any one decision.
 - [`MONITORING.md`](./MONITORING.md) — **software-factory** health runbook (read the pipeline's health in 60 seconds; recurring failure patterns and how to unblock them).
 - [`OPERATIONS.md`](./OPERATIONS.md) — **Operations Factory** runbook (the `MONITORING.md` analogue: where to run/approve/audit ops workflows, the approval SLA, failure recovery).
 - [`docs/runbooks/secret-operations.md`](./docs/runbooks/secret-operations.md) — credential custody, rotation cadence, rollback, and break-glass handling.
-- [`PHASE2-DEPLOYMENT.md`](./PHASE2-DEPLOYMENT.md) — live deployment details (AKS, Supabase, Front Door).
+- [`PHASE2-DEPLOYMENT.md`](./PHASE2-DEPLOYMENT.md) — live deployment details (AKS, Supabase, Front Door) for when a cluster is brought up.
 
 ### Product & end-user docs
 - [`docs/user-guide/`](./docs/user-guide/README.md) — end-user how-to guides for the DIA Portal DMS.
@@ -333,6 +220,4 @@ ADRs/specs for the depth on any one decision.
 
 ### Contributing / conventions
 - [`AGENTS.md`](./AGENTS.md) — repository guidelines: project structure, coding conventions, commit/PR norms, and the canonical commands. Read this before contributing (human or agent).
-
-## Notes
-- CI image publishing (`.github/workflows/build-images.yml`) uses repository configuration only: set `vars.ACR_LOGIN_SERVER` and `secrets.ACR_USERNAME`/`secrets.ACR_PASSWORD` to enable push on `main`; otherwise it performs build-only ([ADR-0010](./docs/adrs/0010-immutable-images-push-gating-digest-promotion.md)).
+- [`CLAUDE.md`](./CLAUDE.md) — Claude Code working agreement for this repo.
