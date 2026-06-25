@@ -5,6 +5,9 @@
 - **Deciders:** @copilot
 - **Supersedes / Superseded by:** none
 
+> **Status atual (2026-06-25):** `code-quality.yml`, `visual-ux.yml`, and `e2e-dev.yml` are currently parked in `.github/workflows.disabled/`, so the nightly/daily/real-env observability lanes do not run automatically today. This ADR remains the target design for any future reactivation.
+
+
 ## Context
 
 The test-quality rollout adds new control-plane workflow behavior across `.github/workflows/pr-validation.yml`, `.github/workflows/code-quality.yml`, `.github/workflows/visual-ux.yml`, and `.github/workflows/e2e-dev.yml`:

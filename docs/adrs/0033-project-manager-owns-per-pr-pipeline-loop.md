@@ -5,6 +5,9 @@
 - **Deciders:** Repository owner, Project Manager, Tech Reviewer
 - **Supersedes / Superseded by:** Clarifies the PR-pipeline topology described in [ADR-0025](./0025-agent-cadence-pipelines.md); complements [ADR-0026](./0026-no-human-escalation-reviewers-terminal-decisions.md)
 
+> **Status atual (2026-06-25):** this ADR records the accepted design, but its GitHub Actions implementation is currently parked in `.github/workflows.disabled/`. Only `.github/workflows/ci.yml` is active; the factory operates via local Claude Code skills (`/ship-issue`, `/ship-batch`) until an explicit reactivation.
+
+
 ## Context
 
 The old PR topology split ownership awkwardly:

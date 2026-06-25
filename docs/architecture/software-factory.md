@@ -2,20 +2,29 @@
 
 The Software Factory is the autonomous system that **builds and ships the product**
 ([ADR-0006](../adrs/0006-autonomous-software-factory.md)). It is a set of
-**role-based AI agents** invoked on **scheduled cadence pipelines** (GitHub Actions),
-plus **GitHub Copilot** as the implementation worker
+**role-based AI agents** designed to be invoked on **scheduled cadence pipelines**
+(GitHub Actions), plus **GitHub Copilot** as the implementation worker
 ([ADR-0007](../adrs/0007-copilot-implements-sdk-agents-orchestrate.md)). Work flows
 through GitHub issues and PRs, routed entirely by **labels**
 ([ADR-0009](../adrs/0009-label-driven-work-routing.md)).
+
+> **⚠️ Status atual (2026-06-25):** only `.github/workflows/ci.yml` is active in
+> GitHub Actions. The factory workflows described here (`pipeline-*`, `pr-loop`,
+> `agent-*`, `monitor-*`, `pr-enrichment`, `pr-validation`) are parked in
+> `.github/workflows.disabled/` and do **not** run automatically today. Current
+> issue shipping is executed through local Claude Code skills (`/ship-issue`,
+> `/ship-batch`).
 
 Full design: [`docs/specs/software-creation-factory.md`](../specs/software-creation-factory.md).
 Health runbook: [`MONITORING.md`](../../MONITORING.md).
 
 ## The agents
 
-15 live agents, each a `*.agent.md` file (YAML frontmatter + prompt body) under
-[`.github/agents/`](../../.github/agents/), run by the shared TypeScript runtime.
-The fast pipeline's per-PR loop now runs `project-manager` once per PR; substantive
+15 agent definitions, each a `*.agent.md` file (YAML frontmatter + prompt body) under
+[`.github/agents/`](../../.github/agents/), designed to run by the shared TypeScript runtime when the parked Actions
+workflows are reactivated. In the current local-skill flow, these GitHub Actions
+lanes are inactive.
+The fast pipeline's per-PR loop design runs `project-manager` once per PR; substantive
 review is escalated to `tech-reviewer` via `queue:review`.
 
 ```mermaid
@@ -51,7 +60,7 @@ flowchart TB
 
 ## Cadence pipelines
 
-Agents run as **single-pass stages on a schedule**, not long-lived loops
+When reactivated, agents run as **single-pass stages on a schedule**, not long-lived loops
 ([ADR-0025](../adrs/0025-agent-cadence-pipelines.md)). Each stage has its own timeout;
 a soft timeout blocks downstream stages rather than hanging the run.
 
@@ -134,6 +143,10 @@ stack descriptor, and ops targets (AKS cluster, ACR, Supabase namespace).
 
 ## CI & monitoring workflows
 
+Only `ci.yml` is active today. The table below is the parked design in
+`.github/workflows.disabled/`; these workflows do not currently run on triggers or
+schedules.
+
 | Workflow | Trigger | Role |
 |----------|---------|------|
 | `pr-validation.yml` | PR / push main | frontend lint+build, Temporal pytest, Helm lint, Supabase seed + write-RPC guard contracts |
@@ -145,7 +158,8 @@ stack descriptor, and ops targets (AKS cluster, ACR, Supabase namespace).
 | `architecture-audit.yml` | daily + PR | whole-repo wiring audits; consulted by Security/Tech reviewers ([ADR-0027](../adrs/0027-standing-architecture-audits-and-behavioral-review.md)) |
 | `monitor-actions.yml` | every 15 min | classifies failed runs, raises deduped incident issues |
 
-`pipeline-hourly.yml` intentionally splits monitoring into:
+`pipeline-hourly.yml` is currently disabled; when reactivated, it intentionally
+splits monitoring into:
 - **Public lane (`ubuntu-latest`)** — architect + QA + `operations-manager` with `OPS_CHECK_SCOPE=public`.
 - **Private lane (self-hosted/private-access runner)** — `operations-manager` with `OPS_CHECK_SCOPE=private` + `cluster-guardian`.
 

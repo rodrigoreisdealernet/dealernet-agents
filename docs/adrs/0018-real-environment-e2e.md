@@ -4,6 +4,9 @@
 - **Date:** 2026-06-06 (recorded retroactively)
 - **Deciders:** QA Manager, Factory Architect
 
+> **Status atual (2026-06-25):** `e2e-dev.yml` is currently parked in `.github/workflows.disabled/`, so Playwright E2E does not run on a schedule or post-deploy automatically today. This ADR remains the target design for any future reactivation.
+
+
 ## Context
 Unit/integration tests pass locally yet the deployed app can still fail — wrong Supabase URL, Kong unreachable, migrations not applied. We need tests that exercise the *deployed* environment, and a way to encode desired UX without blocking releases on taste.
 

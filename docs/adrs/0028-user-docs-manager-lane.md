@@ -5,6 +5,9 @@
 - **Deciders:** Tech Reviewer + maintainers (factory control-plane boundary)
 - **Supersedes / Superseded by:** —
 
+> **Status atual (2026-06-25):** this ADR records the accepted design, but its GitHub Actions implementation is currently parked in `.github/workflows.disabled/`. Only `.github/workflows/ci.yml` is active; the factory operates via local Claude Code skills (`/ship-issue`, `/ship-batch`) until an explicit reactivation.
+
+
 ## Context
 PR #416 adds a new autonomous docs lane in the factory control plane under
 `.github/**`: a new `user-docs-manager` agent, a prompt-boundary split from

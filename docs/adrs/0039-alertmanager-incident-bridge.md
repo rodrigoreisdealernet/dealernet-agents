@@ -5,6 +5,9 @@
 - **Deciders:** Tech Reviewer
 - **Supersedes / Superseded by:** -
 
+> **Status atual (2026-06-25):** `alert-incident-bridge.yml` is currently parked in `.github/workflows.disabled/`, so Alertmanager events do not create/update GitHub incidents automatically today. This ADR remains the target design for any future reactivation.
+
+
 ## Context
 
 Issue #686 adds platform alerting for high-value Temporal worker, task queue, schedule, and ops API

@@ -5,6 +5,12 @@ Two runtime topologies: a **local Docker Compose** stack for development, and an
 behind Azure Front Door. Live details: [`PHASE2-DEPLOYMENT.md`](../../PHASE2-DEPLOYMENT.md).
 Azure topology decisions: [ADR-0021](../adrs/0021-azure-environment-topology.md).
 
+> **⚠️ Status atual (2026-06-25):** deployment-related GitHub Actions are
+> disabled. `.github/workflows/` contains only `ci.yml`; `build-images.yml`,
+> `deploy-dev.yml`, `deploy-test.yml`, `deploy-prod.yml`, `e2e-dev.yml` and
+> `k8s-render-validate.yml` are in `.github/workflows.disabled/` and do **not**
+> build, deploy, validate, or smoke-test automatically today.
+
 ## Local development (Docker Compose)
 
 `docker-compose.yml` (+ `docker-compose.dev.yml` for live-reload) runs the full loop
@@ -105,10 +111,12 @@ flowchart LR
 
 ## Image build & promotion
 
-Images are **immutable and digest-promoted** ([ADR-0010](../adrs/0010-immutable-images-push-gating-digest-promotion.md)):
-CI builds on every PR (build-only) and pushes to ACR only on `main` when registry
-vars/secrets are configured. Promotion across environments references the digest, not
-a moving tag.
+The intended deployment design uses images that are **immutable and digest-promoted** ([ADR-0010](../adrs/0010-immutable-images-push-gating-digest-promotion.md)):
+The parked `build-images.yml` workflow was designed to build on every PR
+(build-only) and push to ACR only on `main` when registry vars/secrets are
+configured. Because it is currently disabled, no automatic image build/push or
+digest promotion happens today. Promotion across environments references the
+digest, not a moving tag.
 
 ```mermaid
 flowchart LR
@@ -120,15 +128,15 @@ flowchart LR
     e2e -->|gate| promote["digest promotion → test/prod"]
 ```
 
-Manifests are validated statically in CI (`k8s-render-validate.yml`: Helm render +
-kubeconform) before any cluster contact ([ADR-0011](../adrs/0011-k8s-manifest-validation-in-ci.md)).
+When reactivated, manifests are validated statically in CI
+(`k8s-render-validate.yml`: Helm render + kubeconform) before any cluster contact ([ADR-0011](../adrs/0011-k8s-manifest-validation-in-ci.md)).
 The DB-bootstrap job is decoupled from the app deploy so an unset bootstrap secret
 can't freeze the frontend (see the deploy-gate note in maintainer memory).
 
 ## Operational scripts & runbooks
 
-- **Hourly runtime monitoring lanes (`pipeline-hourly.yml`)**:
-  - Public lane on GitHub-hosted runners performs only public/posture checks.
+- **Hourly runtime monitoring lanes (`pipeline-hourly.yml`) — disabled today**:
+  - Parked design: public lane on GitHub-hosted runners performs only public/posture checks.
   - Private lane runs on self-hosted/private-access runner labels (`factory-cluster-guardian`) for cluster/Azure runtime checks (`operations-manager` private scope + `cluster-guardian`).
   - Missing private prerequisites are reported as explicit degraded monitoring (failing run), not a silent skip.
 - [`scripts/seed-demo-users.sh`](../../scripts/seed-demo-users.sh) — idempotent demo-user provisioning (roles + `app_metadata`).

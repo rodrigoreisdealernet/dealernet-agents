@@ -5,6 +5,9 @@
 - **Deciders:** Repository owner (PR #1667)
 - **Supersedes / Superseded by:** Supersedes the tooling clause of ADR-0030 (linking via `scripts/project-sync.sh`); the three-level hierarchy decision in ADR-0030 is unchanged.
 
+> **Status atual (2026-06-25):** this ADR records the accepted design, but its GitHub Actions implementation is currently parked in `.github/workflows.disabled/`. Only `.github/workflows/ci.yml` is active; the factory operates via local Claude Code skills (`/ship-issue`, `/ship-batch`) until an explicit reactivation.
+
+
 ## Context
 
 ADR-0030 recorded that sub-issue links for the Initiative → Epic → Story hierarchy were created

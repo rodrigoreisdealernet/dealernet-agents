@@ -10,6 +10,12 @@ subsystems together. It complements, and does not replace:
 Read this when you want the *shape of the whole system*; drop into the ADRs and
 specs when you need the depth on a particular decision.
 
+> **⚠️ Status atual (2026-06-25):** the active GitHub Actions surface is only
+> `.github/workflows/ci.yml`. The Software Factory workflows described in these
+> architecture pages are parked in `.github/workflows.disabled/` and do **not**
+> run automatically today; the active shipping path is local Claude Code skills
+> (`/ship-issue`, `/ship-batch`).
+
 > All diagrams below render natively on GitHub (Mermaid). Each subsystem page goes
 > deeper with its own diagrams.
 
@@ -19,7 +25,7 @@ The repository is **two factories around one product**:
 
 1. **The product** — a rental ERP web app (React) over a self-hosted Supabase data
    layer, with **Temporal** orchestrating rental operations.
-2. **The Software Factory** — GitHub Actions + role-based AI agents that triage,
+2. **The Software Factory** — currently local Claude Code skills, with parked GitHub Actions + role-based AI agents that triage,
    design, build (via Copilot), review, and ship the product autonomously.
 3. **The Operations Factory** — Temporal + Azure OpenAI agents that automate the
    rental back-office (revenue recognition, fleet audits, billing reconciliation)
@@ -29,7 +35,7 @@ The repository is **two factories around one product**:
 flowchart TB
     subgraph Builds["🏭 Software Factory — builds the product"]
         direction LR
-        GHA["GitHub Actions<br/>cadence pipelines"] --> Agents["Role-based agents<br/>(PM, reviewers, architect…)"]
+        GHA["GitHub Actions<br/>cadence pipelines<br/>(disabled)"] --> Agents["Role-based agents<br/>(PM, reviewers, architect…)"]
         Agents --> Copilot["GitHub Copilot<br/>(implements)"]
     end
 
@@ -60,7 +66,7 @@ flowchart TB
 flowchart TB
     user(["Rental staff<br/>(4 roles)"])
     maint(["Maintainers"])
-    gh(["GitHub<br/>(issues · PRs · Actions)"])
+    gh(["GitHub<br/>(issues · PRs · ci.yml active;<br/>factory Actions disabled)"])
     aoai(["Azure OpenAI"])
     azure(["Azure<br/>(AKS · ACR · Front Door)"])
 
@@ -69,7 +75,7 @@ flowchart TB
     user -->|signs in, manages rentals| sys
     maint -->|files epics, sets guardrails| sys
     sys -->|orchestrates issues/PRs| gh
-    gh -->|runs agents & CI| sys
+    gh -->|runs ci.yml today;<br/>agent workflows parked| sys
     sys -->|agent reasoning + tools| aoai
     sys -->|deploys to| azure
 ```

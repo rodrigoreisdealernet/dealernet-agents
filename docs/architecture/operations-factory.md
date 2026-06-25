@@ -10,6 +10,12 @@ gate every consequential action behind a human approval signal.
 Design: [`docs/specs/operations-factory-agentic-workflows.md`](../specs/operations-factory-agentic-workflows.md).
 The first implemented slice is **Revenue Recognition (Rev-Rec)**.
 
+> **⚠️ Status atual (2026-06-25):** Operations Factory Temporal concepts remain
+> the product design, but GitHub Actions monitoring lanes for it are parked. Only
+> `.github/workflows/ci.yml` is active; `pipeline-hourly.yml` and
+> `monitor-ops.yml` live in `.github/workflows.disabled/` and do **not** run
+> automatic ops-health checks today.
+
 ## Shape
 
 ```mermaid
@@ -132,11 +138,13 @@ recurring entrypoint.
 
 ## Runtime monitoring coverage (software-factory lane)
 
-Runtime monitoring for the live dev cluster is executed by `pipeline-hourly.yml` in two explicit lanes:
+Runtime monitoring for the live dev cluster was designed to be executed by
+`pipeline-hourly.yml`, but that workflow is currently parked in
+`.github/workflows.disabled/`. When reactivated, it uses two explicit lanes:
 - **Public lane (GitHub-hosted):** `operations-manager` with `OPS_CHECK_SCOPE=public` (public/posture checks only).
 - **Private lane (self-hosted/private-access runner):** `operations-manager` with `OPS_CHECK_SCOPE=private` and `cluster-guardian` for read-only `dia-*` cluster health.
 
-If private prerequisites are missing, the hourly workflow reports **degraded monitoring** as a failing result instead of a success-shaped skip.
+When reactivated, if private prerequisites are missing, the hourly workflow reports **degraded monitoring** as a failing result instead of a success-shaped skip.
 
 ## Reference
 
