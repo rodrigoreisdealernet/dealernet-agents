@@ -237,6 +237,90 @@ export async function getAgentConfig(agentKey: string): Promise<Record<string, u
   return unwrap(res) ?? []
 }
 
+// ── Veículos (DIA dealership domain, issue #4) ──────────────────────────────
+// Leitura direta da view v_dia_vehicle_current (security_invoker → RLS authenticated).
+// Escrita SEMPRE via RPCs endurecidas (create/update/delete_vehicle): o cliente NÃO
+// faz INSERT/UPDATE direto. Mantém o charter "writes go through a guarded path".
+
+export interface VehicleRow {
+  entity_id: string
+  source_record_id: string | null
+  name: string | null
+  condition: 'novo' | 'usado' | string
+  brand: string | null
+  model: string | null
+  model_year: number | null
+  cost: number | null
+  sale_price: number | null
+  purchase_date: string | null
+  status: 'em_estoque' | 'vendido' | string
+  store: string | null
+  days_in_stock: number | null
+  floor_plan_cost: number | null
+}
+
+/** Campos editáveis do veículo (payload das RPCs create/update_vehicle). */
+export interface VehicleInput {
+  condition: 'novo' | 'usado'
+  brand: string
+  model: string
+  model_year?: number | null
+  cost?: number | null
+  sale_price?: number | null
+  purchase_date?: string | null
+  status?: 'em_estoque' | 'vendido'
+  store?: string | null
+}
+
+const VEHICLE_COLS =
+  'entity_id, source_record_id, name, condition, brand, model, model_year, cost, sale_price, purchase_date, status, store, days_in_stock, floor_plan_cost'
+
+export async function getVehicles(): Promise<VehicleRow[]> {
+  const res = (await supabase
+    .from('v_dia_vehicle_current')
+    .select(VEHICLE_COLS)
+    .order('days_in_stock', { ascending: false })) as PgResponse<VehicleRow[]>
+  return unwrap(res) ?? []
+}
+
+// Remove chaves undefined/null vazias para não sobrescrever no merge do update.
+function vehiclePayload(input: VehicleInput): Record<string, unknown> {
+  const p: Record<string, unknown> = {
+    condition: input.condition,
+    brand: input.brand,
+    model: input.model,
+  }
+  if (input.model_year != null) p.model_year = input.model_year
+  if (input.cost != null) p.cost = input.cost
+  if (input.sale_price != null) p.sale_price = input.sale_price
+  if (input.purchase_date) p.purchase_date = input.purchase_date
+  if (input.status) p.status = input.status
+  if (input.store) p.store = input.store
+  return p
+}
+
+export async function createVehicle(input: VehicleInput): Promise<void> {
+  const res = (await supabase.rpc('create_vehicle', {
+    p_data: vehiclePayload(input),
+  })) as PgResponse<unknown>
+  unwrap(res)
+}
+
+export async function updateVehicle(entityId: string, input: Partial<VehicleInput>): Promise<void> {
+  const res = (await supabase.rpc('update_vehicle', {
+    p_entity_id: entityId,
+    p_data: vehiclePayload(input as VehicleInput),
+  })) as PgResponse<unknown>
+  unwrap(res)
+}
+
+export async function deleteVehicle(entityId: string): Promise<void> {
+  const res = (await supabase.rpc('delete_vehicle', {
+    p_entity_id: entityId,
+  })) as PgResponse<unknown>
+  unwrap(res)
+}
+
 // ── Decisão (escrita) via ops-api — POST /api/ops/findings/decision (ver PRD §6.4) ──
 const OPS_API_URL = ENV.VITE_OPS_API_URL || '/api/ops'
 

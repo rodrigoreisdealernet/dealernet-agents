@@ -113,6 +113,20 @@ const MOCK_MENU: MenuItem[] = [
       },
     ],
   },
+  // DIA dealership domain (issue #4) — cadastro de estoque de veículos.
+  {
+    id: 'dealership',
+    text: 'Concessionária',
+    icon: 'fa-car',
+    children: [
+      {
+        id: 'dealership-vehicles',
+        text: 'Estoque de Veículos',
+        icon: 'fa-car',
+        spec: { title: 'Estoque de Veículos', kind: 'component', componentKey: 'dia-vehicles' },
+      },
+    ],
+  },
 ]
 
 const delay = <T>(value: T) => new Promise<T>((r) => setTimeout(() => r(value), 120))
