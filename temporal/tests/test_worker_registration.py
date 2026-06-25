@@ -88,6 +88,7 @@ def _resolve_activity_module_alias(alias: str) -> str | None:
         "ops_integration_exception": "temporal.src.activities.ops_integration_exception",
         "ops_pm": "temporal.src.activities.ops_pm",
         "ops_revrec": "temporal.src.activities.ops_revrec",
+        "ops_vehicle_aging": "temporal.src.activities.ops_vehicle_aging",
         "ops_safety_compliance_monitor": "temporal.src.activities.ops_safety_compliance_monitor",
         "ops_shop_queue": "temporal.src.activities.ops_shop_queue",
         "ops_technician_queue": "temporal.src.activities.ops_technician_queue",

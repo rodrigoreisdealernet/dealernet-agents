@@ -2454,7 +2454,11 @@ DECLARE
     jsonb_build_object('sr','demo-dia-vehicle-009','condition','usado','brand','Volkswagen','model','Golf','model_year',2019,'cost',75000,'sale_price',92900,'days',240,'status','em_estoque','store','Matriz'),
     jsonb_build_object('sr','demo-dia-vehicle-010','condition','usado','brand','Renault','model','Duster','model_year',2021,'cost',70000,'sale_price',86900,'days',30,'status','em_estoque','store','Filial Norte'),
     jsonb_build_object('sr','demo-dia-vehicle-011','condition','usado','brand','Jeep','model','Renegade','model_year',2021,'cost',92000,'sale_price',112900,'days',55,'status','em_estoque','store','Filial Sul'),
-    jsonb_build_object('sr','demo-dia-vehicle-012','condition','usado','brand','Toyota','model','Hilux','model_year',2018,'cost',145000,'sale_price',179900,'days',300,'status','vendido','store','Matriz')
+    jsonb_build_object('sr','demo-dia-vehicle-012','condition','usado','brand','Toyota','model','Hilux','model_year',2018,'cost',145000,'sale_price',179900,'days',300,'status','vendido','store','Matriz'),
+    -- Vehicle Stock-Aging Analyst (issue #32): dedicated 75-90d em_estoque vehicles.
+    jsonb_build_object('sr','demo-dia-vehicle-013','condition','usado','brand','Chevrolet','model','Tracker','model_year',2022,'cost',110000,'sale_price',134900,'days',80,'status','em_estoque','store','Matriz'),
+    jsonb_build_object('sr','demo-dia-vehicle-014','condition','novo','brand','Nissan','model','Kicks','model_year',2026,'cost',125000,'sale_price',152900,'days',86,'status','em_estoque','store','Filial Sul'),
+    jsonb_build_object('sr','demo-dia-vehicle-015','condition','usado','brand','Ford','model','Ranger','model_year',2021,'cost',160000,'sale_price',198900,'days',89,'status','em_estoque','store','Filial Norte')
   );
   v_item jsonb;
 BEGIN
@@ -2489,6 +2493,107 @@ END
 $$;
 
 commit;
+
+-- ===========================================================================
+-- Vehicle Stock-Aging Analyst agent config (issue #32)
+-- Seeds `vehicle-aging-analyst` for demo-ops-a and demo-ops-b in BOTH the
+-- entity store (entity_type='agent_config'; read by ops_agent_config_current →
+-- ops_load_agent_config and by the worker schedule reconcile) and the base
+-- `ops_agent_config` table (parity). enabled=true but schedule.enabled=false so
+-- the recurring run stays off by default. The output schema registry row is
+-- owned by migration 20260626140000_vehicle_aging_agent.sql (applied first).
+-- Idempotent via ON CONFLICT upserts; tenants come from the main ops seed above.
+-- ===========================================================================
+DO $$
+DECLARE
+  v_agent_key   text  := 'vehicle-aging-analyst';
+  v_schema_key  text  := 'vehicle_aging_finding_v1';
+  v_model       jsonb := '{"provider":"azure_openai","deployment":"gpt-4.1-mini","api_version":"2024-12-01-preview"}'::jsonb;
+  v_system_prompt text := 'You are the Vehicle Stock-Aging Analyst for a vehicle dealership. Rank in-stock vehicles approaching the 90-day floor-plan exposure line for tenant {tenant_id}. Recommend a reviewable next action (monitor, markdown, transfer, prioritize_sale, wholesale_auction) using days in stock, floor-plan cost, store, and pricing. Never apply markdowns, transfers, or sales automatically; surface evidence and keep uncertainty explicit.';
+  v_user_prompt text := 'Assess vehicle {vehicle_id} ({brand} {model} {model_year}) at store {store} for tenant {tenant_id}. Days in stock: {days_in_stock}. Aging bucket: {aging_bucket}. Floor-plan cost: {floor_plan_cost}. Cost: {cost}. Sale price: {sale_price}. Recommend the next human-approved action with supporting evidence. Evidence:\n{evidence_json}';
+  v_tools       jsonb := '[]'::jsonb;
+  v_thresholds  jsonb := '{"aging_warning_days":75,"aging_breach_days":90}'::jsonb;
+  v_bounds      jsonb := '{"max_findings_per_run":50,"max_tool_rounds":2}'::jsonb;
+  v_schedule    jsonb := '{"cron":"0 6 * * 1-5","enabled":false}'::jsonb;
+  v_tenant_keys text[] := ARRAY['demo-ops-a','demo-ops-b'];
+  v_tenant_key  text;
+  v_tenant_id   uuid;
+  v_entity_id   uuid;
+BEGIN
+  PERFORM set_config('request.jwt.claim.role', 'service_role', true);
+
+  FOREACH v_tenant_key IN ARRAY v_tenant_keys
+  LOOP
+    SELECT id INTO v_tenant_id FROM tenants WHERE tenant_key = v_tenant_key;
+    IF v_tenant_id IS NULL THEN
+      RAISE EXCEPTION 'Vehicle aging seed requires tenant % (run the main ops seed first)', v_tenant_key;
+    END IF;
+
+    -- Idempotent reset: drop any prior current version first. The SCD2 BEFORE
+    -- INSERT trigger forbids ON CONFLICT from re-updating an existing current
+    -- version in the same command, so a clean delete (cascading to versions)
+    -- keeps a re-applied seed replay-safe.
+    DELETE FROM entities
+    WHERE entity_type = 'agent_config'
+      AND source_record_id = format('demo-ops-agent-config:%s:%s', v_tenant_id, v_agent_key);
+
+    -- Canonical config in the entity store (read by ops_agent_config_current).
+    INSERT INTO entities (entity_type, source_record_id)
+    VALUES ('agent_config', format('demo-ops-agent-config:%s:%s', v_tenant_id, v_agent_key))
+    ON CONFLICT (entity_type, source_record_id) DO UPDATE
+      SET source_record_id = EXCLUDED.source_record_id
+    RETURNING id INTO v_entity_id;
+
+    INSERT INTO entity_versions (entity_id, version_number, data)
+    VALUES (
+      v_entity_id,
+      1,
+      jsonb_build_object(
+        'tenant_id', v_tenant_id,
+        'agent_key', v_agent_key,
+        'enabled', true,
+        'model', v_model,
+        'system_prompt', v_system_prompt,
+        'user_prompt_template', v_user_prompt,
+        'tools', v_tools,
+        'output_schema_key', v_schema_key,
+        'thresholds', v_thresholds,
+        'bounds', v_bounds,
+        'schedule', v_schedule,
+        'auto_apply', false
+      )
+    )
+    ON CONFLICT (entity_id, version_number) DO UPDATE
+      SET data = EXCLUDED.data,
+          is_current = true,
+          valid_to = NULL;
+
+    -- Base-table parity row.
+    INSERT INTO ops_agent_config (
+      tenant_id, agent_key, enabled, model,
+      system_prompt, user_prompt_template,
+      tools, output_schema_key, thresholds, bounds, schedule, auto_apply
+    )
+    VALUES (
+      v_tenant_id, v_agent_key, true, v_model,
+      v_system_prompt, v_user_prompt,
+      v_tools, v_schema_key, v_thresholds, v_bounds, v_schedule, false
+    )
+    ON CONFLICT (tenant_id, agent_key) DO UPDATE
+      SET enabled              = EXCLUDED.enabled,
+          model                = EXCLUDED.model,
+          system_prompt        = EXCLUDED.system_prompt,
+          user_prompt_template = EXCLUDED.user_prompt_template,
+          tools                = EXCLUDED.tools,
+          output_schema_key    = EXCLUDED.output_schema_key,
+          thresholds           = EXCLUDED.thresholds,
+          bounds               = EXCLUDED.bounds,
+          schedule             = EXCLUDED.schedule,
+          auto_apply           = EXCLUDED.auto_apply,
+          updated_at           = now();
+  END LOOP;
+END
+$$;
 
 -- ===========================================================================
 -- DIA dealership domain — demo companies + brands (issue #5)
