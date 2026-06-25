@@ -2426,3 +2426,66 @@ END
 $$;
 
 commit;
+
+-- ===========================================================================
+-- DIA dealership domain — demo vehicles (issue #4)
+-- Idempotent namespace: source_record_id LIKE 'demo-dia-vehicle-%'.
+-- 12 vehicles (6 novo + 6 usado) with varied purchase_date so floor_plan_cost
+-- is > 0 for the aged ones. Reuses rental_upsert_entity_current_state (the
+-- generic SCD2 upsert) under the service_role write guard.
+-- ===========================================================================
+
+begin;
+set local request.jwt.claim.role = 'service_role';
+
+DO $$
+DECLARE
+  v_now timestamptz := now();
+  v_vehicles jsonb := jsonb_build_array(
+    -- condition, brand, model, year, cost, sale_price, days_old, status, store
+    jsonb_build_object('sr','demo-dia-vehicle-001','condition','novo','brand','Fiat','model','Pulse','model_year',2026,'cost',95000,'sale_price',119900,'days',75,'status','em_estoque','store','Matriz'),
+    jsonb_build_object('sr','demo-dia-vehicle-002','condition','novo','brand','Jeep','model','Compass','model_year',2026,'cost',180000,'sale_price',229900,'days',120,'status','em_estoque','store','Matriz'),
+    jsonb_build_object('sr','demo-dia-vehicle-003','condition','novo','brand','Volkswagen','model','Nivus','model_year',2026,'cost',120000,'sale_price',149900,'days',45,'status','em_estoque','store','Filial Sul'),
+    jsonb_build_object('sr','demo-dia-vehicle-004','condition','novo','brand','Chevrolet','model','Onix','model_year',2026,'cost',88000,'sale_price',104900,'days',15,'status','em_estoque','store','Filial Sul'),
+    jsonb_build_object('sr','demo-dia-vehicle-005','condition','novo','brand','Toyota','model','Corolla','model_year',2026,'cost',150000,'sale_price',184900,'days',200,'status','em_estoque','store','Matriz'),
+    jsonb_build_object('sr','demo-dia-vehicle-006','condition','novo','brand','Hyundai','model','Creta','model_year',2026,'cost',135000,'sale_price',164900,'days',5,'status','em_estoque','store','Filial Norte'),
+    jsonb_build_object('sr','demo-dia-vehicle-007','condition','usado','brand','Fiat','model','Argo','model_year',2022,'cost',62000,'sale_price',74900,'days',90,'status','em_estoque','store','Matriz'),
+    jsonb_build_object('sr','demo-dia-vehicle-008','condition','usado','brand','Honda','model','Civic','model_year',2020,'cost',98000,'sale_price',119900,'days',160,'status','em_estoque','store','Filial Sul'),
+    jsonb_build_object('sr','demo-dia-vehicle-009','condition','usado','brand','Volkswagen','model','Golf','model_year',2019,'cost',75000,'sale_price',92900,'days',240,'status','em_estoque','store','Matriz'),
+    jsonb_build_object('sr','demo-dia-vehicle-010','condition','usado','brand','Renault','model','Duster','model_year',2021,'cost',70000,'sale_price',86900,'days',30,'status','em_estoque','store','Filial Norte'),
+    jsonb_build_object('sr','demo-dia-vehicle-011','condition','usado','brand','Jeep','model','Renegade','model_year',2021,'cost',92000,'sale_price',112900,'days',55,'status','em_estoque','store','Filial Sul'),
+    jsonb_build_object('sr','demo-dia-vehicle-012','condition','usado','brand','Toyota','model','Hilux','model_year',2018,'cost',145000,'sale_price',179900,'days',300,'status','vendido','store','Matriz')
+  );
+  v_item jsonb;
+BEGIN
+  PERFORM set_config('request.jwt.claim.role', 'service_role', true);
+
+  -- Idempotent: drop prior demo vehicles, then recreate.
+  DELETE FROM entities
+  WHERE entity_type = 'vehicle'
+    AND source_record_id LIKE 'demo-dia-vehicle-%';
+
+  FOR v_item IN SELECT * FROM jsonb_array_elements(v_vehicles)
+  LOOP
+    PERFORM rental_upsert_entity_current_state(
+      p_entity_type => 'vehicle',
+      p_source_record_id => v_item ->> 'sr',
+      p_data => jsonb_build_object(
+        'name', concat_ws(' ', v_item ->> 'brand', v_item ->> 'model', v_item ->> 'model_year'),
+        'condition', v_item ->> 'condition',
+        'brand', v_item ->> 'brand',
+        'model', v_item ->> 'model',
+        'model_year', (v_item ->> 'model_year')::int,
+        'cost', (v_item ->> 'cost')::numeric,
+        'sale_price', (v_item ->> 'sale_price')::numeric,
+        'purchase_date', to_char((v_now - ((v_item ->> 'days')::int || ' days')::interval)::date, 'YYYY-MM-DD'),
+        'status', v_item ->> 'status',
+        'store', v_item ->> 'store',
+        'source_record_id', v_item ->> 'sr'
+      )
+    );
+  END LOOP;
+END
+$$;
+
+commit;
