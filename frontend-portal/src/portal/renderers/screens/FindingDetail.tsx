@@ -6,7 +6,7 @@ import { usePortalStore } from '@/portal/store/portalStore'
 import { decideFinding, getFinding, type FindingDetail as FindingDetailVM } from '@/portal/lib/agentsApi'
 import type { ScreenProps } from './types'
 import { Badge, severityTone, statusTone } from './ui'
-import { formatBRL, formatPct } from './format'
+import { formatBRL, formatBRLKpi, formatPct } from './format'
 
 export default function FindingDetail({ params }: ScreenProps) {
   const findingId = params?.findingId as string | undefined
@@ -92,6 +92,7 @@ export default function FindingDetail({ params }: ScreenProps) {
           <Badge tone={statusTone(data.status)}>{data.status}</Badge>
           <span className="text-sm text-muted-foreground">Agente: {data.agent_key}</span>
         </div>
+        <p className="text-xs font-medium text-muted-foreground">Valores em R$</p>
       </header>
 
       <div className="flex flex-wrap items-end gap-10">
@@ -100,7 +101,7 @@ export default function FindingDetail({ params }: ScreenProps) {
           <div
             className={`text-3xl font-semibold tabular-nums ${overBilled ? 'text-destructive' : 'text-success'}`}
           >
-            {formatBRL(data.delta)}
+            {formatBRLKpi(data.delta)}
           </div>
         </div>
         <div>

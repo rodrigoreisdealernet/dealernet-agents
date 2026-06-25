@@ -13,7 +13,7 @@ import {
   type PartStockStatus,
 } from '@/portal/lib/agentsApi'
 import { KpiCard, Badge, ScreenShell, type Tone } from './ui'
-import { formatBRL } from './format'
+import { formatBRLKpi } from './format'
 import { ChartCard } from './ChartCard'
 
 // Mesmo mapeamento de estado de estoque da tela de cadastro (PartsInventory.tsx).
@@ -106,14 +106,15 @@ export default function PartsBI() {
     <ScreenShell
       title="Peças (Fast BI)"
       subtitle="Valor de estoque, peças críticas e vendas de peças — visão somente leitura."
+      legend="Valores em R$"
     >
       {error && <p className="text-sm text-destructive">Erro: {error}</p>}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <KpiCard label="Valor em estoque" value={formatBRL(kpis?.parts_inventory_value ?? 0)} />
+        <KpiCard label="Valor em estoque" value={formatBRLKpi(kpis?.parts_inventory_value ?? 0)} />
         <KpiCard label="Peças críticas/zeradas" value={kpis?.parts_critical_count ?? 0} />
         <KpiCard label="Vendidas no mês" value={monthSales.units} />
-        <KpiCard label="Receita no mês" value={formatBRL(monthSales.revenue)} />
+        <KpiCard label="Receita no mês" value={formatBRLKpi(monthSales.revenue)} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

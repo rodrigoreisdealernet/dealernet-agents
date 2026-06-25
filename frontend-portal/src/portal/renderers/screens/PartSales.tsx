@@ -15,7 +15,7 @@ import {
 } from '@/portal/lib/agentsApi'
 import { KpiCard, Badge, ScreenShell, RowActions, RowActionButton, type Tone } from './ui'
 import { XCircle } from 'lucide-react'
-import { formatBRL } from './format'
+import { formatBRL, formatBRLKpi } from './format'
 
 type FormState = {
   part_id: string
@@ -148,13 +148,14 @@ export default function PartSales() {
     <ScreenShell
       title="Venda de Peças"
       subtitle="Vendas de balcão com baixa atômica de estoque; cancelamento estorna a quantidade."
+      legend="Valores em R$"
     >
       {error && <p className="text-sm text-destructive">Erro: {error}</p>}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
         <KpiCard label="Vendas" value={kpis.total} />
         <KpiCard label="Peças vendidas" value={kpis.units} />
-        <KpiCard label="Receita" value={formatBRL(kpis.revenue)} />
+        <KpiCard label="Receita" value={formatBRLKpi(kpis.revenue)} />
       </div>
 
       <div className="flex items-center justify-between">

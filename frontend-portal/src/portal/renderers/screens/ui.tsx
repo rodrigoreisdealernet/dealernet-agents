@@ -93,12 +93,24 @@ export function RowActions({ children }: { children: ReactNode }) {
   return <div className="flex items-center justify-end gap-2">{children}</div>
 }
 
-export function ScreenShell({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
+export function ScreenShell({
+  title,
+  subtitle,
+  legend,
+  children,
+}: {
+  title: string
+  subtitle?: string
+  /** Nota de denominação dos KPI cards (issue #54), ex.: "Valores em R$". */
+  legend?: ReactNode
+  children: ReactNode
+}) {
   return (
     <div className="flex h-full flex-col gap-5 overflow-auto p-5">
       <header className="space-y-1">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">{title}</h1>
         {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+        {legend && <p className="text-xs font-medium text-muted-foreground">{legend}</p>}
       </header>
       {children}
     </div>

@@ -11,7 +11,7 @@ import {
   type VehicleRow,
 } from '@/portal/lib/agentsApi'
 import { ChartCard } from './ChartCard'
-import { formatBRL } from './format'
+import { formatBRL, formatBRLKpi } from './format'
 import { KpiCard, ScreenShell } from './ui'
 
 const AGE_BANDS = ['0-30', '31-60', '61-90', '90+']
@@ -101,13 +101,14 @@ export default function VehicleInventoryBI() {
     <ScreenShell
       title="Estoque de Veículos & Floor Plan (Fast BI)"
       subtitle="Visão somente leitura da idade do estoque, custo de floor plan e veículos prioritários."
+      legend="Valores em R$"
     >
       {error && <p className="text-sm text-destructive">Erro: {error}</p>}
       {loading && <p className="text-sm text-muted-foreground">Carregando…</p>}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <KpiCard label="Valor do estoque" value={formatBRL(kpis?.inventory_vehicle_value ?? 0)} />
-        <KpiCard label="Floor plan total" value={formatBRL(kpis?.floor_plan_total ?? 0)} />
+        <KpiCard label="Valor do estoque" value={formatBRLKpi(kpis?.inventory_vehicle_value ?? 0)} />
+        <KpiCard label="Floor plan total" value={formatBRLKpi(kpis?.floor_plan_total ?? 0)} />
         <KpiCard label="Dias médios de estoque" value={Math.round(kpis?.avg_days_in_stock ?? 0)} />
         <KpiCard label="Parados há +90 dias" value={agedVehiclesCount} />
       </div>

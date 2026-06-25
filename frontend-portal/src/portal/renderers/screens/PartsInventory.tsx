@@ -15,7 +15,7 @@ import {
 } from '@/portal/lib/agentsApi'
 import { KpiCard, Badge, ScreenShell, RowActions, RowActionButton, type Tone } from './ui'
 import { Pencil, Trash2 } from 'lucide-react'
-import { formatBRL } from './format'
+import { formatBRL, formatBRLKpi } from './format'
 
 type FormState = PartInput & { entity_id?: string }
 
@@ -138,6 +138,7 @@ export default function PartsInventory() {
     <ScreenShell
       title="Estoque de Peças"
       subtitle="Inventário de peças com valor de estoque e estado de reposição (zerado/crítico/baixo)."
+      legend="Valores em R$"
     >
       {error && <p className="text-sm text-destructive">Erro: {error}</p>}
 
@@ -145,7 +146,7 @@ export default function PartsInventory() {
         <KpiCard label="Total" value={kpis.total} />
         <KpiCard label="Repor (críticas)" value={kpis.criticas} />
         <KpiCard label="Zeradas" value={kpis.zeradas} />
-        <KpiCard label="Valor em estoque" value={formatBRL(kpis.stockValue)} />
+        <KpiCard label="Valor em estoque" value={formatBRLKpi(kpis.stockValue)} />
       </div>
 
       <div className="flex items-center justify-between">

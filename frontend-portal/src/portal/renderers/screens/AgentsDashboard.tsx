@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { usePortalStore } from '@/portal/store/portalStore'
 import { getAgentStatus, getFindingKpis, type AgentStatus, type FindingKpis } from '@/portal/lib/agentsApi'
 import { KpiCard, Badge, ScreenShell } from './ui'
-import { formatBRL, formatDateTime } from './format'
+import { formatBRL, formatBRLKpi, formatDateTime } from './format'
 
 export default function AgentsDashboard() {
   const openWindow = usePortalStore((s) => s.openWindow)
@@ -36,12 +36,13 @@ export default function AgentsDashboard() {
     <ScreenShell
       title="Agent Dashboard"
       subtitle="A fábrica de agentes de IA: o que rodou, o que está pendente e quanto há para recuperar."
+      legend="Valores em R$"
     >
       {error && <p className="text-sm text-destructive">Erro: {error}</p>}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <KpiCard label="Pendentes" value={kpis?.pending_count ?? '—'} />
-        <KpiCard label="Recuperável" value={formatBRL(kpis?.recoverable_delta)} />
+        <KpiCard label="Recuperável" value={formatBRLKpi(kpis?.recoverable_delta)} />
         <KpiCard label="Aprovados no ciclo" value={kpis?.approved_this_cycle ?? '—'} />
         <KpiCard label="Findings 24h" value={kpis?.findings_last_24h ?? '—'} />
       </div>

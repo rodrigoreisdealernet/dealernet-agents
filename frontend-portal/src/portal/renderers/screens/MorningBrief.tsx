@@ -22,7 +22,7 @@ import {
 } from '@/portal/lib/agentsApi'
 import { useBreakpoint } from '@/hooks/use-breakpoint'
 import { cn } from '@/lib/utils'
-import { formatBRL } from './format'
+import { formatBRL, formatBRLKpi } from './format'
 
 // ── Helpers de formatação dos setores (valores absolutos; "—" quando sem dado) ──
 function fmtUnits(n: number | null | undefined): string {
@@ -30,6 +30,11 @@ function fmtUnits(n: number | null | undefined): string {
 }
 function fmtMoney(n: number | null | undefined): string {
   return typeof n === 'number' && Number.isFinite(n) ? formatBRL(n) : '—'
+}
+// Valor monetário enxuto para os cards (sem R$/centavos, issue #54); a tabela
+// cockpit do desktop mantém fmtMoney (formatBRL). A denominação fica na legenda.
+function fmtMoneyKpi(n: number | null | undefined): string {
+  return typeof n === 'number' && Number.isFinite(n) ? formatBRLKpi(n) : '—'
 }
 function fmtMargin(n: number | null | undefined): string | null {
   return typeof n === 'number' && Number.isFinite(n) ? `margem ${formatBRL(n)}` : null
@@ -129,7 +134,7 @@ function BrandCard({ b, onOpen }: { b: OwnerBriefBrandRow; onOpen: () => void })
           </div>
         </div>
         <div className="text-right">
-          <div className="text-base font-extrabold tabular-nums text-foreground">{fmtMoney(b.resultado)}</div>
+          <div className="text-base font-extrabold tabular-nums text-foreground">{fmtMoneyKpi(b.resultado)}</div>
           <div className="text-[10px] font-semibold text-muted-foreground">Resultado</div>
         </div>
       </div>
@@ -146,7 +151,7 @@ function GroupTotalCard({ total }: { total: OwnerBriefBrandRow }) {
     <div className="rounded-xl bg-foreground p-3 text-background">
       <div className="mb-2.5 flex items-center justify-between">
         <span className="text-sm font-extrabold">Grupo Total</span>
-        <span className="text-base font-extrabold tabular-nums">{fmtMoney(total.resultado)}</span>
+        <span className="text-base font-extrabold tabular-nums">{fmtMoneyKpi(total.resultado)}</span>
       </div>
       <div className="grid grid-cols-5 gap-1.5">
         {cells.map((c) => (
@@ -184,7 +189,7 @@ function StoresDrill({
       <div>
         <div className="text-lg font-extrabold text-foreground">{brand.brand_name}</div>
         <div className="text-sm text-muted-foreground">
-          {fmtMoney(brand.resultado)} · {brand.store_count ?? 0}{' '}
+          {fmtMoneyKpi(brand.resultado)} · {brand.store_count ?? 0}{' '}
           {brand.store_count === 1 ? 'loja' : 'lojas'}
         </div>
       </div>
@@ -200,7 +205,7 @@ function StoresDrill({
         <span
           className={cn('text-sm font-extrabold tabular-nums', atRisk ? 'text-destructive' : 'text-muted-foreground')}
         >
-          {fpUnits} un · {fmtMoney(brand.fp_value_at_risk)}
+          {fpUnits} un · {fmtMoneyKpi(brand.fp_value_at_risk)}
         </span>
       </div>
       <div className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Por loja</div>
@@ -213,7 +218,7 @@ function StoresDrill({
             <div className="mb-2.5 flex items-start justify-between">
               <div className="text-sm font-extrabold text-foreground">📍 {s.store_name}</div>
               <div className="text-right">
-                <div className="text-base font-extrabold tabular-nums text-foreground">{fmtMoney(s.resultado)}</div>
+                <div className="text-base font-extrabold tabular-nums text-foreground">{fmtMoneyKpi(s.resultado)}</div>
                 <div className="text-[10px] font-semibold text-muted-foreground">Resultado</div>
               </div>
             </div>
@@ -503,6 +508,7 @@ export default function MorningBrief() {
                 <div className="text-xl font-extrabold capitalize text-foreground">Ontem</div>
                 <div className="text-xs capitalize text-muted-foreground">{dateLabel}</div>
               </div>
+              <div className="mt-0.5 text-[11px] font-medium text-muted-foreground">Valores em R$</div>
             </header>
             <div className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
               Por marca · toque para ver lojas
@@ -538,6 +544,7 @@ export default function MorningBrief() {
             Morning Brief · Portal DIA
           </div>
           <div className="text-xl font-extrabold text-foreground">Resultado por marca e loja · ontem</div>
+          <div className="mt-0.5 text-[11px] font-medium text-muted-foreground">Valores em R$</div>
         </div>
         <div className="text-right text-xs capitalize text-muted-foreground">{dateLabel}</div>
       </header>
