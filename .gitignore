@@ -81,3 +81,6 @@ frontend/vite.config.js
 frontend/vite.config.d.ts
 quality-results.json
 results/
+
+# deep-research-debate working artifacts
+.deep-research/
