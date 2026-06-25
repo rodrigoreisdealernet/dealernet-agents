@@ -100,8 +100,11 @@ test('AC1 owner_kpis: exatamente 1 linha e nenhuma coluna nula', () => {
 
   // bool_and sobre TODAS as colunas (incluindo as_of) via jsonb_each: 't' se
   // nenhum valor for nulo. Cobre as 12 colunas sem precisar lista-las aqui.
+  // IMPORTANTE: to_jsonb() converte um NULL SQL no escalar JSON 'null', que NAO
+  // e' SQL-NULL — por isso testamos jsonb_typeof(value) <> 'null' (e nao
+  // `value is not null`, que passaria mesmo com coluna nula).
   const noNulls = scalar(
-    `select bool_and(value is not null)
+    `select bool_and(jsonb_typeof(value) <> 'null')
        from v_dia_owner_kpis k, lateral jsonb_each(to_jsonb(k)) as e(key, value);`,
   )
   assert.equal(noNulls, 't', `nenhuma coluna de v_dia_owner_kpis deveria ser nula; obtido=${noNulls}`)
@@ -125,6 +128,17 @@ test('AC2 owner_kpis: KPIs numericas (exceto margin) sao >= 0', () => {
       from v_dia_owner_kpis;`,
   )
   assert.equal(out, 't', `todas as KPIs nao-margin de v_dia_owner_kpis deveriam ser >= 0; obtido=${out}`)
+
+  // Sanidade do join veiculo: com o seed atual ha veiculos em estoque, entao o
+  // valor de estoque deve ser > 0. Pega um join quebrado que zeraria tudo.
+  const invHasInventory = scalar(
+    'select inventory_vehicle_value > 0 from v_dia_owner_kpis;',
+  )
+  assert.equal(
+    invHasInventory,
+    't',
+    `inventory_vehicle_value deveria ser > 0 com o seed de veiculos; obtido=${invHasInventory}`,
+  )
 })
 
 // ---------------------------------------------------------------------------
@@ -229,7 +243,10 @@ test('AC7 service_summary: contrato de colunas + select executa sem erro (0 linh
   // O select tem que rodar limpo mesmo sem o entity_type 'service_order'.
   const { ok, out, err } = psql(`begin;\nselect count(*) from v_dia_service_summary;\nrollback;`)
   assert.ok(ok, `select em v_dia_service_summary falhou: ${err}`)
-  assert.ok(Number(out) >= 0, `count(*) de v_dia_service_summary deveria ser >= 0; obtido=${out}`)
+  // entity_type 'service_order' nao esta no rental_entity_type_catalog desta
+  // branch, entao a view DEVE retornar exatamente 0 linhas hoje (degrade-graceful
+  // ancorado; populara quando #7 registrar o tipo no catalogo).
+  assert.equal(out, '0', `v_dia_service_summary deveria ter 0 linhas ate #7; obtido=${out}`)
 })
 
 // ---------------------------------------------------------------------------
@@ -243,7 +260,10 @@ test('AC8 parts_summary: contrato de colunas + select executa sem erro (0 linhas
 
   const { ok, out, err } = psql(`begin;\nselect count(*) from v_dia_parts_summary;\nrollback;`)
   assert.ok(ok, `select em v_dia_parts_summary falhou: ${err}`)
-  assert.ok(Number(out) >= 0, `count(*) de v_dia_parts_summary deveria ser >= 0; obtido=${out}`)
+  // 'part'/'parts_sale' nao estao no rental_entity_type_catalog desta branch:
+  // o UNION ALL (inventory+sales) DEVE retornar exatamente 0 linhas hoje
+  // (populara quando #8/#10 registrarem os tipos).
+  assert.equal(out, '0', `v_dia_parts_summary deveria ter 0 linhas ate #8/#10; obtido=${out}`)
 })
 
 // ---------------------------------------------------------------------------
