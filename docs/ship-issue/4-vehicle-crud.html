@@ -9,7 +9,7 @@
   .sub{color:#9ca3af;font-size:13px;margin-bottom:16px}
   .sub a{color:#60a5fa;text-decoration:none}
   .bar{height:8px;background:#1f2937;border-radius:99px;overflow:hidden;margin:12px 0 20px}
-  .bar>i{display:block;height:100%;background:#16a34a;width:14%}
+  .bar>i{display:block;height:100%;background:#16a34a;width:100%}
   .banner{background:#7c2d12;color:#fed7aa;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:14px}
   table{width:100%;border-collapse:collapse}
   td{padding:12px 8px;border-top:1px solid #1f2937;vertical-align:top}
@@ -24,9 +24,9 @@
   .foot{color:#6b7280;font-size:12px;margin-top:20px}
 </style></head><body><div class="wrap">
 <h1>ship-issue #4 — Veículo — entidade + CRUD (fatia de validação)</h1>
-<div class="sub"><a href="https://github.com/rodrigoreisdealernet/dealernet-agents/issues/4">issue</a> · branch <code>feature/4-vehicle-crud</code>  · 14% complete</div>
+<div class="sub"><a href="https://github.com/rodrigoreisdealernet/dealernet-agents/issues/4">issue</a> · branch <code>feature/4-vehicle-crud</code> · <a href="https://github.com/rodrigoreisdealernet/dealernet-agents/pull/11">PR #11</a> · 100% complete</div>
 <div class="bar"><i></i></div>
-<div class="banner">🚧 Waiting on human gate: <b>spec-approval</b></div>
+
 <table><tbody><tr class="done">
         <td class="ic" style="color:#16a34a">●</td>
         <td class="lbl">01 · Spec<div class="st" style="color:#16a34a">done</div></td>
@@ -35,54 +35,54 @@
           <div class="arts"><a href="../../docs/specs/4-vehicle-crud.md">Spec</a></div>
           <ul class="notes"><li>iniciando investigação dos padrões: RPC endurecida, helper upsert, view com security_invoker, RLS, UIEngine, seed</li><li>padrões mapeados: RPC hardening, helper upsert, security_invoker views, RLS, UIEngine routes, seed idempotente</li></ul>
         </td>
-      </tr><tr class="waiting">
-        <td class="ic" style="color:#d97706">⏸</td>
-        <td class="lbl">02 · Approve (human gate)<div class="st" style="color:#d97706">waiting</div></td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">02 · Approve (human gate)<div class="st" style="color:#16a34a">done</div></td>
         <td class="meta">
-          <div class="sum">Aguardando aprovação humana da spec</div>
+          <div class="sum">Spec aprovada pelo humano</div>
           
           
         </td>
-      </tr><tr class="pending">
-        <td class="ic" style="color:#9ca3af">○</td>
-        <td class="lbl">03 · Code<div class="st" style="color:#9ca3af">pending</div></td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">03 · Code<div class="st" style="color:#16a34a">done</div></td>
         <td class="meta">
-          
-          
-          
+          <div class="sum">Migration+RPCs+view+seed+tela; DESVIO: UIEngine foi prunada → implementado no frontend-portal nativo. Validado no DB vivo (commit 746b9c8)</div>
+          <div class="arts"><a href="https://github.com/rodrigoreisdealernet/dealernet-agents/commit/746b9c8">Commit</a></div>
+          <ul class="notes"><li>DB inspecionado: create_stock_item foi PRUNADO; rental_entity_type_catalog e um VALUES view sem 'vehicle'; upsert/get_my_role/delete_entity vivos. Adaptando padrao.</li><li>Escrevendo migration: vehicle no catalog + RPCs endurecidas (create/update/delete_vehicle) + view v_dia_vehicle_current. Frontend sera no frontend-portal (UIEngine/frontend foi removido na prune).</li><li>DB validado: migration+seed aplicados; v_dia_vehicle_current=12 linhas, floor_plan&gt;0; CRUD admin OK (create/update/soft-delete); read_only negado (42501). Iniciando frontend-portal.</li><li>Frontend feito no frontend-portal: VehiclesInventory.tsx + helpers em agentsApi.ts + registry + item de menu (Concessionaria). Rodando tsc + vite build.</li><li>Build OK (tsc+vite) e 9/9 testes. Commit 746b9c8. Migration+seed validados no DB vivo: v_dia_vehicle_current=12 linhas floor_plan&gt;0; CRUD admin OK; read_only negado (42501). Frontend no frontend-portal (UIEngine/frontend foi prunado).</li></ul>
         </td>
-      </tr><tr class="pending">
-        <td class="ic" style="color:#9ca3af">○</td>
-        <td class="lbl">04 · Tests<div class="st" style="color:#9ca3af">pending</div></td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">04 · Tests<div class="st" style="color:#16a34a">done</div></td>
         <td class="meta">
+          <div class="sum">Contrato SQL 7/7 + wiring 6/6; build OK (commit 92ec890)</div>
           
-          
-          
+          <ul class="notes"><li>escrevendo teste de contrato SQL (vehicle CRUD) contra Postgres vivo</li><li>7 testes de contrato SQL verdes + 6 asserts de wiring frontend verdes; rodando build</li><li>PR draft #11 aberto; 7 testes SQL + 6 wiring verdes; build verde (https://github.com/rodrigoreisdealernet/dealernet-agents/pull/11)</li></ul>
         </td>
-      </tr><tr class="pending">
-        <td class="ic" style="color:#9ca3af">○</td>
-        <td class="lbl">05 · Test review<div class="st" style="color:#9ca3af">pending</div></td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">05 · Test review<div class="st" style="color:#16a34a">done</div></td>
         <td class="meta">
+          <div class="sum">Aprovado após 1 iteração (10 testes: +update SCD2, +brand/model)</div>
           
-          
-          
+          <ul class="notes"><li>2 bloqueantes: falta teste de update_vehicle (SCD2) + validação brand/model. 4 não-bloqueantes (fragilidades menores).</li><li>Iteração 1: bloqueantes (update SCD2, validação brand/model) devolvidos ao tester</li><li>tester: adicionados 3 testes (update SCD2 + brand/model obrigatorios); rodando contrato</li><li>Bloqueantes 1 (update SCD2) + 2 (brand/model obrigatórios) FECHADOS com 3+2 assertions robustas</li></ul>
         </td>
-      </tr><tr class="pending">
-        <td class="ic" style="color:#9ca3af">○</td>
-        <td class="lbl">06 · Code review<div class="st" style="color:#9ca3af">pending</div></td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">06 · Code review<div class="st" style="color:#16a34a">done</div></td>
         <td class="meta">
+          <div class="sum">Pronto para merge: SQL security/corretude OK; desvio UIEngine documentado</div>
           
-          
-          
+          <ul class="notes"><li>Security (DEFINER+search_path+guard+grants+RLS) 100%. Corretude (floor_plan formula, SCD2 merge, soft-delete SCD2) 100%. Wiring (frontend-portal React nativo; desvio UIEngine documentado, aceitável). SQL+wiring tests 100%. PR #11 MERGED.</li></ul>
         </td>
-      </tr><tr class="pending">
-        <td class="ic" style="color:#9ca3af">○</td>
-        <td class="lbl">Merge (human gate)<div class="st" style="color:#9ca3af">pending</div></td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">Merge (human gate)<div class="st" style="color:#16a34a">done</div></td>
         <td class="meta">
-          
+          <div class="sum">Mergeado na main (PR #11, commit fe7f684); 3 testes recuperados via follow-up</div>
           
           
         </td>
       </tr></tbody></table>
-<div class="foot">auto-refreshes every 5s · last update 2026-06-25T16:14:35.187Z</div>
+<div class="foot">auto-refreshes every 5s · last update 2026-06-25T17:15:39.417Z</div>
 </div></body></html>
