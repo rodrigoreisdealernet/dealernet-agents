@@ -1,5 +1,5 @@
 ---
-description: Ship ALL open GitHub issues in one run — isolated git worktrees per issue, dependency-ordered, serial merge with auto-rebase. Specs auto-approved; humans gate only the final merge.
+description: Ship ALL open GitHub issues in one run — one clean-context agent per issue (same model/effort as the session), isolated git worktrees, dependency-ordered, serial merge with auto-rebase, then run the app to prove it works. Specs auto-approved; humans gate only the final merge.
 argument-hint: "[--only 3,8,10] [--label cap:parts] [--dry-run]"
 ---
 
@@ -78,27 +78,36 @@ For each wave:
    which already contains all previously-merged waves):
    `node .github/scripts/ship-batch.mjs add <issue>` (skip the commit/PR side
    effects only under `--dry-run`; still create the worktree).
-2. **Run the per-issue pipeline in parallel**, one set of subagents per issue, each
-   pinned to that issue's worktree path. For each issue spawn the roles from
-   `.claude/agents/` exactly as `/ship-issue` does (see its "How agents are spawned"
-   section — `coder`/`tester` → `general-purpose`, `spec`/`reviewer` → `Explore`),
-   but with these batch rules:
-   - Tell each subagent: **"Work only inside `<abs-worktree-path>`. cd into it before
-     any command; all file paths are relative to it."**
-   - **Reuse the existing dashboard** per issue:
-     `docs/ship-issue/<n>-<slug>` (init it, then drive it through the steps just like
-     `/ship-issue`). The batch keeps each issue fully traceable.
-   - Pipeline per issue: **spec → (auto-approve) → code → tests → code-review → PR**.
-     - `spec`: write `docs/specs/<n>-<slug>.md` (inside the worktree), post to issue.
-     - **Auto-approve**: mark the approve step `done --summary "Auto-approved (batch)" --gate none`. Do not stop.
-     - `coder`: implement the minimal change for the acceptance criteria. Commit in
-       the worktree. Coder may **statically** verify SQL/TS but must **not** run
-       `supabase db reset`.
-     - `tester`: generate tests; for DB work, write migration/contract tests but do
-       **not** reset the shared DB. Commit. Open a **draft PR** (`gh pr create`)
-       from the worktree's branch, linking the issue + spec.
-     - `reviewer` mode `tests` then mode `diff`: post reviews on the PR. Apply the
-       same ≤2-iteration loop as `/ship-issue` for the test review.
+2. **Run one agent per issue — single agent, clean context, in parallel.** Spawn
+   **exactly one** subagent per issue that owns that issue end-to-end. Do **not**
+   split an issue across several role-subagents; the whole pipeline for an issue
+   lives in one fresh agent so its context stays clean and self-contained.
+   - **Agent type:** `general-purpose` (it must read, edit, write, run bash, use `gh`).
+   - **Model / effort: inherit the main session — do NOT override.** When calling the
+     Agent tool, **omit the `model` (and any effort) argument** so the subagent runs
+     on the same model and reasoning effort as this orchestrating session. Never pin
+     a cheaper/different tier for batch work.
+   - **Clean context:** each issue gets a brand-new Agent call (no SendMessage reuse
+     across issues). Pass everything it needs explicitly — it cannot see this
+     conversation: issue number, issue body, the absolute worktree path, the spec
+     path, the dashboard base path.
+   - **Worktree pin:** tell the agent **"Work only inside `<abs-worktree-path>`. cd
+     into it before any command; all file paths are relative to it."**
+   - **What the single agent does, in order**, reading the role files in
+     `.claude/agents/` (`spec`, `coder`, `tester`, `reviewer`) as guidance for each
+     stage but doing them all itself:
+     1. **Spec** — write `docs/specs/<n>-<slug>.md` (inside the worktree), post to issue.
+     2. **Auto-approve** — dashboard `approve done --summary "Auto-approved (batch)" --gate none`. Never stop here.
+     3. **Code** — implement the minimal change for the acceptance criteria; commit
+        in the worktree. May **statically** verify SQL/TS but must **not** run
+        `supabase db reset` (shared DB — see constraints).
+     4. **Tests** — generate tests; for DB work write migration/contract tests but do
+        **not** reset the shared DB. Commit. Open a **draft PR** (`gh pr create`)
+        from the worktree branch, linking the issue + spec.
+     5. **Reviews** — self-review as `reviewer` mode `tests` then mode `diff`, posting
+        both on the PR; apply the same ≤2-iteration fix loop as `/ship-issue`.
+   - **Live dashboard:** the agent drives `docs/ship-issue/<n>-<slug>` (init, then
+     each step transition + progress notes) so every issue stays traceable.
    - Mark each PR **ready** (`gh pr ready`) when its reviews pass.
 3. When the wave's PRs are all green, continue to the **next wave's** worktree
    creation (its branches will fork off the still-un-merged `main`; they get rebased
@@ -145,12 +154,37 @@ Once approved, merge in **`plan.order`**. For each issue in order:
 After the last merge, run `node .github/scripts/ship-batch.mjs prune --force` to
 clear any leftover worktrees, and `git worktree prune`.
 
+## Phase 4 — Run the app and prove it works (mandatory)
+
+A batch is **not done** until the integrated app actually runs. After all merges,
+from the **main** working tree on updated `main`:
+
+1. **Bring the stack up.** Use the project's own way to run (prefer an existing
+   `/run` skill if present; otherwise the Makefile/Supabase path from `AGENTS.md`):
+   - `supabase db reset --config supabase/config.toml` — migrations + seed apply clean
+     (this already ran per-merge; run once more on the fully-merged main to be sure).
+   - `make up` (or `USE_DEV=1 make up`) — Supabase stub + Temporal + frontend.
+   - Frontend portal: build it so the merged UI compiles —
+     `cd frontend-portal && npm ci && npm run build` (and `npm run dev` if a live
+     check is needed).
+2. **Smoke-test what was shipped.** For each merged issue, exercise its acceptance
+   criteria against the running app — query the new tables/RPCs via `psql`/Studio,
+   and load the new screens. Use the **`/verify`** skill if available to drive the
+   running app and observe real behavior rather than trusting tests alone.
+3. **Report honestly.** If the stack comes up clean and the smoke-tests pass, say so
+   plainly. If anything fails — migration error, build break, broken screen, runtime
+   error in logs (`make logs`) — **stop, report the exact failure, and do not claim
+   success.** Offer to open a follow-up issue or fix it.
+4. **Tear down** what you started (`make down`) unless the user wants it left running.
+
 ## When you finish
 
 Print a final summary:
 - Issues shipped (merged) vs. held, with PR URLs.
 - Any issue that stopped at a conflict/validation gate and why.
 - The merge order actually executed.
+- **Phase 4 result: did the integrated app come up and pass smoke-tests?** State it
+  explicitly — green, or the exact failure. Never imply success you didn't observe.
 - Links to each issue's dashboard `docs/ship-issue/<n>-<slug>.html`.
 
 ## Recovery / re-runs
