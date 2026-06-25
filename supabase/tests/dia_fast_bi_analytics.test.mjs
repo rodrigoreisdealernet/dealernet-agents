@@ -236,17 +236,16 @@ test('AC6 inventory_summary: contrato de colunas + dominio de age_band e count>=
 // (0 linhas hoje, entity_type 'service_order' ainda nao semeado em #7). A
 // consulta deve EXECUTAR SEM ERRO.
 // ---------------------------------------------------------------------------
-test('AC7 service_summary: contrato de colunas + select executa sem erro (0 linhas hoje)', () => {
+test('AC7 service_summary: contrato de colunas + select executa sem erro', () => {
   const expected = ['avg_turnaround', 'orders_count', 'period_month', 'revenue', 'status'].join(',')
   assert.equal(columnsCsv('v_dia_service_summary'), expected, 'contrato de colunas de v_dia_service_summary divergiu')
 
-  // O select tem que rodar limpo mesmo sem o entity_type 'service_order'.
+  // O select tem que rodar limpo. Com #7 integrado, 'service_order' esta no
+  // catalogo e a view popula a partir do seed — entao o invariante e count >= 0
+  // (e nao mais exatamente 0, premissa pre-integracao do autor da #14).
   const { ok, out, err } = psql(`begin;\nselect count(*) from v_dia_service_summary;\nrollback;`)
   assert.ok(ok, `select em v_dia_service_summary falhou: ${err}`)
-  // entity_type 'service_order' nao esta no rental_entity_type_catalog desta
-  // branch, entao a view DEVE retornar exatamente 0 linhas hoje (degrade-graceful
-  // ancorado; populara quando #7 registrar o tipo no catalogo).
-  assert.equal(out, '0', `v_dia_service_summary deveria ter 0 linhas ate #7; obtido=${out}`)
+  assert.ok(Number.isInteger(Number(out)) && Number(out) >= 0, `count invalido de v_dia_service_summary: ${out}`)
 })
 
 // ---------------------------------------------------------------------------
@@ -260,10 +259,9 @@ test('AC8 parts_summary: contrato de colunas + select executa sem erro (0 linhas
 
   const { ok, out, err } = psql(`begin;\nselect count(*) from v_dia_parts_summary;\nrollback;`)
   assert.ok(ok, `select em v_dia_parts_summary falhou: ${err}`)
-  // 'part'/'parts_sale' nao estao no rental_entity_type_catalog desta branch:
-  // o UNION ALL (inventory+sales) DEVE retornar exatamente 0 linhas hoje
-  // (populara quando #8/#10 registrarem os tipos).
-  assert.equal(out, '0', `v_dia_parts_summary deveria ter 0 linhas ate #8/#10; obtido=${out}`)
+  // Com #8/#10 integrados, 'part'/'part_sale' estao no catalogo e o UNION ALL
+  // (inventory+sales) popula a partir do seed — invariante e count >= 0.
+  assert.ok(Number.isInteger(Number(out)) && Number(out) >= 0, `count invalido de v_dia_parts_summary: ${out}`)
 })
 
 // ---------------------------------------------------------------------------
