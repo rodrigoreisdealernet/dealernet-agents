@@ -9,7 +9,7 @@
   .sub{color:#9ca3af;font-size:13px;margin-bottom:16px}
   .sub a{color:#60a5fa;text-decoration:none}
   .bar{height:8px;background:#1f2937;border-radius:99px;overflow:hidden;margin:12px 0 20px}
-  .bar>i{display:block;height:100%;background:#16a34a;width:0%}
+  .bar>i{display:block;height:100%;background:#16a34a;width:14%}
   .banner{background:#7c2d12;color:#fed7aa;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:14px}
   table{width:100%;border-collapse:collapse}
   td{padding:12px 8px;border-top:1px solid #1f2937;vertical-align:top}
@@ -24,22 +24,22 @@
   .foot{color:#6b7280;font-size:12px;margin-top:20px}
 </style></head><body><div class="wrap">
 <h1>ship-issue #32 — feat(ops): primeiro agente DIA — Vehicle Stock-Aging Analyst (estoque ~90d) sobre v_dia_vehicle_current</h1>
-<div class="sub"><a href="https://github.com/rodrigoreisdealernet/dealernet-agents/issues/32">issue</a> · branch <code>feature/32-feat-ops-primeiro-agente-dia</code>  · 0% complete</div>
+<div class="sub"><a href="https://github.com/rodrigoreisdealernet/dealernet-agents/issues/32">issue</a> · branch <code>feature/32-feat-ops-primeiro-agente-dia</code>  · 14% complete</div>
 <div class="bar"><i></i></div>
-
-<table><tbody><tr class="running">
-        <td class="ic" style="color:#2563eb">◐</td>
-        <td class="lbl">01 · Spec<div class="st" style="color:#2563eb">running</div></td>
+<div class="banner">🚧 Waiting on human gate: <b>spec-approval</b></div>
+<table><tbody><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">01 · Spec<div class="st" style="color:#16a34a">done</div></td>
         <td class="meta">
-          <div class="sum">Drafting spec from issue #32</div>
-          
+          <div class="sum">6 acceptance criteria drafted; grounded against revrec-analyst pattern</div>
+          <div class="arts"><a href="docs/specs/32-feat-ops-primeiro-agente-dia.md">Spec</a> · <a href="https://github.com/rodrigoreisdealernet/dealernet-agents/issues/32#issuecomment-4803635813">Issue comment</a></div>
           <ul class="notes"><li>Starting spec: reading role file and grounding repo patterns</li><li>Reading revrec pattern and v_dia_vehicle_current view</li><li>Grounding: confirming scope/assess/record_finding/finalize pattern in ops_revrec</li><li>Drafting acceptance criteria — confirmed 12 existing vehicles, 9 qualifying (&gt;=75d em_estoque), revrec pattern confirmed</li><li>Finalising spec — 9 qualifying vehicles confirmed (6 existing + 3 new seeds), revrec pattern verified, approve/reject via POST /findings/decision</li></ul>
         </td>
-      </tr><tr class="pending">
-        <td class="ic" style="color:#9ca3af">○</td>
-        <td class="lbl">02 · Approve (human gate)<div class="st" style="color:#9ca3af">pending</div></td>
+      </tr><tr class="waiting">
+        <td class="ic" style="color:#d97706">⏸</td>
+        <td class="lbl">02 · Approve (human gate)<div class="st" style="color:#d97706">waiting</div></td>
         <td class="meta">
-          
+          <div class="sum">Awaiting human approval — re-run with --approved to ship</div>
           
           
         </td>
@@ -84,5 +84,5 @@
           
         </td>
       </tr></tbody></table>
-<div class="foot">auto-refreshes every 5s · last update 2026-06-25T19:54:32.710Z</div>
+<div class="foot">auto-refreshes every 5s · last update 2026-06-25T19:56:38.034Z</div>
 </div></body></html>

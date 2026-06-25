@@ -6,14 +6,23 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/32",
   "pr": null,
   "prUrl": null,
-  "updatedAt": "2026-06-25T19:54:32.710Z",
+  "updatedAt": "2026-06-25T19:56:38.034Z",
   "steps": [
     {
       "id": "spec",
       "label": "01 · Spec",
-      "status": "running",
-      "summary": "Drafting spec from issue #32",
-      "artifacts": [],
+      "status": "done",
+      "summary": "6 acceptance criteria drafted; grounded against revrec-analyst pattern",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/32-feat-ops-primeiro-agente-dia.md"
+        },
+        {
+          "label": "Issue comment",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/32#issuecomment-4803635813"
+        }
+      ],
       "notes": [
         "Starting spec: reading role file and grounding repo patterns",
         "Reading revrec pattern and v_dia_vehicle_current view",
@@ -26,11 +35,11 @@
     {
       "id": "approve",
       "label": "02 · Approve (human gate)",
-      "status": "pending",
-      "summary": "",
+      "status": "waiting",
+      "summary": "Awaiting human approval — re-run with --approved to ship",
       "artifacts": [],
       "notes": [],
-      "gate": null
+      "gate": "spec-approval"
     },
     {
       "id": "code",
