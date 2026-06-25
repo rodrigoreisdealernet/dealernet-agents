@@ -40,6 +40,7 @@ from .activities import (
     ops_shop_queue,
     ops_technician_queue,
     ops_territory_brief,
+    ops_vehicle_aging,
     rental_operations,
     supabase_core,
 )
@@ -78,6 +79,7 @@ from .workflows.ops.safety_compliance_monitor import SafetyComplianceMonitorWork
 from .workflows.ops.shop_morning_queue import ShopMorningQueueWorkflow, ShopMorningQueueWorkflowInput
 from .workflows.ops.technician_morning_queue import TechnicianMorningQueueWorkflow, TechnicianMorningQueueWorkflowInput
 from .workflows.ops.territory_brief import TerritoryAccountBriefWorkflow
+from .workflows.ops.vehicle_aging import VehicleAgingWorkflow, VehicleAgingWorkflowInput
 from .workflows.rental import (
     InspectionWorkflow,
     InvoiceWorkflow,
@@ -96,6 +98,9 @@ _REVREC_DEFAULT_CRON = "0 2 * * *"
 
 _PM_AGENT_KEY = "pm-evaluator"
 _PM_DEFAULT_CRON = "0 */6 * * *"
+
+_VEHICLE_AGING_AGENT_KEY = "vehicle-aging-analyst"
+_VEHICLE_AGING_DEFAULT_CRON = "0 6 * * 1-5"
 
 # Prometheus metrics are exposed by the Temporal SDK Runtime on this port.
 # Keep in sync with temporalWorker.metrics.port in chart values.
@@ -343,6 +348,79 @@ async def reconcile_pm_schedules(client: Client, config_rows: Sequence[Mapping[s
     rows = list(config_rows) if config_rows is not None else await asyncio.to_thread(_fetch_pm_schedule_rows)
     for row in rows:
         await _reconcile_tenant_pm_schedule(client, row)
+
+
+# ---------------------------------------------------------------------------
+# Vehicle stock-aging analyst schedule reconciliation
+# ---------------------------------------------------------------------------
+
+def _fetch_vehicle_aging_schedule_rows() -> list[dict[str, Any]]:
+    return _fetch_agent_config_rows(_VEHICLE_AGING_AGENT_KEY)
+
+
+def _build_vehicle_aging_schedule(tenant_id: str, cron: str) -> Schedule:
+    return Schedule(
+        action=ScheduleActionStartWorkflow(
+            VehicleAgingWorkflow.run,
+            VehicleAgingWorkflowInput(tenant_id=tenant_id),
+            id=f"ops-vehicle-aging-{tenant_id}",
+            task_queue=settings.temporal_task_queue,
+        ),
+        spec=ScheduleSpec(cron_expressions=[cron]),
+    )
+
+
+async def _reconcile_tenant_vehicle_aging_schedule(client: Client, config_row: Mapping[str, Any]) -> None:
+    tenant_id = str(config_row.get("tenant_id") or "").strip()
+    if not tenant_id:
+        return
+
+    enabled, cron = _extract_schedule_fields(config_row, default_cron=_VEHICLE_AGING_DEFAULT_CRON)
+    schedule_id = _schedule_id_for_tenant(tenant_id, _VEHICLE_AGING_AGENT_KEY)
+    schedule_handle = client.get_schedule_handle(schedule_id)
+
+    # vehicle-aging ships schedule.enabled=false: reconcile deletes any stray
+    # schedule so the recurring run stays off until explicitly enabled.
+    if not enabled:
+        try:
+            await schedule_handle.delete()
+            logger.info(
+                "Deleted disabled vehicle-aging schedule",
+                extra={"tenant_id": tenant_id, "schedule_id": schedule_id},
+            )
+        except BaseException as exc:
+            if not _is_not_found_error(exc):
+                raise
+        return
+
+    desired_schedule = _build_vehicle_aging_schedule(tenant_id, cron)
+    try:
+        await schedule_handle.describe()
+    except BaseException as exc:
+        if not _is_not_found_error(exc):
+            raise
+        await client.create_schedule(schedule_id, desired_schedule)
+        logger.info(
+            "Created vehicle-aging schedule from config",
+            extra={"tenant_id": tenant_id, "schedule_id": schedule_id, "cron": cron},
+        )
+        return
+
+    await schedule_handle.update(
+        lambda _: ScheduleUpdate(schedule=desired_schedule),
+    )
+    logger.info(
+        "Updated vehicle-aging schedule from config",
+        extra={"tenant_id": tenant_id, "schedule_id": schedule_id, "cron": cron},
+    )
+
+
+async def reconcile_vehicle_aging_schedules(
+    client: Client, config_rows: Sequence[Mapping[str, Any]] | None = None
+) -> None:
+    rows = list(config_rows) if config_rows is not None else await asyncio.to_thread(_fetch_vehicle_aging_schedule_rows)
+    for row in rows:
+        await _reconcile_tenant_vehicle_aging_schedule(client, row)
 
 
 # ---------------------------------------------------------------------------
@@ -1279,6 +1357,11 @@ async def main() -> None:
         logger.exception("PM schedule reconcile failed at startup; continuing to start worker")
 
     try:
+        await reconcile_vehicle_aging_schedules(client)
+    except Exception:  # noqa: BLE001 - never let vehicle-aging schedule reconcile crash the worker
+        logger.exception("vehicle-aging schedule reconcile failed at startup; continuing to start worker")
+
+    try:
         await reconcile_samsara_schedules(client)
     except Exception:  # noqa: BLE001 - never let samsara schedule reconcile crash the worker
         logger.exception("Samsara schedule reconcile failed at startup; continuing to start worker")
@@ -1348,6 +1431,7 @@ async def main() -> None:
             CoupaSyncWorkflow,
             DescartesSyncWorkflow,
             RevenueRecognitionWorkflow,
+            VehicleAgingWorkflow,
             ContractAnalysisWorkflow,
             ContractOcrRevalidationWorkflow,
             FleetUtilizationWorkflow,
@@ -1432,6 +1516,14 @@ async def main() -> None:
             ops_revrec.ops_record_finding,
             ops_revrec.ops_record_finding_disposition,
             ops_revrec.ops_draft_invoice_adjustment,
+            ops_vehicle_aging.ops_load_agent_config,
+            ops_vehicle_aging.ops_scope_vehicle_aging,
+            ops_vehicle_aging.ops_vehicle_aging_assess,
+            ops_vehicle_aging.ops_list_open_finding_fingerprints,
+            ops_vehicle_aging.ops_create_workflow_run,
+            ops_vehicle_aging.ops_finalize_workflow_run,
+            ops_vehicle_aging.ops_record_finding,
+            ops_vehicle_aging.ops_record_finding_disposition,
             ops_contract_ocr.ops_contract_ocr_revalidate_pages,
             ops_contract_ocr.ops_contract_analyze_contract,
             ops_fleet.ops_load_agent_config,
