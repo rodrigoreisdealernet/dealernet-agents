@@ -59,11 +59,39 @@ test('AC acoes-botoes: ui.tsx expoe RowActionButton como <button> acessivel (typ
     /focus-visible:ring/,
     'RowActionButton deve ter focus-visible:ring (foco visivel por teclado)',
   )
-  // Recebe icone + rotulo (icon/label props renderizados).
-  assert.ok(
-    ui.includes('icon') && ui.includes('label'),
-    'RowActionButton deve aceitar icon + label (icone + rotulo)',
+  // Recebe icone + rotulo como PROPS REAIS (nao mera ocorrencia das strings):
+  // o bloco da funcao RowActionButton deve desestruturar icon/label nos params E
+  // renderiza-los no JSX ({icon}/{label}). Isola o corpo da funcao para nao casar
+  // com usos incidentais de 'icon'/'label' em outras partes do arquivo.
+  const fnStart = ui.indexOf('export function RowActionButton')
+  assert.ok(fnStart !== -1, 'RowActionButton deve existir em ui.tsx')
+  const fnEnd = ui.indexOf('export function RowActions', fnStart)
+  const rab = ui.slice(fnStart, fnEnd === -1 ? undefined : fnEnd)
+  // Params desestruturados: 'icon,' e 'label,' como nomes proprios na assinatura.
+  assert.match(
+    rab,
+    /^\s*icon\s*,/m,
+    'RowActionButton deve desestruturar `icon` como prop nos parametros',
   )
+  assert.match(
+    rab,
+    /^\s*label\s*,/m,
+    'RowActionButton deve desestruturar `label` como prop nos parametros',
+  )
+  // Tipagem das props (icon: ReactNode / label: string) — confirma que sao props.
+  assert.match(
+    rab,
+    /icon\s*:\s*ReactNode/,
+    'icon deve ser tipado como prop (icon: ReactNode)',
+  )
+  assert.match(
+    rab,
+    /label\s*:\s*string/,
+    'label deve ser tipado como prop (label: string)',
+  )
+  // Renderizados no JSX: {icon} e {label} dentro do <button>.
+  assert.match(rab, /\{\s*icon\s*\}/, 'RowActionButton deve renderizar {icon} no JSX')
+  assert.match(rab, /\{\s*label\s*\}/, 'RowActionButton deve renderizar {label} no JSX')
 })
 
 for (const screen of CRUD_SCREENS) {
@@ -176,5 +204,47 @@ test('AC telas-maximizadas: portalStore.openWindow maximiza telas kind:component
     store,
     /maximized:\s*openMaximized/,
     'a janela deve usar maximized: openMaximized (telas de CRUD abrem maximizadas)',
+  )
+})
+
+test('AC telas-maximizadas (negativo): dialogo com tamanho explicito NAO maximiza (segue flutuante)', () => {
+  const store = read('src/portal/store/portalStore.ts')
+  // explicitSize deve ser derivado da presenca de width E height no spec.
+  assert.match(
+    store,
+    /explicitSize\s*=\s*spec\.width\s*!=\s*null\s*&&\s*spec\.height\s*!=\s*null/,
+    'explicitSize deve ser (spec.width != null && spec.height != null)',
+  )
+  // openMaximized DEVE depender de !explicitSize. Se alguem trocasse por
+  // "spec.kind === 'component'" sozinho (maximizando todo component, inclusive
+  // dialogos com tamanho), esta assercao falharia.
+  const m = store.match(
+    /const\s+openMaximized\s*=\s*([^\n]+)/,
+  )
+  assert.ok(m, 'openWindow deve definir const openMaximized = ...')
+  const expr = m[1]
+  assert.match(
+    expr,
+    /!\s*explicitSize/,
+    "openMaximized deve gatilhar em !explicitSize (dialogos com width/height NAO maximizam)",
+  )
+  assert.match(
+    expr,
+    /spec\.kind\s*===\s*['"]component['"]/,
+    "openMaximized deve exigir kind === 'component'",
+  )
+  // Guarda explicita contra a regressao "maximizar todo component": a expressao
+  // de openMaximized NAO pode ser apenas a checagem de kind sem o !explicitSize.
+  const exprNoSpaces = expr.replace(/\s+/g, '')
+  assert.notEqual(
+    exprNoSpaces,
+    "spec.kind==='component'".replace(/\s+/g, ''),
+    'openMaximized nao pode maximizar TODO component (precisa gatear em !explicitSize)',
+  )
+  // prevRect (rect flutuante p/ restaurar) so e gravado quando openMaximized.
+  assert.match(
+    store,
+    /\.\.\.\(\s*openMaximized\s*\?\s*\{\s*prevRect:/,
+    'prevRect (restaurar) so deve ser definido quando openMaximized e verdadeiro',
   )
 })

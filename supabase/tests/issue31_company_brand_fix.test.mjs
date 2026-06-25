@@ -153,6 +153,50 @@ rollback;
 })
 
 // ===========================================================================
+// AC "Editar Empresa sem erro" (negativo) — a leniencia de backfill foi adicionada
+// APENAS a update_company. create_company SEGUE ESTRITO: um payload sem legal_name
+// E sem name (nada para backfillar) deve FALHAR em dia_validate_company_data com
+// "company.legal_name is required". Prova que a correcao nao afrouxou a criacao.
+// ===========================================================================
+
+test('AC empresa/estrito (negativo): create_company FALHA sem legal_name e sem name (sem backfill na criacao)', () => {
+  // Payload deliberadamente sem legal_name e sem name; so cnpj. Nao ha de onde
+  // backfillar legal_name, entao a validacao estrita deve disparar.
+  const sql = `${asWriter('admin')}
+select create_company('{"cnpj":"77.777.777/0001-77","status":"ativo"}'::jsonb);
+rollback;
+`
+  // Rodamos COM ON_ERROR_STOP (default): o raise de create_company aborta o psql
+  // (exit != 0), entao a chamada DEVE falhar (ok === false) e o stderr deve trazer
+  // a mensagem da validacao estrita.
+  const { ok, out, err } = psql(sql)
+  assert.equal(
+    ok,
+    false,
+    `create_company deveria FALHAR (estrito) sem legal_name/name; em vez disso retornou: ${out}`,
+  )
+  assert.match(
+    err,
+    /company\.legal_name is required/,
+    `create_company deve levantar "company.legal_name is required" (estrito); psql stderr: ${err}`,
+  )
+})
+
+// Controle: com legal_name presente, create_company SUCEDE (garante que o teste
+// negativo acima falha por causa da regra de legal_name, nao por outro motivo).
+test('AC empresa/estrito (controle): create_company SUCEDE quando legal_name e cnpj sao fornecidos', () => {
+  const sql = `${asWriter('admin')}
+select create_company(
+  '{"legal_name":"Estrita OK LTDA","cnpj":"77.777.777/0001-77","status":"ativo"}'::jsonb
+) is not null as created;
+rollback;
+`
+  const { ok, out, err } = psql(sql)
+  assert.ok(ok, `create_company deveria suceder com legal_name+cnpj; psql falhou: ${err}`)
+  assert.match(out, /\bt\b/, 'create_company deve retornar uma linha (created = t)')
+})
+
+// ===========================================================================
 // AC "Associar Marca em Empresa" — create_company com brand_id; a view resolve
 // brand_name via left join a v_dia_brand_current.
 // ===========================================================================
