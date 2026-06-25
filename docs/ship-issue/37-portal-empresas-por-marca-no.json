@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/37",
   "pr": null,
   "prUrl": null,
-  "updatedAt": "2026-06-25T20:36:42.052Z",
+  "updatedAt": "2026-06-25T20:38:53.673Z",
   "steps": [
     {
       "id": "spec",
@@ -38,8 +38,8 @@
     {
       "id": "code",
       "label": "03 · Code",
-      "status": "running",
-      "summary": "",
+      "status": "done",
+      "summary": "portalStore (getCompanies->seletor por marca), EmpresaSelector, portalApi (menus + mover p/ Admin)",
       "artifacts": [],
       "notes": [
         "Lendo EmpresaSelector, agentsApi, portalApi, portalStore",
@@ -50,10 +50,12 @@
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "pending",
+      "status": "running",
       "summary": "",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "estudando verify-issue31 e escrevendo verify-issue37-wiring.mjs"
+      ],
       "gate": null
     },
     {
