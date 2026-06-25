@@ -1,5 +1,5 @@
 ---
-description: Ship ALL open GitHub issues in one run — one clean-context agent per issue (same model/effort as the session), isolated git worktrees, dependency-ordered, serial merge with auto-rebase, then run the app to prove it works. Specs auto-approved; humans gate only the final merge.
+description: Ship ALL open GitHub issues in one run — one clean-context orchestrator agent per issue (which spawns its own spec/coder/tester/reviewer subagents, all on the session's model/effort), isolated git worktrees, dependency-ordered, serial merge with auto-rebase, then run the app to prove it works. Specs auto-approved; humans gate only the final merge.
 argument-hint: "[--only 3,8,10] [--label cap:parts] [--dry-run]"
 ---
 
@@ -78,36 +78,50 @@ For each wave:
    which already contains all previously-merged waves):
    `node .github/scripts/ship-batch.mjs add <issue>` (skip the commit/PR side
    effects only under `--dry-run`; still create the worktree).
-2. **Run one agent per issue — single agent, clean context, in parallel.** Spawn
-   **exactly one** subagent per issue that owns that issue end-to-end. Do **not**
-   split an issue across several role-subagents; the whole pipeline for an issue
-   lives in one fresh agent so its context stays clean and self-contained.
-   - **Agent type:** `general-purpose` (it must read, edit, write, run bash, use `gh`).
-   - **Model / effort: inherit the main session — do NOT override.** When calling the
-     Agent tool, **omit the `model` (and any effort) argument** so the subagent runs
-     on the same model and reasoning effort as this orchestrating session. Never pin
-     a cheaper/different tier for batch work.
-   - **Clean context:** each issue gets a brand-new Agent call (no SendMessage reuse
-     across issues). Pass everything it needs explicitly — it cannot see this
-     conversation: issue number, issue body, the absolute worktree path, the spec
-     path, the dashboard base path.
-   - **Worktree pin:** tell the agent **"Work only inside `<abs-worktree-path>`. cd
-     into it before any command; all file paths are relative to it."**
-   - **What the single agent does, in order**, reading the role files in
-     `.claude/agents/` (`spec`, `coder`, `tester`, `reviewer`) as guidance for each
-     stage but doing them all itself:
-     1. **Spec** — write `docs/specs/<n>-<slug>.md` (inside the worktree), post to issue.
+2. **Run one orchestrator agent per issue — in parallel.** Spawn **exactly one**
+   subagent per issue. That agent **owns the issue end-to-end and is itself a
+   per-issue orchestrator**: it runs the `/ship-issue` pipeline by spawning its
+   **own role subagents** (`spec`, `coder`, `tester`, `reviewer`). So the structure
+   is two tiers:
+
+   ```
+   /ship-batch (this session)
+     └─ issue-agent #5  (clean context)   ┐
+          ├─ spec subagent                │
+          ├─ coder subagent               │  one such tree per issue,
+          ├─ tester subagent              │  trees run in parallel
+          └─ reviewer subagent (×2 modes) ┘
+     └─ issue-agent #6 …  └─ issue-agent #8 …
+   ```
+
+   - **Issue-agent type:** `general-purpose` (it must read, edit, write, run bash,
+     use `gh`, **and spawn subagents**).
+   - **Model / effort: inherit the main session at EVERY level — never override.**
+     When this session calls the Agent tool for an issue-agent, **omit the `model`
+     and effort arguments**. **Instruct the issue-agent to do the same** when it
+     spawns its own role subagents — omit `model`/effort so the whole tree runs on
+     the session's model and reasoning effort. Never pin a cheaper tier anywhere.
+   - **Clean context:** each issue-agent is a brand-new Agent call (no SendMessage
+     reuse across issues). Pass everything explicitly — it cannot see this
+     conversation: issue number, issue body, absolute worktree path, spec path,
+     dashboard base path, and these batch rules.
+   - **Worktree pin (propagated):** tell the issue-agent **"Work only inside
+     `<abs-worktree-path>`; cd into it before any command, and tell every role
+     subagent you spawn the same — all file paths are relative to it."**
+   - **What the issue-agent orchestrates** (mirroring `/ship-issue`, reading the role
+     files in `.claude/agents/` and spawning a subagent for each):
+     1. **`spec` subagent** — write `docs/specs/<n>-<slug>.md` (in the worktree), post to issue.
      2. **Auto-approve** — dashboard `approve done --summary "Auto-approved (batch)" --gate none`. Never stop here.
-     3. **Code** — implement the minimal change for the acceptance criteria; commit
-        in the worktree. May **statically** verify SQL/TS but must **not** run
+     3. **`coder` subagent** — minimal change for the acceptance criteria; commit in
+        the worktree. May **statically** verify SQL/TS but must **not** run
         `supabase db reset` (shared DB — see constraints).
-     4. **Tests** — generate tests; for DB work write migration/contract tests but do
-        **not** reset the shared DB. Commit. Open a **draft PR** (`gh pr create`)
-        from the worktree branch, linking the issue + spec.
-     5. **Reviews** — self-review as `reviewer` mode `tests` then mode `diff`, posting
-        both on the PR; apply the same ≤2-iteration fix loop as `/ship-issue`.
-   - **Live dashboard:** the agent drives `docs/ship-issue/<n>-<slug>` (init, then
-     each step transition + progress notes) so every issue stays traceable.
+     4. **`tester` subagent** — generate tests; for DB work write migration/contract
+        tests but do **not** reset the shared DB. Commit. Open a **draft PR**
+        (`gh pr create`) from the worktree branch, linking the issue + spec.
+     5. **`reviewer` subagent** — mode `tests` then mode `diff`, posting both on the
+        PR; apply the same ≤2-iteration fix loop as `/ship-issue`.
+   - **Live dashboard:** the issue-agent drives `docs/ship-issue/<n>-<slug>` (init,
+     then each step transition + progress notes) so every issue stays traceable.
    - Mark each PR **ready** (`gh pr ready`) when its reviews pass.
 3. When the wave's PRs are all green, continue to the **next wave's** worktree
    creation (its branches will fork off the still-un-merged `main`; they get rebased
