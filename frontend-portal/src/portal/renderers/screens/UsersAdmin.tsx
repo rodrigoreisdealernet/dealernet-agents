@@ -132,6 +132,16 @@ export default function UsersAdmin() {
     }
   }
 
+  const roleLabel = (appRole: string) => {
+    const labels: Record<string, string> = {
+      admin: t('roleAdmin'),
+      branch_manager: t('roleManager'),
+      field_operator: t('roleOperator'),
+      read_only: t('roleReadOnly'),
+    }
+    return labels[appRole] ?? appRole
+  }
+
   return (
     <ScreenShell
       title={t('title')}
@@ -325,7 +335,7 @@ function CreateUserForm({
           />
         </label>
         <label className="text-xs text-muted-foreground">
-          Role
+          {t('role')}
           <select className={inputCls} value={form.role} onChange={(e) => set('role', e.target.value as AppRole)}>
             {ROLES.map((r) => (
               <option key={r} value={r}>
@@ -382,7 +392,7 @@ function EditUserForm({
           />
         </label>
         <label className="text-xs text-muted-foreground">
-          Role
+          {t('role')}
           <select className={inputCls} value={form.role} onChange={(e) => set('role', e.target.value as AppRole)}>
             {ROLES.map((r) => (
               <option key={r} value={r}>
@@ -437,12 +447,3 @@ function FormActions({
     </div>
   )
 }
-  const roleLabel = (appRole: string) => {
-    const labels: Record<string, string> = {
-      admin: t('roleAdmin'),
-      branch_manager: t('roleManager'),
-      field_operator: t('roleOperator'),
-      read_only: t('roleReadOnly'),
-    }
-    return labels[appRole] ?? appRole
-  }

@@ -60,6 +60,16 @@ export default function ServiceDashboard() {
       .catch((e) => setError(String(e)))
   }, [])
 
+  function statusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      aberta: t('statusOpen'),
+      em_andamento: t('statusInProgress'),
+      concluida: t('statusDone'),
+      cancelada: t('statusCanceled'),
+    }
+    return labels[status] ?? status
+  }
+
   const kpis = useMemo(() => {
     const now = new Date()
     const open = rows.filter((r) => r.status === 'aberta').length
@@ -97,7 +107,7 @@ export default function ServiceDashboard() {
       status: statusLabel(s),
       count: counts.get(s) ?? 0,
     }))
-  }, [rows])
+  }, [rows, t])
 
   // Gráfico 2 — faturamento por mês (period 'YYYY-MM'), ordenado cronologicamente.
   const revenueData = useMemo(() => {
@@ -195,12 +205,3 @@ export default function ServiceDashboard() {
     </ScreenShell>
   )
 }
-  function statusLabel(status: string): string {
-    const labels: Record<string, string> = {
-      aberta: t('statusOpen'),
-      em_andamento: t('statusInProgress'),
-      concluida: t('statusDone'),
-      cancelada: t('statusCanceled'),
-    }
-    return labels[status] ?? status
-  }

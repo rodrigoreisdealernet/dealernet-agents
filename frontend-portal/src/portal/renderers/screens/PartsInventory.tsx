@@ -131,6 +131,16 @@ export default function PartsInventory() {
     }
   }
 
+  const stockLabel = (status: string | null | undefined) => {
+    const labels: Record<string, string> = {
+      zerado: t('stockZero'),
+      critico: t('stockCritical'),
+      baixo: t('stockLow'),
+      ok: t('stockOk'),
+    }
+    return labels[(status ?? '').toLowerCase()] ?? status ?? '—'
+  }
+
   return (
     <ScreenShell
       title={t('title')}
@@ -358,7 +368,7 @@ function PartForm({
           />
         </label>
         <label className="text-xs text-muted-foreground">
-          Status
+          {common('status')}
           <select
             className={inputCls}
             value={form.status ?? 'ativo'}
@@ -390,12 +400,3 @@ function PartForm({
     </div>
   )
 }
-  const stockLabel = (status: string | null | undefined) => {
-    const labels: Record<string, string> = {
-      zerado: t('stockZero'),
-      critico: t('stockCritical'),
-      baixo: t('stockLow'),
-      ok: t('stockOk'),
-    }
-    return labels[(status ?? '').toLowerCase()] ?? status ?? '—'
-  }

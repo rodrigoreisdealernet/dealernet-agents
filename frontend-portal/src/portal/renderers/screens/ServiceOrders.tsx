@@ -126,6 +126,16 @@ export default function ServiceOrders() {
     }
   }
 
+  const statusLabel = (status: string | null | undefined) => {
+    const labels: Record<string, string> = {
+      aberta: t('statusOpen'),
+      em_andamento: t('statusInProgress'),
+      concluida: t('statusDone'),
+      cancelada: t('statusCanceled'),
+    }
+    return labels[status ?? ''] ?? status ?? '—'
+  }
+
   return (
     <ScreenShell
       title={t('title')}
@@ -374,12 +384,3 @@ function ServiceOrderForm({
     </div>
   )
 }
-  const statusLabel = (status: string | null | undefined) => {
-    const labels: Record<string, string> = {
-      aberta: t('statusOpen'),
-      em_andamento: t('statusInProgress'),
-      concluida: t('statusDone'),
-      cancelada: t('statusCanceled'),
-    }
-    return labels[status ?? ''] ?? status ?? '—'
-  }

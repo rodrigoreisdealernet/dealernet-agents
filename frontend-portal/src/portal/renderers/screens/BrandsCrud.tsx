@@ -94,6 +94,15 @@ export default function BrandsCrud() {
     }
   }
 
+  const segmentLabel = (segment: string | null | undefined) => {
+    const labels: Record<string, string> = {
+      automoveis: t('cars'),
+      caminhoes: t('trucks'),
+      motos: t('motorcycles'),
+    }
+    return labels[segment ?? ''] ?? segment ?? '—'
+  }
+
   return (
     <ScreenShell
       title={t('title')}
@@ -273,11 +282,3 @@ function BrandForm({
     </div>
   )
 }
-  const segmentLabel = (segment: string | null | undefined) => {
-    const labels: Record<string, string> = {
-      automoveis: t('cars'),
-      caminhoes: t('trucks'),
-      motos: t('motorcycles'),
-    }
-    return labels[segment ?? ''] ?? segment ?? '—'
-  }

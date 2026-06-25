@@ -64,6 +64,16 @@ export default function PartsBI() {
     [summary],
   )
 
+  const stockLabel = (status: string | null | undefined) => {
+    const labels: Record<string, string> = {
+      zerado: t('stockZero'),
+      critico: t('stockCritical'),
+      baixo: t('stockLow'),
+      ok: t('stockOk'),
+    }
+    return labels[(status ?? '').toLowerCase()] ?? status ?? '—'
+  }
+
   // Vendas do mês corrente: soma das linhas de venda cujo period_month bate com o
   // prefixo ano-mês de hoje (ex.: '2026-06'). period_month é date; comparamos texto.
   const monthSales = useMemo(() => {
@@ -177,12 +187,3 @@ export default function PartsBI() {
     </ScreenShell>
   )
 }
-  const stockLabel = (status: string | null | undefined) => {
-    const labels: Record<string, string> = {
-      zerado: t('stockZero'),
-      critico: t('stockCritical'),
-      baixo: t('stockLow'),
-      ok: t('stockOk'),
-    }
-    return labels[(status ?? '').toLowerCase()] ?? status ?? '—'
-  }
