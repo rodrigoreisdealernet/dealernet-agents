@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/43",
   "pr": null,
   "prUrl": null,
-  "updatedAt": "2026-06-25T21:28:08.765Z",
+  "updatedAt": "2026-06-25T21:34:15.662Z",
   "steps": [
     {
       "id": "spec",
@@ -37,8 +37,8 @@
     {
       "id": "code",
       "label": "03 · Code",
-      "status": "running",
-      "summary": "",
+      "status": "done",
+      "summary": "migration v_dia_owner_brief_by_brand/by_store + FP<7d; MorningBrief.tsx mobile+desktop; agentsApi; registry+menu; deep-link ?screen=",
       "artifacts": [],
       "notes": [
         "Lendo spec, prototipos e views existentes; iniciando migration + screen",
@@ -50,10 +50,13 @@
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "pending",
+      "status": "running",
       "summary": "",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "Estudando harness psql/node --test; escrevendo contrato SQL das views owner_brief + wiring frontend",
+        "12 contratos SQL (views/helper, ontem on-the-fly, Sem marca, proxy FP <7d boundary 82/83, setores NULL, drill por loja, security_invoker) + 15 wiring frontend — todos verdes. Commit + draft PR."
+      ],
       "gate": null
     },
     {
