@@ -125,6 +125,18 @@ const MOCK_MENU: MenuItem[] = [
         icon: 'fa-car',
         spec: { title: 'Estoque de Veículos', kind: 'component', componentKey: 'dia-vehicles' },
       },
+      {
+        id: 'dealership-companies',
+        text: 'Empresas',
+        icon: 'fa-building',
+        spec: { title: 'Empresas', kind: 'component', componentKey: 'dia-companies' },
+      },
+      {
+        id: 'dealership-brands',
+        text: 'Marcas',
+        icon: 'fa-tag',
+        spec: { title: 'Marcas', kind: 'component', componentKey: 'dia-brands' },
+      },
     ],
   },
 ]

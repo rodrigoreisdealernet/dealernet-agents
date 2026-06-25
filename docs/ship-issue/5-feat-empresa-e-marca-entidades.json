@@ -1,0 +1,80 @@
+{
+  "issue": "5",
+  "title": "feat: Empresa e Marca — entidades + CRUD",
+  "slug": "feat-empresa-e-marca-entidades",
+  "branch": "feature/5-feat-empresa-e-marca-entidades",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/5",
+  "pr": null,
+  "prUrl": null,
+  "updatedAt": "2026-06-25T18:25:04.837Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "Spec com 6 critérios de aceitação testáveis em linguagem de negócio; padrão da #4 reaproveitado",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/5-feat-empresa-e-marca-entidades.md"
+        }
+      ],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Auto-approved (batch)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    }
+  ]
+}

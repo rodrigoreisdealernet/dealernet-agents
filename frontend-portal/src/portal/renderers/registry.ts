@@ -15,6 +15,9 @@ export const componentRegistry: Record<string, LazyExoticComponent<ComponentType
   'executive-pack': lazy(() => import('@/portal/renderers/screens/ExecutivePack')),
   // DIA dealership domain (issue #4) — primeira entidade de negócio com CRUD.
   'dia-vehicles': lazy(() => import('@/portal/renderers/screens/VehiclesInventory')),
+  // DIA dealership domain (issue #5) — dados mestres empresa/marca com CRUD.
+  'dia-companies': lazy(() => import('@/portal/renderers/screens/CompaniesCrud')),
+  'dia-brands': lazy(() => import('@/portal/renderers/screens/BrandsCrud')),
 }
 
 export function resolveComponent(key: string) {
