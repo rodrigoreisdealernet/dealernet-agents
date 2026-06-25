@@ -28,7 +28,7 @@
 //    so they are deterministic and identical every run.
 
 import { execFileSync } from "node:child_process";
-import { writeFileSync, readFileSync, existsSync, mkdirSync } from "node:fs";
+import { writeFileSync, readFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
 import { dirname, basename, join } from "node:path";
 
 // ---------- small shell helpers ----------
@@ -81,6 +81,22 @@ function worktreePath(issue, slug) {
 }
 function branchName(issue, slug) {
   return `feature/${issue}-${slug}`;
+}
+
+// Paths git has registered as worktrees. Git may report these in a different path
+// flavor than node computes (e.g. `/mnt/c/...` from WSL vs `C:\...` from Windows),
+// so callers compare by the unique `<n>-<slug>` leaf rather than the full string.
+function registeredWorktreePaths() {
+  const res = tryRun("git", ["worktree", "list", "--porcelain"]);
+  if (!res.ok) return [];
+  return res.out
+    .split("\n")
+    .filter((l) => l.startsWith("worktree "))
+    .map((l) => l.slice("worktree ".length).trim());
+}
+function isRegisteredWorktree(leaf) {
+  const norm = (p) => p.replace(/\\/g, "/").replace(/\/+$/, "");
+  return registeredWorktreePaths().some((p) => norm(p).endsWith("/" + leaf) || norm(p) === leaf);
 }
 
 // ---------- slug ----------
@@ -226,19 +242,50 @@ function findInPlan(plan, issue) {
   return it;
 }
 
+// Resolve one issue's worktree geometry WITHOUT requiring a plan, so the same
+// mechanics work for a solo /ship-issue run (no batch). Prefers a plan entry if
+// one exists (keeps slugs consistent within a batch); otherwise asks `gh` for the
+// title and derives the slug the same way buildPlan does.
+function resolveIssue(issue, flags) {
+  const num = Number(issue);
+  const planPath = flags.plan || join(repoRoot(), "docs", "ship-batch", "plan.json");
+  if (existsSync(planPath)) {
+    try {
+      const plan = JSON.parse(readFileSync(planPath, "utf8"));
+      const it = plan.issues.find((x) => x.number === num);
+      if (it) return it;
+    } catch {
+      /* fall through to gh */
+    }
+  }
+  const title = JSON.parse(run("gh", ["issue", "view", String(num), "--json", "title"])).title;
+  const slug = slugify(title);
+  return { number: num, title, slug, branch: branchName(num, slug), worktree: worktreePath(num, slug) };
+}
+
 function cmdAdd(positional, flags) {
   const issue = positional[0];
   if (!issue) throw new Error("usage: add <issue> [--base <ref>]");
-  const plan = loadPlan(flags);
-  const it = findInPlan(plan, issue);
+  const it = resolveIssue(issue, flags);
   const base = flags.base || "origin/main";
-  // Make sure we have the latest base ref locally.
+  const leaf = `${it.number}-${it.slug}`;
+  // Make sure we have the latest base ref locally, and drop stale registrations
+  // (e.g. a worktree created in another environment whose admin files don't resolve).
   tryRun("git", ["fetch", "origin", "--quiet"]);
+  tryRun("git", ["worktree", "prune"]);
   mkdirSync(worktreesDir(), { recursive: true });
-  if (existsSync(it.worktree)) {
+
+  if (isRegisteredWorktree(leaf) && existsSync(it.worktree)) {
     console.log(`Worktree already exists: ${it.worktree}`);
     return;
   }
+  // Directory present but git doesn't track it (orphan / cross-env path mismatch).
+  // Safe to clear: a tracked worktree with real work would be registered above.
+  if (existsSync(it.worktree) && !isRegisteredWorktree(leaf)) {
+    rmSync(it.worktree, { recursive: true, force: true });
+    console.log(`Cleared stale untracked directory: ${it.worktree}`);
+  }
+
   // Create worktree with a fresh branch off base.
   const res = tryRun("git", ["worktree", "add", "-b", it.branch, it.worktree, base]);
   if (!res.ok) {
@@ -255,30 +302,48 @@ function cmdAdd(positional, flags) {
 
 function cmdList() {
   const out = git(["worktree", "list", "--porcelain"]);
-  const dir = worktreesDir();
-  const blocks = out.split("\n\n");
-  const mine = blocks.filter((b) => b.includes(dir.replace(/\\/g, "/")) || b.includes(dir));
+  const tag = basename(worktreesDir()); // e.g. "dealernet-agents-worktrees"
+  // Parse porcelain line-by-line (robust to CRLF and entry separators).
+  const entries = [];
+  let cur = null;
+  for (const raw of out.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (line.startsWith("worktree ")) {
+      cur = { path: line.slice("worktree ".length), branch: "(detached)", flags: [] };
+      entries.push(cur);
+    } else if (cur && line.startsWith("branch ")) {
+      cur.branch = line.slice("branch ".length);
+    } else if (cur && (line === "locked" || line === "prunable" || line.startsWith("locked ") || line.startsWith("prunable "))) {
+      cur.flags.push(line.split(" ")[0]);
+    }
+  }
+  const mine = entries.filter((e) => e.path.replace(/\\/g, "/").includes(`/${tag}/`));
   if (mine.length === 0) {
     console.log("No batch worktrees.");
     return;
   }
-  for (const b of mine) {
-    const path = (b.match(/worktree (.+)/) || [])[1];
-    const branch = (b.match(/branch (.+)/) || [])[1] || "(detached)";
-    console.log(`${path}\n    ${branch}`);
+  for (const e of mine) {
+    const f = e.flags.length ? `  [${e.flags.join(", ")}]` : "";
+    console.log(`${e.path}\n    ${e.branch}${f}`);
   }
 }
 
 function cmdRm(positional, flags) {
   const issue = positional[0];
   if (!issue) throw new Error("usage: rm <issue> [--delete-branch] [--force]");
-  const plan = loadPlan(flags);
-  const it = findInPlan(plan, issue);
+  const it = resolveIssue(issue, flags);
+  tryRun("git", ["worktree", "prune"]);
   const args = ["worktree", "remove", it.worktree];
   if (flags.force) args.push("--force");
   const res = tryRun("git", args);
-  if (!res.ok) throw new Error(`worktree remove failed:\n${res.out}`);
-  console.log(`Removed worktree ${it.worktree}`);
+  if (!res.ok) {
+    // Orphan / cross-env path: git can't remove it, so clear the dir and prune.
+    if (existsSync(it.worktree)) rmSync(it.worktree, { recursive: true, force: true });
+    tryRun("git", ["worktree", "prune"]);
+    console.log(`Removed worktree ${it.worktree} (cleared orphan)`);
+  } else {
+    console.log(`Removed worktree ${it.worktree}`);
+  }
   if (flags["delete-branch"]) {
     const d = tryRun("git", ["branch", "-D", it.branch]);
     console.log(d.ok ? `Deleted branch ${it.branch}` : `Could not delete branch ${it.branch}: ${d.out}`);
@@ -305,8 +370,7 @@ function cmdPrune(flags) {
 function cmdRebase(positional, flags) {
   const issue = positional[0];
   if (!issue) throw new Error("usage: rebase <issue> [--onto <ref>]");
-  const plan = loadPlan(flags);
-  const it = findInPlan(plan, issue);
+  const it = resolveIssue(issue, flags);
   const onto = flags.onto || "origin/main";
   tryRun("git", ["fetch", "origin", "--quiet"]);
   const res = tryRun("git", ["rebase", onto], { cwd: it.worktree });

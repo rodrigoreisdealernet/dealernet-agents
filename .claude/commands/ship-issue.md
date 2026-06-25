@@ -93,8 +93,21 @@ it auto-refresh.
 
 1. Fetch the issue: `gh issue view <issue-number>`. Derive a short slug from the
    title.
-2. Create and checkout the feature branch `feature/<issue-number>-<slug>` (skip
-   on `--dry-run`).
+2. **Create an isolated git worktree for this issue — do NOT `git checkout` in the
+   shared tree.** This is what lets several `/ship-issue` runs proceed in parallel
+   without trampling each other's branch:
+
+   `node .github/scripts/ship-batch.mjs add <issue-number>`
+
+   It creates `feature/<issue-number>-<slug>` in a separate directory at
+   `<repo-parent>/<repo-name>-worktrees/<issue-number>-<slug>` (off `origin/main`)
+   and prints the path. Skip this on `--dry-run`.
+   - **From here on, every step runs INSIDE that worktree path.** cd into it before
+     any edit, command, commit, or `gh` call; all file paths (spec, dashboard, code,
+     tests) are relative to it. The shared/main tree stays untouched.
+   - If you spawn subagents, pass them the absolute worktree path and the same rule.
+   - The script resolves the slug itself (it queries `gh`), so no batch/plan is
+     required — this works for a standalone run.
 3. **Initialize the status dashboard** (always, including `--dry-run`):
    `node .github/scripts/ship-issue-dashboard.mjs init docs/ship-issue/<issue-number>-<slug> --issue <issue-number> --title "<issue title>" --slug <slug> --branch feature/<issue-number>-<slug> --issue-url <issue url>`.
    Print the returned `.html` path to the user.
@@ -171,6 +184,11 @@ it auto-refresh.
 
     > Pipeline complete for issue #`<n>`. PR: `<url>`. Read the review and merge
     > when you're satisfied. This is the second and final human moment.
+
+    **Worktree cleanup (after the human merges):** once the PR is merged, remove the
+    isolated worktree and its branch so they don't pile up:
+    `node .github/scripts/ship-batch.mjs rm <issue-number> --delete-branch --force`.
+    Mention this command in the stop message so the user can run it post-merge.
 
 ## When you finish
 
