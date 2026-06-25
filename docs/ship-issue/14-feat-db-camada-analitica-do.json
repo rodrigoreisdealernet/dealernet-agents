@@ -1,0 +1,75 @@
+{
+  "issue": "14",
+  "title": "feat(db): camada analítica do Fast BI (views agregadas + fact_types)",
+  "slug": "feat-db-camada-analitica-do",
+  "branch": "feature/14-feat-db-camada-analitica-do",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/14",
+  "pr": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/23",
+  "prUrl": null,
+  "updatedAt": "2026-06-25T18:37:39.518Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "Spec written and posted as issue comment",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Auto-approved (batch)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": "Migration 20260625150000_dia_fast_bi_analytics.sql: 6 views + 6 fact_types, committed 6f88086",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "done",
+      "summary": "10 SQL contract tests committed 81a82aa; draft PR #23 created",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "done",
+      "summary": "Reviewer: MINOR. 1 blocking test fix (owner_kpis no-null via jsonb_typeof) + AC2/AC7/AC8 hardened, pushed ccd3048. PR ready.",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "waiting",
+      "summary": "Awaiting human merge gate",
+      "artifacts": [],
+      "notes": [],
+      "gate": "merge"
+    }
+  ]
+}
