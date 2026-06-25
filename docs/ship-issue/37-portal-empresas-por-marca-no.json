@@ -1,0 +1,87 @@
+{
+  "issue": "37",
+  "title": "Portal: empresas por marca no seletor, renomear menus e mover Empresas/Marcas para Administracao",
+  "slug": "37-portal-empresas-por-marca-no",
+  "branch": "feature/37-portal-empresas-por-marca-no",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/37",
+  "pr": null,
+  "prUrl": null,
+  "updatedAt": "2026-06-25T20:36:42.052Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "6 criterios de aceite redigidos",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/37-portal-empresas-por-marca-no.md"
+        }
+      ],
+      "notes": [
+        "lendo issue #37 e o código do portal",
+        "escrevendo critérios de aceite",
+        "spec escrito e postado na issue #37 como comentário"
+      ],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec aprovada pelo humano (--approved)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "running",
+      "summary": "",
+      "artifacts": [],
+      "notes": [
+        "Lendo EmpresaSelector, agentsApi, portalApi, portalStore",
+        "3 mudancas aplicadas; verificando no preview"
+      ],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    }
+  ]
+}
