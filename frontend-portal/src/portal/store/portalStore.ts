@@ -183,10 +183,13 @@ export const usePortalStore = create<PortalState>()(
     ])
     // Adapta as empresas reais ao shape do seletor (id/nome/grupo). O grupo do
     // dropdown passa a ser a MARCA (brand_name); sem marca cai em "Sem marca".
+    // `ativa` vem do status da view (ativo/inativo) — o boot abaixo seleciona a
+    // primeira empresa ATIVA, caindo na primeira da lista só se nenhuma for ativa.
     const empresas: Empresa[] = companies.map((c) => ({
       id: c.entity_id,
       nome: c.trade_name ?? c.name ?? c.legal_name ?? c.entity_id,
       grupo: c.brand_name ?? 'Sem marca',
+      ativa: c.status === 'ativo',
     }))
     set({
       config,

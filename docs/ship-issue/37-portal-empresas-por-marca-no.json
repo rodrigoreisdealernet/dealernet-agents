@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/37",
   "pr": "38",
   "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/38",
-  "updatedAt": "2026-06-25T20:44:08.404Z",
+  "updatedAt": "2026-06-25T20:47:16.878Z",
   "steps": [
     {
       "id": "spec",
@@ -62,22 +62,25 @@
     {
       "id": "test-review",
       "label": "05 · Test review",
-      "status": "running",
-      "summary": "",
+      "status": "done",
+      "summary": "1 iteracao — 25 testes verdes, LGTM",
       "artifacts": [],
       "notes": [
         "21/21 tests pass; gaps: changeEmpresa state verification, dropdown grouping/interaction coverage (AC#2/3)",
-        "tester: reforçando asserções do EmpresaSelector (iteração 1)"
+        "tester: reforçando asserções do EmpresaSelector (iteração 1)",
+        "All 25 tests pass; 3 gaps (onSelect wiring, Check indicator, brand grouping) adequately covered via hermetic source assertions."
       ],
       "gate": null
     },
     {
       "id": "code-review",
       "label": "06 · Code review",
-      "status": "pending",
+      "status": "done",
       "summary": "",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "APPROVE WITH NITS: ativa field regression needs resolution"
+      ],
       "gate": null
     },
     {
