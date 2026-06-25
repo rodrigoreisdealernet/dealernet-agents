@@ -1,0 +1,81 @@
+{
+  "issue": "32",
+  "title": "feat(ops): primeiro agente DIA — Vehicle Stock-Aging Analyst (estoque ~90d) sobre v_dia_vehicle_current",
+  "slug": "feat-ops-primeiro-agente-dia",
+  "branch": "feature/32-feat-ops-primeiro-agente-dia",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/32",
+  "pr": null,
+  "prUrl": null,
+  "updatedAt": "2026-06-25T19:54:32.710Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "running",
+      "summary": "Drafting spec from issue #32",
+      "artifacts": [],
+      "notes": [
+        "Starting spec: reading role file and grounding repo patterns",
+        "Reading revrec pattern and v_dia_vehicle_current view",
+        "Grounding: confirming scope/assess/record_finding/finalize pattern in ops_revrec",
+        "Drafting acceptance criteria — confirmed 12 existing vehicles, 9 qualifying (>=75d em_estoque), revrec pattern confirmed",
+        "Finalising spec — 9 qualifying vehicles confirmed (6 existing + 3 new seeds), revrec pattern verified, approve/reject via POST /findings/decision"
+      ],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    }
+  ]
+}
