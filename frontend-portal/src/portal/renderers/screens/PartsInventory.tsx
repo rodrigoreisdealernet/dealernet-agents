@@ -15,7 +15,7 @@ import {
 } from '@/portal/lib/agentsApi'
 import { KpiCard, Badge, ScreenShell, RowActions, RowActionButton, type Tone } from './ui'
 import { Pencil, Trash2 } from 'lucide-react'
-import { formatBRL, formatBRLKpi } from './format'
+import { formatBRLKpi } from './format'
 
 type FormState = PartInput & { entity_id?: string }
 
@@ -194,8 +194,8 @@ export default function PartsInventory() {
                   </div>
                 </td>
                 <td className="px-3 py-2 text-right tabular-nums">{r.quantity_in_stock ?? '—'}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{formatBRL(r.unit_price)}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{formatBRL(r.stock_value)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{formatBRLKpi(r.unit_price)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{formatBRLKpi(r.stock_value)}</td>
                 <td className="px-3 py-2">
                   <Badge tone={stockTone(r.stock_status)}>{STOCK_LABEL[r.stock_status] ?? r.stock_status}</Badge>
                 </td>

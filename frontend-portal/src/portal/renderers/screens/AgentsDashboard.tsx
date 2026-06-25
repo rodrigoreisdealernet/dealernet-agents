@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { usePortalStore } from '@/portal/store/portalStore'
 import { getAgentStatus, getFindingKpis, type AgentStatus, type FindingKpis } from '@/portal/lib/agentsApi'
 import { KpiCard, Badge, ScreenShell } from './ui'
-import { formatBRL, formatBRLKpi, formatDateTime } from './format'
+import { formatBRLKpi, formatDateTime } from './format'
 
 export default function AgentsDashboard() {
   const openWindow = usePortalStore((s) => s.openWindow)
@@ -75,7 +75,7 @@ export default function AgentsDashboard() {
             </div>
             <div className="mt-2 text-sm text-foreground">
               Identificado:{' '}
-              <span className="font-semibold tabular-nums">{formatBRL(a.identified_delta)}</span>
+              <span className="font-semibold tabular-nums">{formatBRLKpi(a.identified_delta)}</span>
             </div>
             <div className="mt-1 text-xs text-muted-foreground">
               Último run: {formatDateTime(a.last_run_finished_at)} · {a.last_run_status ?? '—'}

@@ -41,7 +41,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { formatBRL, formatPct } from './format'
+import { formatBRLKpi, formatPct } from './format'
 
 export type ChartType = 'line' | 'bar' | 'pie'
 
@@ -86,7 +86,7 @@ const DEFAULT_PALETTE = [
 function formatValue(value: unknown, fmt: ValueFormat): string {
   const num = typeof value === 'string' ? Number(value) : value
   if (typeof num !== 'number' || !Number.isFinite(num)) return '—'
-  if (fmt === 'currency') return formatBRL(num)
+  if (fmt === 'currency') return formatBRLKpi(num)
   if (fmt === 'percent') return formatPct(num)
   return num.toLocaleString('pt-BR')
 }

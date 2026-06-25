@@ -96,8 +96,8 @@ test('AC KPIs: renderiza quatro KpiCard com campos reais, fallbacks e +90 dias d
   const kpiCount = (src.match(/<KpiCard\b/g) ?? []).length
   assert.ok(kpiCount >= 4, `deve renderizar ao menos 4 KpiCard; encontrados ${kpiCount}`)
   assert.ok(src.includes('KpiCard'), 'VehicleInventoryBI deve usar o componente KpiCard')
-  // Issue #54: KPI cards usam formatBRLKpi (sem R$/decimais). A tabela de
-  // veiculos abaixo mantem formatBRL (precisao preservada).
+  // Issue #54 + clean-currency-grids: KPI cards usam formatBRLKpi (sem
+  // R$/decimais). A tabela de veiculos abaixo tambem usa formatBRLKpi.
   assert.match(
     src,
     /formatBRLKpi\(\s*kpis\?\.inventory_vehicle_value\s*\?\?\s*0\s*\)/,
@@ -186,8 +186,8 @@ test('AC oldest-vehicles list: filtra em_estoque, ordena por floor_plan_cost des
   assert.match(src, /vehicle\.days_in_stock/, 'linhas devem renderizar days_in_stock')
   assert.match(
     src,
-    /formatBRL\(\s*vehicle\.floor_plan_cost\s*\?\?\s*0\s*\)/,
-    'linhas devem renderizar floor_plan_cost via formatBRL',
+    /formatBRLKpi\(\s*vehicle\.floor_plan_cost\s*\?\?\s*0\s*\)/,
+    'linhas devem renderizar floor_plan_cost via formatBRLKpi',
   )
   assert.match(src, /vehicle\.store/, 'linhas devem renderizar store')
   for (const field of ['brand', 'model', 'model_year']) {

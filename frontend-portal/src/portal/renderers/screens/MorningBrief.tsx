@@ -23,22 +23,22 @@ import {
 } from '@/portal/lib/agentsApi'
 import { useBreakpoint } from '@/hooks/use-breakpoint'
 import { cn } from '@/lib/utils'
-import { formatBRL, formatBRLKpi } from './format'
+import { formatBRLKpi } from './format'
 
 // ── Helpers de formatação dos setores (valores absolutos; "—" quando sem dado) ──
 function fmtUnits(n: number | null | undefined): string {
   return typeof n === 'number' && Number.isFinite(n) ? `${n} un` : '—'
 }
 function fmtMoney(n: number | null | undefined): string {
-  return typeof n === 'number' && Number.isFinite(n) ? formatBRL(n) : '—'
+  return typeof n === 'number' && Number.isFinite(n) ? formatBRLKpi(n) : '—'
 }
-// Valor monetário enxuto para os cards (sem R$/centavos, issue #54); a tabela
-// cockpit do desktop mantém fmtMoney (formatBRL). A denominação fica na legenda.
+// Valor monetário enxuto (sem R$/centavos, issue #54); aplicado em toda a tela —
+// cards E tabela cockpit do desktop. A denominação R$ fica na legenda "Valores em R$".
 function fmtMoneyKpi(n: number | null | undefined): string {
   return typeof n === 'number' && Number.isFinite(n) ? formatBRLKpi(n) : '—'
 }
 function fmtMargin(n: number | null | undefined): string | null {
-  return typeof n === 'number' && Number.isFinite(n) ? `margem ${formatBRL(n)}` : null
+  return typeof n === 'number' && Number.isFinite(n) ? `margem ${formatBRLKpi(n)}` : null
 }
 
 interface SectorCell {
@@ -275,7 +275,7 @@ function ActionsSection({
               </div>
               <div className="mb-1 text-sm font-bold text-foreground">{label}</div>
               {typeof f.delta === 'number' && (
-                <div className="mb-3 text-xs text-muted-foreground">Δ {formatBRL(f.delta)}</div>
+                <div className="mb-3 text-xs text-muted-foreground">Δ {formatBRLKpi(f.delta)}</div>
               )}
               <div className="flex items-center gap-2">
                 <button
