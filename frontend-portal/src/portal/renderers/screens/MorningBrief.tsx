@@ -17,6 +17,7 @@ import {
   getOwnerBriefByBrand,
   getOwnerBriefByStore,
   type FindingRow,
+  type OwnerBriefBaseRow,
   type OwnerBriefBrandRow,
   type OwnerBriefStoreRow,
 } from '@/portal/lib/agentsApi'
@@ -44,7 +45,7 @@ interface SectorCell {
 }
 
 // Constrói as 5 células de setor (Novos, Usados, Peças, AT, FP) de uma linha.
-function sectorCells(r: OwnerBriefBrandRow): SectorCell[] {
+function sectorCells(r: OwnerBriefBaseRow): SectorCell[] {
   const atRisk = (r.fp_units_at_risk ?? 0) > 0
   return [
     { label: 'Novos', value: fmtUnits(r.novos_units), hint: fmtMoney(r.novos_value) },

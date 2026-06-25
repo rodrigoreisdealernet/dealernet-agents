@@ -1,0 +1,87 @@
+{
+  "issue": "53",
+  "title": "Bug: drill de lojas do Morning Brief vazio (store_count inexistente -> 400)",
+  "slug": "53-bug-drill-de-lojas-do",
+  "branch": "feature/53-bug-drill-de-lojas-do",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/53",
+  "pr": null,
+  "prUrl": null,
+  "updatedAt": "2026-06-25T22:16:51.178Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "4 criterios de aceite",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/53-bug-drill-de-lojas-do.md"
+        }
+      ],
+      "notes": [
+        "lendo issue #53 e confirmando a causa no agentsApi"
+      ],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec aprovada (--approved)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": "by_store select sem store_count (base/brand/store types); tsc limpo",
+      "artifacts": [],
+      "notes": [
+        "Lendo agentsApi.ts e corrigindo OWNER_BRIEF_STORE_COLS/tipos"
+      ],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "running",
+      "summary": "",
+      "artifacts": [],
+      "notes": [
+        "Escrevendo teste de contrato SQL select-vs-schema do by_store (parse OWNER_BRIEF_STORE_COLS x information_schema)",
+        "Teste de contrato SQL select-vs-schema do by_store: 5/5 verde; falha 3/5 no codigo pre-fix (store_count inexistente)"
+      ],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    }
+  ]
+}
