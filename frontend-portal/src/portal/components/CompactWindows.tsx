@@ -3,8 +3,10 @@
 // faz sentido em telas pequenas. Fechar pela própria aba.
 
 import { X } from 'lucide-react'
+import { useTranslations } from 'use-intl'
 import { usePortalStore } from '@/portal/store/portalStore'
 import { WindowBody } from '@/portal/components/WindowBody'
+import { translateWindowTitle } from '@/i18n/menu'
 import { cn } from '@/lib/utils'
 import type { PortalWindow } from '@/portal/types'
 
@@ -14,6 +16,8 @@ interface Props {
 }
 
 export function CompactWindows({ windows, allowedOrigins }: Props) {
+  const tShell = useTranslations('shell')
+  const tMenu = useTranslations('menu')
   const activeWindowId = usePortalStore((s) => s.activeWindowId)
   const focusWindow = usePortalStore((s) => s.focusWindow)
   const restoreWindow = usePortalStore((s) => s.restoreWindow)
@@ -53,11 +57,11 @@ export function CompactWindows({ windows, allowedOrigins }: Props) {
                 onClick={() => selectTab(w)}
                 className="max-w-[40vw] truncate"
               >
-                {w.title}
+                {translateWindowTitle(w, tMenu)}
               </button>
               <button
                 type="button"
-                title="Fechar"
+                title={tShell('close')}
                 onClick={() => closeWindow(w.id)}
                 className="rounded p-0.5 hover:bg-background"
               >

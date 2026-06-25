@@ -1,10 +1,6 @@
 // Filtro booleano: toggle de 3 estados (todos / sim / não) — client-side por spec §3.
 
-const ESTADOS = [
-  { v: '', label: 'Todos' },
-  { v: 'eq:true', label: 'Sim' },
-  { v: 'eq:false', label: 'Não' },
-]
+import { useTranslations } from 'use-intl'
 
 export default function FilterBool({
   value,
@@ -13,9 +9,15 @@ export default function FilterBool({
   value: string
   onChange: (v: string) => void
 }) {
+  const t = useTranslations('common')
+  const estados = [
+    { v: '', label: t('all') },
+    { v: 'eq:true', label: t('yes') },
+    { v: 'eq:false', label: t('no') },
+  ]
   return (
     <div className="flex gap-1">
-      {ESTADOS.map((e) => (
+      {estados.map((e) => (
         <button
           key={e.v || 'all'}
           type="button"

@@ -9,14 +9,18 @@
 import { useState, type FormEvent, type KeyboardEvent } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
+import { useTranslations } from 'use-intl'
 import {
   AlertCircle, ArrowBigUp, ArrowLeft, Check, Eye, EyeOff, Loader2, Lock, Moon, Palette, Sun, User,
 } from 'lucide-react'
 import { useAuth, AuthError } from '@/hooks/use-auth'
 import { useTheme, ACCENTS } from '@/hooks/use-theme'
+import { locales } from '@/i18n/locale'
+import { useLocale } from '@/i18n/LocaleProvider'
 
 export function Login() {
   const [recovering, setRecovering] = useState(false)
+  const t = useTranslations('shell.login')
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background p-4">
@@ -50,7 +54,7 @@ export function Login() {
 
           {recovering && (
             <p className="mb-4 text-center text-sm text-muted-foreground">
-              Informe seu usuário para recuperar a senha
+              {t('recoverHint')}
             </p>
           )}
 
@@ -70,6 +74,7 @@ export function Login() {
 // --- Formulário de login -----------------------------------------------------
 
 function LoginForm({ onForgot }: { onForgot: () => void }) {
+  const t = useTranslations('shell.login')
   const { login } = useAuth()
   const [usuario, setUsuario] = useState('')
   const [senha, setSenha] = useState('')
@@ -91,7 +96,7 @@ function LoginForm({ onForgot }: { onForgot: () => void }) {
       // Identificador normalizado em MAIÚSCULAS (padrão dos usuários Dealernet).
       await login({ usuario: usuario.trim().toUpperCase(), senha })
     } catch (err) {
-      setError(err instanceof AuthError ? err.message : 'Não foi possível conectar. Verifique sua conexão.')
+      setError(err instanceof AuthError ? err.message : t('connectError'))
     } finally {
       setLoading(false)
     }
@@ -107,10 +112,10 @@ function LoginForm({ onForgot }: { onForgot: () => void }) {
       noValidate
     >
       <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
-        Modo POC — qualquer login entra automaticamente como o usuário demo (admin).
+        {t('pocMode')}
       </div>
 
-      <Field label="Usuário" htmlFor="usuario" icon={<User size={16} />}>
+      <Field label={t('user')} htmlFor="usuario" icon={<User size={16} />}>
         <input
           id="usuario"
           autoComplete="username"
@@ -124,7 +129,7 @@ function LoginForm({ onForgot }: { onForgot: () => void }) {
         />
       </Field>
 
-      <Field label="Senha" htmlFor="senha" icon={<Lock size={16} />}>
+      <Field label={t('password')} htmlFor="senha" icon={<Lock size={16} />}>
         <input
           id="senha"
           type={showPwd ? 'text' : 'password'}
@@ -143,7 +148,7 @@ function LoginForm({ onForgot }: { onForgot: () => void }) {
           type="button"
           onClick={() => setShowPwd((v) => !v)}
           className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
-          aria-label={showPwd ? 'Ocultar senha' : 'Mostrar senha'}
+          aria-label={showPwd ? t('hidePassword') : t('showPassword')}
           tabIndex={-1}
         >
           {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -153,7 +158,7 @@ function LoginForm({ onForgot }: { onForgot: () => void }) {
       {capsLock && (
         <div className="-mt-2 flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
           <ArrowBigUp size={14} />
-          <span>Caps Lock está ativado</span>
+          <span>{t('capsLock')}</span>
         </div>
       )}
 
@@ -163,7 +168,7 @@ function LoginForm({ onForgot }: { onForgot: () => void }) {
           onClick={onForgot}
           className="text-xs font-medium text-primary hover:underline"
         >
-          Esqueci minha senha
+          {t('forgotPassword')}
         </button>
       </div>
 
@@ -188,10 +193,10 @@ function LoginForm({ onForgot }: { onForgot: () => void }) {
       >
         {loading ? (
           <>
-            <Loader2 className="animate-spin" size={16} /> Entrando…
+            <Loader2 className="animate-spin" size={16} /> {t('signingIn')}
           </>
         ) : (
-          'Entrar'
+          t('signIn')
         )}
       </button>
     </motion.form>
@@ -201,6 +206,7 @@ function LoginForm({ onForgot }: { onForgot: () => void }) {
 // --- Formulário de recuperação de senha (placeholder) ------------------------
 
 function RecoverForm({ onBack }: { onBack: () => void }) {
+  const t = useTranslations('shell.login')
   const [usuario, setUsuario] = useState('')
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -223,19 +229,19 @@ function RecoverForm({ onBack }: { onBack: () => void }) {
             <Check size={22} />
           </div>
           <p className="text-sm text-muted-foreground">
-            Se o usuário existir, enviaremos as instruções de recuperação para o e-mail cadastrado.
+            {t('recoverSent')}
           </p>
           <button
             type="button"
             onClick={onBack}
             className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
           >
-            <ArrowLeft size={15} /> Voltar ao login
+            <ArrowLeft size={15} /> {t('backToLogin')}
           </button>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-          <Field label="Usuário" htmlFor="rec-usuario" icon={<User size={16} />}>
+          <Field label={t('user')} htmlFor="rec-usuario" icon={<User size={16} />}>
             <input
               id="rec-usuario"
               autoComplete="username"
@@ -256,10 +262,10 @@ function RecoverForm({ onBack }: { onBack: () => void }) {
           >
             {loading ? (
               <>
-                <Loader2 className="animate-spin" size={16} /> Enviando…
+                <Loader2 className="animate-spin" size={16} /> {t('sending')}
               </>
             ) : (
-              'Recuperar senha'
+              t('recoverPassword')
             )}
           </button>
 
@@ -268,7 +274,7 @@ function RecoverForm({ onBack }: { onBack: () => void }) {
             onClick={onBack}
             className="flex w-full items-center justify-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
           >
-            <ArrowLeft size={15} /> Voltar ao login
+            <ArrowLeft size={15} /> {t('backToLogin')}
           </button>
         </form>
       )}
@@ -279,12 +285,15 @@ function RecoverForm({ onBack }: { onBack: () => void }) {
 // --- Controles de tema (cor + claro/escuro) no canto superior direito --------
 
 function ThemeControls() {
+  const t = useTranslations('shell')
+  const tLocale = useTranslations('locale')
   const { theme, toggleTheme, accent, setAccent } = useTheme()
+  const { locale, setLocale } = useLocale()
   return (
     <div className="absolute right-4 top-4 flex items-center gap-1">
       <DropdownMenu.Root>
         <DropdownMenu.Trigger
-          title="Cor do tema"
+          title={t('themeColor')}
           className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-secondary hover:text-foreground data-[state=open]:bg-secondary"
         >
           <Palette size={18} />
@@ -296,7 +305,7 @@ function ThemeControls() {
             className="z-[9999] w-44 rounded-lg border bg-card p-1 text-card-foreground shadow-xl"
           >
             <DropdownMenu.Label className="px-3 py-1.5 text-xs font-semibold text-muted-foreground">
-              Cor do portal
+              {t('portalColor')}
             </DropdownMenu.Label>
             {ACCENTS.map((a) => (
               <DropdownMenu.Item
@@ -316,9 +325,36 @@ function ThemeControls() {
         </DropdownMenu.Portal>
       </DropdownMenu.Root>
 
+      <DropdownMenu.Root>
+        <DropdownMenu.Trigger
+          title={t('language')}
+          className="flex h-9 items-center gap-1.5 rounded-md px-2 text-muted-foreground outline-none transition-colors hover:bg-secondary hover:text-foreground data-[state=open]:bg-secondary"
+        >
+          {locale}
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Portal>
+          <DropdownMenu.Content
+            align="end"
+            sideOffset={6}
+            className="z-[9999] min-w-44 rounded-lg border bg-card p-1 text-card-foreground shadow-xl"
+          >
+            {locales.map((option) => (
+              <DropdownMenu.Item
+                key={option}
+                onSelect={() => setLocale(option)}
+                className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm outline-none data-[highlighted]:bg-secondary"
+              >
+                <span className="flex-1">{tLocale(option)}</span>
+                {locale === option && <Check size={14} className="text-primary" />}
+              </DropdownMenu.Item>
+            ))}
+          </DropdownMenu.Content>
+        </DropdownMenu.Portal>
+      </DropdownMenu.Root>
+
       <button
         type="button"
-        title="Alternar claro/escuro"
+        title={t('toggleTheme')}
         onClick={toggleTheme}
         className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
       >

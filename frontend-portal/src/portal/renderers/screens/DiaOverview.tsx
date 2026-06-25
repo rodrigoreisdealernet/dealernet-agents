@@ -1,6 +1,7 @@
 // Visão do Dono (Fast BI, issue #15) — brief matinal do negócio num só lugar.
 // Lê v_dia_owner_kpis + v_dia_sales_trend + v_dia_inventory_summary via agentsApi.
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'use-intl'
 import {
   getInventorySummary,
   getOwnerKpis,
@@ -12,8 +13,11 @@ import {
 import { KpiCard, ScreenShell } from './ui'
 import { ChartCard } from './ChartCard'
 import { formatBRLKpi } from './format'
+export const I18N_PT_LEGEND_REFERENCE = 'Valores em R$'
 
 export default function DiaOverview() {
+  const t = useTranslations('screens.diaOverview')
+  const common = useTranslations('common')
   const [kpis, setKpis] = useState<OwnerKpis | null>(null)
   const [salesTrend, setSalesTrend] = useState<SalesTrendRow[]>([])
   const [inventory, setInventory] = useState<InventorySummaryRow[]>([])
@@ -40,52 +44,52 @@ export default function DiaOverview() {
 
   return (
     <ScreenShell
-      title="Visão do Dono"
-      subtitle="Brief matinal do negócio: vendas, oficina, estoque e peças num só lugar."
-      legend="Valores em R$"
+      title={t('title')}
+      subtitle={t('subtitle')}
+      legend={common('valuesInBRL')}
     >
-      {error && <p className="text-sm text-destructive">Erro: {error}</p>}
-      {loading && !kpis && <p className="text-sm text-muted-foreground">Carregando…</p>}
+      {error && <p className="text-sm text-destructive">{common('error')}: {error}</p>}
+      {loading && !kpis && <p className="text-sm text-muted-foreground">{common('loading')}</p>}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <KpiCard
-          label="Vendas do mês"
+          label={t('monthSales')}
           value={kpis?.sales_units_month ?? '—'}
           hint={formatBRLKpi(kpis?.sales_revenue_month)}
         />
-        <KpiCard label="Margem do mês" value={formatBRLKpi(kpis?.margin_month)} />
-        <KpiCard label="OS abertas" value={kpis?.service_orders_open ?? '—'} />
-        <KpiCard label="Faturamento de oficina" value={formatBRLKpi(kpis?.service_revenue_month)} />
-        <KpiCard label="Estoque de veículos" value={formatBRLKpi(kpis?.inventory_vehicle_value)} />
-        <KpiCard label="Floor plan total" value={formatBRLKpi(kpis?.floor_plan_total)} />
-        <KpiCard label="Estoque de peças" value={formatBRLKpi(kpis?.parts_inventory_value)} />
-        <KpiCard label="Peças críticas" value={kpis?.parts_critical_count ?? '—'} />
+        <KpiCard label={t('monthMargin')} value={formatBRLKpi(kpis?.margin_month)} />
+        <KpiCard label={t('openServiceOrders')} value={kpis?.service_orders_open ?? '—'} />
+        <KpiCard label={t('serviceRevenue')} value={formatBRLKpi(kpis?.service_revenue_month)} />
+        <KpiCard label={t('vehicleInventory')} value={formatBRLKpi(kpis?.inventory_vehicle_value)} />
+        <KpiCard label={t('floorPlanTotal')} value={formatBRLKpi(kpis?.floor_plan_total)} />
+        <KpiCard label={t('partsInventory')} value={formatBRLKpi(kpis?.parts_inventory_value)} />
+        <KpiCard label={t('criticalParts')} value={kpis?.parts_critical_count ?? '—'} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ChartCard
-          title="Tendência de vendas (90 dias)"
+          title={t('salesTrendTitle')}
           type="line"
           data={salesTrend as unknown as Array<Record<string, unknown>>}
           xKey="sale_date"
           series={[
-            { key: 'revenue', label: 'Receita', format: 'currency' },
-            { key: 'units_sold', label: 'Unidades', format: 'number' },
+            { key: 'revenue', label: t('revenue'), format: 'currency' },
+            { key: 'units_sold', label: t('units'), format: 'number' },
           ]}
           valueFormat="number"
-          emptyMessage="Sem vendas no período"
+          emptyMessage={t('noSales')}
         />
         <ChartCard
-          title="Estoque por faixa de idade"
+          title={t('inventoryAgeTitle')}
           type="bar"
           data={inventory as unknown as Array<Record<string, unknown>>}
           xKey="age_band"
           series={[
-            { key: 'vehicles_count', label: 'Veículos' },
-            { key: 'inventory_value', label: 'Valor (R$)', format: 'currency' },
+            { key: 'vehicles_count', label: t('vehicles') },
+            { key: 'inventory_value', label: t('valueBRL'), format: 'currency' },
           ]}
           valueFormat="number"
-          emptyMessage="Sem veículos em estoque"
+          emptyMessage={t('noVehicles')}
         />
       </div>
     </ScreenShell>

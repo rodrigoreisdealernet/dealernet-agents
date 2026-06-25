@@ -267,6 +267,7 @@ export const usePortalStore = create<PortalState>()(
     const win: PortalWindow = {
       id: nextId(),
       title: spec.title,
+      titleKey: spec.titleKey,
       kind: spec.kind,
       icon: spec.icon,
       src: spec.src,
@@ -395,7 +396,7 @@ export const usePortalStore = create<PortalState>()(
     set((s) =>
       s.bookmarks.some((b) => b.text === text)
         ? s
-        : { bookmarks: [...s.bookmarks, { spec, text }] },
+        : { bookmarks: [...s.bookmarks, { spec, text, textKey: spec.titleKey }] },
     )
   },
 

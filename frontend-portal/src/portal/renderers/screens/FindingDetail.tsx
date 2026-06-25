@@ -1,14 +1,18 @@
 // Finding Detail + Approval Card — o momento central (human-in-the-loop).
 // Lê ops_findings_view por id; aprova/rejeita via ops-api (decideFinding).
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslations } from 'use-intl'
 import ConfirmDialog from '@/portal/components/ui/ConfirmDialog'
 import { usePortalStore } from '@/portal/store/portalStore'
 import { decideFinding, getFinding, type FindingDetail as FindingDetailVM } from '@/portal/lib/agentsApi'
 import type { ScreenProps } from './types'
 import { Badge, severityTone, statusTone } from './ui'
 import { formatBRLKpi, formatPct } from './format'
+export const I18N_PT_LEGEND_REFERENCE = 'Valores em R$'
 
 export default function FindingDetail({ params }: ScreenProps) {
+  const t = useTranslations('screens.findingDetail')
+  const common = useTranslations('common')
   const findingId = params?.findingId as string | undefined
   const openWindow = usePortalStore((s) => s.openWindow)
 
@@ -48,7 +52,7 @@ export default function FindingDetail({ params }: ScreenProps) {
   async function confirm() {
     if (!data || !mode) return
     if (mode === 'reject' && !text.trim()) {
-      setDialogErr('Motivo é obrigatório para rejeitar.')
+      setDialogErr(t('rejectReasonRequired'))
       return
     }
     setBusy(true)
@@ -62,13 +66,13 @@ export default function FindingDetail({ params }: ScreenProps) {
         workflowId: data.workflow_id,
         runId: data.run_id,
       })
-      setActionMsg(mode === 'approve' ? 'Achado aprovado.' : 'Achado rejeitado.')
+      setActionMsg(mode === 'approve' ? t('findingApproved') : t('findingRejected'))
       setMode(null)
       setText('')
       load()
     } catch (e) {
       setActionErr(
-        `${e instanceof Error ? e.message : String(e)} — a disposição real exige a ops-api (FastAPI :8000) + Temporal no ar. A leitura segue válida.`,
+        `${e instanceof Error ? e.message : String(e)} — ${t('opsApiRequired')}`,
       )
       setMode(null)
     } finally {
@@ -76,9 +80,9 @@ export default function FindingDetail({ params }: ScreenProps) {
     }
   }
 
-  if (!findingId) return <div className="p-5 text-sm text-destructive">Abra um achado a partir da fila.</div>
-  if (loading && !data) return <div className="p-5 text-sm text-muted-foreground">Carregando…</div>
-  if (error) return <div className="p-5 text-sm text-destructive">Erro: {error}</div>
+  if (!findingId) return <div className="p-5 text-sm text-destructive">{t('openFromQueue')}</div>
+  if (loading && !data) return <div className="p-5 text-sm text-muted-foreground">{common('loading')}</div>
+  if (error) return <div className="p-5 text-sm text-destructive">{common('error')}: {error}</div>
   if (!data) return null
 
   const overBilled = (data.billed_amount ?? 0) > (data.expected_amount ?? 0)
@@ -90,14 +94,14 @@ export default function FindingDetail({ params }: ScreenProps) {
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone={severityTone(data.severity)}>{data.severity}</Badge>
           <Badge tone={statusTone(data.status)}>{data.status}</Badge>
-          <span className="text-sm text-muted-foreground">Agente: {data.agent_key}</span>
+          <span className="text-sm text-muted-foreground">{t('agent')}: {data.agent_key}</span>
         </div>
-        <p className="text-xs font-medium text-muted-foreground">Valores em R$</p>
+        <p className="text-xs font-medium text-muted-foreground">{common('valuesInBRL')}</p>
       </header>
 
       <div className="flex flex-wrap items-end gap-10">
         <div>
-          <div className="text-xs uppercase tracking-wide text-muted-foreground">Impacto</div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('impact')}</div>
           <div
             className={`text-3xl font-semibold tabular-nums ${overBilled ? 'text-destructive' : 'text-success'}`}
           >
@@ -105,52 +109,52 @@ export default function FindingDetail({ params }: ScreenProps) {
           </div>
         </div>
         <div>
-          <div className="text-xs uppercase tracking-wide text-muted-foreground">Confiança</div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('confidence')}</div>
           <div className="text-2xl font-semibold tabular-nums text-foreground">{formatPct(data.confidence)}</div>
         </div>
       </div>
 
       <div className="rounded-md border-l-4 border-primary bg-primary/5 p-4">
-        <div className="text-sm font-semibold text-foreground">Ação proposta</div>
-        <div className="text-sm text-foreground">{data.proposed_action ?? 'Sem ação proposta.'}</div>
+        <div className="text-sm font-semibold text-foreground">{t('proposedAction')}</div>
+        <div className="text-sm text-foreground">{data.proposed_action ?? t('noProposedAction')}</div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="rounded-lg border border-border bg-card p-4">
-          <div className="text-xs uppercase tracking-wide text-muted-foreground">Esperado</div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('expected')}</div>
           <div className="text-xl font-semibold tabular-nums text-foreground">{formatBRLKpi(data.expected_amount)}</div>
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
-          <div className="text-xs uppercase tracking-wide text-muted-foreground">Faturado</div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('billed')}</div>
           <div className="text-xl font-semibold tabular-nums text-foreground">{formatBRLKpi(data.billed_amount)}</div>
         </div>
       </div>
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-foreground">Evidência</h2>
+        <h2 className="mb-2 text-sm font-semibold text-foreground">{t('evidence')}</h2>
         {data.evidence && data.evidence.length > 0 ? (
           <ul className="space-y-1">
             {data.evidence.map((ev, i) => (
               <li key={i} className="rounded border border-border px-3 py-2 text-sm text-foreground">
                 <span className="text-success">✓</span>{' '}
-                {String(ev.label ?? ev.summary ?? ev.description ?? ev.event_type ?? ev.type ?? `Evidência ${i + 1}`)}
+                {String(ev.label ?? ev.summary ?? ev.description ?? ev.event_type ?? ev.type ?? `${t('evidence')} ${i + 1}`)}
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-muted-foreground">Sem evidência fornecida.</p>
+          <p className="text-sm text-muted-foreground">{t('noEvidence')}</p>
         )}
       </section>
 
       <section className="rounded-lg border border-border bg-card p-4">
-        <h2 className="mb-1 text-sm font-semibold text-foreground">Rationale do agente</h2>
-        <p className="text-sm italic text-muted-foreground">{data.rationale ?? 'Sem rationale.'}</p>
+        <h2 className="mb-1 text-sm font-semibold text-foreground">{t('agentRationale')}</h2>
+        <p className="text-sm italic text-muted-foreground">{data.rationale ?? t('noRationale')}</p>
       </section>
 
       <section className="space-y-0.5 text-sm text-muted-foreground">
-        <div>Contrato: {data.contract_label ?? '—'}</div>
-        <div>Linha: {data.line_item_label ?? '—'}</div>
-        <div>Cliente: {data.customer_name ?? '—'}</div>
+        <div>{t('contract')}: {data.contract_label ?? '—'}</div>
+        <div>{t('line')}: {data.line_item_label ?? '—'}</div>
+        <div>{t('customer')}: {data.customer_name ?? '—'}</div>
         {data.contract_id && (
           <button
             type="button"
@@ -158,13 +162,13 @@ export default function FindingDetail({ params }: ScreenProps) {
               openWindow({
                 kind: 'component',
                 componentKey: 'audit-trail',
-                title: 'Auditoria',
+                title: t('auditTrail'),
                 params: { entityId: data.contract_id },
               })
             }
             className="mt-1 text-primary hover:underline"
           >
-            Abrir trilha de auditoria
+            {t('openAuditTrail')}
           </button>
         )}
       </section>
@@ -183,25 +187,25 @@ export default function FindingDetail({ params }: ScreenProps) {
             onClick={() => openDialog('approve')}
             className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
-            Aprovar
+            {t('approve')}
           </button>
           <button
             type="button"
             onClick={() => openDialog('reject')}
             className="rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-destructive/90"
           >
-            Rejeitar
+            {t('reject')}
           </button>
         </div>
       ) : (
-        <div className="text-sm text-muted-foreground">Achado já {data.status}. Sem ação pendente.</div>
+        <div className="text-sm text-muted-foreground">{t('alreadyProcessed').replace('{status}', data.status)}</div>
       )}
 
       <ConfirmDialog
         open={mode !== null}
-        title={mode === 'reject' ? 'Rejeitar achado' : 'Aprovar achado'}
+        title={mode === 'reject' ? t('rejectFinding') : t('approveFinding')}
         destructive={mode === 'reject'}
-        confirmLabel={mode === 'reject' ? 'Rejeitar' : 'Aprovar'}
+        confirmLabel={mode === 'reject' ? t('reject') : t('approve')}
         busy={busy}
         onConfirm={confirm}
         onCancel={() => {
@@ -213,7 +217,7 @@ export default function FindingDetail({ params }: ScreenProps) {
       >
         <div className="space-y-2">
           <p className="text-sm text-muted-foreground">
-            {mode === 'reject' ? 'Informe o motivo da rejeição (obrigatório).' : 'Observação (opcional).'}
+            {mode === 'reject' ? t('rejectReasonPrompt') : t('noteOptional')}
           </p>
           <textarea
             value={text}
@@ -223,7 +227,7 @@ export default function FindingDetail({ params }: ScreenProps) {
             }}
             rows={3}
             className="w-full rounded-md border border-input bg-background p-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-            placeholder={mode === 'reject' ? 'Motivo…' : 'Observação…'}
+            placeholder={mode === 'reject' ? t('reasonPlaceholder') : t('notePlaceholder')}
           />
           {dialogErr && <p className="text-xs text-destructive">{dialogErr}</p>}
         </div>

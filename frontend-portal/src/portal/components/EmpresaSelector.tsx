@@ -5,10 +5,12 @@
 
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { Building2, Check, ChevronDown } from 'lucide-react'
+import { useTranslations } from 'use-intl'
 import { usePortalStore } from '@/portal/store/portalStore'
 import type { Empresa } from '@/portal/types'
 
 export function EmpresaSelector() {
+  const t = useTranslations('shell')
   const empresas = usePortalStore((s) => s.empresas)
   const empresaAtualId = usePortalStore((s) => s.empresaAtualId)
   const changeEmpresa = usePortalStore((s) => s.changeEmpresa)
@@ -20,7 +22,7 @@ export function EmpresaSelector() {
   // Agrupa por `grupo`; empresas sem grupo ficam num bloco "Outras".
   const grupos = new Map<string, Empresa[]>()
   for (const e of empresas) {
-    const g = e.grupo ?? 'Outras'
+    const g = e.grupo ?? t('otherCompanies')
     grupos.set(g, [...(grupos.get(g) ?? []), e])
   }
 
@@ -28,7 +30,7 @@ export function EmpresaSelector() {
     <DropdownMenu.Root>
       <DropdownMenu.Trigger className="flex max-w-[280px] items-center gap-2 rounded-md border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-header-foreground outline-none transition-colors hover:bg-white/20 data-[state=open]:bg-white/20">
         <Building2 size={15} className="shrink-0 opacity-80" />
-        <span className="truncate font-medium">{atual?.nome ?? 'Selecionar empresa'}</span>
+        <span className="truncate font-medium">{atual?.nome ?? t('selectCompany')}</span>
         {atual?.grupo && (
           /* Marca (default) da empresa logada — chip ao lado do nome. */
           <span className="shrink-0 rounded bg-white/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">

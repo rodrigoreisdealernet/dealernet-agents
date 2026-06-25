@@ -8,6 +8,8 @@ import { AlertTriangle } from 'lucide-react'
 interface Props {
   children: ReactNode
   title: string
+  errorTitle: string
+  retryLabel: string
 }
 interface State {
   error: Error | null
@@ -32,7 +34,7 @@ export class WindowErrorBoundary extends Component<Props, State> {
       return (
         <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
           <AlertTriangle className="text-destructive" size={28} />
-          <p className="text-sm font-medium">Esta janela encontrou um erro</p>
+          <p className="text-sm font-medium">{this.props.errorTitle}</p>
           <p className="max-w-xs text-xs text-muted-foreground break-words">
             {this.state.error.message}
           </p>
@@ -41,7 +43,7 @@ export class WindowErrorBoundary extends Component<Props, State> {
             onClick={this.reset}
             className="rounded-md bg-secondary px-3 py-1.5 text-xs font-medium hover:bg-muted"
           >
-            Tentar novamente
+            {this.props.retryLabel}
           </button>
         </div>
       )

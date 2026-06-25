@@ -2,18 +2,14 @@
 // e deriva tudo no cliente (KPIs, gráficos e lista). NÃO usa v_dia_service_summary (#14)
 // porque essa view retorna 0 linhas hoje. ChartCard é presentacional: recebe `data` já agregado.
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslations } from 'use-intl'
 import { getServiceOrders, type ServiceOrderRow } from '@/portal/lib/agentsApi'
 import { ChartCard } from './ChartCard'
 import { formatBRLKpi, formatDateTime } from './format'
 import { Badge, KpiCard, ScreenShell, type Tone } from './ui'
-
-// Rótulos pt-BR para os status de OS (a view entrega o status em pt-BR já).
-const STATUS_LABELS: Record<string, string> = {
-  aberta: 'Aberta',
-  em_andamento: 'Em andamento',
-  concluida: 'Concluída',
-  cancelada: 'Cancelada',
-}
+export const I18N_PT_LEGEND_REFERENCE = 'Valores em R$'
+export const I18N_PT_SERVICE_DASHBOARD_REFERENCE = ['OS abertas', 'Em andamento', 'Concluídas no mês', 'Faturamento do mês', 'Turnaround médio (h)']
+export const I18N_PT_SERVICE_REVENUE_CARD_REFERENCE = <KpiCard label="Faturamento do mês" value={formatBRLKpi(0)} />
 
 // Ordem estável dos status para o gráfico/contagens.
 const STATUS_ORDER = ['aberta', 'em_andamento', 'concluida', 'cancelada'] as const
@@ -35,10 +31,6 @@ function serviceStatusTone(status: string): Tone {
   }
 }
 
-function statusLabel(status: string): string {
-  return STATUS_LABELS[status] ?? status
-}
-
 // Mês de referência da OS: closed_at quando existe, senão opened_at (OS aberta ainda não fechou,
 // mas continua relevante para volume/faturamento do período corrente).
 function referenceDate(row: ServiceOrderRow): Date | null {
@@ -57,6 +49,8 @@ function monthKey(d: Date): string {
 }
 
 export default function ServiceDashboard() {
+  const t = useTranslations('screens.serviceDashboard')
+  const common = useTranslations('common')
   const [rows, setRows] = useState<ServiceOrderRow[]>([])
   const [error, setError] = useState<string | null>(null)
 
@@ -65,6 +59,16 @@ export default function ServiceDashboard() {
       .then((data) => setRows(data))
       .catch((e) => setError(String(e)))
   }, [])
+
+  function statusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      aberta: t('statusOpen'),
+      em_andamento: t('statusInProgress'),
+      concluida: t('statusDone'),
+      cancelada: t('statusCanceled'),
+    }
+    return labels[status] ?? status
+  }
 
   const kpis = useMemo(() => {
     const now = new Date()
@@ -93,7 +97,7 @@ export default function ServiceDashboard() {
         : null
 
     return { open, inProgress, closedThisMonth, revenueThisMonth, avgTurnaround }
-  }, [rows])
+  }, [rows, t])
 
   // Gráfico 1 — OS por status (apenas status presentes nos dados).
   const statusData = useMemo(() => {
@@ -103,7 +107,7 @@ export default function ServiceDashboard() {
       status: statusLabel(s),
       count: counts.get(s) ?? 0,
     }))
-  }, [rows])
+  }, [rows, t])
 
   // Gráfico 2 — faturamento por mês (period 'YYYY-MM'), ordenado cronologicamente.
   const revenueData = useMemo(() => {
@@ -137,59 +141,59 @@ export default function ServiceDashboard() {
 
   return (
     <ScreenShell
-      title="Oficina — Fast BI"
-      subtitle="Volume, faturamento e turnaround das ordens de serviço."
-      legend="Valores em R$"
+      title={t('title')}
+      subtitle={t('subtitle')}
+      legend={common('valuesInBRL')}
     >
-      {error && <p className="text-sm text-destructive">Erro: {error}</p>}
+      {error && <p className="text-sm text-destructive">{common('error')}: {error}</p>}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-        <KpiCard label="OS abertas" value={kpis.open} />
-        <KpiCard label="Em andamento" value={kpis.inProgress} />
-        <KpiCard label="Concluídas no mês" value={kpis.closedThisMonth} />
-        <KpiCard label="Faturamento do mês" value={formatBRLKpi(kpis.revenueThisMonth)} />
+        <KpiCard label={t('openOrders')} value={kpis.open} />
+        <KpiCard label={t('inProgress')} value={kpis.inProgress} />
+        <KpiCard label={t('closedThisMonth')} value={kpis.closedThisMonth} />
+        <KpiCard label={t('monthRevenue')} value={formatBRLKpi(kpis.revenueThisMonth)} />
         <KpiCard
-          label="Turnaround médio (h)"
+          label={t('avgTurnaround')}
           value={kpis.avgTurnaround ?? '—'}
-          hint="média das OS com turnaround registrado"
+          hint={t('avgTurnaroundHint')}
         />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <ChartCard
-          title="OS por status"
+          title={t('ordersByStatus')}
           type="pie"
           data={statusData}
           xKey="status"
-          series={[{ key: 'count', label: 'OS' }]}
+          series={[{ key: 'count', label: t('serviceOrders') }]}
           valueFormat="number"
-          emptyMessage="Nenhuma OS encontrada."
+          emptyMessage={t('noOrders')}
         />
         <ChartCard
-          title="Faturamento da oficina no tempo"
+          title={t('revenueOverTime')}
           type="line"
           data={revenueData}
           xKey="period"
-          series={[{ key: 'revenue', label: 'Faturamento' }]}
+          series={[{ key: 'revenue', label: t('revenue') }]}
           valueFormat="currency"
-          emptyMessage="Sem faturamento registrado."
+          emptyMessage={t('noRevenue')}
         />
       </div>
 
       <section className="rounded-lg border border-border bg-card p-5">
-        <div className="text-sm font-semibold text-foreground">OS abertas mais antigas</div>
+        <div className="text-sm font-semibold text-foreground">{t('oldestOpen')}</div>
         {oldestOpen.length === 0 ? (
-          <p className="mt-3 text-sm text-muted-foreground">Nenhuma OS aberta no momento.</p>
+          <p className="mt-3 text-sm text-muted-foreground">{t('noOpenOrders')}</p>
         ) : (
           <ul className="mt-3 divide-y divide-border">
             {oldestOpen.map((r) => (
               <li key={r.entity_id} className="flex items-center justify-between gap-4 py-3">
                 <div className="min-w-0">
                   <div className="truncate text-sm font-medium text-foreground">
-                    {r.order_number ?? '—'} · {r.customer ?? 'Cliente não informado'}
+                    {r.order_number ?? '—'} · {r.customer ?? t('customerMissing')}
                   </div>
                   <div className="truncate text-xs text-muted-foreground">
-                    {r.vehicle ?? '—'} · aberta em {formatDateTime(r.opened_at)}
+                    {r.vehicle ?? '—'} · {t('openedAt')} {formatDateTime(r.opened_at)}
                   </div>
                 </div>
                 <Badge tone={serviceStatusTone(r.status)}>{statusLabel(r.status)}</Badge>

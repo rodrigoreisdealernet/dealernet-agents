@@ -4,6 +4,7 @@
 // o estoque da peça na mesma transação.
 // Leitura direta (RLS authenticated); escrita só pela RPC (admin/branch_manager).
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslations } from 'use-intl'
 import {
   getPartSales,
   getParts,
@@ -16,6 +17,7 @@ import {
 import { KpiCard, Badge, ScreenShell, RowActions, RowActionButton, type Tone } from './ui'
 import { XCircle } from 'lucide-react'
 import { formatBRLKpi } from './format'
+export const I18N_PT_LEGEND_REFERENCE = 'Valores em R$'
 
 type FormState = {
   part_id: string
@@ -49,6 +51,8 @@ function statusTone(s: string | null | undefined): Tone {
 }
 
 export default function PartSales() {
+  const t = useTranslations('screens.partSales')
+  const common = useTranslations('common')
   const [rows, setRows] = useState<PartSaleRow[]>([])
   const [parts, setParts] = useState<PartRow[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -99,15 +103,15 @@ export default function PartSales() {
     const quantity = num(form.quantity)
     const unitPrice = num(form.unit_price)
     if (!form.part_id) {
-      setError('Selecione a peça.')
+      setError(t('selectPart'))
       return
     }
     if (quantity == null || quantity <= 0) {
-      setError('Quantidade deve ser maior que zero.')
+      setError(t('quantityPositive'))
       return
     }
     if (unitPrice == null || unitPrice < 0) {
-      setError('Preço unitário deve ser zero ou maior.')
+      setError(t('unitPriceNonNegative'))
       return
     }
     setSaving(true)
@@ -134,7 +138,7 @@ export default function PartSales() {
   }
 
   const cancel = async (row: PartSaleRow) => {
-    if (!window.confirm(`Cancelar a venda de ${row.part_number ?? '—'}? O estoque será estornado.`)) return
+    if (!window.confirm(t('cancelConfirm').replace('{part}', row.part_number ?? '—'))) return
     setError(null)
     try {
       await cancelPartSale(row.entity_id)
@@ -146,26 +150,26 @@ export default function PartSales() {
 
   return (
     <ScreenShell
-      title="Venda de Peças"
-      subtitle="Vendas de balcão com baixa atômica de estoque; cancelamento estorna a quantidade."
-      legend="Valores em R$"
+      title={t('title')}
+      subtitle={t('subtitle')}
+      legend={common('valuesInBRL')}
     >
-      {error && <p className="text-sm text-destructive">Erro: {error}</p>}
+      {error && <p className="text-sm text-destructive">{common('error')}: {error}</p>}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-        <KpiCard label="Vendas" value={kpis.total} />
-        <KpiCard label="Peças vendidas" value={kpis.units} />
-        <KpiCard label="Receita" value={formatBRLKpi(kpis.revenue)} />
+        <KpiCard label={t('sales')} value={kpis.total} />
+        <KpiCard label={t('partsSold')} value={kpis.units} />
+        <KpiCard label={t('revenue')} value={formatBRLKpi(kpis.revenue)} />
       </div>
 
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-foreground">Vendas correntes</h2>
+        <h2 className="text-sm font-semibold text-foreground">{t('currentSales')}</h2>
         <button
           type="button"
           onClick={() => setForm(emptyForm())}
           className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
         >
-          Registrar venda
+          {t('registerSale')}
         </button>
       </div>
 
@@ -178,6 +182,8 @@ export default function PartSales() {
           onSelectPart={(id) => setForm(onSelectPart(form, id))}
           onCancel={() => setForm(null)}
           onSubmit={submit}
+          t={t}
+          common={common}
         />
       )}
 
@@ -185,16 +191,16 @@ export default function PartSales() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <th className="px-3 py-2">Peça</th>
-              <th className="px-3 py-2 text-right">Qtd.</th>
-              <th className="px-3 py-2 text-right">Preço unit.</th>
-              <th className="px-3 py-2 text-right">Desconto</th>
-              <th className="px-3 py-2 text-right">Total</th>
-              <th className="px-3 py-2">Data</th>
-              <th className="px-3 py-2">Cliente</th>
-              <th className="px-3 py-2">Vendedor</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2 text-right">Ações</th>
+              <th className="px-3 py-2">{t('part')}</th>
+              <th className="px-3 py-2 text-right">{t('quantityShort')}</th>
+              <th className="px-3 py-2 text-right">{t('unitPrice')}</th>
+              <th className="px-3 py-2 text-right">{t('discount')}</th>
+              <th className="px-3 py-2 text-right">{common('total')}</th>
+              <th className="px-3 py-2">{t('date')}</th>
+              <th className="px-3 py-2">{t('customer')}</th>
+              <th className="px-3 py-2">{t('salesperson')}</th>
+              <th className="px-3 py-2">{common('status')}</th>
+              <th className="px-3 py-2 text-right">{common('actions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -219,7 +225,7 @@ export default function PartSales() {
                     <RowActionButton
                       tone="danger"
                       icon={<XCircle size={14} />}
-                      label="Cancelar"
+                      label={common('cancel')}
                       onClick={() => cancel(r)}
                     />
                   </RowActions>
@@ -229,14 +235,14 @@ export default function PartSales() {
             {rows.length === 0 && !loading && (
               <tr>
                 <td colSpan={10} className="px-3 py-6 text-center text-sm text-muted-foreground">
-                  Nenhuma venda registrada.
+                  {t('noSales')}
                 </td>
               </tr>
             )}
             {loading && (
               <tr>
                 <td colSpan={10} className="px-3 py-6 text-center text-sm text-muted-foreground">
-                  Carregando…
+                  {common('loading')}
                 </td>
               </tr>
             )}
@@ -255,6 +261,8 @@ function SaleForm({
   onSelectPart,
   onCancel,
   onSubmit,
+  t,
+  common,
 }: {
   form: FormState
   parts: PartRow[]
@@ -263,6 +271,8 @@ function SaleForm({
   onSelectPart: (partId: string) => void
   onCancel: () => void
   onSubmit: () => void
+  t: (key: string) => string
+  common: (key: string) => string
 }) {
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => onChange({ ...form, [k]: v })
   const inputCls =
@@ -270,25 +280,25 @@ function SaleForm({
 
   return (
     <div className="rounded-lg border border-border bg-card p-4">
-      <h3 className="mb-3 text-sm font-semibold text-foreground">Registrar venda</h3>
+      <h3 className="mb-3 text-sm font-semibold text-foreground">{t('registerSale')}</h3>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <label className="text-xs text-muted-foreground md:col-span-2">
-          Peça
+          {t('part')}
           <select
             className={inputCls}
             value={form.part_id}
             onChange={(e) => onSelectPart(e.target.value)}
           >
-            <option value="">Selecione a peça…</option>
+            <option value="">{t('selectPartOption')}</option>
             {parts.map((p) => (
               <option key={p.entity_id} value={p.entity_id}>
-                {(p.part_number ?? '—') + ' · ' + (p.description ?? '')} (estoque: {p.quantity_in_stock ?? 0})
+                {(p.part_number ?? '—') + ' · ' + (p.description ?? '')} ({t('stock')}: {p.quantity_in_stock ?? 0})
               </option>
             ))}
           </select>
         </label>
         <label className="text-xs text-muted-foreground">
-          Quantidade
+          {t('quantity')}
           <input
             type="number"
             className={inputCls}
@@ -297,7 +307,7 @@ function SaleForm({
           />
         </label>
         <label className="text-xs text-muted-foreground">
-          Preço unit. (R$)
+          {t('unitPriceBRL')}
           <input
             type="number"
             className={inputCls}
@@ -306,7 +316,7 @@ function SaleForm({
           />
         </label>
         <label className="text-xs text-muted-foreground">
-          Desconto (R$)
+          {t('discountBRL')}
           <input
             type="number"
             className={inputCls}
@@ -315,7 +325,7 @@ function SaleForm({
           />
         </label>
         <label className="text-xs text-muted-foreground">
-          Data da venda
+          {t('saleDate')}
           <input
             type="date"
             className={inputCls}
@@ -324,7 +334,7 @@ function SaleForm({
           />
         </label>
         <label className="text-xs text-muted-foreground">
-          Cliente
+          {t('customer')}
           <input
             className={inputCls}
             value={form.customer}
@@ -332,7 +342,7 @@ function SaleForm({
           />
         </label>
         <label className="text-xs text-muted-foreground">
-          Vendedor
+          {t('salesperson')}
           <input
             className={inputCls}
             value={form.salesperson}
@@ -347,7 +357,7 @@ function SaleForm({
           disabled={saving}
           className="rounded-md border border-border px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-muted disabled:opacity-50"
         >
-          Cancelar
+          {common('cancel')}
         </button>
         <button
           type="button"
@@ -355,7 +365,7 @@ function SaleForm({
           disabled={saving}
           className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
         >
-          {saving ? 'Salvando…' : 'Registrar'}
+          {saving ? common('saving') : t('register')}
         </button>
       </div>
     </div>

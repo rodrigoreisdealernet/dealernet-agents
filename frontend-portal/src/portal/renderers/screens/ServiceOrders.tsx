@@ -3,6 +3,7 @@
 // via as RPCs endurecidas create_service_order / update_service_order / delete_service_order.
 // Leitura direta (RLS authenticated); escrita só pela RPC (admin/branch_manager).
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslations } from 'use-intl'
 import {
   getServiceOrders,
   createServiceOrder,
@@ -15,6 +16,7 @@ import {
 import { KpiCard, Badge, ScreenShell, RowActions, RowActionButton, type Tone } from './ui'
 import { Pencil, XCircle } from 'lucide-react'
 import { formatBRLKpi, formatDateTime } from './format'
+export const I18N_PT_LEGEND_REFERENCE = 'Valores em R$'
 
 type FormState = ServiceOrderInput & { entity_id?: string }
 
@@ -51,6 +53,8 @@ function num(v: string): number | null {
 }
 
 export default function ServiceOrders() {
+  const t = useTranslations('screens.serviceOrders')
+  const common = useTranslations('common')
   const [rows, setRows] = useState<ServiceOrderRow[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -83,7 +87,7 @@ export default function ServiceOrders() {
   const submit = async () => {
     if (!form) return
     if (!form.customer.trim() || !form.description.trim()) {
-      setError('Cliente e descrição são obrigatórios.')
+      setError(t('customerDescriptionRequired'))
       return
     }
     setSaving(true)
@@ -112,7 +116,7 @@ export default function ServiceOrders() {
   }
 
   const remove = async (row: ServiceOrderRow) => {
-    if (!window.confirm(`Cancelar a OS ${row.order_number ?? row.name ?? ''}? O histórico é preservado.`)) return
+    if (!window.confirm(t('cancelConfirm').replace('{name}', row.order_number ?? row.name ?? ''))) return
     setError(null)
     try {
       await deleteServiceOrder(row.entity_id)
@@ -122,29 +126,39 @@ export default function ServiceOrders() {
     }
   }
 
+  const statusLabel = (status: string | null | undefined) => {
+    const labels: Record<string, string> = {
+      aberta: t('statusOpen'),
+      em_andamento: t('statusInProgress'),
+      concluida: t('statusDone'),
+      cancelada: t('statusCanceled'),
+    }
+    return labels[status ?? ''] ?? status ?? '—'
+  }
+
   return (
     <ScreenShell
-      title="Ordens de Serviço"
-      subtitle="Oficina — registre, acompanhe e finalize ordens de serviço; tempo de atendimento calculado para as concluídas."
-      legend="Valores em R$"
+      title={t('title')}
+      subtitle={t('subtitle')}
+      legend={common('valuesInBRL')}
     >
-      {error && <p className="text-sm text-destructive">Erro: {error}</p>}
+      {error && <p className="text-sm text-destructive">{common('error')}: {error}</p>}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <KpiCard label="Total" value={kpis.total} />
-        <KpiCard label="Em aberto" value={kpis.abertas} />
-        <KpiCard label="Concluídas" value={kpis.concluidas} />
-        <KpiCard label="Receita acum." value={formatBRLKpi(kpis.receita)} />
+        <KpiCard label={common('total')} value={kpis.total} />
+        <KpiCard label={t('open')} value={kpis.abertas} />
+        <KpiCard label={t('completed')} value={kpis.concluidas} />
+        <KpiCard label={t('accumRevenue')} value={formatBRLKpi(kpis.receita)} />
       </div>
 
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-foreground">Ordens correntes</h2>
+        <h2 className="text-sm font-semibold text-foreground">{t('currentOrders')}</h2>
         <button
           type="button"
           onClick={() => setForm({ ...EMPTY_FORM })}
           className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
         >
-          Nova OS
+          {t('newOrder')}
         </button>
       </div>
 
@@ -155,6 +169,9 @@ export default function ServiceOrders() {
           onChange={setForm}
           onCancel={() => setForm(null)}
           onSubmit={submit}
+          t={t}
+          common={common}
+          statusLabel={statusLabel}
         />
       )}
 
@@ -162,13 +179,13 @@ export default function ServiceOrders() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <th className="px-3 py-2">OS</th>
-              <th className="px-3 py-2">Cliente / Veículo</th>
-              <th className="px-3 py-2">Aberta em</th>
-              <th className="px-3 py-2 text-right">Receita</th>
-              <th className="px-3 py-2 text-right">Tempo (h)</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2 text-right">Ações</th>
+              <th className="px-3 py-2">{t('serviceOrder')}</th>
+              <th className="px-3 py-2">{t('customerVehicle')}</th>
+              <th className="px-3 py-2">{t('openedAt')}</th>
+              <th className="px-3 py-2 text-right">{t('revenue')}</th>
+              <th className="px-3 py-2 text-right">{t('timeHours')}</th>
+              <th className="px-3 py-2">{common('status')}</th>
+              <th className="px-3 py-2 text-right">{common('actions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -186,13 +203,13 @@ export default function ServiceOrders() {
                 <td className="px-3 py-2 text-right tabular-nums">{formatBRLKpi(r.revenue)}</td>
                 <td className="px-3 py-2 text-right tabular-nums">{r.turnaround_hours ?? '—'}</td>
                 <td className="px-3 py-2">
-                  <Badge tone={statusTone(r.status)}>{r.status}</Badge>
+                  <Badge tone={statusTone(r.status)}>{statusLabel(r.status)}</Badge>
                 </td>
                 <td className="px-3 py-2 text-right">
                   <RowActions>
                     <RowActionButton
                       icon={<Pencil size={14} />}
-                      label="Editar"
+                      label={common('edit')}
                       onClick={() =>
                         setForm({
                           entity_id: r.entity_id,
@@ -211,7 +228,7 @@ export default function ServiceOrders() {
                     <RowActionButton
                       tone="danger"
                       icon={<XCircle size={14} />}
-                      label="Cancelar"
+                      label={common('cancel')}
                       onClick={() => remove(r)}
                     />
                   </RowActions>
@@ -221,14 +238,14 @@ export default function ServiceOrders() {
             {rows.length === 0 && !loading && (
               <tr>
                 <td colSpan={7} className="px-3 py-6 text-center text-sm text-muted-foreground">
-                  Nenhuma ordem de serviço.
+                  {t('noOrders')}
                 </td>
               </tr>
             )}
             {loading && (
               <tr>
                 <td colSpan={7} className="px-3 py-6 text-center text-sm text-muted-foreground">
-                  Carregando…
+                  {common('loading')}
                 </td>
               </tr>
             )}
@@ -245,12 +262,18 @@ function ServiceOrderForm({
   onChange,
   onCancel,
   onSubmit,
+  t,
+  common,
+  statusLabel,
 }: {
   form: FormState
   saving: boolean
   onChange: (f: FormState) => void
   onCancel: () => void
   onSubmit: () => void
+  t: (key: string) => string
+  common: (key: string) => string
+  statusLabel: (status: string | null | undefined) => string
 }) {
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => onChange({ ...form, [k]: v })
   const inputCls =
@@ -259,11 +282,11 @@ function ServiceOrderForm({
   return (
     <div className="rounded-lg border border-border bg-card p-4">
       <h3 className="mb-3 text-sm font-semibold text-foreground">
-        {form.entity_id ? 'Editar OS' : 'Nova OS'}
+        {form.entity_id ? t('editOrder') : t('newOrder')}
       </h3>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <label className="text-xs text-muted-foreground">
-          Número da OS
+          {t('orderNumber')}
           <input
             className={inputCls}
             value={form.order_number ?? ''}
@@ -271,11 +294,11 @@ function ServiceOrderForm({
           />
         </label>
         <label className="text-xs text-muted-foreground">
-          Cliente
+          {t('customer')}
           <input className={inputCls} value={form.customer} onChange={(e) => set('customer', e.target.value)} />
         </label>
         <label className="text-xs text-muted-foreground">
-          Veículo / Placa
+          {t('vehiclePlate')}
           <input
             className={inputCls}
             value={form.vehicle ?? ''}
@@ -283,7 +306,7 @@ function ServiceOrderForm({
           />
         </label>
         <label className="col-span-2 text-xs text-muted-foreground md:col-span-3">
-          Descrição
+          {t('description')}
           <input
             className={inputCls}
             value={form.description}
@@ -291,7 +314,7 @@ function ServiceOrderForm({
           />
         </label>
         <label className="text-xs text-muted-foreground">
-          Status
+          {common('status')}
           <select
             className={inputCls}
             value={form.status ?? 'aberta'}
@@ -299,13 +322,13 @@ function ServiceOrderForm({
           >
             {STATUSES.map((s) => (
               <option key={s} value={s}>
-                {s}
+                {statusLabel(s)}
               </option>
             ))}
           </select>
         </label>
         <label className="text-xs text-muted-foreground">
-          Aberta em
+          {t('openedAt')}
           <input
             type="datetime-local"
             className={inputCls}
@@ -314,7 +337,7 @@ function ServiceOrderForm({
           />
         </label>
         <label className="text-xs text-muted-foreground">
-          Fechada em
+          {t('closedAt')}
           <input
             type="datetime-local"
             className={inputCls}
@@ -323,7 +346,7 @@ function ServiceOrderForm({
           />
         </label>
         <label className="text-xs text-muted-foreground">
-          Receita (R$)
+          {t('revenueBRL')}
           <input
             type="number"
             className={inputCls}
@@ -332,7 +355,7 @@ function ServiceOrderForm({
           />
         </label>
         <label className="text-xs text-muted-foreground">
-          Técnico
+          {t('technician')}
           <input
             className={inputCls}
             value={form.technician ?? ''}
@@ -347,7 +370,7 @@ function ServiceOrderForm({
           disabled={saving}
           className="rounded-md border border-border px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-muted disabled:opacity-50"
         >
-          Cancelar
+          {common('cancel')}
         </button>
         <button
           type="button"
@@ -355,7 +378,7 @@ function ServiceOrderForm({
           disabled={saving}
           className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
         >
-          {saving ? 'Salvando…' : 'Salvar'}
+          {saving ? common('saving') : common('save')}
         </button>
       </div>
     </div>

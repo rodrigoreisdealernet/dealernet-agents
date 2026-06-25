@@ -4,6 +4,7 @@
 // Ver docs/portal-mdi-arquitetura.md §4.3 (navegação).
 
 import { useMemo, useState } from 'react'
+import { useTranslations } from 'use-intl'
 import * as Tooltip from '@radix-ui/react-tooltip'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import {
@@ -18,6 +19,7 @@ import { useBreakpoint } from '@/hooks/use-breakpoint'
 import { filterMenu, filterMenuByRole } from '@/portal/lib/menuFilter'
 import { resolveMenuIcon } from '@/portal/lib/menuIcon'
 import { cn } from '@/lib/utils'
+import { localizeMenuTree } from '@/i18n/menu'
 import type { MenuItem, WindowSpec } from '@/portal/types'
 
 // Ícone do item: resolvedor COMPARTILHADO (menuIcon.tsx) — o mesmo usado por abas/janelas.
@@ -42,8 +44,10 @@ function DesktopSidebar() {
   const collapsed = usePortalStore((s) => s.sidebarCollapsed)
   const toggleSidebar = usePortalStore((s) => s.toggleSidebar)
   const config = usePortalStore((s) => s.config)
+  const tShell = useTranslations('shell')
+  const tMenu = useTranslations('menu')
 
-  const menu = useMemo(() => filterMenuByRole(rawMenu, role), [rawMenu, role])
+  const menu = useMemo(() => filterMenuByRole(localizeMenuTree(rawMenu, tMenu), role), [rawMenu, role, tMenu])
   const [query, setQuery] = useState('')
   const filtered = useMemo(() => filterMenu(menu, query), [menu, query])
   const filtering = query.trim().length > 0
@@ -73,11 +77,11 @@ function DesktopSidebar() {
           <button
             type="button"
             onClick={toggleSidebar}
-            title={collapsed ? 'Expandir menu' : 'Recolher menu'}
+            title={collapsed ? tShell('expandMenu') : tShell('collapseMenu')}
             className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-sidebar-muted transition-colors hover:bg-white/10 hover:text-sidebar-foreground"
           >
             {collapsed ? <PanelLeft size={18} /> : <ChevronLeft size={18} />}
-            {!collapsed && <span>Recolher</span>}
+            {!collapsed && <span>{tShell('collapse')}</span>}
           </button>
         </div>
       </aside>
@@ -87,6 +91,7 @@ function DesktopSidebar() {
 
 // Campo de busca do menu (sidebar expandida + drawer).
 function MenuSearch({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const t = useTranslations('shell')
   return (
     <div className="px-2 pt-2" data-tour="busca">
       <div className="relative">
@@ -98,13 +103,13 @@ function MenuSearch({ value, onChange }: { value: string; onChange: (v: string) 
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="Buscar tela…"
+          placeholder={t('searchScreen')}
           className="w-full rounded-md border border-sidebar-border bg-black/20 py-1.5 pl-8 pr-7 text-sm text-sidebar-foreground placeholder:text-sidebar-muted outline-none focus:border-sidebar-accent"
         />
         {value && (
           <button
             type="button"
-            title="Limpar"
+            title={t('clear')}
             onClick={() => onChange('')}
             className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-sidebar-muted hover:bg-white/10 hover:text-sidebar-foreground"
           >
@@ -117,9 +122,10 @@ function MenuSearch({ value, onChange }: { value: string; onChange: (v: string) 
 }
 
 function MenuEmpty({ query }: { query: string }) {
+  const t = useTranslations('shell')
   return (
     <div className="px-3 py-6 text-center text-sm text-sidebar-muted">
-      Nenhuma tela encontrada para
+      {t('noScreenFound')}
       <div className="mt-1 truncate font-medium text-sidebar-foreground">“{query}”</div>
     </div>
   )
@@ -132,8 +138,10 @@ function DrawerSidebar() {
   const role = usePortalStore((s) => s.role)
   const open = usePortalStore((s) => s.drawerOpen)
   const setDrawerOpen = usePortalStore((s) => s.setDrawerOpen)
+  const tShell = useTranslations('shell')
+  const tMenu = useTranslations('menu')
 
-  const menu = useMemo(() => filterMenuByRole(rawMenu, role), [rawMenu, role])
+  const menu = useMemo(() => filterMenuByRole(localizeMenuTree(rawMenu, tMenu), role), [rawMenu, role, tMenu])
   const [query, setQuery] = useState('')
   const filtered = useMemo(() => filterMenu(menu, query), [menu, query])
   const filtering = query.trim().length > 0
@@ -156,7 +164,7 @@ function DrawerSidebar() {
           </span>
           <button
             type="button"
-            title="Fechar menu"
+            title={tShell('closeMenu')}
             onClick={() => setDrawerOpen(false)}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-sidebar-muted hover:bg-white/10 hover:text-sidebar-foreground"
           >

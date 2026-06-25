@@ -6,12 +6,14 @@
 
 import { useState, useEffect } from 'react'
 import { Clock, LogOut } from 'lucide-react'
+import { useTranslations } from 'use-intl'
 import { usePortalStore } from '@/portal/store/portalStore'
 import { useAuth } from '@/hooks/use-auth'
 import { useIdleTimeout, formatRemaining } from '@/hooks/use-idle-timeout'
 import { SESSION_EXPIRED_EVENT } from '@/portal/lib/sessionEvents'
 
 export function SessionGuard() {
+  const t = useTranslations('shell.session')
   const config = usePortalStore((s) => s.config)
   const { logout } = useAuth()
   const [warnOpen, setWarnOpen] = useState(false)
@@ -26,7 +28,7 @@ export function SessionGuard() {
   useEffect(() => {
     const onExpired = (e: Event) => {
       const det = (e as CustomEvent).detail as { motivo?: string } | undefined
-      setMotivo(det?.motivo || 'Sua sessão foi encerrada.')
+      setMotivo(det?.motivo || t('ended'))
       setWarnOpen(false)
       setExpired(true)
     }
@@ -42,7 +44,7 @@ export function SessionGuard() {
     onWarn: () => setWarnOpen(true),
     onExpire: () => {
       setWarnOpen(false)
-      setMotivo(`Sua sessão foi encerrada por inatividade (${minutes} min).`)
+      setMotivo(t('endedByIdle').replace('{minutes}', String(minutes)))
       setExpired(true)
       // No real: window.location.href = config.endpoints.logout
     },
@@ -61,9 +63,9 @@ export function SessionGuard() {
             <LogOut className="text-muted-foreground" size={26} />
           </div>
           <div>
-            <h2 className="text-lg font-semibold">Sessão expirada</h2>
+            <h2 className="text-lg font-semibold">{t('expiredTitle')}</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {motivo || `Sua sessão foi encerrada por inatividade (${minutes} min).`}
+              {motivo || t('endedByIdle').replace('{minutes}', String(minutes))}
             </p>
           </div>
           <button
@@ -75,7 +77,7 @@ export function SessionGuard() {
             }}
             className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
           >
-            Entrar novamente
+            {t('signInAgain')}
           </button>
         </div>
       </div>
@@ -92,9 +94,9 @@ export function SessionGuard() {
             <Clock className="text-amber-500" size={20} />
           </div>
           <div>
-            <h2 className="font-semibold">Sua sessão vai expirar</h2>
+            <h2 className="font-semibold">{t('willExpire')}</h2>
             <p className="text-sm text-muted-foreground">
-              Por inatividade, em <span className="font-mono font-medium">{formatRemaining(remaining)}</span>.
+              {t('idlePrefix')} <span className="font-mono font-medium">{formatRemaining(remaining)}</span>.
             </p>
           </div>
         </div>
@@ -107,14 +109,14 @@ export function SessionGuard() {
             }}
             className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-secondary"
           >
-            Sair agora
+            {t('signOutNow')}
           </button>
           <button
             type="button"
             onClick={continuar}
             className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
           >
-            Continuar conectado
+            {t('stayConnected')}
           </button>
         </div>
       </div>

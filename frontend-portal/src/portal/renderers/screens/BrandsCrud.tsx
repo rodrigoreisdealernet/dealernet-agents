@@ -3,6 +3,7 @@
 // via as RPCs endurecidas create_brand / update_brand / delete_brand.
 // Leitura direta (RLS authenticated); escrita só pela RPC (admin/branch_manager).
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslations } from 'use-intl'
 import {
   getBrands,
   createBrand,
@@ -22,17 +23,13 @@ const EMPTY_FORM: FormState = {
   status: 'ativo',
 }
 
-const SEGMENT_LABEL: Record<string, string> = {
-  automoveis: 'Automóveis',
-  caminhoes: 'Caminhões',
-  motos: 'Motos',
-}
-
 function statusTone(s: string | null | undefined): Tone {
   return (s ?? '').toLowerCase() === 'inativo' ? 'neutral' : 'success'
 }
 
 export default function BrandsCrud() {
+  const t = useTranslations('screens.brandsCrud')
+  const common = useTranslations('common')
   const [rows, setRows] = useState<BrandRow[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -64,7 +61,7 @@ export default function BrandsCrud() {
   const submit = async () => {
     if (!form) return
     if (!form.name.trim()) {
-      setError('Nome é obrigatório.')
+      setError(t('nameRequired'))
       return
     }
     setSaving(true)
@@ -87,7 +84,7 @@ export default function BrandsCrud() {
   }
 
   const remove = async (row: BrandRow) => {
-    if (!window.confirm(`Inativar ${row.name}? O histórico é preservado.`)) return
+    if (!window.confirm(t('inactivateConfirm').replace('{name}', row.name ?? '—'))) return
     setError(null)
     try {
       await deleteBrand(row.entity_id)
@@ -97,27 +94,36 @@ export default function BrandsCrud() {
     }
   }
 
+  const segmentLabel = (segment: string | null | undefined) => {
+    const labels: Record<string, string> = {
+      automoveis: t('cars'),
+      caminhoes: t('trucks'),
+      motos: t('motorcycles'),
+    }
+    return labels[segment ?? ''] ?? segment ?? '—'
+  }
+
   return (
     <ScreenShell
-      title="Marcas"
-      subtitle="Cadastro de marcas — nome, segmento e situação."
+      title={t('title')}
+      subtitle={t('subtitle')}
     >
-      {error && <p className="text-sm text-destructive">Erro: {error}</p>}
+      {error && <p className="text-sm text-destructive">{common('error')}: {error}</p>}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-        <KpiCard label="Total" value={kpis.total} />
-        <KpiCard label="Ativas" value={kpis.ativas} />
-        <KpiCard label="Segmentos" value={kpis.segmentos} />
+        <KpiCard label={common('total')} value={kpis.total} />
+        <KpiCard label={t('activeBrands')} value={kpis.ativas} />
+        <KpiCard label={t('segments')} value={kpis.segmentos} />
       </div>
 
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-foreground">Marcas correntes</h2>
+        <h2 className="text-sm font-semibold text-foreground">{t('currentBrands')}</h2>
         <button
           type="button"
           onClick={() => setForm({ ...EMPTY_FORM })}
           className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
         >
-          Nova marca
+          {t('newBrand')}
         </button>
       </div>
 
@@ -128,6 +134,8 @@ export default function BrandsCrud() {
           onChange={setForm}
           onCancel={() => setForm(null)}
           onSubmit={submit}
+          t={t}
+          common={common}
         />
       )}
 
@@ -135,10 +143,10 @@ export default function BrandsCrud() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <th className="px-3 py-2">Marca</th>
-              <th className="px-3 py-2">Segmento</th>
-              <th className="px-3 py-2">Situação</th>
-              <th className="px-3 py-2 text-right">Ações</th>
+              <th className="px-3 py-2">{t('brand')}</th>
+              <th className="px-3 py-2">{t('segment')}</th>
+              <th className="px-3 py-2">{common('status')}</th>
+              <th className="px-3 py-2 text-right">{common('actions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -148,7 +156,7 @@ export default function BrandsCrud() {
                   <div className="font-medium text-foreground">{r.name}</div>
                 </td>
                 <td className="px-3 py-2">
-                  <Badge tone="info">{SEGMENT_LABEL[r.segment] ?? r.segment}</Badge>
+                  <Badge tone="info">{segmentLabel(r.segment)}</Badge>
                 </td>
                 <td className="px-3 py-2">
                   <Badge tone={statusTone(r.status)}>{r.status}</Badge>
@@ -157,7 +165,7 @@ export default function BrandsCrud() {
                   <RowActions>
                     <RowActionButton
                       icon={<Pencil size={14} />}
-                      label="Editar"
+                      label={common('edit')}
                       onClick={() =>
                         setForm({
                           entity_id: r.entity_id,
@@ -170,7 +178,7 @@ export default function BrandsCrud() {
                     <RowActionButton
                       tone="danger"
                       icon={<Trash2 size={14} />}
-                      label="Inativar"
+                      label={common('inactivate')}
                       onClick={() => remove(r)}
                     />
                   </RowActions>
@@ -180,14 +188,14 @@ export default function BrandsCrud() {
             {rows.length === 0 && !loading && (
               <tr>
                 <td colSpan={4} className="px-3 py-6 text-center text-sm text-muted-foreground">
-                  Nenhuma marca cadastrada.
+                  {t('noBrands')}
                 </td>
               </tr>
             )}
             {loading && (
               <tr>
                 <td colSpan={4} className="px-3 py-6 text-center text-sm text-muted-foreground">
-                  Carregando…
+                  {common('loading')}
                 </td>
               </tr>
             )}
@@ -204,12 +212,16 @@ function BrandForm({
   onChange,
   onCancel,
   onSubmit,
+  t,
+  common,
 }: {
   form: FormState
   saving: boolean
   onChange: (f: FormState) => void
   onCancel: () => void
   onSubmit: () => void
+  t: (key: string) => string
+  common: (key: string) => string
 }) {
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => onChange({ ...form, [k]: v })
   const inputCls =
@@ -218,34 +230,34 @@ function BrandForm({
   return (
     <div className="rounded-lg border border-border bg-card p-4">
       <h3 className="mb-3 text-sm font-semibold text-foreground">
-        {form.entity_id ? 'Editar marca' : 'Nova marca'}
+        {form.entity_id ? t('editBrand') : t('newBrand')}
       </h3>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <label className="text-xs text-muted-foreground">
-          Nome
+          {t('name')}
           <input className={inputCls} value={form.name} onChange={(e) => set('name', e.target.value)} />
         </label>
         <label className="text-xs text-muted-foreground">
-          Segmento
+          {t('segment')}
           <select
             className={inputCls}
             value={form.segment}
             onChange={(e) => set('segment', e.target.value as 'automoveis' | 'caminhoes' | 'motos')}
           >
-            <option value="automoveis">Automóveis</option>
-            <option value="caminhoes">Caminhões</option>
-            <option value="motos">Motos</option>
+            <option value="automoveis">{t('cars')}</option>
+            <option value="caminhoes">{t('trucks')}</option>
+            <option value="motos">{t('motorcycles')}</option>
           </select>
         </label>
         <label className="text-xs text-muted-foreground">
-          Situação
+          {common('status')}
           <select
             className={inputCls}
             value={form.status ?? 'ativo'}
             onChange={(e) => set('status', e.target.value as 'ativo' | 'inativo')}
           >
-            <option value="ativo">ativo</option>
-            <option value="inativo">inativo</option>
+            <option value="ativo">{common('active')}</option>
+            <option value="inativo">{common('inactive')}</option>
           </select>
         </label>
       </div>
@@ -256,7 +268,7 @@ function BrandForm({
           disabled={saving}
           className="rounded-md border border-border px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-muted disabled:opacity-50"
         >
-          Cancelar
+          {common('cancel')}
         </button>
         <button
           type="button"
@@ -264,7 +276,7 @@ function BrandForm({
           disabled={saving}
           className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
         >
-          {saving ? 'Salvando…' : 'Salvar'}
+          {saving ? common('saving') : common('save')}
         </button>
       </div>
     </div>

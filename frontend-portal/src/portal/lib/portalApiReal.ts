@@ -28,6 +28,7 @@ import type {
   WorkspaceMeta,
 } from '@/portal/types'
 import type { ListQuery, ListResult } from '@/portal/components/datatable/types'
+import { applyMenuTranslationKeys } from '@/i18n/menuKeys'
 import { notifySessionExpired } from '@/portal/lib/sessionEvents'
 
 const BASE = import.meta.env.VITE_API_BASE ?? '/DealernetHubIntegration/api/v1/portal'
@@ -745,7 +746,7 @@ function reescreverMenuDhi(items: MenuItem[]): MenuItem[] {
   return items.map(fix)
 }
 
-const EXTRA_MENU: MenuItem[] = [
+const EXTRA_MENU: MenuItem[] = applyMenuTranslationKeys([
   // Compras (telas React do DealernetFrontEnd, outra SPA) — abertas via iframe-external.
   // Demonstra o Portal DMS hospedando tela de outro front-end (allowlist: localhost:5173).
   {
@@ -832,7 +833,7 @@ const EXTRA_MENU: MenuItem[] = [
       },
     ],
   },
-]
+])
 
 function parseWsData(json?: string): WorkspaceData {
   try {

@@ -26,6 +26,7 @@
 // (`rounded-lg border border-border bg-card`).
 
 import { useMemo, type ReactNode } from 'react'
+import { useTranslations } from 'use-intl'
 import {
   Bar,
   BarChart,
@@ -70,8 +71,6 @@ export interface ChartCardProps {
 }
 
 const DEFAULT_HEIGHT = 280
-const DEFAULT_EMPTY_MESSAGE = 'Sem dados para exibir'
-
 // Paleta padrão ancorada nos tokens de tema do DS (primary + status). Recharts
 // recebe cores como strings CSS, então usamos var(--token); o tema (claro/escuro)
 // propaga sozinho. Ciclamos esta paleta quando a série não define `color`.
@@ -111,10 +110,12 @@ export function ChartCard({
   xKey,
   series,
   valueFormat = 'number',
-  emptyMessage = DEFAULT_EMPTY_MESSAGE,
+  emptyMessage: emptyMessageProp,
   height = DEFAULT_HEIGHT,
 }: ChartCardProps) {
+  const common = useTranslations('common')
   const isEmpty = !data || data.length === 0 || series.length === 0
+  const emptyMessage = emptyMessageProp ?? common('noData')
 
   // Formatador padrão (eixo/tooltip) derivado de `valueFormat`.
   const axisFormatter = useMemo(

@@ -1,5 +1,7 @@
 // Filtro de coluna numérica: faixa min–max (client-side por spec §3).
 
+import { useTranslations } from 'use-intl'
+
 export default function FilterNumberRange({
   value,
   onChange,
@@ -8,6 +10,7 @@ export default function FilterNumberRange({
   value: string
   onChange: (v: string) => void
 }) {
+  const t = useTranslations('common.grid')
   let min = ''
   let max = ''
   if (value.startsWith('between:')) {
@@ -30,7 +33,7 @@ export default function FilterNumberRange({
         type="number"
         value={min}
         onChange={(e) => emit(e.target.value, max)}
-        placeholder="Mín"
+        placeholder={t('min')}
         className="w-20 rounded-md border border-input bg-background px-2 py-1.5 text-sm outline-none focus:border-primary"
       />
       <span className="text-xs text-muted-foreground">–</span>
@@ -38,7 +41,7 @@ export default function FilterNumberRange({
         type="number"
         value={max}
         onChange={(e) => emit(min, e.target.value)}
-        placeholder="Máx"
+        placeholder={t('max')}
         className="w-20 rounded-md border border-input bg-background px-2 py-1.5 text-sm outline-none focus:border-primary"
       />
     </div>

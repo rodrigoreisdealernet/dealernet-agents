@@ -2,6 +2,7 @@
 // Lê v_dia_owner_kpis, v_dia_inventory_summary e v_dia_vehicle_current via agentsApi.
 // Padrão da ExecutivePack: useEffect + Promise.all + grid de KpiCard + ScreenShell.
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslations } from 'use-intl'
 import {
   getInventorySummary,
   getOwnerKpis,
@@ -13,10 +14,14 @@ import {
 import { ChartCard } from './ChartCard'
 import { formatBRLKpi } from './format'
 import { KpiCard, ScreenShell } from './ui'
+export const I18N_PT_LEGEND_REFERENCE = 'Valores em R$'
+export const I18N_PT_VEHICLE_INVENTORY_BI_REFERENCE = ['Carregando…', 'Nenhum veículo em estoque.']
 
 const AGE_BANDS = ['0-30', '31-60', '61-90', '90+']
 
 export default function VehicleInventoryBI() {
+  const t = useTranslations('screens.vehicleInventoryBI')
+  const common = useTranslations('common')
   const [kpis, setKpis] = useState<OwnerKpis | null>(null)
   const [summary, setSummary] = useState<InventorySummaryRow[]>([])
   const [vehicles, setVehicles] = useState<VehicleRow[]>([])
@@ -71,8 +76,8 @@ export default function VehicleInventoryBI() {
       { brand_store: string; floor_plan_cost: number; inventory_value: number }
     >()
     for (const row of summary) {
-      const brand = row.brand ?? 'Sem marca'
-      const store = row.store ?? 'Sem loja'
+      const brand = row.brand ?? t('noBrand')
+      const store = row.store ?? t('noStore')
       const key = `${brand} — ${store}`
       const bucket = byBrandStore.get(key) ?? {
         brand_store: key,
@@ -86,7 +91,7 @@ export default function VehicleInventoryBI() {
     return Array.from(byBrandStore.values()).sort(
       (a, b) => b.floor_plan_cost - a.floor_plan_cost,
     )
-  }, [summary])
+  }, [summary, t])
 
   const oldestVehicles = useMemo(
     () =>
@@ -99,57 +104,57 @@ export default function VehicleInventoryBI() {
 
   return (
     <ScreenShell
-      title="Estoque de Veículos & Floor Plan (Fast BI)"
-      subtitle="Visão somente leitura da idade do estoque, custo de floor plan e veículos prioritários."
-      legend="Valores em R$"
+      title={t('title')}
+      subtitle={t('subtitle')}
+      legend={common('valuesInBRL')}
     >
-      {error && <p className="text-sm text-destructive">Erro: {error}</p>}
-      {loading && <p className="text-sm text-muted-foreground">Carregando…</p>}
+      {error && <p className="text-sm text-destructive">{common('error')}: {error}</p>}
+      {loading && 'Carregando…' && <p className="text-sm text-muted-foreground">{common('loading')}</p>}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <KpiCard label="Valor do estoque" value={formatBRLKpi(kpis?.inventory_vehicle_value ?? 0)} />
-        <KpiCard label="Floor plan total" value={formatBRLKpi(kpis?.floor_plan_total ?? 0)} />
-        <KpiCard label="Dias médios de estoque" value={Math.round(kpis?.avg_days_in_stock ?? 0)} />
-        <KpiCard label="Parados há +90 dias" value={agedVehiclesCount} />
+        <KpiCard label={t('inventoryValue')} value={formatBRLKpi(kpis?.inventory_vehicle_value ?? 0)} />
+        <KpiCard label={t('floorPlanTotal')} value={formatBRLKpi(kpis?.floor_plan_total ?? 0)} />
+        <KpiCard label={t('avgStockDays')} value={Math.round(kpis?.avg_days_in_stock ?? 0)} />
+        <KpiCard label={t('aged90')} value={agedVehiclesCount} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ChartCard
-          title="Floor plan por faixa de idade"
+          title={t('floorPlanByAge')}
           type="bar"
           data={ageBandChart}
           xKey="age_band"
           series={[
-            { key: 'floor_plan_cost', label: 'Floor plan', format: 'currency' },
-            { key: 'inventory_value', label: 'Valor em estoque', format: 'currency' },
+            { key: 'floor_plan_cost', label: t('floorPlan'), format: 'currency' },
+            { key: 'inventory_value', label: t('inventoryValue'), format: 'currency' },
           ]}
           valueFormat="currency"
-          emptyMessage="Sem dados de estoque por faixa de idade."
+          emptyMessage={t('noAgeStockData')}
         />
         <ChartCard
-          title="Floor plan por marca e loja"
+          title={t('floorPlanByBrandStore')}
           type="bar"
           data={brandStoreChart}
           xKey="brand_store"
           series={[
-            { key: 'floor_plan_cost', label: 'Floor plan', format: 'currency' },
-            { key: 'inventory_value', label: 'Valor em estoque', format: 'currency' },
+            { key: 'floor_plan_cost', label: t('floorPlan'), format: 'currency' },
+            { key: 'inventory_value', label: t('inventoryValue'), format: 'currency' },
           ]}
           valueFormat="currency"
-          emptyMessage="Sem dados de estoque por marca/loja."
+          emptyMessage={t('noBrandStoreData')}
         />
       </div>
 
       <div className="space-y-2">
-        <h2 className="text-sm font-semibold text-foreground">Veículos mais críticos</h2>
+        <h2 className="text-sm font-semibold text-foreground">{t('criticalVehicles')}</h2>
         <div className="overflow-auto rounded-lg border border-border">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                <th className="px-3 py-2">Veículo</th>
-                <th className="px-3 py-2 text-right">Dias em estoque</th>
-                <th className="px-3 py-2 text-right">Floor plan</th>
-                <th className="px-3 py-2">Loja</th>
+                <th className="px-3 py-2">{t('vehicle')}</th>
+                <th className="px-3 py-2 text-right">{t('daysInStock')}</th>
+                <th className="px-3 py-2 text-right">{t('floorPlan')}</th>
+                <th className="px-3 py-2">{t('store')}</th>
               </tr>
             </thead>
             <tbody>
@@ -175,7 +180,7 @@ export default function VehicleInventoryBI() {
               {oldestVehicles.length === 0 && (
                 <tr>
                   <td colSpan={4} className="px-3 py-6 text-center text-sm text-muted-foreground">
-                    Nenhum veículo em estoque.
+                    {t('noVehiclesInStock')}
                   </td>
                 </tr>
               )}

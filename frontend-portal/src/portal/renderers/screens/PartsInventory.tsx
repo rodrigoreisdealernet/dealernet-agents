@@ -4,6 +4,7 @@
 // Leitura direta (RLS authenticated); escrita só pela RPC (admin/branch_manager).
 // Destaca o estado de estoque (zerado/critico/baixo/ok) com badge.
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslations } from 'use-intl'
 import {
   getParts,
   createPart,
@@ -16,6 +17,7 @@ import {
 import { KpiCard, Badge, ScreenShell, RowActions, RowActionButton, type Tone } from './ui'
 import { Pencil, Trash2 } from 'lucide-react'
 import { formatBRLKpi } from './format'
+export const I18N_PT_LEGEND_REFERENCE = 'Valores em R$'
 
 type FormState = PartInput & { entity_id?: string }
 
@@ -30,13 +32,6 @@ const EMPTY_FORM: FormState = {
   reorder_point: null,
   location: '',
   status: 'ativo',
-}
-
-const STOCK_LABEL: Record<string, string> = {
-  zerado: 'zerado',
-  critico: 'crítico',
-  baixo: 'baixo',
-  ok: 'ok',
 }
 
 function stockTone(s: PartStockStatus | null | undefined): Tone {
@@ -62,6 +57,8 @@ function num(v: string): number | null {
 }
 
 export default function PartsInventory() {
+  const t = useTranslations('screens.partsInventory')
+  const common = useTranslations('common')
   const [rows, setRows] = useState<PartRow[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -94,7 +91,7 @@ export default function PartsInventory() {
   const submit = async () => {
     if (!form) return
     if (!form.part_number.trim() || !form.description.trim()) {
-      setError('Código (part number) e descrição são obrigatórios.')
+      setError(t('codeDescriptionRequired'))
       return
     }
     setSaving(true)
@@ -124,7 +121,7 @@ export default function PartsInventory() {
   }
 
   const remove = async (row: PartRow) => {
-    if (!window.confirm(`Inativar ${row.part_number ?? row.name}? O histórico é preservado.`)) return
+    if (!window.confirm(t('inactivateConfirm').replace('{name}', row.part_number ?? row.name ?? '—'))) return
     setError(null)
     try {
       await deletePart(row.entity_id)
@@ -134,29 +131,39 @@ export default function PartsInventory() {
     }
   }
 
+  const stockLabel = (status: string | null | undefined) => {
+    const labels: Record<string, string> = {
+      zerado: t('stockZero'),
+      critico: t('stockCritical'),
+      baixo: t('stockLow'),
+      ok: t('stockOk'),
+    }
+    return labels[(status ?? '').toLowerCase()] ?? status ?? '—'
+  }
+
   return (
     <ScreenShell
-      title="Estoque de Peças"
-      subtitle="Inventário de peças com valor de estoque e estado de reposição (zerado/crítico/baixo)."
-      legend="Valores em R$"
+      title={t('title')}
+      subtitle={t('subtitle')}
+      legend={common('valuesInBRL')}
     >
-      {error && <p className="text-sm text-destructive">Erro: {error}</p>}
+      {error && <p className="text-sm text-destructive">{common('error')}: {error}</p>}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <KpiCard label="Total" value={kpis.total} />
-        <KpiCard label="Repor (críticas)" value={kpis.criticas} />
-        <KpiCard label="Zeradas" value={kpis.zeradas} />
-        <KpiCard label="Valor em estoque" value={formatBRLKpi(kpis.stockValue)} />
+        <KpiCard label={common('total')} value={kpis.total} />
+        <KpiCard label={t('replenishCritical')} value={kpis.criticas} />
+        <KpiCard label={t('zeroStock')} value={kpis.zeradas} />
+        <KpiCard label={t('inventoryValue')} value={formatBRLKpi(kpis.stockValue)} />
       </div>
 
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-foreground">Peças correntes</h2>
+        <h2 className="text-sm font-semibold text-foreground">{t('currentParts')}</h2>
         <button
           type="button"
           onClick={() => setForm({ ...EMPTY_FORM })}
           className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
         >
-          Nova peça
+          {t('newPart')}
         </button>
       </div>
 
@@ -167,6 +174,8 @@ export default function PartsInventory() {
           onChange={setForm}
           onCancel={() => setForm(null)}
           onSubmit={submit}
+          t={t}
+          common={common}
         />
       )}
 
@@ -174,13 +183,13 @@ export default function PartsInventory() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <th className="px-3 py-2">Peça</th>
-              <th className="px-3 py-2 text-right">Qtd. estoque</th>
-              <th className="px-3 py-2 text-right">Preço unit.</th>
-              <th className="px-3 py-2 text-right">Valor estoque</th>
-              <th className="px-3 py-2">Estoque</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2 text-right">Ações</th>
+              <th className="px-3 py-2">{t('part')}</th>
+              <th className="px-3 py-2 text-right">{t('stockQty')}</th>
+              <th className="px-3 py-2 text-right">{t('unitPrice')}</th>
+              <th className="px-3 py-2 text-right">{t('stockValue')}</th>
+              <th className="px-3 py-2">{t('stock')}</th>
+              <th className="px-3 py-2">{common('status')}</th>
+              <th className="px-3 py-2 text-right">{common('actions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -197,7 +206,7 @@ export default function PartsInventory() {
                 <td className="px-3 py-2 text-right tabular-nums">{formatBRLKpi(r.unit_price)}</td>
                 <td className="px-3 py-2 text-right tabular-nums">{formatBRLKpi(r.stock_value)}</td>
                 <td className="px-3 py-2">
-                  <Badge tone={stockTone(r.stock_status)}>{STOCK_LABEL[r.stock_status] ?? r.stock_status}</Badge>
+                  <Badge tone={stockTone(r.stock_status)}>{stockLabel(r.stock_status)}</Badge>
                 </td>
                 <td className="px-3 py-2">
                   <Badge tone={statusTone(r.status)}>{r.status}</Badge>
@@ -206,7 +215,7 @@ export default function PartsInventory() {
                   <RowActions>
                     <RowActionButton
                       icon={<Pencil size={14} />}
-                      label="Editar"
+                      label={common('edit')}
                       onClick={() =>
                         setForm({
                           entity_id: r.entity_id,
@@ -226,7 +235,7 @@ export default function PartsInventory() {
                     <RowActionButton
                       tone="danger"
                       icon={<Trash2 size={14} />}
-                      label="Inativar"
+                      label={common('inactivate')}
                       onClick={() => remove(r)}
                     />
                   </RowActions>
@@ -236,14 +245,14 @@ export default function PartsInventory() {
             {rows.length === 0 && !loading && (
               <tr>
                 <td colSpan={7} className="px-3 py-6 text-center text-sm text-muted-foreground">
-                  Nenhuma peça no estoque.
+                  {t('noParts')}
                 </td>
               </tr>
             )}
             {loading && (
               <tr>
                 <td colSpan={7} className="px-3 py-6 text-center text-sm text-muted-foreground">
-                  Carregando…
+                  {common('loading')}
                 </td>
               </tr>
             )}
@@ -260,12 +269,16 @@ function PartForm({
   onChange,
   onCancel,
   onSubmit,
+  t,
+  common,
 }: {
   form: FormState
   saving: boolean
   onChange: (f: FormState) => void
   onCancel: () => void
   onSubmit: () => void
+  t: (key: string) => string
+  common: (key: string) => string
 }) {
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => onChange({ ...form, [k]: v })
   const inputCls =
@@ -274,11 +287,11 @@ function PartForm({
   return (
     <div className="rounded-lg border border-border bg-card p-4">
       <h3 className="mb-3 text-sm font-semibold text-foreground">
-        {form.entity_id ? 'Editar peça' : 'Nova peça'}
+        {form.entity_id ? t('editPart') : t('newPart')}
       </h3>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <label className="text-xs text-muted-foreground">
-          Código (part number)
+          {t('partNumber')}
           <input
             className={inputCls}
             value={form.part_number}
@@ -286,7 +299,7 @@ function PartForm({
           />
         </label>
         <label className="text-xs text-muted-foreground">
-          Descrição
+          {t('description')}
           <input
             className={inputCls}
             value={form.description}
@@ -294,7 +307,7 @@ function PartForm({
           />
         </label>
         <label className="text-xs text-muted-foreground">
-          Fabricante
+          {t('manufacturer')}
           <input
             className={inputCls}
             value={form.manufacturer ?? ''}
@@ -302,7 +315,7 @@ function PartForm({
           />
         </label>
         <label className="text-xs text-muted-foreground">
-          Custo unit. (R$)
+          {t('unitCostBRL')}
           <input
             type="number"
             className={inputCls}
@@ -311,7 +324,7 @@ function PartForm({
           />
         </label>
         <label className="text-xs text-muted-foreground">
-          Preço unit. (R$)
+          {t('unitPriceBRL')}
           <input
             type="number"
             className={inputCls}
@@ -320,7 +333,7 @@ function PartForm({
           />
         </label>
         <label className="text-xs text-muted-foreground">
-          Qtd. em estoque
+          {t('stockQty')}
           <input
             type="number"
             className={inputCls}
@@ -329,7 +342,7 @@ function PartForm({
           />
         </label>
         <label className="text-xs text-muted-foreground">
-          Estoque mínimo
+          {t('minStock')}
           <input
             type="number"
             className={inputCls}
@@ -338,7 +351,7 @@ function PartForm({
           />
         </label>
         <label className="text-xs text-muted-foreground">
-          Ponto de reposição
+          {t('reorderPoint')}
           <input
             type="number"
             className={inputCls}
@@ -347,7 +360,7 @@ function PartForm({
           />
         </label>
         <label className="text-xs text-muted-foreground">
-          Localização
+          {t('location')}
           <input
             className={inputCls}
             value={form.location ?? ''}
@@ -355,14 +368,14 @@ function PartForm({
           />
         </label>
         <label className="text-xs text-muted-foreground">
-          Status
+          {common('status')}
           <select
             className={inputCls}
             value={form.status ?? 'ativo'}
             onChange={(e) => set('status', e.target.value as 'ativo' | 'inativo')}
           >
-            <option value="ativo">ativo</option>
-            <option value="inativo">inativo</option>
+            <option value="ativo">{common('active')}</option>
+            <option value="inativo">{common('inactive')}</option>
           </select>
         </label>
       </div>
@@ -373,7 +386,7 @@ function PartForm({
           disabled={saving}
           className="rounded-md border border-border px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-muted disabled:opacity-50"
         >
-          Cancelar
+          {common('cancel')}
         </button>
         <button
           type="button"
@@ -381,7 +394,7 @@ function PartForm({
           disabled={saving}
           className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
         >
-          {saving ? 'Salvando…' : 'Salvar'}
+          {saving ? common('saving') : common('save')}
         </button>
       </div>
     </div>

@@ -3,6 +3,7 @@
 
 import * as Popover from '@radix-ui/react-popover'
 import { ArrowDown, ArrowUp, Filter, X } from 'lucide-react'
+import { useTranslations } from 'use-intl'
 import type { DnColumn } from './types'
 import FilterText from './filters/FilterText'
 import FilterEnum from './filters/FilterEnum'
@@ -24,6 +25,7 @@ export default function ColumnHeader<T>({
   onSort: (next?: string) => void
   onFilter: (v: string) => void
 }) {
+  const t = useTranslations('common.grid')
   const ordenavel = col.ordenavel !== false
   const filtravel = col.filtravel !== false && col.tipo !== 'data'
   const [sortCol, sortDir] = (sort ?? '').split(':')
@@ -56,7 +58,7 @@ export default function ColumnHeader<T>({
           <Popover.Trigger asChild>
             <button
               type="button"
-              title={`Filtrar ${col.label}`}
+              title={`${t('filter')} ${col.label}`}
               className={cn(
                 'rounded p-0.5 transition-colors hover:bg-muted',
                 filtroAtivo ? 'text-primary' : 'text-muted-foreground/60',
@@ -81,7 +83,7 @@ export default function ColumnHeader<T>({
                     onClick={() => onFilter('')}
                     className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
                   >
-                    <X size={11} /> Limpar
+                    <X size={11} /> {t('clear')}
                   </button>
                 )}
               </div>

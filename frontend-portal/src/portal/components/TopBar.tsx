@@ -3,7 +3,8 @@
 
 import { useEffect, useState } from 'react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
-import { AppWindow, Check, Columns2, Copy, Menu, Minimize, Moon, Palette, Sun, User, XSquare } from 'lucide-react'
+import { AppWindow, Check, Columns2, Copy, Languages, Menu, Minimize, Moon, Palette, Sun, User, XSquare } from 'lucide-react'
+import { useTranslations } from 'use-intl'
 import { usePortalStore } from '@/portal/store/portalStore'
 import { useTheme, ACCENTS } from '@/hooks/use-theme'
 import { portalApi } from '@/portal/lib/portalApi'
@@ -13,8 +14,12 @@ import { useAuth } from '@/hooks/use-auth'
 import { cn } from '@/lib/utils'
 import { EmpresaSelector } from '@/portal/components/EmpresaSelector'
 import { useTour } from '@/portal/components/tour/useTour'
+import { locales } from '@/i18n/locale'
+import { useLocale } from '@/i18n/LocaleProvider'
 
 export function TopBar() {
+  const t = useTranslations('shell')
+  const tLocale = useTranslations('locale')
   const config = usePortalStore((s) => s.config)
   const cascade = usePortalStore((s) => s.cascade)
   const minimizeAll = usePortalStore((s) => s.minimizeAll)
@@ -48,12 +53,13 @@ export function TopBar() {
   const { compact } = useBreakpoint()
   const { session, logout } = useAuth()
   const startTour = useTour((s) => s.start)
+  const { locale, setLocale } = useLocale()
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b border-header-border bg-header px-3 text-header-foreground">
       {/* ESQUERDA: menu (compacto) + EMPRESA (contexto vem primeiro). */}
       {compact && (
-        <IconBtn title="Menu" onClick={() => setDrawerOpen(true)}>
+        <IconBtn title={t('menu')} onClick={() => setDrawerOpen(true)}>
           <Menu size={18} />
         </IconBtn>
       )}
@@ -72,14 +78,14 @@ export function TopBar() {
             {/* Toggle de modo: Abas (estilo navegador) ↔ Janelas (MDI flutuante) */}
             <div data-tour="modo" className="flex items-center gap-0.5 rounded-lg bg-white/10 p-0.5">
               <IconBtn
-                title="Modo abas"
+                title={t('tabsMode')}
                 active={layoutMode === 'tabs'}
                 onClick={() => setLayoutMode('tabs')}
               >
                 <Columns2 size={16} />
               </IconBtn>
               <IconBtn
-                title="Modo janelas"
+                title={t('windowsMode')}
                 active={layoutMode === 'mdi'}
                 onClick={() => setLayoutMode('mdi')}
               >
@@ -90,13 +96,13 @@ export function TopBar() {
             {/* Ações de janela só fazem sentido no modo MDI. */}
             {layoutMode === 'mdi' && (
               <div className="flex items-center gap-0.5 rounded-lg bg-white/10 p-0.5">
-                <IconBtn title="Organizar em cascata" onClick={cascade}>
+                <IconBtn title={t('cascade')} onClick={cascade}>
                   <Copy size={16} />
                 </IconBtn>
-                <IconBtn title="Minimizar todas" onClick={minimizeAll}>
+                <IconBtn title={t('minimizeAll')} onClick={minimizeAll}>
                   <Minimize size={16} />
                 </IconBtn>
-                <IconBtn title="Fechar todas" onClick={closeAll}>
+                <IconBtn title={t('closeAll')} onClick={closeAll}>
                   <XSquare size={16} />
                 </IconBtn>
               </div>
@@ -108,7 +114,7 @@ export function TopBar() {
         {/* Seletor de cor do tema */}
         <DropdownMenu.Root>
           <DropdownMenu.Trigger
-            title="Cor do tema"
+            title={t('themeColor')}
             data-tour="tema"
             className="flex h-8 w-8 items-center justify-center rounded-md text-white/80 outline-none transition-colors hover:bg-white/10 hover:text-white data-[state=open]:bg-white/10"
           >
@@ -124,7 +130,7 @@ export function TopBar() {
                 /* Há temas configurados p/ a marca → mostra SÓ eles (esconde os defaults). */
                 <>
                   <DropdownMenu.Label className="px-3 py-1.5 text-xs font-semibold text-muted-foreground">
-                    {marcaAtiva ? `Temas ${marcaAtiva}` : 'Temas da marca'}
+                    {marcaAtiva ? t('brandThemes').replace('{brand}', marcaAtiva) : t('brandThemesFallback')}
                   </DropdownMenu.Label>
                   {temas.map((t) => (
                     <DropdownMenu.Item
@@ -145,7 +151,7 @@ export function TopBar() {
                 /* Marca sem temas → mostra a paleta default do sistema. */
                 <>
                   <DropdownMenu.Label className="px-3 py-1.5 text-xs font-semibold text-muted-foreground">
-                    Cor do portal
+                    {t('portalColor')}
                   </DropdownMenu.Label>
                   {ACCENTS.map((a) => (
                     <DropdownMenu.Item
@@ -167,7 +173,38 @@ export function TopBar() {
           </DropdownMenu.Portal>
         </DropdownMenu.Root>
 
-        <IconBtn title="Alternar claro/escuro" onClick={toggleTheme}>
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger
+            title={t('language')}
+            className="flex h-8 items-center gap-1.5 rounded-md px-2 text-white/80 outline-none transition-colors hover:bg-white/10 hover:text-white data-[state=open]:bg-white/10"
+          >
+            <Languages size={16} />
+            <span className="hidden text-xs font-medium sm:inline">{locale}</span>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              align="end"
+              sideOffset={6}
+              className="z-[9999] min-w-44 rounded-lg border bg-card p-1 text-card-foreground shadow-xl"
+            >
+              <DropdownMenu.Label className="px-3 py-1.5 text-xs font-semibold text-muted-foreground">
+                {t('language')}
+              </DropdownMenu.Label>
+              {locales.map((option) => (
+                <DropdownMenu.Item
+                  key={option}
+                  onSelect={() => setLocale(option)}
+                  className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm outline-none data-[highlighted]:bg-secondary"
+                >
+                  <span className="flex-1">{tLocale(option)}</span>
+                  {locale === option && <Check size={14} className="text-primary" />}
+                </DropdownMenu.Item>
+              ))}
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
+
+        <IconBtn title={t('toggleTheme')} onClick={toggleTheme}>
           {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
         </IconBtn>
 
@@ -176,7 +213,7 @@ export function TopBar() {
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 text-white">
               <User size={15} />
             </span>
-            <span className="hidden md:inline">{session?.nome ?? config?.userName ?? 'Guest'}</span>
+            <span className="hidden md:inline">{session?.nome ?? config?.userName ?? t('guest')}</span>
           </DropdownMenu.Trigger>
           <DropdownMenu.Portal>
             <DropdownMenu.Content
@@ -188,12 +225,12 @@ export function TopBar() {
                 onSelect={() => startTour()}
                 className="cursor-pointer rounded-md px-3 py-2 text-sm outline-none data-[highlighted]:bg-secondary"
               >
-                Tour do portal
+                {t('portalTour')}
               </DropdownMenu.Item>
               <DropdownMenu.Item
                 onSelect={() =>
                   openWindow({
-                    title: 'Alterar senha',
+                    title: t('changePassword'),
                     kind: 'component',
                     componentKey: 'portal-alterar-senha',
                     width: 460,
@@ -202,13 +239,13 @@ export function TopBar() {
                 }
                 className="cursor-pointer rounded-md px-3 py-2 text-sm outline-none data-[highlighted]:bg-secondary"
               >
-                Alterar senha
+                {t('changePassword')}
               </DropdownMenu.Item>
               <DropdownMenu.Item
                 onSelect={() => logout()}
                 className="cursor-pointer rounded-md px-3 py-2 text-sm text-destructive outline-none data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground"
               >
-                Sair
+                {t('signOut')}
               </DropdownMenu.Item>
             </DropdownMenu.Content>
           </DropdownMenu.Portal>
