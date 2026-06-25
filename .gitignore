@@ -14,6 +14,7 @@ dist/
 .env.local
 .env.*
 !.env.example
+!.env.dia-ops.example
 .env.temporal
 .env.temporal.local
 !.env.temporal.example
