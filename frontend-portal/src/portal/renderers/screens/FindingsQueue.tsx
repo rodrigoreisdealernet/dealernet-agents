@@ -1,7 +1,7 @@
 // Morning Queue — fila de findings priorizada por Δ R$ (molde InboxView).
 // Usa a DataTable corporativa (modo client) sobre ops_findings_view. "Revisar" abre
 // o finding-detail. Aceita params.agentKey p/ pré-filtrar quando aberta do Dashboard.
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import DataTable from '@/portal/components/datatable/DataTable'
 import type { CrudListApi, DnColumn } from '@/portal/components/datatable/types'
 import { gridStorage } from '@/portal/lib/gridStateApi'
@@ -57,6 +57,28 @@ export default function FindingsQueue({ params }: ScreenProps) {
   const openWindow = usePortalStore((s) => s.openWindow)
   const [reloadKey, setReloadKey] = useState(0)
 
+  // Estável: evita recriar columnDefs no DataTable a cada poll (10s) — sem isso a
+  // tabela remonta as linhas e pode engolir o clique no "Revisar".
+  const renderAcoes = useCallback(
+    (f: FindingRowVM) => (
+      <button
+        type="button"
+        onClick={() =>
+          openWindow({
+            kind: 'component',
+            componentKey: 'finding-detail',
+            title: 'Detalhe do achado',
+            params: { findingId: f.id },
+          })
+        }
+        className="rounded-md px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/10"
+      >
+        Revisar
+      </button>
+    ),
+    [openWindow],
+  )
+
   // Polling "vivo" a cada 10s (recarrega a tabela).
   useEffect(() => {
     const t = window.setInterval(() => setReloadKey((k) => k + 1), 10000)
@@ -103,22 +125,7 @@ export default function FindingsQueue({ params }: ScreenProps) {
           storage={gridStorage}
           screenKey="ai-findings"
           reloadKey={reloadKey}
-          renderAcoes={(f) => (
-            <button
-              type="button"
-              onClick={() =>
-                openWindow({
-                  kind: 'component',
-                  componentKey: 'finding-detail',
-                  title: 'Detalhe do achado',
-                  params: { findingId: f.id },
-                })
-              }
-              className="rounded-md px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10"
-            >
-              Revisar
-            </button>
-          )}
+          renderAcoes={renderAcoes}
         />
       </div>
     </div>

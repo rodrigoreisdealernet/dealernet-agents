@@ -4,9 +4,9 @@
   "slug": "vehicle-crud",
   "branch": "feature/4-vehicle-crud",
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/4",
-  "pr": null,
-  "prUrl": null,
-  "updatedAt": "2026-06-25T16:14:35.187Z",
+  "pr": "11",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/11",
+  "updatedAt": "2026-06-25T17:15:39.417Z",
   "steps": [
     {
       "id": "spec",
@@ -28,53 +28,75 @@
     {
       "id": "approve",
       "label": "02 · Approve (human gate)",
-      "status": "waiting",
-      "summary": "Aguardando aprovação humana da spec",
+      "status": "done",
+      "summary": "Spec aprovada pelo humano",
       "artifacts": [],
       "notes": [],
-      "gate": "spec-approval"
+      "gate": null
     },
     {
       "id": "code",
       "label": "03 · Code",
-      "status": "pending",
-      "summary": "",
-      "artifacts": [],
-      "notes": [],
+      "status": "done",
+      "summary": "Migration+RPCs+view+seed+tela; DESVIO: UIEngine foi prunada → implementado no frontend-portal nativo. Validado no DB vivo (commit 746b9c8)",
+      "artifacts": [
+        {
+          "label": "Commit",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/commit/746b9c8"
+        }
+      ],
+      "notes": [
+        "DB inspecionado: create_stock_item foi PRUNADO; rental_entity_type_catalog e um VALUES view sem 'vehicle'; upsert/get_my_role/delete_entity vivos. Adaptando padrao.",
+        "Escrevendo migration: vehicle no catalog + RPCs endurecidas (create/update/delete_vehicle) + view v_dia_vehicle_current. Frontend sera no frontend-portal (UIEngine/frontend foi removido na prune).",
+        "DB validado: migration+seed aplicados; v_dia_vehicle_current=12 linhas, floor_plan>0; CRUD admin OK (create/update/soft-delete); read_only negado (42501). Iniciando frontend-portal.",
+        "Frontend feito no frontend-portal: VehiclesInventory.tsx + helpers em agentsApi.ts + registry + item de menu (Concessionaria). Rodando tsc + vite build.",
+        "Build OK (tsc+vite) e 9/9 testes. Commit 746b9c8. Migration+seed validados no DB vivo: v_dia_vehicle_current=12 linhas floor_plan>0; CRUD admin OK; read_only negado (42501). Frontend no frontend-portal (UIEngine/frontend foi prunado)."
+      ],
       "gate": null
     },
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "pending",
-      "summary": "",
+      "status": "done",
+      "summary": "Contrato SQL 7/7 + wiring 6/6; build OK (commit 92ec890)",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "escrevendo teste de contrato SQL (vehicle CRUD) contra Postgres vivo",
+        "7 testes de contrato SQL verdes + 6 asserts de wiring frontend verdes; rodando build",
+        "PR draft #11 aberto; 7 testes SQL + 6 wiring verdes; build verde (https://github.com/rodrigoreisdealernet/dealernet-agents/pull/11)"
+      ],
       "gate": null
     },
     {
       "id": "test-review",
       "label": "05 · Test review",
-      "status": "pending",
-      "summary": "",
+      "status": "done",
+      "summary": "Aprovado após 1 iteração (10 testes: +update SCD2, +brand/model)",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "2 bloqueantes: falta teste de update_vehicle (SCD2) + validação brand/model. 4 não-bloqueantes (fragilidades menores).",
+        "Iteração 1: bloqueantes (update SCD2, validação brand/model) devolvidos ao tester",
+        "tester: adicionados 3 testes (update SCD2 + brand/model obrigatorios); rodando contrato",
+        "Bloqueantes 1 (update SCD2) + 2 (brand/model obrigatórios) FECHADOS com 3+2 assertions robustas"
+      ],
       "gate": null
     },
     {
       "id": "code-review",
       "label": "06 · Code review",
-      "status": "pending",
-      "summary": "",
+      "status": "done",
+      "summary": "Pronto para merge: SQL security/corretude OK; desvio UIEngine documentado",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "Security (DEFINER+search_path+guard+grants+RLS) 100%. Corretude (floor_plan formula, SCD2 merge, soft-delete SCD2) 100%. Wiring (frontend-portal React nativo; desvio UIEngine documentado, aceitável). SQL+wiring tests 100%. PR #11 MERGED."
+      ],
       "gate": null
     },
     {
       "id": "merge",
       "label": "Merge (human gate)",
-      "status": "pending",
-      "summary": "",
+      "status": "done",
+      "summary": "Mergeado na main (PR #11, commit fe7f684); 3 testes recuperados via follow-up",
       "artifacts": [],
       "notes": [],
       "gate": null
