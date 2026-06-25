@@ -1,0 +1,87 @@
+{
+  "issue": "43",
+  "title": "Portal: Morning Brief do Dono - visao por marca, lojas, acoes do agente",
+  "slug": "43-portal-morning-brief-do-dono",
+  "branch": "feature/43-portal-morning-brief-do-dono",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/43",
+  "pr": null,
+  "prUrl": null,
+  "updatedAt": "2026-06-25T21:28:08.765Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "7 criterios de aceite redigidos",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/43-portal-morning-brief-do-dono.md"
+        }
+      ],
+      "notes": [
+        "lendo issue #43, protótipos v7 e código relevante",
+        "spec com 7 critérios de aceite postada na issue #43"
+      ],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec aprovada pelo humano (--approved)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "running",
+      "summary": "",
+      "artifacts": [],
+      "notes": [
+        "Lendo spec, prototipos e views existentes; iniciando migration + screen",
+        "SQL validado (2 views por marca/loja, prev-day, FP at-risk >=83d). Iniciando agentsApi + tela MorningBrief",
+        "tsc OK; views validadas no DB live; tela+menu+deep-link prontos. Commitando."
+      ],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    }
+  ]
+}

@@ -35,6 +35,8 @@ export const componentRegistry: Record<string, LazyExoticComponent<ComponentType
   'dia-overview': lazy(() => import('@/portal/renderers/screens/DiaOverview')),
   // DIA Fast BI (issue #17) — dashboard Oficina (deriva de v_dia_service_order_current).
   'dia-service-dashboard': lazy(() => import('@/portal/renderers/screens/ServiceDashboard')),
+  // Morning Brief do Dono (issue #43) — visão por marca → lojas → ações do agente.
+  'morning-brief': lazy(() => import('@/portal/renderers/screens/MorningBrief')),
 }
 
 export function resolveComponent(key: string) {
