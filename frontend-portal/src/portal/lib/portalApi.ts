@@ -89,7 +89,7 @@ const MOCK_MENU: MenuItem[] = [
         id: 'morning-brief-owner',
         text: 'Morning Brief',
         icon: 'fa-sun',
-        spec: { title: 'Morning Brief', kind: 'component', componentKey: 'morning-brief' },
+        spec: { title: 'Morning Brief', kind: 'component', componentKey: 'morning-brief', icon: 'fa-sun' },
       },
       {
         id: 'ai-agents-dashboard',
