@@ -2459,11 +2459,11 @@ commit;
 -- ===========================================================================
 -- DIA dealership domain — demo vehicles (issue #4, ampliado #46)
 -- Idempotent namespace: source_record_id LIKE 'demo-dia-vehicle-%'.
--- 24 vehicles covering distinct situations: condition novo/usado, status
--- em_estoque/vendido, and a wide spread of days_in_stock (recém-chegado ->
--- parado há muito tempo) so floor_plan_cost varies. Brands/stores are spread
--- across the seeded brands (Fiat/Volkswagen/Volvo) and stores (Matriz/Sul/
--- Norte). Reuses rental_upsert_entity_current_state under the service_role guard.
+-- ~120 veículos GERADOS POR LOJA (8 lojas, 15 cada) para concentrar os dados:
+-- cada veículo herda a 'brand' e o 'store' da sua loja (marca consistente com a
+-- loja, alinhado às 4 marcas / 8 lojas do bloco de empresas abaixo). Cobre
+-- condition novo/usado, status em_estoque/vendido e days_in_stock de 0 a ~420
+-- (variando floor_plan_cost). Reuses rental_upsert_entity_current_state.
 -- ===========================================================================
 
 begin;
@@ -2472,37 +2472,28 @@ set local request.jwt.claim.role = 'service_role';
 DO $$
 DECLARE
   v_now timestamptz := now();
-  v_vehicles jsonb := jsonb_build_array(
-    -- condition, brand, model, year, cost, sale_price, days_old, status, store
-    -- novos em estoque (idades variadas para floor_plan_cost)
-    jsonb_build_object('sr','demo-dia-vehicle-001','condition','novo','brand','Fiat','model','Pulse','model_year',2026,'cost',95000,'sale_price',119900,'days',75,'status','em_estoque','store','Matriz'),
-    jsonb_build_object('sr','demo-dia-vehicle-002','condition','novo','brand','Jeep','model','Compass','model_year',2026,'cost',180000,'sale_price',229900,'days',120,'status','em_estoque','store','Matriz'),
-    jsonb_build_object('sr','demo-dia-vehicle-003','condition','novo','brand','Volkswagen','model','Nivus','model_year',2026,'cost',120000,'sale_price',149900,'days',45,'status','em_estoque','store','Filial Sul'),
-    jsonb_build_object('sr','demo-dia-vehicle-004','condition','novo','brand','Chevrolet','model','Onix','model_year',2026,'cost',88000,'sale_price',104900,'days',15,'status','em_estoque','store','Filial Sul'),
-    jsonb_build_object('sr','demo-dia-vehicle-005','condition','novo','brand','Toyota','model','Corolla','model_year',2026,'cost',150000,'sale_price',184900,'days',200,'status','em_estoque','store','Matriz'),
-    jsonb_build_object('sr','demo-dia-vehicle-006','condition','novo','brand','Hyundai','model','Creta','model_year',2026,'cost',135000,'sale_price',164900,'days',5,'status','em_estoque','store','Filial Norte'),
-    jsonb_build_object('sr','demo-dia-vehicle-013','condition','novo','brand','Volkswagen','model','Polo','model_year',2026,'cost',92000,'sale_price',112900,'days',2,'status','em_estoque','store','Filial Sul'),
-    jsonb_build_object('sr','demo-dia-vehicle-014','condition','novo','brand','Fiat','model','Toro','model_year',2026,'cost',165000,'sale_price',199900,'days',150,'status','em_estoque','store','Matriz'),
-    jsonb_build_object('sr','demo-dia-vehicle-015','condition','novo','brand','Volvo','model','FH 460','model_year',2026,'cost',680000,'sale_price',789900,'days',95,'status','em_estoque','store','Filial Norte'),
-    jsonb_build_object('sr','demo-dia-vehicle-016','condition','novo','brand','Volvo','model','VM 270','model_year',2026,'cost',420000,'sale_price',489900,'days',260,'status','em_estoque','store','Filial Norte'),
-    jsonb_build_object('sr','demo-dia-vehicle-017','condition','novo','brand','Chevrolet','model','Tracker','model_year',2026,'cost',128000,'sale_price',154900,'days',38,'status','em_estoque','store','Filial Sul'),
-    jsonb_build_object('sr','demo-dia-vehicle-018','condition','novo','brand','Hyundai','model','HB20','model_year',2026,'cost',84000,'sale_price',99900,'days',10,'status','em_estoque','store','Matriz'),
-    -- usados em estoque
-    jsonb_build_object('sr','demo-dia-vehicle-007','condition','usado','brand','Fiat','model','Argo','model_year',2022,'cost',62000,'sale_price',74900,'days',90,'status','em_estoque','store','Matriz'),
-    jsonb_build_object('sr','demo-dia-vehicle-008','condition','usado','brand','Honda','model','Civic','model_year',2020,'cost',98000,'sale_price',119900,'days',160,'status','em_estoque','store','Filial Sul'),
-    jsonb_build_object('sr','demo-dia-vehicle-009','condition','usado','brand','Volkswagen','model','Golf','model_year',2019,'cost',75000,'sale_price',92900,'days',240,'status','em_estoque','store','Matriz'),
-    jsonb_build_object('sr','demo-dia-vehicle-010','condition','usado','brand','Renault','model','Duster','model_year',2021,'cost',70000,'sale_price',86900,'days',30,'status','em_estoque','store','Filial Norte'),
-    jsonb_build_object('sr','demo-dia-vehicle-011','condition','usado','brand','Jeep','model','Renegade','model_year',2021,'cost',92000,'sale_price',112900,'days',55,'status','em_estoque','store','Filial Sul'),
-    jsonb_build_object('sr','demo-dia-vehicle-019','condition','usado','brand','Volkswagen','model','T-Cross','model_year',2022,'cost',105000,'sale_price',127900,'days',20,'status','em_estoque','store','Filial Sul'),
-    jsonb_build_object('sr','demo-dia-vehicle-020','condition','usado','brand','Volvo','model','XC60','model_year',2021,'cost',280000,'sale_price',329900,'days',310,'status','em_estoque','store','Filial Norte'),
-    jsonb_build_object('sr','demo-dia-vehicle-021','condition','usado','brand','Fiat','model','Mobi','model_year',2020,'cost',42000,'sale_price',52900,'days',365,'status','em_estoque','store','Matriz'),
-    -- vendidos (status vendido para validar o filtro de estoque vs. vendas)
-    jsonb_build_object('sr','demo-dia-vehicle-012','condition','usado','brand','Toyota','model','Hilux','model_year',2018,'cost',145000,'sale_price',179900,'days',300,'status','vendido','store','Matriz'),
-    jsonb_build_object('sr','demo-dia-vehicle-022','condition','novo','brand','Fiat','model','Strada','model_year',2026,'cost',98000,'sale_price',118900,'days',80,'status','vendido','store','Filial Sul'),
-    jsonb_build_object('sr','demo-dia-vehicle-023','condition','novo','brand','Volkswagen','model','Saveiro','model_year',2026,'cost',96000,'sale_price',114900,'days',60,'status','vendido','store','Filial Norte'),
-    jsonb_build_object('sr','demo-dia-vehicle-024','condition','usado','brand','Volvo','model','XC40','model_year',2022,'cost',230000,'sale_price',269900,'days',140,'status','vendido','store','Matriz')
+  -- store/brand alinhados às 4 marcas e 8 lojas (2 por marca). cost_base reflete
+  -- o segmento (motos baratas, caminhões caros) e cada loja tem seus modelos.
+  v_lojas jsonb := jsonb_build_array(
+    jsonb_build_object('store','Fiat São Paulo','brand','Fiat','cost_base',85000,'models',jsonb_build_array('Pulse','Argo','Mobi','Cronos','Toro','Strada')),
+    jsonb_build_object('store','Fiat Campinas','brand','Fiat','cost_base',82000,'models',jsonb_build_array('Pulse','Argo','Mobi','Cronos','Fastback','Fiorino')),
+    jsonb_build_object('store','Volkswagen Porto Alegre','brand','Volkswagen','cost_base',95000,'models',jsonb_build_array('Polo','Nivus','T-Cross','Virtus','Golf','Saveiro')),
+    jsonb_build_object('store','Volkswagen Curitiba','brand','Volkswagen','cost_base',98000,'models',jsonb_build_array('Polo','Nivus','T-Cross','Virtus','Taos','Amarok')),
+    jsonb_build_object('store','Volvo Caminhões Manaus','brand','Volvo','cost_base',420000,'models',jsonb_build_array('FH 460','VM 270','FH 540','VM 220')),
+    jsonb_build_object('store','Volvo Caminhões Brasília','brand','Volvo','cost_base',460000,'models',jsonb_build_array('FH 460','VM 270','FH 540','FMX 500')),
+    jsonb_build_object('store','Honda Motos Belo Horizonte','brand','Honda','cost_base',18000,'models',jsonb_build_array('CG 160','Biz 125','CB 500','XRE 300','PCX 160')),
+    jsonb_build_object('store','Honda Motos Salvador','brand','Honda','cost_base',16000,'models',jsonb_build_array('CG 160','Biz 125','CB 300','XRE 190','Pop 110'))
   );
-  v_item jsonb;
+  v_loja jsonb;
+  v_models jsonb;
+  v_nmodels int;
+  v_seq int := 0;
+  k int;
+  v_cond text;
+  v_status text;
+  v_cost numeric;
+  v_model text;
+  v_days int;
 BEGIN
   PERFORM set_config('request.jwt.claim.role', 'service_role', true);
 
@@ -2511,25 +2502,38 @@ BEGIN
   WHERE entity_type = 'vehicle'
     AND source_record_id LIKE 'demo-dia-vehicle-%';
 
-  FOR v_item IN SELECT * FROM jsonb_array_elements(v_vehicles)
+  FOR v_loja IN SELECT * FROM jsonb_array_elements(v_lojas)
   LOOP
-    PERFORM rental_upsert_entity_current_state(
-      p_entity_type => 'vehicle',
-      p_source_record_id => v_item ->> 'sr',
-      p_data => jsonb_build_object(
-        'name', concat_ws(' ', v_item ->> 'brand', v_item ->> 'model', v_item ->> 'model_year'),
-        'condition', v_item ->> 'condition',
-        'brand', v_item ->> 'brand',
-        'model', v_item ->> 'model',
-        'model_year', (v_item ->> 'model_year')::int,
-        'cost', (v_item ->> 'cost')::numeric,
-        'sale_price', (v_item ->> 'sale_price')::numeric,
-        'purchase_date', to_char((v_now - ((v_item ->> 'days')::int || ' days')::interval)::date, 'YYYY-MM-DD'),
-        'status', v_item ->> 'status',
-        'store', v_item ->> 'store',
-        'source_record_id', v_item ->> 'sr'
-      )
-    );
+    v_models  := v_loja -> 'models';
+    v_nmodels := jsonb_array_length(v_models);
+
+    FOR k IN 1..15 LOOP
+      v_seq    := v_seq + 1;
+      v_cond   := CASE WHEN k % 2 = 0 THEN 'novo' ELSE 'usado' END;
+      v_status := CASE WHEN k % 7 = 0 THEN 'vendido' ELSE 'em_estoque' END;
+      v_model  := v_models ->> (k % v_nmodels);
+      v_days   := (k * 29) % 420;
+      v_cost   := (v_loja ->> 'cost_base')::numeric
+                  + ((k % 8) * ((v_loja ->> 'cost_base')::numeric * 0.05));
+
+      PERFORM rental_upsert_entity_current_state(
+        p_entity_type => 'vehicle',
+        p_source_record_id => format('demo-dia-vehicle-%s', lpad(v_seq::text, 3, '0')),
+        p_data => jsonb_build_object(
+          'name', concat_ws(' ', v_loja ->> 'brand', v_model, (2018 + (k % 9))::text),
+          'condition', v_cond,
+          'brand', v_loja ->> 'brand',
+          'model', v_model,
+          'model_year', CASE WHEN v_cond = 'novo' THEN 2026 ELSE 2018 + (k % 8) END,
+          'cost', round(v_cost, 2),
+          'sale_price', round(v_cost * 1.18, -2),
+          'purchase_date', to_char((v_now - (v_days || ' days')::interval)::date, 'YYYY-MM-DD'),
+          'status', v_status,
+          'store', v_loja ->> 'store',
+          'source_record_id', format('demo-dia-vehicle-%s', lpad(v_seq::text, 3, '0'))
+        )
+      );
+    END LOOP;
   END LOOP;
 END
 $$;
@@ -2549,18 +2553,25 @@ set local request.jwt.claim.role = 'service_role';
 
 DO $$
 DECLARE
-  -- 3 marcas distintas em segmentos diferentes (automoveis x2 + caminhoes).
+  -- 4 marcas distintas cobrindo os 3 segmentos (automoveis x2 + caminhoes + motos).
   v_brands jsonb := jsonb_build_array(
     jsonb_build_object('sr','demo-dia-brand-1','name','Fiat','segment','automoveis','status','ativo'),
     jsonb_build_object('sr','demo-dia-brand-2','name','Volkswagen','segment','automoveis','status','ativo'),
-    jsonb_build_object('sr','demo-dia-brand-3','name','Volvo','segment','caminhoes','status','ativo')
+    jsonb_build_object('sr','demo-dia-brand-3','name','Volvo','segment','caminhoes','status','ativo'),
+    jsonb_build_object('sr','demo-dia-brand-4','name','Honda','segment','motos','status','ativo')
   );
-  -- 3 empresas, cada uma associada a uma marca distinta via brand_sr -> brand_id.
-  -- Uma fica inativa para validar o filtro de status (a view só esconde retired).
+  -- 8 lojas divididas entre as 4 marcas (2 por marca) para CONCENTRAR os dados.
+  -- O trade_name de cada loja é reutilizado no campo 'store' dos veículos, então
+  -- os veículos agrupam por loja/marca. Uma loja fica inativa (filtro de status).
   v_companies jsonb := jsonb_build_array(
-    jsonb_build_object('sr','demo-dia-company-1','brand_sr','demo-dia-brand-1','legal_name','DIA Veículos Matriz Ltda','trade_name','DIA Matriz','cnpj','12.345.678/0001-90','city','São Paulo','state','SP','status','ativo'),
-    jsonb_build_object('sr','demo-dia-company-2','brand_sr','demo-dia-brand-2','legal_name','DIA Veículos Filial Sul Ltda','trade_name','DIA Sul','cnpj','12.345.678/0002-71','city','Porto Alegre','state','RS','status','ativo'),
-    jsonb_build_object('sr','demo-dia-company-3','brand_sr','demo-dia-brand-3','legal_name','DIA Caminhões Filial Norte Ltda','trade_name','DIA Norte','cnpj','12.345.678/0003-52','city','Manaus','state','AM','status','inativo')
+    jsonb_build_object('sr','demo-dia-company-1','brand_sr','demo-dia-brand-1','legal_name','DIA Fiat São Paulo Ltda','trade_name','Fiat São Paulo','cnpj','12.345.678/0001-90','city','São Paulo','state','SP','status','ativo'),
+    jsonb_build_object('sr','demo-dia-company-2','brand_sr','demo-dia-brand-1','legal_name','DIA Fiat Campinas Ltda','trade_name','Fiat Campinas','cnpj','12.345.678/0002-71','city','Campinas','state','SP','status','ativo'),
+    jsonb_build_object('sr','demo-dia-company-3','brand_sr','demo-dia-brand-2','legal_name','DIA VW Porto Alegre Ltda','trade_name','Volkswagen Porto Alegre','cnpj','12.345.678/0003-52','city','Porto Alegre','state','RS','status','ativo'),
+    jsonb_build_object('sr','demo-dia-company-4','brand_sr','demo-dia-brand-2','legal_name','DIA VW Curitiba Ltda','trade_name','Volkswagen Curitiba','cnpj','12.345.678/0004-33','city','Curitiba','state','PR','status','ativo'),
+    jsonb_build_object('sr','demo-dia-company-5','brand_sr','demo-dia-brand-3','legal_name','DIA Volvo Manaus Ltda','trade_name','Volvo Caminhões Manaus','cnpj','12.345.678/0005-14','city','Manaus','state','AM','status','ativo'),
+    jsonb_build_object('sr','demo-dia-company-6','brand_sr','demo-dia-brand-3','legal_name','DIA Volvo Brasília Ltda','trade_name','Volvo Caminhões Brasília','cnpj','12.345.678/0006-04','city','Brasília','state','DF','status','ativo'),
+    jsonb_build_object('sr','demo-dia-company-7','brand_sr','demo-dia-brand-4','legal_name','DIA Honda BH Ltda','trade_name','Honda Motos Belo Horizonte','cnpj','12.345.678/0007-87','city','Belo Horizonte','state','MG','status','ativo'),
+    jsonb_build_object('sr','demo-dia-company-8','brand_sr','demo-dia-brand-4','legal_name','DIA Honda Salvador Ltda','trade_name','Honda Motos Salvador','cnpj','12.345.678/0008-68','city','Salvador','state','BA','status','inativo')
   );
   v_item jsonb;
   v_brand_id uuid;
@@ -2912,129 +2923,9 @@ commit;
 -- Namespaces dedicados (sufixo '-bNNN') para não colidir com o conjunto curado.
 -- ===========================================================================
 
--- --- Marcas + empresas em massa -------------------------------------------
-begin;
-set local request.jwt.claim.role = 'service_role';
-
-DO $$
-DECLARE
-  v_brands jsonb := jsonb_build_array(
-    jsonb_build_object('sr','demo-dia-brand-b01','name','Chevrolet','segment','automoveis'),
-    jsonb_build_object('sr','demo-dia-brand-b02','name','Toyota','segment','automoveis'),
-    jsonb_build_object('sr','demo-dia-brand-b03','name','Hyundai','segment','automoveis'),
-    jsonb_build_object('sr','demo-dia-brand-b04','name','Renault','segment','automoveis'),
-    jsonb_build_object('sr','demo-dia-brand-b05','name','Honda','segment','automoveis'),
-    jsonb_build_object('sr','demo-dia-brand-b06','name','Scania','segment','caminhoes'),
-    jsonb_build_object('sr','demo-dia-brand-b07','name','Mercedes-Benz','segment','caminhoes'),
-    jsonb_build_object('sr','demo-dia-brand-b08','name','Honda Motos','segment','motos'),
-    jsonb_build_object('sr','demo-dia-brand-b09','name','Yamaha','segment','motos')
-  );
-  -- Todas as marcas (curadas + massa) para associação das empresas.
-  v_all_brand_srs text[] := ARRAY[
-    'demo-dia-brand-1','demo-dia-brand-2','demo-dia-brand-3',
-    'demo-dia-brand-b01','demo-dia-brand-b02','demo-dia-brand-b03','demo-dia-brand-b04',
-    'demo-dia-brand-b05','demo-dia-brand-b06','demo-dia-brand-b07','demo-dia-brand-b08','demo-dia-brand-b09'
-  ];
-  v_cities text[]  := ARRAY['São Paulo','Campinas','Rio de Janeiro','Belo Horizonte','Curitiba','Salvador','Recife','Fortaleza','Goiânia','Brasília','Florianópolis','Vitória'];
-  v_states text[]  := ARRAY['SP','SP','RJ','MG','PR','BA','PE','CE','GO','DF','SC','ES'];
-  v_item jsonb;
-  v_brand_id uuid;
-  v_brand_sr text;
-  i int;
-BEGIN
-  PERFORM set_config('request.jwt.claim.role', 'service_role', true);
-
-  FOR v_item IN SELECT * FROM jsonb_array_elements(v_brands)
-  LOOP
-    PERFORM rental_upsert_entity_current_state(
-      p_entity_type => 'brand',
-      p_source_record_id => v_item ->> 'sr',
-      p_data => jsonb_build_object(
-        'name', v_item ->> 'name',
-        'segment', v_item ->> 'segment',
-        'status', 'ativo',
-        'source_record_id', v_item ->> 'sr'
-      )
-    );
-  END LOOP;
-
-  -- 12 empresas em massa, cada uma associada a uma marca distinta (round-robin).
-  FOR i IN 1..12 LOOP
-    v_brand_sr := v_all_brand_srs[1 + ((i - 1) % array_length(v_all_brand_srs, 1))];
-
-    SELECT id INTO v_brand_id
-    FROM entities
-    WHERE entity_type = 'brand' AND source_record_id = v_brand_sr;
-
-    PERFORM rental_upsert_entity_current_state(
-      p_entity_type => 'company',
-      p_source_record_id => format('demo-dia-company-b%s', lpad(i::text, 3, '0')),
-      p_data => jsonb_build_object(
-        'name', format('DIA Concessionária %s', lpad(i::text, 2, '0')),
-        'legal_name', format('DIA Concessionária %s Ltda', lpad(i::text, 2, '0')),
-        'trade_name', format('DIA Filial %s', lpad(i::text, 2, '0')),
-        'cnpj', format('98.765.%s/0001-%s', lpad(i::text, 3, '0'), lpad(i::text, 2, '0')),
-        'city', v_cities[1 + ((i - 1) % array_length(v_cities, 1))],
-        'state', v_states[1 + ((i - 1) % array_length(v_states, 1))],
-        'status', CASE WHEN i % 5 = 0 THEN 'inativo' ELSE 'ativo' END,
-        'brand_id', v_brand_id::text,
-        'source_record_id', format('demo-dia-company-b%s', lpad(i::text, 3, '0'))
-      )
-    );
-  END LOOP;
-END
-$$;
-
-commit;
-
--- --- Veículos em massa (~96) ----------------------------------------------
-begin;
-set local request.jwt.claim.role = 'service_role';
-
-DO $$
-DECLARE
-  v_now timestamptz := now();
-  v_brands text[] := ARRAY['Fiat','Volkswagen','Chevrolet','Toyota','Hyundai','Renault','Honda','Jeep','Volvo','Scania'];
-  v_models text[] := ARRAY['Pulse','Polo','Onix','Corolla','HB20','Kwid','City','Compass','XC60','R450'];
-  v_stores text[] := ARRAY['Matriz','Filial Sul','Filial Norte','Filial Leste','Filial Oeste'];
-  i int;
-  v_cond text;
-  v_status text;
-  v_cost numeric;
-BEGIN
-  PERFORM set_config('request.jwt.claim.role', 'service_role', true);
-
-  FOR i IN 1..96 LOOP
-    v_cond   := CASE WHEN i % 2 = 0 THEN 'novo' ELSE 'usado' END;
-    v_status := CASE WHEN i % 6 = 0 THEN 'vendido' ELSE 'em_estoque' END;
-    v_cost   := 45000 + ((i % 25) * 9000);
-
-    PERFORM rental_upsert_entity_current_state(
-      p_entity_type => 'vehicle',
-      p_source_record_id => format('demo-dia-vehicle-b%s', lpad(i::text, 3, '0')),
-      p_data => jsonb_build_object(
-        'name', concat_ws(' ',
-          v_brands[1 + (i % array_length(v_brands, 1))],
-          v_models[1 + (i % array_length(v_models, 1))],
-          (2018 + (i % 9))::text
-        ),
-        'condition', v_cond,
-        'brand', v_brands[1 + (i % array_length(v_brands, 1))],
-        'model', v_models[1 + (i % array_length(v_models, 1))],
-        'model_year', 2018 + (i % 9),
-        'cost', v_cost,
-        'sale_price', round(v_cost * 1.18, -2),
-        'purchase_date', to_char((v_now - (((i * 11) % 420) || ' days')::interval)::date, 'YYYY-MM-DD'),
-        'status', v_status,
-        'store', v_stores[1 + (i % array_length(v_stores, 1))],
-        'source_record_id', format('demo-dia-vehicle-b%s', lpad(i::text, 3, '0'))
-      )
-    );
-  END LOOP;
-END
-$$;
-
-commit;
+-- (As marcas/empresas e os veículos NÃO têm bloco "em massa": as 4 marcas, as
+--  8 lojas e os ~120 veículos por loja já são criados nos blocos curados acima.
+--  Aqui em baixo geram-se apenas OS, peças e vendas em massa.)
 
 -- --- Ordens de serviço em massa (~82) -------------------------------------
 begin;
