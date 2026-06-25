@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "test": "node --test scripts/verify-dia-branding.mjs scripts/verify-vehicle-wiring.mjs scripts/verify-chartcard.mjs scripts/verify-owner-overview.mjs",
+    "test": "node --test scripts/verify-dia-branding.mjs scripts/verify-vehicle-wiring.mjs scripts/verify-chartcard.mjs scripts/verify-owner-overview.mjs scripts/verify-sales-dashboard.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint ."
