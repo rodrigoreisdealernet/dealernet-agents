@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/7",
   "pr": null,
   "prUrl": null,
-  "updatedAt": "2026-06-25T18:25:36.725Z",
+  "updatedAt": "2026-06-25T18:30:11.637Z",
   "steps": [
     {
       "id": "spec",
@@ -29,8 +29,8 @@
     {
       "id": "code",
       "label": "03 · Code",
-      "status": "pending",
-      "summary": "",
+      "status": "done",
+      "summary": "Migration, RPCs, view, seed, screen implemented (commit 2939ea7)",
       "artifacts": [],
       "notes": [],
       "gate": null
