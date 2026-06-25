@@ -1,0 +1,83 @@
+{
+  "issue": "61",
+  "title": "Portal: persistir estado/preferências do app por usuário (tema, idioma) em localStorage",
+  "slug": "portal-persistir-estado-preferencias-do",
+  "branch": "feature/61-portal-persistir-estado-preferencias-do",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/61",
+  "pr": null,
+  "prUrl": null,
+  "updatedAt": "2026-06-25T23:11:16.875Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "7 acceptance criteria drafted",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/61-portal-persistir-estado-preferencias-do.md"
+        }
+      ],
+      "notes": [
+        "Lendo role file e issue #61; próximo: ler código de tema, autenticação e store",
+        "Spec concluída com 7 critérios de aceite; arquivo salvo e comentário postado no issue #61"
+      ],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "waiting",
+      "summary": "Awaiting human approval of the spec",
+      "artifacts": [],
+      "notes": [],
+      "gate": "spec-approval"
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    }
+  ]
+}

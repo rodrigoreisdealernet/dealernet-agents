@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { useAuth } from '@/hooks/use-auth'
+import { DEFAULT_USUARIO, getUserPrefs, setUserPrefs, type UserPreferences } from '@/portal/lib/userPreferences'
 
 type Mode = 'light' | 'dark'
 export type Accent =
@@ -43,24 +45,32 @@ export const MARCA_ACCENT: Record<string, Accent> = {
   TOYOTA: 'red',
 }
 
-const MODE_KEY = 'dealernet-portal-theme'
-const ACCENT_KEY = 'dealernet-portal-accent'
-// Cor HEX escolhida pelo usuário (tema por marca, vindo da API). Tem prioridade sobre o accent fixo.
-const HEX_KEY = 'dealernet-portal-themehex'
-
 const HEX_RX = /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
 
-function getInitialMode(): Mode {
-  if (typeof window === 'undefined') return 'light'
-  const stored = localStorage.getItem(MODE_KEY) as Mode | null
-  if (stored === 'light' || stored === 'dark') return stored
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+function getSystemMode(): Mode {
+  try {
+    if (typeof window === 'undefined') return 'light'
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  } catch {
+    return 'light'
+  }
 }
 
-function getInitialAccent(): Accent {
-  if (typeof window === 'undefined') return 'navy'
-  const stored = localStorage.getItem(ACCENT_KEY) as Accent | null
-  return ACCENTS.some((a) => a.id === stored) ? (stored as Accent) : 'navy'
+function isMode(value: UserPreferences['themeMode']): value is Mode {
+  return value === 'light' || value === 'dark'
+}
+
+function isAccent(value: UserPreferences['accent']): value is Accent {
+  return ACCENTS.some((a) => a.id === value)
+}
+
+function loadThemePrefs(usuario?: string | null): { theme: Mode; accent: Accent; hex: string } {
+  const prefs = getUserPrefs(usuario)
+  return {
+    theme: isMode(prefs.themeMode) ? prefs.themeMode : getSystemMode(),
+    accent: isAccent(prefs.accent) ? prefs.accent : 'navy',
+    hex: prefs.hex && HEX_RX.test(prefs.hex) ? prefs.hex : '',
+  }
 }
 
 /** Resolve a cor padrão de uma marca (sigla). Default 'navy' se não mapeada. */
@@ -95,22 +105,30 @@ function applyHex(hex: string) {
   root.style.setProperty('--chrome', `color-mix(in oklch, ${hex} 55%, black)`)
 }
 
-function getInitialHex(): string {
-  if (typeof window === 'undefined') return ''
-  const stored = localStorage.getItem(HEX_KEY) ?? ''
-  return HEX_RX.test(stored) ? stored : ''
-}
-
 export function useTheme() {
-  const [theme, setTheme] = useState<Mode>(getInitialMode)
-  const [accent, setAccentState] = useState<Accent>(getInitialAccent)
+  const { session } = useAuth()
+  const authUsuario = session?.usuario ?? DEFAULT_USUARIO
+  const initialPrefs = () => loadThemePrefs(authUsuario)
+  const [prefsUsuario, setPrefsUsuario] = useState(authUsuario)
+  const [theme, setTheme] = useState<Mode>(() => initialPrefs().theme)
+  const [accent, setAccentState] = useState<Accent>(() => initialPrefs().accent)
   // Cor hex tem PRIORIDADE: se setada, pinta por hex; senão cai no accent (paleta fixa).
-  const [hex, setHexState] = useState<string>(getInitialHex)
+  const [hex, setHexState] = useState<string>(() => initialPrefs().hex)
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme)
-    localStorage.setItem(MODE_KEY, theme)
-  }, [theme])
+    const next = loadThemePrefs(authUsuario)
+    setPrefsUsuario(authUsuario)
+    setTheme(next.theme)
+    setAccentState(next.accent)
+    setHexState(next.hex)
+  }, [authUsuario])
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-theme', theme)
+    }
+    setUserPrefs({ themeMode: theme }, prefsUsuario)
+  }, [prefsUsuario, theme])
 
   // hex vence accent. Sem hex → aplica o accent fixo.
   useEffect(() => {
@@ -122,14 +140,14 @@ export function useTheme() {
   }, [accent, hex])
 
   useEffect(() => {
-    localStorage.setItem(ACCENT_KEY, accent)
-  }, [accent])
+    setUserPrefs({ accent }, prefsUsuario)
+  }, [accent, prefsUsuario])
 
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
 
   // Escolha de accent fixo (paleta): limpa o override hex (volta ao modo paleta).
   const setAccent = (a: Accent) => {
-    localStorage.removeItem(HEX_KEY)
+    setUserPrefs({ accent: a, hex: undefined }, prefsUsuario)
     setHexState('')
     setAccentState(a)
   }
@@ -137,19 +155,21 @@ export function useTheme() {
   /** Escolha de um TEMA por hex (vindo da API). Vira override do usuário (persiste). */
   const setHex = (h: string) => {
     if (!HEX_RX.test(h)) return
-    localStorage.setItem(HEX_KEY, h)
+    setUserPrefs({ hex: h }, prefsUsuario)
     setHexState(h)
   }
 
   /** Cor padrão da MARCA (hex vindo da API), só se o usuário ainda não escolheu (accent NEM hex). */
   const aplicarHexMarcaSeSemOverride = (corHex?: string) => {
-    if (localStorage.getItem(ACCENT_KEY) || localStorage.getItem(HEX_KEY)) return
+    const prefs = getUserPrefs(prefsUsuario)
+    if (prefs.accent || prefs.hex) return
     if (corHex && HEX_RX.test(corHex)) setHexState(corHex)
   }
 
   /** Define a cor a partir da MARCA (accent fixo), MAS só se o usuário ainda não escolheu. */
   const aplicarMarcaSeSemOverride = (marcaSgl?: string) => {
-    if (localStorage.getItem(ACCENT_KEY) || localStorage.getItem(HEX_KEY)) return
+    const prefs = getUserPrefs(prefsUsuario)
+    if (prefs.accent || prefs.hex) return
     setAccentState(accentDaMarca(marcaSgl))
   }
 
