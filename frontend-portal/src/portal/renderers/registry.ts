@@ -13,6 +13,10 @@ export const componentRegistry: Record<string, LazyExoticComponent<ComponentType
   'finding-detail': lazy(() => import('@/portal/renderers/screens/FindingDetail')),
   'audit-trail': lazy(() => import('@/portal/renderers/screens/AuditTrail')),
   'executive-pack': lazy(() => import('@/portal/renderers/screens/ExecutivePack')),
+  // Fast BI (issue #16) — dashboard de Vendas VN/VU.
+  'dia-sales': lazy(() => import('@/portal/renderers/screens/SalesDashboard')),
+  // Fast BI de Peças (issue #18) — dashboard read-only de estoque/vendas de peças.
+  'dia-parts-bi': lazy(() => import('@/portal/renderers/screens/PartsBI')),
   // DIA dealership domain (issue #4) — primeira entidade de negócio com CRUD.
   'dia-vehicles': lazy(() => import('@/portal/renderers/screens/VehiclesInventory')),
   // DIA dealership domain (issue #5) — dados mestres empresa/marca com CRUD.
@@ -28,6 +32,8 @@ export const componentRegistry: Record<string, LazyExoticComponent<ComponentType
   'dia-part-sales': lazy(() => import('@/portal/renderers/screens/PartSales')),
   // DIA Fast BI (issue #15) — dashboard Visão do Dono.
   'dia-overview': lazy(() => import('@/portal/renderers/screens/DiaOverview')),
+  // DIA Fast BI (issue #17) — dashboard Oficina (deriva de v_dia_service_order_current).
+  'dia-service-dashboard': lazy(() => import('@/portal/renderers/screens/ServiceDashboard')),
 }
 
 export function resolveComponent(key: string) {

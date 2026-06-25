@@ -138,21 +138,41 @@ it auto-refresh.
    `set <base> approve done --summary "Spec approved by human" --gate none`, then
    continue.
 
+### Repo gotchas (pass these to the coder/tester — learned from real runs)
+
+- **Real frontend is `frontend-portal/`** (React component registry under
+  `src/portal/renderers/`, screens in `screens/`, registry in `registry.ts`, nav in
+  `portalApi.ts` MOCK_MENU, API helpers in `agentsApi.ts`). Issue bodies often cite the
+  removed `frontend/` JSON-engine layout — ignore those paths, discover the actual one.
+- **`rental_entity_type_catalog` is a hard-coded `VALUES` VIEW.** When adding an
+  entity_type, `create or replace` it with the FULL current list **plus** your new type
+  — never drop existing types, or their current-state views go empty.
+- **Shared single Supabase DB; no `supabase` CLI on PATH.** Validate SQL against the
+  live container: `Get-Content <migration> -Raw | docker exec -i
+  supabase_db_dealernet-agents psql -U postgres -d postgres -v ON_ERROR_STOP=1`, then
+  run contract tests `node --test --test-concurrency=1 supabase/tests/<file>` (harness
+  uses psql + BEGIN/ROLLBACK, no node_modules; see `vehicle_crud.test.mjs`). If running
+  alongside other `/ship-issue` instances, do NOT `supabase db reset`.
+- **Frontend build:** worktrees have no node_modules; prefer static TS review. If you do
+  build and added an npm dep, `npm install` (not `npm ci`) reconciles the lockfile.
+
 ### Step 03 — CODE  *(agent: `coder`)*
 
 7. Dashboard: `set <base> code running`. Invoke the **`coder`** subagent,
    pointing it at the approved spec file `docs/specs/<issue-number>-<slug>.md`
    (pass the path explicitly — the subagent runs in an isolated context and
-   cannot see this conversation). It implements the minimal change that satisfies
-   the acceptance criteria and confirms the build compiles. Commit the diff (skip
-   on `--dry-run`). Then `set <base> code done --summary "<files changed>"`.
+   cannot see this conversation) **and the Repo gotchas above**. It implements the
+   minimal change that satisfies the acceptance criteria and confirms it compiles
+   (static TS review is fine; validate SQL via psql per the gotchas). Commit the diff
+   in the worktree (skip on `--dry-run`). Then `set <base> code done --summary "<files changed>"`.
 
 ### Step 04 — TESTS  *(agent: `tester`)*
 
 8. Dashboard: `set <base> tests running`. Invoke the **`tester`** subagent with
    the coder's diff and the approved spec file `docs/specs/<issue-number>-<slug>.md`
    (pass both explicitly — the subagent runs in an isolated context). It generates
-   the unit / integration / e2e tests and runs them green. Commit the tests, then
+   the tests (SQL contract tests via the psql/`node --test` harness for DB work) and
+   runs them green **without resetting the shared DB**. Commit the tests, then
    open a **draft PR** with `gh pr create`, linking the issue and the spec file
    (skip on `--dry-run`). Record the PR on the dashboard and close the step:
    `set <base> tests done --summary "<test counts>" --pr <pr-number> --pr-url <pr-url>`.

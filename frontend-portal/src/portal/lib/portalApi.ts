@@ -102,7 +102,7 @@ const MOCK_MENU: MenuItem[] = [
   },
   {
     id: 'insights',
-    text: 'Insights',
+    text: 'Fast BI',
     icon: 'BarChart3',
     children: [
       {
@@ -110,6 +110,18 @@ const MOCK_MENU: MenuItem[] = [
         text: 'Executive Pack',
         icon: 'Building2',
         spec: { title: 'Painel do Dono', kind: 'component', componentKey: 'executive-pack' },
+      },
+      {
+        id: 'insights-sales',
+        text: 'Vendas (VN/VU)',
+        icon: 'BarChart3',
+        spec: { title: 'Vendas (VN/VU)', kind: 'component', componentKey: 'dia-sales' },
+      },
+      {
+        id: 'insights-service-dashboard',
+        text: 'Oficina',
+        icon: 'fa-wrench',
+        spec: { title: 'Oficina — Fast BI', kind: 'component', componentKey: 'dia-service-dashboard' },
       },
     ],
   },
@@ -124,6 +136,13 @@ const MOCK_MENU: MenuItem[] = [
         text: 'Visão do Dono',
         icon: 'BarChart3',
         spec: { title: 'Visão do Dono', kind: 'component', componentKey: 'dia-overview' },
+      },
+      // Fast BI de Peças (issue #18) — dashboard read-only de estoque/vendas.
+      {
+        id: 'fastbi-parts',
+        text: 'Peças',
+        icon: 'fa-cog',
+        spec: { title: 'Peças (Fast BI)', kind: 'component', componentKey: 'dia-parts-bi' },
       },
     ],
   },
