@@ -23,8 +23,9 @@ READ_ENDPOINTS = (
     "/rest/v1/entities?select=id,entity_type&limit=5",
     "/rest/v1/rental_current_assets?select=entity_id&limit=5",
     "/rest/v1/rental_current_branches?select=entity_id&limit=5",
-    "/rest/v1/v_asset_analytics_current?select=asset_id,lifetime_revenue,roi_status&limit=5",
 )
+# DIA core tables (post Wynne-domain prune — see
+# supabase/migrations/20260625120000_dia_core_prune_wynne_domain.sql).
 RLS_TABLES = (
     "entities",
     "entity_versions",
@@ -32,12 +33,12 @@ RLS_TABLES = (
     "fact_types",
     "entity_facts",
     "time_series_points",
-    "dim_rental_order_status",
-    "dim_rental_contract_status",
-    "dim_rental_line_status",
-    "dim_asset_availability_status",
-    "dim_rental_rate_type",
-    "dim_rental_type",
+    "tenants",
+    "ops_agent_config",
+    "ops_workflow_run",
+    "finding",
+    "invoice_adjustment_draft",
+    "credit_change_proposal",
 )
 TRANSIENT_RESET_ERROR_FRAGMENTS = (
     "Error status 502",

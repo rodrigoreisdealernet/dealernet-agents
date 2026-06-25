@@ -407,22 +407,9 @@ BEGIN
   END;
 
   -- ---------------------------------------------------------------------------
-  -- Customer issue: seed a payment issue for customer 3 (Summit Arc Steel)
-  -- so the CRM escalation surface has a durable issue entity to display.
+  -- (Removed) CRM payment-issue seed — the CRM domain was pruned from the DIA core
+  -- schema (see migration 20260625120000_dia_core_prune_wynne_domain.sql).
   -- ---------------------------------------------------------------------------
-  DECLARE
-  BEGIN
-    PERFORM crm_upsert_payment_issue(
-      p_issue_source_record_id => 'demo-baseline-payment-issue-3',
-      p_customer_id            => v_customer_ids[3],
-      p_issue_type             => 'payment_issue',
-      p_status                 => 'open',
-      p_severity               => 'high',
-      p_metadata               => jsonb_build_object(
-        'note', 'Payment delays noted on last two invoices. Require PO on new orders.'
-      )
-    );
-  END;
 
   -- ---------------------------------------------------------------------------
   -- Asset categories
