@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/37",
   "pr": "38",
   "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/38",
-  "updatedAt": "2026-06-25T20:47:16.878Z",
+  "updatedAt": "2026-06-25T20:48:41.989Z",
   "steps": [
     {
       "id": "spec",
@@ -75,11 +75,12 @@
     {
       "id": "code-review",
       "label": "06 · Code review",
-      "status": "done",
+      "status": "running",
       "summary": "",
       "artifacts": [],
       "notes": [
-        "APPROVE WITH NITS: ativa field regression needs resolution"
+        "APPROVE WITH NITS: ativa field regression needs resolution",
+        "coder: infere empresa ativa de status (nit do review)"
       ],
       "gate": null
     },

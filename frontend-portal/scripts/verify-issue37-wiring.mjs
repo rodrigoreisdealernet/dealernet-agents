@@ -154,6 +154,19 @@ test('AC seletor (regressao boot): boot() deriva empresaAtualId de empresas.find
   )
 })
 
+// AC#3 (regressao) — o flag `ativa` de cada Empresa e derivado do status da
+// company (c.status === 'ativo'), de modo que a empresa ativa no boot e a
+// primeira ATIVA. Asserta a expressao real do map; falharia se a derivacao do
+// status fosse removida ou trocada.
+test("AC seletor (regressao boot): o map deriva ativa de c.status === 'ativo'", () => {
+  const boot = bootBody(read(STORE))
+  assert.match(
+    boot,
+    /ativa:\s*c\.status\s*===\s*'ativo'/,
+    "o map de CompanyRow -> Empresa deve setar ativa: c.status === 'ativo'",
+  )
+})
+
 // ===========================================================================
 // AC seletor (componente): EmpresaSelector agrupa por e.grupo e o chip da marca
 // renderiza atual.grupo. Negativo: nao referencia MOCK_EMPRESAS.
