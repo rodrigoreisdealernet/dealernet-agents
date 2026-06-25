@@ -807,10 +807,37 @@ export async function getOwnerKpis(): Promise<OwnerKpis | null> {
   return unwrap(res)
 }
 
+// ── Vendas / Fast BI (issue #16) ────────────────────────────────────────────
+// Leitura direta das views agregadas v_dia_sales_summary / v_dia_sales_trend
+// (security_invoker → RLS authenticated). SOMENTE leitura — o dashboard de
+// vendas não faz insert/update/delete/rpc.
+
+export interface SalesSummaryRow {
+  period_month: string
+  condition: 'novo' | 'usado' | string
+  brand: string | null
+  store: string | null
+  units_sold: number
+  revenue: number
+  margin: number
+  avg_days_to_sell: number
+}
+
 export interface SalesTrendRow {
   sale_date: string
   units_sold: number
   revenue: number
+}
+
+const SALES_SUMMARY_COLS =
+  'period_month, condition, brand, store, units_sold, revenue, margin, avg_days_to_sell'
+
+export async function getSalesSummary(): Promise<SalesSummaryRow[]> {
+  const res = (await supabase
+    .from('v_dia_sales_summary')
+    .select(SALES_SUMMARY_COLS)
+    .order('period_month', { ascending: true })) as PgResponse<SalesSummaryRow[]>
+  return unwrap(res) ?? []
 }
 
 const SALES_TREND_COLS = 'sale_date, units_sold, revenue'

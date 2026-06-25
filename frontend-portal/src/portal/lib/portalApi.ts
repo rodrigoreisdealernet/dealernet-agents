@@ -111,6 +111,12 @@ const MOCK_MENU: MenuItem[] = [
         icon: 'Building2',
         spec: { title: 'Painel do Dono', kind: 'component', componentKey: 'executive-pack' },
       },
+      {
+        id: 'insights-sales',
+        text: 'Vendas (VN/VU)',
+        icon: 'BarChart3',
+        spec: { title: 'Vendas (VN/VU)', kind: 'component', componentKey: 'dia-sales' },
+      },
     ],
   },
   // DIA Fast BI (issue #15) — dashboard Visão do Dono (views analíticas).

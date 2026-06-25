@@ -1,0 +1,89 @@
+{
+  "issue": "16",
+  "title": "feat(frontend): dashboard Vendas VN/VU (Fast BI)",
+  "slug": "feat-frontend-dashboard-vendas-vn",
+  "branch": "feature/16-feat-frontend-dashboard-vendas-vn",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/16",
+  "pr": "28",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/28",
+  "updatedAt": "2026-06-25T19:22:28.301Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "Spec escrita e postada na issue",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "../specs/16-feat-frontend-dashboard-vendas-vn.md"
+        }
+      ],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Auto-approved (batch)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": "Tela SalesDashboard + helpers + registry + menu (4 arquivos)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "done",
+      "summary": "verify-sales-dashboard.mjs: 15/15 verde (suite total 40/40)",
+      "artifacts": [
+        {
+          "label": "PR",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/28"
+        }
+      ],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "done",
+      "summary": "Sem bloqueios; 3 melhorias não-bloqueantes (NB-2/3/4)",
+      "artifacts": [],
+      "notes": [
+        "Loop 1: fortalecer asserts currentMonth, isVN, Sem marca"
+      ],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "done",
+      "summary": "Aprovado no review do diff; 2 nits não-bloqueantes registrados",
+      "artifacts": [],
+      "notes": [
+        "NB-1 (fetch trend não usado) mantido: teste estrutural fixa o import no screen; nit, não defeito"
+      ],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "waiting",
+      "summary": "PR #28 ready + mergeable; aguardando gate humano de merge",
+      "artifacts": [],
+      "notes": [],
+      "gate": "merge"
+    }
+  ]
+}
