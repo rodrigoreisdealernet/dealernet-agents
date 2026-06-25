@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/15",
   "pr": "27",
   "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/27",
-  "updatedAt": "2026-06-25T19:15:58.353Z",
+  "updatedAt": "2026-06-25T19:18:34.669Z",
   "steps": [
     {
       "id": "spec",
@@ -62,8 +62,8 @@
     {
       "id": "test-review",
       "label": "05 · Test review",
-      "status": "pending",
-      "summary": "",
+      "status": "done",
+      "summary": "Test audit: assertions tied to ACs; hardened to lock series keys + view select columns (8 tests green)",
       "artifacts": [],
       "notes": [],
       "gate": null
@@ -71,20 +71,25 @@
     {
       "id": "code-review",
       "label": "06 · Code review",
-      "status": "pending",
-      "summary": "",
-      "artifacts": [],
+      "status": "done",
+      "summary": "Code review posted on PR #27 — verdict READY TO MERGE, no must-fix; LOW findings addressed",
+      "artifacts": [
+        {
+          "label": "PR",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/27"
+        }
+      ],
       "notes": [],
       "gate": null
     },
     {
       "id": "merge",
       "label": "Merge (human gate)",
-      "status": "pending",
-      "summary": "",
+      "status": "waiting",
+      "summary": "Awaiting human merge gate",
       "artifacts": [],
       "notes": [],
-      "gate": null
+      "gate": "merge"
     }
   ]
 }
