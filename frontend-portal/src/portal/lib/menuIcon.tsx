@@ -5,6 +5,7 @@
 
 import {
   AppWindow,
+  ArrowLeftRight,
   BarChart3,
   Bell,
   Boxes,
@@ -33,8 +34,11 @@ import {
   Megaphone,
   MessageSquare,
   Package,
+  Palette,
   Settings,
   Shield,
+  ShoppingCart,
+  Tag,
   Target,
   Truck,
   Users,
@@ -69,6 +73,7 @@ const FA_TO_LUCIDE: Record<string, LucideIcon> = {
   'credit-card': CreditCard,
   database: Database,
   'dollar-sign': DollarSign,
+  'shopping-cart': ShoppingCart,
   'envelope-open-text': Mail,
   envelope: Mail,
   users: Users,
@@ -88,6 +93,7 @@ const FA_TO_LUCIDE: Record<string, LucideIcon> = {
   file: FileText,
   folder: Folder,
   truck: Truck,
+  tag: Tag,
 }
 
 /**
@@ -102,8 +108,13 @@ export function resolveMenuIcon(raw?: string): LucideIcon {
   if (fa) {
     return FA_TO_LUCIDE[fa[1].toLowerCase()] ?? AppWindow
   }
-  // Nome lucide direto (mock/telas nativas) — só os que o portal usa hoje.
-  const direct: Record<string, LucideIcon> = { Users, BarChart3, Boxes, Home, Database, Building2 }
+  // Nome lucide direto (mock/telas nativas e EXTRA_MENU do real). Cobre os nomes que
+  // os menus enviam como ícone lucide (não-FA); o resto cai no fallback AppWindow.
+  const direct: Record<string, LucideIcon> = {
+    Users, BarChart3, Boxes, Home, Database, Building2,
+    ShoppingCart, FileText, Tag, Palette, ArrowLeftRight,
+    Settings, Shield, Briefcase, Wrench, Car, Package, Gauge,
+  }
   return direct[raw] ?? AppWindow
 }
 

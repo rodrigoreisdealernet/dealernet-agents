@@ -71,10 +71,14 @@ const MOCK_EMPRESAS: Empresa[] = [
   { id: 'dn-2', nome: 'DEALERNET Empresa 2', grupo: 'DEALERNET' },
 ]
 
-// POC — IA proativa (Operations Factory) como cidadã de primeira classe no topo.
-// Ver docs/PRD-portal-dms-frontend-acoplamento.md §8. Ícones limitados ao que o
-// resolvedor (menuIcon.tsx) reconhece: 6 nomes lucide diretos + tokens fa-*.
+// Menu do Portal DMS — hierarquia por DOMÍNIO DE NEGÓCIO (concessionária/DMS), em
+// níveis e subníveis coerentes e SEM duplicidade (antes existiam DOIS grupos "Fast BI").
+// A IA proativa (Operations Factory) abre o menu como cidadã de 1ª classe
+// (docs/PRD-portal-dms-frontend-acoplamento.md §8). Ícones em Font Awesome (fa-*) —
+// formato canônico que o backend envia — resolvidos por menuIcon.tsx (resolveMenuIcon).
+// Cada folha repete o ícone no `spec` para a aba/janela herdar o mesmo ícone do menu.
 const MOCK_MENU: MenuItem[] = [
+  // 1) IA proativa — Operations Factory (cidadã de 1ª classe, no topo).
   {
     id: 'ai-ops',
     text: 'AI Operations',
@@ -82,128 +86,149 @@ const MOCK_MENU: MenuItem[] = [
     children: [
       {
         id: 'ai-agents-dashboard',
-        text: 'Agent Dashboard',
+        text: 'Painel de Agentes',
         icon: 'fa-gauge',
-        spec: { title: 'Agent Dashboard', kind: 'component', componentKey: 'agents-dashboard' },
+        spec: { title: 'Painel de Agentes', kind: 'component', componentKey: 'agents-dashboard', icon: 'fa-gauge' },
       },
       {
         id: 'ai-morning-queue',
-        text: 'Morning Queue',
+        text: 'Fila Matinal',
         icon: 'fa-tasks',
-        spec: { title: 'Fila de Findings', kind: 'component', componentKey: 'findings-queue' },
+        spec: { title: 'Fila de Findings', kind: 'component', componentKey: 'findings-queue', icon: 'fa-tasks' },
       },
       {
         id: 'ai-audit-trail',
-        text: 'Audit Trail',
+        text: 'Trilha de Auditoria',
         icon: 'fa-clipboard-check',
-        spec: { title: 'Auditoria', kind: 'component', componentKey: 'audit-trail' },
+        spec: { title: 'Auditoria', kind: 'component', componentKey: 'audit-trail', icon: 'fa-clipboard-check' },
       },
     ],
   },
-  {
-    id: 'insights',
-    text: 'Fast BI',
-    icon: 'BarChart3',
-    children: [
-      {
-        id: 'insights-executive-pack',
-        text: 'Executive Pack',
-        icon: 'Building2',
-        spec: { title: 'Painel do Dono', kind: 'component', componentKey: 'executive-pack' },
-      },
-      {
-        id: 'insights-sales',
-        text: 'Vendas (VN/VU)',
-        icon: 'BarChart3',
-        spec: { title: 'Vendas (VN/VU)', kind: 'component', componentKey: 'dia-sales' },
-      },
-      {
-        id: 'insights-service-dashboard',
-        text: 'Oficina',
-        icon: 'fa-wrench',
-        spec: { title: 'Oficina — Fast BI', kind: 'component', componentKey: 'dia-service-dashboard' },
-      },
-    ],
-  },
-  // DIA Fast BI (issue #15) — dashboard Visão do Dono (views analíticas).
+  // 2) Fast BI — indicadores read-only. Grupo ÚNICO (antes duplicado), com subníveis:
+  // Visão Geral (executivo) e Indicadores Operacionais (vendas/oficina/peças).
   {
     id: 'fast-bi',
     text: 'Fast BI',
-    icon: 'BarChart3',
+    icon: 'fa-chart-line',
     children: [
       {
-        id: 'fast-bi-owner-overview',
-        text: 'Visão do Dono',
-        icon: 'BarChart3',
-        spec: { title: 'Visão do Dono', kind: 'component', componentKey: 'dia-overview' },
+        id: 'fast-bi-visao-geral',
+        text: 'Visão Geral',
+        icon: 'fa-chart-pie',
+        children: [
+          {
+            id: 'fast-bi-executive',
+            text: 'Painel Executivo',
+            icon: 'fa-chart-pie',
+            spec: { title: 'Painel Executivo', kind: 'component', componentKey: 'executive-pack', icon: 'fa-chart-pie' },
+          },
+          {
+            id: 'fast-bi-overview',
+            text: 'Visão do Dono',
+            icon: 'fa-gauge',
+            spec: { title: 'Visão do Dono', kind: 'component', componentKey: 'dia-overview', icon: 'fa-gauge' },
+          },
+        ],
       },
-      // Fast BI de Peças (issue #18) — dashboard read-only de estoque/vendas.
       {
-        id: 'fastbi-parts',
-        text: 'Peças',
-        icon: 'fa-cog',
-        spec: { title: 'Peças (Fast BI)', kind: 'component', componentKey: 'dia-parts-bi' },
-      },
-      {
-        id: 'fastbi-vehicle-inventory',
-        text: 'Estoque de Veículos',
-        icon: 'fa-car',
-        spec: {
-          title: 'Estoque de Veículos (Fast BI)',
-          kind: 'component',
-          componentKey: 'dia-vehicle-inventory',
-        },
+        id: 'fast-bi-operacional',
+        text: 'Indicadores Operacionais',
+        icon: 'fa-chart-line',
+        children: [
+          {
+            id: 'fast-bi-sales',
+            text: 'Vendas (VN/VU)',
+            icon: 'fa-dollar-sign',
+            spec: { title: 'Vendas (VN/VU)', kind: 'component', componentKey: 'dia-sales', icon: 'fa-dollar-sign' },
+          },
+          {
+            id: 'fast-bi-service',
+            text: 'Oficina',
+            icon: 'fa-wrench',
+            spec: { title: 'Oficina — Fast BI', kind: 'component', componentKey: 'dia-service-dashboard', icon: 'fa-wrench' },
+          },
+          {
+            id: 'fast-bi-parts',
+            text: 'Peças',
+            icon: 'fa-boxes',
+            spec: { title: 'Peças (Fast BI)', kind: 'component', componentKey: 'dia-parts-bi', icon: 'fa-boxes' },
+          },
+          {
+            id: 'fast-bi-vehicle-inventory',
+            text: 'Estoque de Veículos',
+            icon: 'fa-car',
+            spec: { title: 'Estoque de Veículos (Fast BI)', kind: 'component', componentKey: 'dia-vehicle-inventory', icon: 'fa-car' },
+          },
+        ],
       },
     ],
   },
-  // DIA dealership domain (issue #4) — cadastro de estoque de veículos.
+  // 3) Concessionária — operação organizada por DEPARTAMENTO (Veículos/Oficina/Peças).
   {
     id: 'dealership',
     text: 'Concessionária',
     icon: 'fa-car',
     children: [
       {
-        id: 'dealership-vehicles',
+        id: 'dealership-veiculos',
         text: 'Veículos',
         icon: 'fa-car',
-        spec: { title: 'Veículos', kind: 'component', componentKey: 'dia-vehicles' },
+        children: [
+          {
+            id: 'dealership-vehicles',
+            text: 'Estoque de Veículos',
+            icon: 'fa-car',
+            spec: { title: 'Estoque de Veículos', kind: 'component', componentKey: 'dia-vehicles', icon: 'fa-car' },
+          },
+        ],
       },
-      // DIA dealership domain (issue #7) — Oficina / ordens de serviço (/dia/service-orders).
       {
-        id: 'dealership-service-orders',
-        text: 'Ordens de Serviço',
+        id: 'dealership-oficina',
+        text: 'Oficina',
         icon: 'fa-wrench',
-        spec: { title: 'Ordens de Serviço', kind: 'component', componentKey: 'dia-service-orders' },
+        children: [
+          {
+            id: 'dealership-service-orders',
+            text: 'Ordens de Serviço',
+            icon: 'fa-clipboard-list',
+            spec: { title: 'Ordens de Serviço', kind: 'component', componentKey: 'dia-service-orders', icon: 'fa-clipboard-list' },
+          },
+        ],
       },
-      // DIA dealership domain (issue #8) — Estoque de peças (/dia/parts).
       {
-        id: 'dealership-parts',
+        id: 'dealership-pecas',
         text: 'Peças',
-        icon: 'fa-cog',
-        spec: { title: 'Peças', kind: 'component', componentKey: 'dia-parts' },
-      },
-      // DIA dealership domain (issue #10) — Venda de peças (/dia/part-sales).
-      {
-        id: 'dealership-part-sales',
-        text: 'Venda de Peças',
-        icon: 'fa-shopping-cart',
-        spec: { title: 'Venda de Peças', kind: 'component', componentKey: 'dia-part-sales' },
+        icon: 'fa-boxes',
+        children: [
+          {
+            id: 'dealership-parts',
+            text: 'Estoque de Peças',
+            icon: 'fa-boxes',
+            spec: { title: 'Estoque de Peças', kind: 'component', componentKey: 'dia-parts', icon: 'fa-boxes' },
+          },
+          {
+            id: 'dealership-part-sales',
+            text: 'Venda de Peças',
+            icon: 'fa-shopping-cart',
+            spec: { title: 'Venda de Peças', kind: 'component', componentKey: 'dia-part-sales', icon: 'fa-shopping-cart' },
+          },
+        ],
       },
     ],
   },
-  // Administração (issue #6) — gestão de usuários/perfis; visível só para admin.
+  // 4) Administração — gestão de usuários/perfis e dados mestres; visível só para admin.
   {
     id: 'admin',
     text: 'Administração',
-    icon: 'Users',
+    icon: 'fa-users',
     requiredRole: 'admin',
     children: [
       {
         id: 'admin-users',
         text: 'Usuários',
-        icon: 'UserPlus',
+        icon: 'fa-user',
         requiredRole: 'admin',
-        spec: { title: 'Usuários', kind: 'component', componentKey: 'admin-users' },
+        spec: { title: 'Usuários', kind: 'component', componentKey: 'admin-users', icon: 'fa-user' },
       },
       // Dados mestres (issue #37) — movidos de Concessionária para Administração.
       {
@@ -211,14 +236,14 @@ const MOCK_MENU: MenuItem[] = [
         text: 'Empresas',
         icon: 'fa-building',
         requiredRole: 'admin',
-        spec: { title: 'Empresas', kind: 'component', componentKey: 'dia-companies' },
+        spec: { title: 'Empresas', kind: 'component', componentKey: 'dia-companies', icon: 'fa-building' },
       },
       {
         id: 'dealership-brands',
         text: 'Marcas',
         icon: 'fa-tag',
         requiredRole: 'admin',
-        spec: { title: 'Marcas', kind: 'component', componentKey: 'dia-brands' },
+        spec: { title: 'Marcas', kind: 'component', componentKey: 'dia-brands', icon: 'fa-tag' },
       },
     ],
   },

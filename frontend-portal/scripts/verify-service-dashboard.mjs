@@ -196,8 +196,8 @@ test('AC: registry.ts mapeia dia-service-dashboard -> import lazy de ServiceDash
   )
 })
 
-// AC: Item de menu "Oficina" dentro do grupo 'insights' apontando para dia-service-dashboard.
-test('AC: portalApi.ts tem item "Oficina" -> dia-service-dashboard dentro do grupo insights', () => {
+// AC: Item de menu "Oficina" dentro do grupo 'fast-bi' apontando para dia-service-dashboard.
+test('AC: portalApi.ts tem item "Oficina" -> dia-service-dashboard dentro do grupo fast-bi', () => {
   const portalApi = read('src/portal/lib/portalApi.ts')
   // Existe um item de menu de texto "Oficina" com o componentKey do dashboard.
   assert.match(
@@ -210,17 +210,17 @@ test('AC: portalApi.ts tem item "Oficina" -> dia-service-dashboard dentro do gru
     /componentKey:\s*'dia-service-dashboard'/,
     "o item deve apontar componentKey: 'dia-service-dashboard' (liga menu -> registry -> tela)",
   )
-  // Proximidade/ordenacao: o item vive dentro do grupo 'insights'. O grupo abre
-  // com id: 'insights' antes do item 'insights-service-dashboard', e o
-  // componentKey do dashboard aparece depois desse id de grupo.
-  const insightsGroupIdx = portalApi.indexOf("id: 'insights'")
-  const itemIdx = portalApi.indexOf("id: 'insights-service-dashboard'")
+  // Proximidade/ordenacao: o item vive dentro do grupo 'fast-bi'. O grupo abre
+  // com id: 'fast-bi' antes do item 'fast-bi-service', e o componentKey do
+  // dashboard aparece logo depois desse id de item.
+  const biGroupIdx = portalApi.indexOf("id: 'fast-bi'")
+  const itemIdx = portalApi.indexOf("id: 'fast-bi-service'")
   const keyIdx = portalApi.indexOf("componentKey: 'dia-service-dashboard'")
-  assert.ok(insightsGroupIdx !== -1, "deve existir o grupo id: 'insights'")
-  assert.ok(itemIdx !== -1, "deve existir o item id: 'insights-service-dashboard'")
+  assert.ok(biGroupIdx !== -1, "deve existir o grupo id: 'fast-bi'")
+  assert.ok(itemIdx !== -1, "deve existir o item id: 'fast-bi-service'")
   assert.ok(
-    insightsGroupIdx < itemIdx && itemIdx < keyIdx,
-    "o item 'Oficina' deve estar dentro do grupo 'insights' (grupo precede o item, que precede seu componentKey)",
+    biGroupIdx < itemIdx && itemIdx < keyIdx,
+    "o item 'Oficina' deve estar dentro do grupo 'fast-bi' (grupo precede o item, que precede seu componentKey)",
   )
 })
 
