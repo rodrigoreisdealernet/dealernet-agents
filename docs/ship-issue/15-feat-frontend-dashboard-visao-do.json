@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/15",
   "pr": null,
   "prUrl": null,
-  "updatedAt": "2026-06-25T19:13:21.637Z",
+  "updatedAt": "2026-06-25T19:15:32.974Z",
   "steps": [
     {
       "id": "spec",
@@ -48,9 +48,14 @@
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "pending",
-      "summary": "",
-      "artifacts": [],
+      "status": "done",
+      "summary": "Structural verifier verify-owner-overview.mjs (8 tests, all green); wired into npm test",
+      "artifacts": [
+        {
+          "label": "Test",
+          "href": "frontend-portal/scripts/verify-owner-overview.mjs"
+        }
+      ],
       "notes": [],
       "gate": null
     },
