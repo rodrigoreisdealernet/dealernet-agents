@@ -331,33 +331,77 @@ rollback;
 // ---------------------------------------------------------------------------
 // AC drill por loja: v_dia_owner_brief_by_store retorna uma linha por (marca,
 // loja) e os totais por loja somam ao total por marca (store_count, novos_units,
-// novos_value). Prova a consistencia do drill marca -> lojas.
+// novos_value E o destaque FP em risco <7d: fp_units_at_risk / fp_value_at_risk).
+// Prova a consistencia do drill marca -> lojas, incluindo o highlight do AC2.
+//
+// O cenario semeia, na mesma txn, dois NOVOS vendidos ontem (L1, L2) e DOIS
+// usados EM ESTOQUE at-risk (days_in_stock>=83: purchase_date=now()-90) — um em
+// L1 e outro em L2 — para que SUM(fp_units_at_risk)/SUM(fp_value_at_risk) por
+// loja seja > 0 e a equivalencia com o total por marca nao seja trivial (0==0).
 // ---------------------------------------------------------------------------
-test('AC drill: by_store (uma linha por loja) soma aos totais de by_brand', () => {
+test('AC drill: by_store soma aos totais de by_brand (novos + FP at-risk)', () => {
   const sql = `${AS_ADMIN}
 select create_vehicle(
   ('{"condition":"novo","brand":"ZZ_BRIEF_DRILL","model":"A","store":"L1","cost":"50000","sale_price":"80000","status":"vendido","sold_at":"' || ${yesterday} || '"}')::jsonb) \\g /dev/null
 select create_vehicle(
   ('{"condition":"novo","brand":"ZZ_BRIEF_DRILL","model":"B","store":"L2","cost":"50000","sale_price":"70000","status":"vendido","sold_at":"' || ${yesterday} || '"}')::jsonb) \\g /dev/null
-select 'brand', store_count, novos_units, novos_value
+-- Dois usados EM ESTOQUE at-risk (days_in_stock>=83), um por loja, com
+-- floor_plan_cost distintos, para somas at-risk > 0 nas duas lojas.
+select create_vehicle(
+  ('{"condition":"usado","brand":"ZZ_BRIEF_DRILL","model":"VelhoL1","store":"L1","cost":"40000","status":"em_estoque","purchase_date":"' || (now()::date - 90)::text || '"}')::jsonb) \\g /dev/null
+select create_vehicle(
+  ('{"condition":"usado","brand":"ZZ_BRIEF_DRILL","model":"VelhoL2","store":"L2","cost":"60000","status":"em_estoque","purchase_date":"' || (now()::date - 95)::text || '"}')::jsonb) \\g /dev/null
+select 'brand', store_count, novos_units, novos_value, fp_units_at_risk, fp_value_at_risk
   from v_dia_owner_brief_by_brand where brand_name = 'ZZ_BRIEF_DRILL';
-select 'stores', count(*), sum(novos_units), sum(novos_value)
+select 'stores', count(*), sum(novos_units), sum(novos_value), sum(fp_units_at_risk), sum(fp_value_at_risk)
   from v_dia_owner_brief_by_store where brand_name = 'ZZ_BRIEF_DRILL';
 rollback;
 `
   const { ok, out, err } = psql(sql)
   assert.ok(ok, `psql falhou: ${err}`)
   const get = rows(out)
-  // 2 lojas: store_count=2 no by_brand; 2 linhas no by_store; somas batem.
+  const brand = get('brand')
+  const stores = get('stores')
+  assert.ok(brand, `linha de by_brand ausente; saida=${out}`)
+  assert.ok(stores, `agregacao de by_store ausente; saida=${out}`)
+
+  // 2 lojas: store_count=2 no by_brand; 2 linhas no by_store; somas de novos batem.
   assert.deepEqual(
-    get('brand'),
+    brand.slice(0, 4),
     ['brand', '2', '2', '150000.00'],
     'by_brand: store_count=2, novos_units=2, novos_value=150000',
   )
   assert.deepEqual(
-    get('stores'),
+    stores.slice(0, 4),
     ['stores', '2', '2', '150000.00'],
-    'by_store: 2 linhas (uma por loja) cujas somas batem com o total por marca',
+    'by_store: 2 linhas (uma por loja) cujas somas de novos batem com o total por marca',
+  )
+
+  // AC2 highlight FP <7d: as somas at-risk por loja DEVEM bater com o total por
+  // marca — e nao podem ser triviais (0). Cada loja tem 1 unidade at-risk.
+  const brandFpUnits = Number(brand[4])
+  const brandFpValue = Number(brand[5])
+  const storesFpUnits = Number(stores[4])
+  const storesFpValue = Number(stores[5])
+
+  assert.ok(
+    brandFpUnits > 0 && brandFpValue > 0,
+    `cenario nao-trivial: by_brand deveria ter fp_*_at_risk > 0; obtido units=${brandFpUnits} value=${brandFpValue}`,
+  )
+  assert.equal(
+    brandFpUnits,
+    2,
+    `by_brand: fp_units_at_risk deveria ser 2 (um at-risk por loja); obtido=${brandFpUnits}`,
+  )
+  assert.equal(
+    storesFpUnits,
+    brandFpUnits,
+    `SUM(fp_units_at_risk) por loja deveria igualar o total por marca; stores=${storesFpUnits} brand=${brandFpUnits}`,
+  )
+  assert.equal(
+    storesFpValue,
+    brandFpValue,
+    `SUM(fp_value_at_risk) por loja deveria igualar o total por marca; stores=${storesFpValue} brand=${brandFpValue}`,
   )
 })
 

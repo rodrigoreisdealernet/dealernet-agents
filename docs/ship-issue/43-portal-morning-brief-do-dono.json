@@ -4,9 +4,9 @@
   "slug": "43-portal-morning-brief-do-dono",
   "branch": "feature/43-portal-morning-brief-do-dono",
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/43",
-  "pr": null,
-  "prUrl": null,
-  "updatedAt": "2026-06-25T21:34:15.662Z",
+  "pr": "48",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/48",
+  "updatedAt": "2026-06-25T21:39:08.797Z",
   "steps": [
     {
       "id": "spec",
@@ -50,8 +50,8 @@
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "running",
-      "summary": "",
+      "status": "done",
+      "summary": "27 testes verdes (12 SQL contrato + 15 wiring)",
       "artifacts": [],
       "notes": [
         "Estudando harness psql/node --test; escrevendo contrato SQL das views owner_brief + wiring frontend",
@@ -62,10 +62,13 @@
     {
       "id": "test-review",
       "label": "05 · Test review",
-      "status": "pending",
+      "status": "running",
       "summary": "",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "Blocking: FP at-risk drill sums not tested; 4 non-blocking suggestions",
+        "tester: drill agora soma fp_units_at_risk/fp_value_at_risk (iteração 1)"
+      ],
       "gate": null
     },
     {

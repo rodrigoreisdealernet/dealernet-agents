@@ -150,10 +150,28 @@ test('AC tela: drill de marca -> lojas (StoresDrill + indexacao por marca)', () 
   assert.match(src, /setOpenBrand\(/, 'tocar numa marca deve abrir o drill (setOpenBrand)')
 })
 
-test('AC tela: card Grupo Total soma as marcas', () => {
+test('AC tela: card Grupo Total soma as marcas (reduce sobre as brands)', () => {
   const src = read(MORNING_BRIEF)
   assert.match(src, /function\s+groupTotal\b/, 'deve existir a soma das marcas (groupTotal)')
   assert.match(src, /brand_name:\s*'Grupo Total'/, "groupTotal deve produzir a linha 'Grupo Total'")
+  // O corpo da funcao deve realmente AGREGAR sobre o array de marcas (reduce/
+  // some acumulando o campo escolhido) — nao apenas estampar o rotulo. Isola o
+  // corpo de groupTotal e prova que ele itera as brands somando os valores.
+  const body = exportedFnBody(src, 'function groupTotal')
+  assert.match(
+    body,
+    /brands\.reduce\(\s*\([^)]*\)\s*=>\s*acc\s*\+\s*\(pick\([^)]*\)\s*\?\?\s*0\)/,
+    'groupTotal deve reduzir (somar) os valores escolhidos sobre o array brands',
+  )
+  // E o resultado por setor/FP deve sair do agregador (sum/sumOrNull) — i.e. os
+  // totais por marca sendo somados, e nao constantes/labels.
+  for (const field of ['novos_value', 'fp_units_at_risk', 'fp_value_at_risk', 'resultado']) {
+    assert.match(
+      body,
+      new RegExp(`${field}:\\s*sum(OrNull)?\\(`),
+      `groupTotal.${field} deve vir do agregador (sum/sumOrNull sobre as marcas)`,
+    )
+  }
 })
 
 test('AC tela: destaque Floor Plan <7d em risco (vermelho quando ha unidades)', () => {
