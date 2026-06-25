@@ -4,9 +4,9 @@
   "slug": "feat-frontend-widget-chartcard-recharts",
   "branch": "feature/13-feat-frontend-widget-chartcard-recharts",
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/13",
-  "pr": null,
+  "pr": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/20",
   "prUrl": null,
-  "updatedAt": "2026-06-25T18:29:11.743Z",
+  "updatedAt": "2026-06-25T18:31:37.806Z",
   "steps": [
     {
       "id": "spec",
@@ -38,8 +38,8 @@
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "pending",
-      "summary": "",
+      "status": "done",
+      "summary": "verify-chartcard.mjs (10 asserts) wired; suite 25/25 verde",
       "artifacts": [],
       "notes": [],
       "gate": null

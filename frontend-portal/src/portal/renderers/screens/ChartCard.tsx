@@ -41,7 +41,6 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { cn } from '@/lib/utils'
 import { formatBRL, formatPct } from './format'
 
 export type ChartType = 'line' | 'bar' | 'pie'
