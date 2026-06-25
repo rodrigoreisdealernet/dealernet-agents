@@ -924,10 +924,10 @@ export async function getInventorySummary(): Promise<InventorySummaryRow[]> {
 // leitura — uma linha por marca (e por marca/loja no drill) com os 5 setores do
 // dia anterior. Setores sem dado vêm NULL → a tela renderiza "—".
 
-export interface OwnerBriefBrandRow {
+// Base comum às duas views (sem store_count, que só existe na view por marca).
+export interface OwnerBriefBaseRow {
   brand_name: string | null
   brand_id: string | null
-  store_count: number | null
   novos_units: number | null
   novos_value: number | null
   novos_margin: number | null
@@ -945,14 +945,22 @@ export interface OwnerBriefBrandRow {
   resultado: number | null
 }
 
-export interface OwnerBriefStoreRow extends OwnerBriefBrandRow {
+// view por marca: base + store_count (quantas lojas a marca agrega).
+export interface OwnerBriefBrandRow extends OwnerBriefBaseRow {
+  store_count: number | null
+}
+
+// view por loja (drill): base + store_name. NÃO tem store_count (não existe na view).
+export interface OwnerBriefStoreRow extends OwnerBriefBaseRow {
   store_name: string | null
 }
 
-const OWNER_BRIEF_BRAND_COLS =
-  'brand_name, brand_id, store_count, novos_units, novos_value, novos_margin, usados_units, usados_value, usados_margin, pecas_value, pecas_margin, at_value, at_margin, fp_units, fp_value, fp_units_at_risk, fp_value_at_risk, resultado'
+const OWNER_BRIEF_BASE_COLS =
+  'brand_name, brand_id, novos_units, novos_value, novos_margin, usados_units, usados_value, usados_margin, pecas_value, pecas_margin, at_value, at_margin, fp_units, fp_value, fp_units_at_risk, fp_value_at_risk, resultado'
 
-const OWNER_BRIEF_STORE_COLS = `${OWNER_BRIEF_BRAND_COLS}, store_name`
+const OWNER_BRIEF_BRAND_COLS = `${OWNER_BRIEF_BASE_COLS}, store_count`
+
+const OWNER_BRIEF_STORE_COLS = `${OWNER_BRIEF_BASE_COLS}, store_name`
 
 export async function getOwnerBriefByBrand(): Promise<OwnerBriefBrandRow[]> {
   const res = (await supabase
