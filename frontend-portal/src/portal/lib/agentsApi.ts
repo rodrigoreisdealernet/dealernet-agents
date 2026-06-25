@@ -522,6 +522,91 @@ export async function updateProfile(userId: string, input: ProfileUpdateInput): 
   unwrap(res)
 }
 
+// ── Ordens de Serviço / Oficina (DIA dealership domain, issue #7) ────────────
+// Leitura direta da view v_dia_service_order_current (security_invoker → RLS
+// authenticated). Escrita SEMPRE via RPCs endurecidas (create/update/delete_
+// service_order): o cliente NÃO faz INSERT/UPDATE direto.
+
+export type ServiceOrderStatus = 'aberta' | 'em_andamento' | 'concluida' | 'cancelada'
+
+export interface ServiceOrderRow {
+  entity_id: string
+  source_record_id: string | null
+  name: string | null
+  order_number: string | null
+  customer: string | null
+  vehicle: string | null
+  description: string | null
+  status: ServiceOrderStatus | string
+  opened_at: string | null
+  closed_at: string | null
+  revenue: number | null
+  technician: string | null
+  turnaround_hours: number | null
+}
+
+/** Campos editáveis da OS (payload das RPCs create/update_service_order). */
+export interface ServiceOrderInput {
+  order_number?: string | null
+  customer: string
+  vehicle?: string | null
+  description: string
+  status?: ServiceOrderStatus
+  opened_at?: string | null
+  closed_at?: string | null
+  revenue?: number | null
+  technician?: string | null
+}
+
+const SERVICE_ORDER_COLS =
+  'entity_id, source_record_id, name, order_number, customer, vehicle, description, status, opened_at, closed_at, revenue, technician, turnaround_hours'
+
+export async function getServiceOrders(): Promise<ServiceOrderRow[]> {
+  const res = (await supabase
+    .from('v_dia_service_order_current')
+    .select(SERVICE_ORDER_COLS)
+    .order('opened_at', { ascending: false })) as PgResponse<ServiceOrderRow[]>
+  return unwrap(res) ?? []
+}
+
+// Remove chaves undefined/null vazias para não sobrescrever no merge do update.
+function serviceOrderPayload(input: ServiceOrderInput): Record<string, unknown> {
+  const p: Record<string, unknown> = {
+    customer: input.customer,
+    description: input.description,
+  }
+  if (input.order_number) p.order_number = input.order_number
+  if (input.vehicle) p.vehicle = input.vehicle
+  if (input.status) p.status = input.status
+  if (input.opened_at) p.opened_at = input.opened_at
+  if (input.closed_at) p.closed_at = input.closed_at
+  if (input.revenue != null) p.revenue = input.revenue
+  if (input.technician) p.technician = input.technician
+  return p
+}
+
+export async function createServiceOrder(input: ServiceOrderInput): Promise<void> {
+  const res = (await supabase.rpc('create_service_order', {
+    p_data: serviceOrderPayload(input),
+  })) as PgResponse<unknown>
+  unwrap(res)
+}
+
+export async function updateServiceOrder(entityId: string, input: Partial<ServiceOrderInput>): Promise<void> {
+  const res = (await supabase.rpc('update_service_order', {
+    p_entity_id: entityId,
+    p_data: serviceOrderPayload(input as ServiceOrderInput),
+  })) as PgResponse<unknown>
+  unwrap(res)
+}
+
+export async function deleteServiceOrder(entityId: string): Promise<void> {
+  const res = (await supabase.rpc('delete_service_order', {
+    p_entity_id: entityId,
+  })) as PgResponse<unknown>
+  unwrap(res)
+}
+
 // ── Decisão (escrita) via ops-api — POST /api/ops/findings/decision (ver PRD §6.4) ──
 const OPS_API_URL = ENV.VITE_OPS_API_URL || '/api/ops'
 

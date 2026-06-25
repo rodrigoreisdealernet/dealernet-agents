@@ -1,0 +1,75 @@
+{
+  "issue": "7",
+  "title": "feat: Ordem de Serviço (Oficina) — entidade + CRUD",
+  "slug": "feat-ordem-de-servico-oficina",
+  "branch": "feature/7-feat-ordem-de-servico-oficina",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/7",
+  "pr": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/24",
+  "prUrl": null,
+  "updatedAt": "2026-06-25T18:36:34.634Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "Spec written and posted to issue",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Auto-approved (batch)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": "Migration, RPCs, view, seed, screen implemented (commit 2939ea7)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "done",
+      "summary": "Contract tests written (commit 47d64b1); draft PR #24",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "done",
+      "summary": "Reviewer approve-quality: 0 blockers/majors, faithful mirror of vehicle slice",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "waiting",
+      "summary": "Ready for human merge gate",
+      "artifacts": [],
+      "notes": [],
+      "gate": "merge"
+    }
+  ]
+}

@@ -137,6 +137,13 @@ const MOCK_MENU: MenuItem[] = [
         icon: 'fa-tag',
         spec: { title: 'Marcas', kind: 'component', componentKey: 'dia-brands' },
       },
+      // DIA dealership domain (issue #7) — Oficina / ordens de serviço (/dia/service-orders).
+      {
+        id: 'dealership-service-orders',
+        text: 'Ordens de Serviço',
+        icon: 'fa-wrench',
+        spec: { title: 'Ordens de Serviço', kind: 'component', componentKey: 'dia-service-orders' },
+      },
     ],
   },
   // Administração (issue #6) — gestão de usuários/perfis; visível só para admin.
