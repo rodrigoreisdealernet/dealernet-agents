@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/13",
   "pr": null,
   "prUrl": null,
-  "updatedAt": "2026-06-25T18:25:45.904Z",
+  "updatedAt": "2026-06-25T18:29:11.743Z",
   "steps": [
     {
       "id": "spec",
@@ -29,8 +29,8 @@
     {
       "id": "code",
       "label": "03 · Code",
-      "status": "pending",
-      "summary": "",
+      "status": "done",
+      "summary": "ChartCard.tsx (line/bar/pie, ResponsiveContainer, value formatters, empty state, theme tokens); recharts ^2.13.0 add",
       "artifacts": [],
       "notes": [],
       "gate": null
