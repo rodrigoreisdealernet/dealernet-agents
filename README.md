@@ -1,11 +1,11 @@
-# Dealernet — Equipment Rental Platform
+# DIA Portal — Dealernet Automotive DMS
 
-An equipment-rental ERP for **Dealernet** (Volaris Group) — the RentalMan problem space: assets and fleet, rental orders and contracts, billing and invoicing, transfers, inspections, and maintenance. It is designed and operated by AI agents end to end.
+**DIA Portal** is the Dealernet (Volaris Group) **DMS for automotive dealerships** — vehicles (frota), service orders (ordem de serviço/oficina), parts and inventory (peças/almoxarifado), master data (dados mestres), and **agentic BI** over a self-hosted Supabase data layer. It is designed and operated by AI agents end to end.
 
 This repository holds both the product and the autonomous system that designs, builds, runs, and plans it:
 
-- **The product** — a rental-ERP web app over a self-hosted Supabase data layer, with **Temporal**-orchestrated rental operations (order → contract → checkout → return → inspection → invoice).
-- **The factories that run it** — an autonomous **software factory** (GitHub Actions + role-based agents) that triages, designs, builds, reviews, and ships the product, and an emerging agentic **Operations Factory** (Temporal + Azure OpenAI) that automates the tedious rental back-office work — revenue recognition, fleet-utilization audits, billing reconciliation, maintenance triage — for the people who use the software.
+- **The product** — a DMS web app over a self-hosted Supabase data layer, with **Temporal**-orchestrated agentic operations for the automotive dealership domain (vehicles, service orders, parts/inventory, master data, and BI).
+- **The factories that run it** — an autonomous **software factory** (GitHub Actions + role-based agents) that triages, designs, builds, reviews, and ships the product, and an emerging agentic **Operations Factory** (Temporal + Azure OpenAI) that automates tedious dealership back-office work — reporting, reconciliation, and operational audits — for the people who use the software.
 - **How they decide what to build (and how to build it agentically)** — three layers that feed the factory:
   - an **operating model** ([`docs/discovery/domain/`](./docs/discovery/domain/README.md)) answering *"what does it take to run an X?"* — the target business mapped into roles → real, cited tasks, with a calibrated **coverage % and ROI** (Hubbard-style 90% CIs) and a bridge that turns the highest-value gaps into the backlog as **one epic per role**;
   - a nightly **discovery pipeline** ([`docs/discovery/`](./docs/discovery/README.md)) that researches the market and matures product ideas from raw signal to design-ready;
@@ -19,11 +19,12 @@ This repository holds both the product and the autonomous system that designs, b
 
 Core entities (stored in a generic entity model with SCD2 history — see [ADR-0001](./docs/adrs/0001-generic-entity-model-scd2.md)):
 
-- **Assets** organized by **Category**, homed at **Branches**, moving through availability states (available → on_rent → returned → inspection_hold → maintenance).
-- **Customers** with **Billing Accounts**, **Contacts**, and **Job Sites**.
-- **Rental Orders** → **Contracts** → **Invoices**, plus **Transfers**, **Inspections**, and **Maintenance Records**.
+- **Vehicles** (frota) and their master data, organized by **Company/Brand** (empresa/marca).
+- **Service Orders** (ordem de serviço/oficina) running through the workshop lifecycle.
+- **Parts & Inventory** (peças/almoxarifado), including parts sales.
+- **Users & master data** (dados mestres) plus an **agentic BI** analytics layer over the operational data.
 
-Full model: [`docs/specs/equipment-rental-domain-model.md`](./docs/specs/equipment-rental-domain-model.md).
+Full model: see the per-entity design specs under [`docs/specs/`](./docs/specs/) (e.g. [Vehicle](./docs/specs/4-vehicle-crud.md), [Service Order](./docs/specs/7-feat-ordem-de-servico-oficina.md), [Parts](./docs/specs/8-feat-pecas-entidade-crud.md)) and the [data model & security](./docs/architecture/data-model.md) architecture page.
 
 ## The stack
 
@@ -31,10 +32,10 @@ Full model: [`docs/specs/equipment-rental-domain-model.md`](./docs/specs/equipme
 |------|--------|----------|
 | Frontend | React 18 + Vite + TanStack Router/Query; **JSON-driven UI engine** (screens are declarative JSON over the entity model) | [ADR-0016](./docs/adrs/0016-json-driven-ui-engine.md), [ADR-0017](./docs/adrs/0017-frontend-data-layer-supabase-anon.md) |
 | Data | **Self-hosted, open-source Supabase** (Postgres + PostgREST + GoTrue + Kong) in-cluster | [ADR-0013](./docs/adrs/0013-self-host-supabase-in-cluster.md) |
-| Workflows | **Temporal** (Python) for rental operations and agentic ops; human-in-the-loop via signals | [ADR-0003](./docs/adrs/0003-temporal-workflow-orchestration.md), [ADR-0004](./docs/adrs/0004-signal-driven-human-in-the-loop.md) |
+| Workflows | **Temporal** (Python) for dealership operations and agentic ops; human-in-the-loop via signals | [ADR-0003](./docs/adrs/0003-temporal-workflow-orchestration.md), [ADR-0004](./docs/adrs/0004-signal-driven-human-in-the-loop.md) |
 | AI agents | **Azure OpenAI** `chat_with_tools` | [ADR-0005](./docs/adrs/0005-azure-openai-chat-with-tools-adapter.md) |
 | Build & deploy | AKS + Helm (dev/test/prod), images in ACR, **Azure Front Door** edge | [ADR-0012](./docs/adrs/0012-aks-helm-multienv-gated-promotion.md), [ADR-0015](./docs/adrs/0015-azure-front-door-external-edge.md) |
-| Factories | Software factory (builds the product) + Operations Factory (serves rental users) | [ADR-0006](./docs/adrs/0006-autonomous-software-factory.md), [ADR-0020](./docs/adrs/0020-operations-factory-agentic-ops.md) |
+| Factories | Software factory (builds the product) + Operations Factory (serves dealership users) | [ADR-0006](./docs/adrs/0006-autonomous-software-factory.md), [ADR-0020](./docs/adrs/0020-operations-factory-agentic-ops.md) |
 
 ## Repository map
 
@@ -43,7 +44,7 @@ Where things live, at a glance:
 | Path | What's there |
 |------|--------------|
 | [`frontend-portal/`](./frontend-portal/) | DIA **Portal DMS** shell — React 18 + Vite + Tailwind, MDI window manager, native AI-Operations screens (`src/portal/renderers/screens/`) over the Supabase data layer |
-| [`temporal/`](./temporal/) | Python Temporal workers — rental + agentic-ops workflows, activities, and pytest suites |
+| [`temporal/`](./temporal/) | Python Temporal workers — dealership + agentic-ops workflows, activities, and pytest suites |
 | [`supabase/`](./supabase/) | Postgres migrations, seed, and RLS / access-control contract tests |
 | [`charts/`](./charts/) | Helm charts — app, monitoring, observability |
 | [`deploy/`](./deploy/) | Kubernetes + OpenBao deploy surface |
@@ -53,7 +54,7 @@ Where things live, at a glance:
 
 ## Live Dev Environment
 
-The rental-ERP MVP is deployed to Kubernetes (`aks-selfheal-staging`) with a fully
+The DIA Portal DMS MVP is deployed to Kubernetes (`aks-selfheal-staging`) with a fully
 **self-hosted, open-source Supabase** stack in-cluster. Full deploy details:
 [`PHASE2-DEPLOYMENT.md`](./PHASE2-DEPLOYMENT.md).
 
@@ -91,6 +92,12 @@ Passwords are **not committed** — they are stored as secrets (`DEMO_ADMIN_PASS
 demo credentials using the [secret operations runbook](./docs/runbooks/secret-operations.md).
 Contact a maintainer for current environment credentials, or run the seed script
 yourself against a local Supabase instance with passwords of your choosing.
+
+> **Note:** the `@dia-rental.dev` domain on the seeded demo accounts is a **legacy
+> placeholder** carried over from the project's earlier name — it is just a throwaway
+> dev-account label, not the product's business domain (the product is the DIA Portal
+> automotive DMS). The underlying seeded accounts are unchanged; renaming them is
+> follow-up infra work, out of scope for this doc.
 
 | Email | Role |
 |-------|------|
@@ -160,6 +167,8 @@ migrated and the demo **baseline** data is seeded.
 
 **In-cluster fallback** (if Front Door is mid-propagation):
 ```bash
+# the in-cluster Service is named "<helm-release>-frontend" (legacy release name "rental-app"
+# yields "rental-app-frontend"); the app it serves is the DIA Portal frontend (frontend-portal/).
 kubectl -n dia-test port-forward svc/rental-app-frontend 8080:80   # → http://localhost:8080
 ```
 
@@ -256,7 +265,7 @@ TEMPORAL_ADDRESS=localhost:7234 python -m src.worker
 | Suite | What it covers | Where | Run |
 |------|----------------|-------|-----|
 | **Frontend Portal (lint, build, test)** | DIA Portal shell — ESLint, type-checked build (`tsc -b && vite build`), and the DIA-branding verification test | [`frontend-portal/`](./frontend-portal/) | `cd frontend-portal && npm run lint && npm run build && npm test` |
-| **Temporal worker** | Rental-operations workflows & activities (pytest) | [`temporal/tests/`](./temporal/tests/) | `python -m pytest temporal/tests/ -v` |
+| **Temporal worker** | Dealership-operations workflows & activities (pytest) | [`temporal/tests/`](./temporal/tests/) | `python -m pytest temporal/tests/ -v` |
 | **Supabase access-control contract** | RLS / role boundaries on the data layer (details [below](#supabase-api-access-control-contract-tests)) | [`test_supabase_api_access_contract.py`](./temporal/tests/test_supabase_api_access_contract.py) | `python -m pytest temporal/tests/test_supabase_api_access_contract.py -v` |
 
 > **Note (2026-06-25):** the inherited Playwright E2E / Visual-UX suites and the heavy CI factory belonged to the removed `frontend/` (dia-frontend) and live under `.github/workflows.disabled/`. The active gate is the slim [`ci.yml`](./.github/workflows/ci.yml) (guard-rails + the `frontend-portal` lint/build/test job). Re-establishing E2E for the Portal is follow-up work.
@@ -295,8 +304,8 @@ ADRs/specs for the depth on any one decision.
 | Page | Covers |
 |------|--------|
 | [Overview](./docs/architecture/README.md) | System context, container diagram, how the pieces relate |
-| [Product architecture](./docs/architecture/product-architecture.md) | JSON-driven UI engine, Supabase data layer, Temporal rental workflows |
-| [Data model & security](./docs/architecture/data-model.md) | Generic entity model + SCD2, rental domain graph, RLS / role model, write-RPC guards |
+| [Product architecture](./docs/architecture/product-architecture.md) | Portal DMS shell, Supabase data layer, Temporal dealership workflows |
+| [Data model & security](./docs/architecture/data-model.md) | Generic entity model + SCD2, automotive domain graph, RLS / role model, write-RPC guards |
 | [Software Factory](./docs/architecture/software-factory.md) | Role-based agents, cadence pipelines, the issue→PR→merge→deploy lifecycle |
 | [Operations Factory](./docs/architecture/operations-factory.md) | Agentic ops (Rev-Rec), the `chat_with_tools` loop, findings & approvals |
 | [CI/CD & GitHub Actions](./docs/architecture/ci-cd-pipelines.md) | **Catalogue of every workflow and why it exists**, the six bands (CI gate · Build · Deploy · Verify · Agents · Monitor), the `«Band» · «Name»` naming convention, and the placement rule for adding a new workflow |
@@ -309,7 +318,7 @@ ADRs/specs for the depth on any one decision.
 
 ### Decisions & designs
 - [`docs/adrs/`](./docs/adrs/) — **Architecture Decision Records.** The reference point for reviews; start at the [index](./docs/adrs/README.md).
-- [`docs/specs/`](./docs/specs/) — design specs: the [domain model](./docs/specs/equipment-rental-domain-model.md), [logistics telemetry + ELD compliance contract](./docs/specs/logistics-telemetry-compliance-contract.md), the [software factory](./docs/specs/software-creation-factory.md), [live-cluster deployment](./docs/specs/live-cluster-deploy-smoke-rollback.md), and the [Operations Factory](./docs/specs/operations-factory-agentic-workflows.md).
+- [`docs/specs/`](./docs/specs/) — design specs: the automotive domain entities ([Vehicle](./docs/specs/4-vehicle-crud.md), [Service Order](./docs/specs/7-feat-ordem-de-servico-oficina.md), [Parts](./docs/specs/8-feat-pecas-entidade-crud.md)), the [software factory](./docs/specs/software-creation-factory.md), [live-cluster deployment](./docs/specs/live-cluster-deploy-smoke-rollback.md), and the [Operations Factory](./docs/specs/operations-factory-agentic-workflows.md).
 - [`DATABASE.md`](./DATABASE.md) — the generic entity-model + SCD2 schema template the data layer is built on.
 
 ### Operational runbooks
@@ -319,7 +328,7 @@ ADRs/specs for the depth on any one decision.
 - [`PHASE2-DEPLOYMENT.md`](./PHASE2-DEPLOYMENT.md) — live deployment details (AKS, Supabase, Front Door).
 
 ### Product & end-user docs
-- [`docs/user-guide/`](./docs/user-guide/README.md) — end-user how-to guides for the rental ERP.
+- [`docs/user-guide/`](./docs/user-guide/README.md) — end-user how-to guides for the DIA Portal DMS.
 - [`docs/release-notes/`](./docs/release-notes/README.md) — plain-language record of what shipped, build over build.
 
 ### Contributing / conventions
