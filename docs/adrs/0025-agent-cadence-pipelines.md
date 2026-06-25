@@ -4,6 +4,9 @@
 - **Date:** 2026-06-08
 - **Deciders:** Factory Architect, Owner (Ian)
 
+> **Status atual (2026-06-25):** this ADR records the accepted design, but its GitHub Actions implementation is currently parked in `.github/workflows.disabled/`. Only `.github/workflows/ci.yml` is active; the factory operates via local Claude Code skills (`/ship-issue`, `/ship-batch`) until an explicit reactivation.
+
+
 ## Context
 
 The factory currently runs **11 independent agent workflows**, each on its own

@@ -1,0 +1,96 @@
+{
+  "issue": "50",
+  "title": "docs: alinhar docs de arquitetura/ops à realidade — workflows da 'software factory' estão desativados",
+  "slug": "docs-alinhar-docs-de-arquitetura",
+  "branch": "feature/50-docs-alinhar-docs-de-arquitetura",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/50",
+  "pr": null,
+  "prUrl": null,
+  "updatedAt": "2026-06-25T22:11:15.379Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "6 acceptance criteria drafted",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/50-docs-alinhar-docs-de-arquitetura.md"
+        }
+      ],
+      "notes": [
+        "Investigando estado real: workflows ativos vs desativados",
+        "Redigindo spec: documentação descreve automação desativada em workflows.disabled/"
+      ],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec approved by human (--approved)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": "7 docs + 9 ADRs aligned to disabled-workflow reality (commit eb3cec4)",
+      "artifacts": [],
+      "notes": [
+        "starting coder pass; reading spec and verifying workflow state",
+        "inspecting workflows.disabled and scanning docs for live automation claims",
+        "editing architecture and operations docs to mark disabled Actions workflows",
+        "validating docs for unqualified schedule/Actions claims",
+        "committing documentation alignment changes",
+        "committed documentation alignment changes"
+      ],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "running",
+      "summary": "",
+      "artifacts": [],
+      "notes": [
+        "Tester starting: reading spec and preparing docs workflow regression guard.",
+        "Writing dependency-free node --test guard for workflow docs alignment.",
+        "Running node --test for the new workflow-docs regression guard.",
+        "Docs guard test is green; preparing commit.",
+        "Commit created; pushing branch and opening draft PR."
+      ],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    }
+  ]
+}

@@ -20,18 +20,40 @@ neighbouring docs and does not repeat their depth:
 
 ---
 
+> **⚠️ Status atual (2026-06-25):** a split ativo/desativado foi verificado no
+> filesystem: `.github/workflows/` contém apenas `ci.yml`; os workflows
+> `pipeline-*`, `pr-loop`, `pr-enrichment`, `pr-validation`, `build-images`,
+> `deploy-*`, `e2e-dev`, `visual-ux`, `code-quality`, `monitor-*`,
+> `agent-*`, `architecture-audit`, `k8s-render-validate` e
+> `alert-incident-bridge` estão em `.github/workflows.disabled/` e **não rodam
+> automaticamente hoje**. A fábrica opera via skills locais do Claude Code
+> (`/ship-issue`, `/ship-batch`), não por cron/Actions.
+>
+> Split verificado no worktree:
+> - ativo: `ci.yml`;
+> - desativados: `agent-cluster-guardian.yml`, `agent-tech-reviewer.yml`,
+>   `alert-incident-bridge.yml`, `architecture-audit.yml`, `build-images.yml`,
+>   `code-quality.yml`, `deploy-dev.yml`, `deploy-prod.yml`, `deploy-test.yml`,
+>   `e2e-dev.yml`, `k8s-render-validate.yml`, `mirror-temporal-ui-image.yml`,
+>   `monitor-actions.yml`, `monitor-deploy.yml`, `monitor-ops.yml`,
+>   `pipeline-daily.yml`, `pipeline-fast.yml`, `pipeline-hourly.yml`,
+>   `pipeline-weekly.yml`, `pr-enrichment.yml`, `pr-loop.yml`,
+>   `pr-validation.yml`, `roadmap-curation.yml`, `visual-ux.yml`.
+
 ## The shape in one picture
 
-There are **two clocks** in this repo and they meet at `main`:
+The designed architecture has **two clocks** that meet at `main`, but the GitHub
+Actions implementation of both clocks is currently disabled:
 
-1. **The agent clock** — the cadence pipelines (`pipeline-fast/hourly/daily`),
-   the dedicated **PR Loop**, and the event-driven Tech Reviewer. Together they
-   triage issues, assign work to Copilot, review PRs, and merge them.
-2. **The delivery clock** — event-driven CI/CD (`pr-validation` → `build-images`
-   → `deploy-dev` → `e2e-dev`, then manual `deploy-test` / `deploy-prod`).
+1. **Agent clock (disabled)** — the cadence pipelines (`pipeline-fast/hourly/daily`),
+   the dedicated **PR Loop**, and the event-driven Tech Reviewer.
+2. **Delivery clock (disabled except `ci.yml`)** — event-driven CI/CD
+   (`pr-validation` → `build-images` → `deploy-dev` → `e2e-dev`, then manual
+   `deploy-test` / `deploy-prod`).
 
-A merge to `main` is the hand-off point: the agent clock *produces* merges; the
-delivery clock *consumes* them.
+Today, `ci.yml` is the only automatic Actions validation. Issue shipping happens
+through local Claude Code skills; parked workflows are design/historical reference
+until deliberately reactivated.
 
 ```mermaid
 flowchart TB
@@ -86,9 +108,19 @@ flowchart TB
 
 ## Part 1 — Workflow catalogue
 
-Twenty-three workflows live in [`.github/workflows/`](../../.github/workflows/). They
-fall into **six bands**, and a workflow's band is determined by *what triggers it*, not
-by preference (see [Which band?](#which-band-the-placement-rule) and [Naming convention](#naming-convention)):
+Only `ci.yml` currently lives in [`.github/workflows/`](../../.github/workflows/)
+and runs automatically. The catalogue below describes the parked design: the listed
+workflows live in [`.github/workflows.disabled/`](../../.github/workflows.disabled/)
+and do **not** run on PRs, pushes, schedules, or `workflow_run` events today. They
+fall into **six bands**, and a workflow's band is determined by *what would trigger
+it*, not by preference (see [Which band?](#which-band-the-placement-rule) and
+[Naming convention](#naming-convention)):
+
+| Active today | Trigger | Role |
+|--------------|---------|------|
+| `ci.yml` | PR / push as configured in the active workflow | Current automatic validation gate |
+
+**Parked in `.github/workflows.disabled/`:**
 
 | Workflow | Trigger | Band | Role / why it exists |
 |----------|---------|------|------|
@@ -143,10 +175,11 @@ Display names (`name:`) carry the band as a prefix so the Actions list self-grou
 
 ### How they chain (the `workflow_run` graph)
 
-Workflows trigger each other via `workflow_run` — there is no monolithic pipeline,
-only an event chain. Solid arrows are automatic; dashed are manual. The crons on
-the left are the agent clock's heartbeat (offset so they don't compete: fast at
-:00/:15/:30/:45, hourly at :30, guardian at :45, E2E at :17).
+When reactivated, workflows trigger each other via `workflow_run` — there is no
+monolithic pipeline, only an event chain. In the current repo state these arrows
+are inactive because the workflows are parked in `.github/workflows.disabled/`.
+Solid arrows below mean automatic in the intended design; dashed are manual. The
+crons on the left are the designed agent clock heartbeat.
 
 ```mermaid
 flowchart TB
@@ -186,8 +219,9 @@ without re-running everything.
 
 ## Part 2 — How Copilot SDK agents run inside GitHub Actions
 
-This is the heart of the factory: **ordinary Actions workflows that host LLM agent
-sessions**. Everything lives in [`.github/tools/shared/`](../../.github/tools/shared/)
+This is the parked Actions design for the factory: **ordinary Actions workflows
+that host LLM agent sessions**. These workflows are currently disabled; local
+Claude Code skills are the active factory surface. Everything lives in [`.github/tools/shared/`](../../.github/tools/shared/)
 (TypeScript, vitest-covered) plus one markdown file per agent in
 [`.github/agents/`](../../.github/agents/).
 
@@ -342,7 +376,10 @@ The contract for all of this is locked by
 
 ## Part 3 — The agent cadence pipelines
 
-The autonomous loop runs on three scheduled pipelines, the PR Loop, two dedicated
+> **Inactive in Actions:** all workflows in this section are in
+> `.github/workflows.disabled/`; they do not run on schedules or events today.
+
+The intended autonomous loop runs on three scheduled pipelines, the PR Loop, two dedicated
 agent workflows, and event-driven monitors. Each pipeline is a sequence of agent
 *stages*; every stage is `continue-on-error: true` (or shell-equivalent) so one
 agent failing never blocks the rest
@@ -393,7 +430,7 @@ flowchart TB
 
 ### `pipeline-fast` — triage and review (the metronome)
 
-Runs a **single pass** per `*/15` tick: **Product Owner triage → conditional
+When reactivated, runs a **single pass** per `*/15` tick: **Product Owner triage → conditional
 specialist lanes → Tech Reviewer**, then exits. The specialist lanes
 (`labeled_work_exists` checks the label *before* spending a session) run before
 the Tech Reviewer so an open `needs-*-review` lane is cleared and the PR approved
@@ -420,14 +457,14 @@ multi-hour budget.
 ### `pr-loop` — the per-PR merge engine
 
 Covered in depth in [Part 2](#worked-example--the-pr-loop-run-pr-pipelinets).
-Operationally: `*/30` cron, 300-minute job cap, 270-minute pass budget, 8 min per
+Designed operation: `*/30` cron, 300-minute job cap, 270-minute pass budget, 8 min per
 PR, 5 min assignment, CI re-trigger cap 75. A long sweep simply holds the
 `pr-loop` concurrency group while the next tick queues — it never starves
 `pipeline-fast`, which keeps producing the approvals this loop merges on.
 
 ### `agent-tech-reviewer` — event-driven review latency
 
-Fires on every **Build Images** completion (i.e. fresh CI results on some head)
+When reactivated, fires on every **Build Images** completion (i.e. fresh CI results on some head)
 plus a `*/15` cron backstop, so a PR whose validation just finished gets reviewed
 within minutes rather than waiting for the next fast-pipeline pass. Sweeps are
 **serialised** (`concurrency: agent-tech-reviewer`, no cancel): a CI wave once
@@ -440,7 +477,7 @@ concurrency group means at most one executes at a time per driver.
 
 ### `pipeline-hourly` — design, QA, and ops posture
 
-Two lanes at :30, deliberately split so private/runtime coverage can never *look*
+When reactivated, two lanes at :30, deliberately split so private/runtime coverage can never *look*
 healthy when its prerequisites are missing:
 
 - **Public lane** (github-hosted): Factory Architect (12 m) → QA Manager (20 m) →
@@ -454,7 +491,7 @@ healthy when its prerequisites are missing:
 
 ### `agent-cluster-guardian` — detection always, mutation only with approval
 
-At :45 (offset from hourly's :30): preflight (kubernetes-app profile enabled,
+When reactivated, at :45 (offset from hourly's :30): preflight (kubernetes-app profile enabled,
 namespace allowlist is non-empty and all `dia-*`, guardian runner online) →
 **detect** (read-only `cluster-guardian` agent on the self-hosted runner, files
 deduped `auto:cluster` issues). The **remediate** job (`cluster-remediator`:
@@ -465,15 +502,15 @@ protected environment. A scheduled run can *never* mutate the cluster.
 
 ### `pipeline-daily` — docs
 
-06:00 UTC: Docs Improver (12 m) → User Docs Manager (12 m).
+When reactivated, 06:00 UTC: Docs Improver (12 m) → User Docs Manager (12 m).
 
 ### Monitors
 
-- `monitor-deploy` (**working**): fires only when Deploy Dev or E2E concludes
+- `monitor-deploy` (**disabled today**): when reactivated, fires only when Deploy Dev or E2E concludes
   `failure`; the `deploy-sentinel` agent root-causes the run and guarantees a
   deduped `priority:critical` incident — covering the low-frequency deploy runs a
   polling monitor would miss (#533).
-- `monitor-actions` / `monitor-ops` (**currently no-oping** — see known gaps):
+- `monitor-actions` / `monitor-ops` (**disabled today**): when reactivated,
   every 15 minutes, intended to classify failed Actions runs and watch Ops
   Factory SLAs respectively.
 
@@ -503,15 +540,12 @@ outer `timeout`, which overrides the agents' own 15-minute frontmatter budgets.)
 
 ### ⚠️ Known gaps (2026-06-10)
 
-**Open — `monitor-actions` and `monitor-ops` silently skip every run.** Both
-workflows still carry the `AZURE_API_*` env from the short-lived Azure-REST agent
-experiment (commit `bb3e4c9`) and were never given `COPILOT_GITHUB_TOKEN` back
-when the SDK runner was restored (`70e27c8`). `run-agent.ts` soft-skips without
-that token, so both jobs exit green having done nothing — the actions-monitor and
-ops-monitor agents are effectively **off**, and failed-run incident coverage rests
-on `monitor-deploy` (which is wired correctly) plus humans. Fix: replace the
-`AZURE_API_*` block with `COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}` in
-both workflows.
+**Historical gap before disablement — `monitor-actions` and `monitor-ops`
+silently skipped every run.** These workflows are now parked in
+`.github/workflows.disabled/`, so they do not run at all today. Before reactivation,
+re-check the old token gap: both workflows carried the `AZURE_API_*` env from the
+short-lived Azure-REST agent experiment (commit `bb3e4c9`) and were never given
+`COPILOT_GITHUB_TOKEN` back when the SDK runner was restored (`70e27c8`).
 
 **Resolved — fast pipeline self-cancellation** (69% of runs cancelled): timer-only
 design, #704/#705 — see the design note above.
@@ -527,7 +561,9 @@ re-trigger pre-pass and code-enforced caps (pr-loop.yml, PR #1052).
 
 ## Part 4 — The test gate (`pr-validation`)
 
-Every PR to `main` and every push to `main` runs **PR Validation**. It is the
+The legacy **PR Validation** workflow is currently disabled. Today the active
+validation surface is `ci.yml`; the details below describe the parked
+`pr-validation.yml` design. It is the
 authoritative quality gate: nothing reaches `main` without it going green. All jobs
 run in parallel on `ubuntu-latest`; a `validation-summary` job (`if: always()`)
 renders the result table.
@@ -569,8 +605,8 @@ by inspecting changed paths against the linked issue's declared scope.
 ### E2E — the *out-of-band* gate
 
 Playwright E2E does **not** run in `pr-validation` because it tests the *deployed*
-dev app, not the PR branch ([ADR-0018](../adrs/0018-real-environment-e2e.md)). It
-runs hourly (`17 * * * *`) and after every dev deploy, against
+dev app, not the PR branch ([ADR-0018](../adrs/0018-real-environment-e2e.md)). `e2e-dev.yml` is currently disabled; it does not run hourly or after dev deploy
+today. When reactivated, it runs hourly (`17 * * * *`) and after every dev deploy, against
 `E2E_BASE_URL` (the live dev URL behind Front Door):
 
 - **Gating smoke** — `smoke`, `auth-access-control`, `roles-data-access`,
@@ -586,7 +622,7 @@ Playwright config: chromium, 2 retries (real-env flake tolerance), 45 s/test.
 
 ## Part 5 — Test trend history
 
-Results are appended to two **orphan branches** (no parent commit) — durable,
+In the parked design, results are appended to two **orphan branches** (no parent commit) — durable,
 machine-readable history independent of any external dashboard service.
 
 ```mermaid
@@ -618,7 +654,7 @@ report into a JSONL row; `*-history-render.mjs` regenerate the dashboard).
 
 ## Part 6 — Build & the promotion path
 
-The promotion contract is **build once, promote the digest**
+The parked promotion contract is **build once, promote the digest**
 ([ADR-0010](../adrs/0010-immutable-images-push-gating-digest-promotion.md)): the
 same image SHA256 that ran in dev is the one that runs in test and prod — no
 per-environment rebuild.
@@ -649,10 +685,10 @@ flowchart TB
 
 | Stage | Trigger | Gate | Target | Concurrency |
 |-------|---------|------|--------|-------------|
-| **build-images** | PR (build-only) · push `main` (build+push) | ACR push only on `main` *and* when `ACR_*` creds present (else clean skip, no red) | ACR + digest artifacts | per-ref |
-| **deploy-dev** | `workflow_run: Build Images == success` on `main` · manual | preflight: `K8S_DEPLOY_ENABLED` + `DIA_DEV_NAMESPACE` + `KUBE_CONFIG_DEV` | `dia-dev` | `cancel-in-progress: false` — in-flight deploy completes; GitHub keeps only the newest pending run |
-| **deploy-test** (UAT) | manual `workflow_dispatch` (`sha` preferred; `build_run_id` legacy) | preflight + **GitHub Environment `test` reviewer approval** (configure reviewers) | `dia-test` | `cancel-in-progress: false` |
-| **deploy-prod** | manual `workflow_dispatch` (`sha` preferred; `build_run_id` legacy) | preflight + **GitHub Environment `prod` reviewer approval** | `dia-prod` | `cancel-in-progress: false` |
+| **build-images** | **Disabled today**; designed for PR (build-only) · push `main` (build+push) | ACR push only on `main` *and* when `ACR_*` creds present (else clean skip, no red) | ACR + digest artifacts | per-ref |
+| **deploy-dev** | **Disabled today**; designed for `workflow_run: Build Images == success` on `main` · manual | preflight: `K8S_DEPLOY_ENABLED` + `DIA_DEV_NAMESPACE` + `KUBE_CONFIG_DEV` | `dia-dev` | `cancel-in-progress: false` — in-flight deploy completes; GitHub keeps only the newest pending run |
+| **deploy-test** (UAT) | **Disabled today**; designed for manual `workflow_dispatch` (`sha` preferred; `build_run_id` legacy) | preflight + **GitHub Environment `test` reviewer approval** (configure reviewers) | `dia-test` | `cancel-in-progress: false` |
+| **deploy-prod** | **Disabled today**; designed for manual `workflow_dispatch` (`sha` preferred; `build_run_id` legacy) | preflight + **GitHub Environment `prod` reviewer approval** | `dia-prod` | `cancel-in-progress: false` |
 
 All three deploys run `helm upgrade --install rental-app charts/app -f
 charts/app/values-<env>.yaml` with `--wait --timeout 10m`, pinning
@@ -662,7 +698,7 @@ two images are built).
 
 ### What's special about each gate
 
-- **The dev gate is automatic but defensive.** `deploy-dev` only fires when Build
+- **The dev gate is disabled today; in the intended design it is automatic but defensive.** `deploy-dev` only fires when Build
   Images concluded `success` on `main`. Its `preflight` job emits two independent
   flags — `app_enabled` and `bootstrap_enabled` — so a missing DB-bootstrap secret
   **does not freeze the app deploy** (decoupled in #303 — a prior coupling silently
@@ -696,7 +732,9 @@ two images are built).
 
 ### Failure handling
 
-A failed `deploy-dev` triggers its own `deploy-failure-sentinel` job *and*
+While disabled, a failed or stale dev environment will not trigger
+`deploy-failure-sentinel` or `monitor-deploy`. In the intended design, a failed
+`deploy-dev` triggers its own `deploy-failure-sentinel` job *and*
 `monitor-deploy` (the `deploy-sentinel` agent) root-causes the failed run and
 guarantees a deduped `priority:critical` incident — covering the low-frequency
 deploy runs that a polling monitor would miss
@@ -712,11 +750,11 @@ are the state machine ([ADR-0009 label-driven routing](../adrs/0009-label-driven
 ```mermaid
 stateDiagram-v2
     [*] --> needs_triage: issue filed
-    needs_triage --> queue_x: Product Owner triages (fast)
+    needs_triage --> queue_x: Product Owner triages (fast, disabled today)
     queue_x --> design: queue:architecture
     queue_x --> ready_for_dev: simple → queue:development
-    design --> ready_for_dev: Factory Architect<br/>design-approved (hourly)
-    ready_for_dev --> assigned: PR Loop assignment session<br/>(code-gated cap of 8)
+    design --> ready_for_dev: Factory Architect<br/>design-approved (hourly, disabled today)
+    ready_for_dev --> assigned: PR Loop assignment session<br/>(disabled today; code-gated cap of 8)
     assigned --> pr_draft: Copilot opens draft PR
     pr_draft --> pr_ci: CI re-trigger pre-pass wakes gated CI<br/>PM readies when green + settled
     pr_ci --> review: queue:review
@@ -755,7 +793,7 @@ Human approvals remain only where GitHub/environment policy enforces them direct
 
 ## Reference
 
-- Config: [`.github/factory.yml`](../../.github/factory.yml) · Agents: [`.github/agents/`](../../.github/agents/) · Runtime: [`.github/tools/shared/`](../../.github/tools/shared/) · Workflows: [`.github/workflows/`](../../.github/workflows/)
+- Config: [`.github/factory.yml`](../../.github/factory.yml) · Agents: [`.github/agents/`](../../.github/agents/) · Runtime: [`.github/tools/shared/`](../../.github/tools/shared/) · Active workflow: [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) · Parked workflows: [`.github/workflows.disabled/`](../../.github/workflows.disabled/)
 - Runtime entry points: [`run-agent.ts`](../../.github/tools/shared/src/run-agent.ts) (one agent) · [`run-pr-pipeline.ts`](../../.github/tools/shared/src/run-pr-pipeline.ts) (per-PR loop) · [`ci-retrigger.ts`](../../.github/tools/shared/src/ci-retrigger.ts) (trusted-actor CI wake) · [`pr-snapshot.ts`](../../.github/tools/shared/src/pr-snapshot.ts) (batched PR state)
 - Companion docs: [Software Factory](./software-factory.md) · [Deployment & infrastructure](./deployment.md) · [Operations Factory](./operations-factory.md)
 - Runbooks: [`docs/runbooks/`](../runbooks/) · [`MONITORING.md`](../../MONITORING.md) · [`OPERATIONS.md`](../../OPERATIONS.md)

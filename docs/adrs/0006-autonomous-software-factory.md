@@ -4,6 +4,9 @@
 - **Date:** 2026-06-06 (recorded retroactively)
 - **Deciders:** Maintainer, Factory Architect
 
+> **Status atual (2026-06-25):** this ADR records the accepted design, but its GitHub Actions implementation is currently parked in `.github/workflows.disabled/`. Only `.github/workflows/ci.yml` is active; the factory operates via local Claude Code skills (`/ship-issue`, `/ship-batch`) until an explicit reactivation.
+
+
 ## Context
 The day-to-day work of shipping software — triage, design decomposition, assignment, review, QA, CI monitoring — is repetitive and high-volume. We want it run by agents continuously, with humans reserved for risky or ambiguous calls.
 

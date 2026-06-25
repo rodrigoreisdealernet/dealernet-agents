@@ -5,6 +5,9 @@
 - **Deciders:** @copilot, @ianreay
 - **Supersedes / Superseded by:** none
 
+> **Status atual (2026-06-25):** `monitor-actions.yml` is currently parked in `.github/workflows.disabled/`, so actions-monitor does not run automatically today. This ADR remains the target design for any future reactivation.
+
+
 ## Context
 
 The `actions-monitor` agent raises or updates shared-cause incidents for stuck GitHub Actions runs.

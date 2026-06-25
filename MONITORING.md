@@ -11,11 +11,22 @@
 
 ---
 
+> **⚠️ Status atual (2026-06-25):** no GitHub Actions, somente
+> `.github/workflows/ci.yml` está ativo. Os workflows citados neste runbook
+> (`pipeline-*`, `pr-loop`, `deploy-*`, `e2e-dev`, `monitor-*`, `agent-*`,
+> `pr-enrichment`, `pr-validation` etc.) estão estacionados em
+> `.github/workflows.disabled/` e **não rodam automaticamente hoje**. A fábrica
+> opera agora por skills locais do Claude Code (`/ship-issue`, `/ship-batch`);
+> use as seções de workflows abaixo apenas como histórico/projeto-alvo até uma
+> reativação explícita.
+
 ## What this factory is
 
 An **autonomous software factory** that builds an equipment-rental ERP. No human
 writes product code day-to-day. A pipeline of role-based AI agents (`.github/agents/*.agent.md`),
-driven by GitHub Actions, plus **GitHub Copilot** as the implementation worker:
+designed to be driven by GitHub Actions, plus **GitHub Copilot** as the
+implementation worker. **Today that Actions automation is disabled**; issue
+shipping runs via local Claude Code skills:
 
 1. **Product Owner** triages issues → `queue:*` labels
 2. **Factory Architect** designs `queue:architecture` work → specs/ADRs + child stories
@@ -25,12 +36,16 @@ driven by GitHub Actions, plus **GitHub Copilot** as the implementation worker:
    returns the terminal `queue:review` verdict; specialist lanes (DB / Security /
    Platform) clear their own labels
 
-There are **two clocks** that meet at `main`:
+The intended design has **two clocks** that meet at `main`, but both clocks are
+currently parked in `.github/workflows.disabled/`:
 
-- **Agent clock** — scheduled cadence pipelines (`pipeline-fast/hourly/daily`) that
-  *produce* merges.
-- **Delivery clock** — event-driven CI/CD (`pr-validation → build-images →
-  deploy-dev → e2e-dev`, then manual `deploy-test`/`deploy-prod`) that *consumes* them.
+- **Agent clock (disabled)** — scheduled cadence pipelines
+  (`pipeline-fast/hourly/daily`) that would *produce* merges.
+- **Delivery clock (disabled except `ci.yml`)** — event-driven CI/CD
+  (`pr-validation → build-images → deploy-dev → e2e-dev`, then manual
+  `deploy-test`/`deploy-prod`) that would *consume* them.
+
+The only active automatic workflow today is `.github/workflows/ci.yml`.
 
 The human owner (Ian) is executive oversight. The monitoring agent (you) is the
 executive assistant: keep the pipeline flowing, fix recurring breakage, escalate
@@ -40,9 +55,14 @@ only the two genuinely human-gated things (Actions approval setting; prod deploy
 
 ## 60-second health check
 
+> **Status atual:** do **not** use `pipeline-fast.yml` or the other parked
+> workflows as live health signals; they are in `.github/workflows.disabled/` and
+> will not have fresh scheduled runs. Start with the active `ci.yml` run history
+> and the PR/issue queues below.
+
 ```bash
-# 1. Is the engine actually completing passes? (look for back-to-back `cancelled`)
-gh run list --workflow=pipeline-fast.yml --limit 15 \
+# 1. Active validation signal
+gh run list --workflow=ci.yml --limit 15 \
   --json createdAt,event,status,conclusion \
   --jq '.[] | "\(.createdAt[:16]) \(.event) \(.status)/\(.conclusion)"'
 
@@ -55,14 +75,20 @@ gh issue list --state open --label "queue:development" --label "ready-for-dev" \
   --json number,title,assignees --jq '.[] | "#\(.number) [\(.assignees|map(.login)|join(","))] \(.title[:55])"'
 ```
 
-**Act on anything stuck > 30 min.** The fastest tells of trouble:
-- a string of `cancelled` `pipeline-fast` runs (engine is starving itself — see §A);
+**Act on live PR/issue queues manually.** Because the agent/delivery workflows are
+disabled, stale PRs or ready issues will not be moved by cron/Actions. The fastest
+tells of trouble are:
+- a ready issue waiting for the local `/ship-issue` or `/ship-batch` pipeline;
 - a PR carrying `queue:architecture`/`needs-design` (deadlock void — see §B);
 - a PR `mergeable=MERGEABLE` + CI green + APPROVED that hasn't merged.
 
 ---
 
 ## Pipeline flow (happy path)
+
+> **Inactive Actions design:** the flow below describes the parked GitHub Actions
+> factory. Today, `/ship-issue` and `/ship-batch` perform the issue→spec→code→PR
+> path locally instead of cron-driven Actions.
 
 ```
 Issue → Product Owner labels queue:architecture|queue:development
@@ -85,16 +111,17 @@ terminal verdict the Project Manager consumes to merge.
 
 ## Runtime monitoring coverage (public vs private lanes)
 
-`pipeline-hourly.yml` is split into explicit lanes:
+`pipeline-hourly.yml` is currently disabled in `.github/workflows.disabled/`.
+When re-enabled, its design is split into explicit lanes:
 
 - **Public lane (`ubuntu-latest`)**: Factory Architect → QA Manager → `operations-manager` with `OPS_CHECK_SCOPE=public`.
 - **Private lane (self-hosted/private-access runner)**: `operations-manager` with `OPS_CHECK_SCOPE=private` → `cluster-guardian` (read-only `dia-*`).
 
 ### What is **not** monitored when private lane is degraded
 
-If private prerequisites are missing, the hourly workflow now fails with an explicit
-**degraded monitoring** result. In that state, the following checks are **not**
-executing:
+When `pipeline-hourly.yml` is re-enabled, missing private prerequisites should
+fail with an explicit **degraded monitoring** result. In that state, the following
+checks are **not** executing:
 - private AKS/runtime health checks,
 - cert-expiry and secret-expiry checks,
 - backup-evidence validation,
@@ -123,11 +150,9 @@ self-terminate**. The full sweep (triage → PR loop → specialist lanes) runs 
 pass. Contract enforced by `temporal/tests/test_pipeline_fast_workflow_contract.py`.
 
 **Consequence to watch:** with the event safety-net gone, queue management rides on
-the `*/15` cron (GitHub throttles it under load) + manual dispatch. To process PRs
-promptly between cron ticks — or right now — just dispatch a pass:
-```bash
-gh workflow run pipeline-fast.yml
-```
+the `*/15` cron (GitHub throttles it under load) + manual dispatch. In the
+current disabled state, do **not** dispatch `pipeline-fast.yml` as an operational
+fix; use the local `/ship-issue` or `/ship-batch` flow instead.
 **Regression signal:** if you see `cancelled` `pipeline-fast` runs or any
 `workflow_run`-triggered run again, the trigger was reintroduced — that's a
 regression, not normal. Shorten the cron (`*/10`) instead of re-adding events.
@@ -253,8 +278,10 @@ GraphQL `addAssigneesToAssignable` mutation with `agentAssignment` (see
 
 ### 6. Deploy looks stale / dev app blank
 
-Usually a **failing deploy**, not the app. `deploy-dev` triggers a `deploy-sentinel`
-incident on failure (`monitor-deploy.yml`). Check:
+In the current repo state, `deploy-dev.yml` and `monitor-deploy.yml` are disabled,
+so stale/blank dev symptoms will not auto-create deploy-sentinel incidents. Check
+the environment directly and use the parked workflow history only as historical
+evidence:
 ```bash
 gh run list --workflow=deploy-dev.yml --limit 5 --json createdAt,status,conclusion
 ```
@@ -358,17 +385,17 @@ before sequencing is the backstop for this edge case.
 | Copilot bot ID | `BOT_kgDOC9w8XQ` |
 | Repository node ID | `R_kgDOSx5OCA` |
 | Max concurrent Copilot PRs | `8` (`.github/factory.yml`) |
-| Engine | `pipeline-fast.yml` — `*/15` cron + `workflow_dispatch` (timer-only; `workflow_run` trigger removed 2026-06-08 #705). `pr-loop.yml` — `*/30` cron + `workflow_run` on Build Images completion (event-driven since 2026-06-12; safe because its group queues instead of cancelling). **Real cron cadence under load is ~60-100 min, not the nominal interval** — GitHub throttles short crons; the event triggers, not the crons, keep merge latency low. |
-| Hourly agents | `pipeline-hourly.yml` — `:30` (public lane: Architect → QA → Ops/public; private lane: preflight → Ops/private → Cluster Guardian) |
-| Daily agents | `pipeline-daily.yml` — `06:00` (Docs Improver → User Docs Manager → **release-notes pipeline**: Release Notes Curator → Release Marketer → publish nightly release-notes PR (`docs/release-notes/README.md`) → Trend Analyst → **discovery pipeline**: Market Scout → Product Strategist → Discovery Critic → publish nightly discovery PR (`docs/discovery/README.md`)) |
-| Weekly agents | `pipeline-weekly.yml` — **TEMP daily `07:00`** (bootstrap; revert cron to `0 7 * * 0`). Agentic Reflector → charter PR; Domain Cartographer → reconcile (feedback loop) → operating-model PR → epics-sync (one epic/role into `queue:product`, the ticket bridge). Maps "what it takes to run an X" in `docs/discovery/domain/`; all propose, humans dispose. |
-| Monitors | `monitor-actions.yml` (`*/15`), `monitor-deploy.yml` (on deploy/E2E failure) |
+| Engine | **Disabled**: `pipeline-fast.yml` and `pr-loop.yml` are parked in `.github/workflows.disabled/`; no cron/event-driven merge engine runs automatically today. |
+| Hourly agents | **Disabled**: `pipeline-hourly.yml` is parked in `.github/workflows.disabled/`. |
+| Daily agents | **Disabled**: `pipeline-daily.yml` is parked in `.github/workflows.disabled/`; no nightly release-notes/discovery PRs are published automatically today. |
+| Weekly agents | **Disabled**: `pipeline-weekly.yml` is parked in `.github/workflows.disabled/`. |
+| Monitors | **Disabled**: `monitor-actions.yml`, `monitor-deploy.yml`, and `monitor-ops.yml` are parked in `.github/workflows.disabled/`. |
 | Token | `PROJECT_MANAGER_PAT` (trusted actor / `gh`), `COPILOT_TOKEN` (Copilot SDK) |
 
-> **Note:** most per-agent `agent-*.yml` workflows were retired; agents run as stages
-> inside the three `pipeline-*.yml` files plus `pr-loop.yml`. Two exceptions are live:
-> `agent-tech-reviewer.yml` (event-driven on Build Images completion — this is what
-> makes approvals land minutes after CI goes green) and `agent-cluster-guardian.yml`.
+> **Note:** most per-agent `agent-*.yml` workflows were retired in the parked
+> design; agents would run as stages inside the three `pipeline-*.yml` files plus
+> `pr-loop.yml`. The former exceptions (`agent-tech-reviewer.yml` and
+> `agent-cluster-guardian.yml`) are also disabled today.
 
 ---
 
@@ -388,11 +415,11 @@ See the [promotion runbook](docs/runbooks/promotion.md) and
 
 `needs-platform-review` is a **blocking specialist lane** applied by `pr-enrichment` for
 scope anomalies as a reviewer heads-up (e.g. infra / CODEOWNERS path changes). It is
-**not a human gate**: `pipeline-fast` conditionally runs the **Platform Engineer agent**
-whenever this label is present; the agent reviews, removes `needs-platform-review`, and
-adds `platform-reviewed` when the concern is resolved. Project Manager will not merge a PR
-carrying `needs-platform-review` until the lane is cleared by the agent (or, in an
-unblock scenario, by a human removing the label manually).
+**not a human gate** in the parked Actions design: when reactivated, `pipeline-fast`
+conditionally runs the **Platform Engineer agent** whenever this label is present;
+the agent reviews, removes `needs-platform-review`, and adds `platform-reviewed`
+when the concern is resolved. While the workflow is disabled, clear or route the
+label through the local process instead of expecting an automatic lane pass.
 
 The actual human-only gates are the **CODEOWNERS boundary** (`/.github/`, `/docs/adrs/`,
 `/deploy/k8s/`) and **prod deploy approval** (protected environment — see above).
@@ -434,8 +461,7 @@ new repair migration is required.
 gh pr list --state open --json number,title,isDraft,mergeable,reviewDecision,labels,updatedAt \
   --jq '.[] | "#\(.number) draft=\(.isDraft) merge=\(.mergeable) rev=\(.reviewDecision) up=\(.updatedAt[:16]) [\(.labels|map(.name)|join(","))] \(.title[:50])"'
 
-# Force a clean engine pass (won't be cancelled by the workflow_run group)
-gh workflow run pipeline-fast.yml
+# Disabled today: do not rely on pipeline-fast.yml; use /ship-issue or /ship-batch locally.
 
 # Re-trigger a Copilot PR's CI as the trusted actor (clears action_required)
 gh pr update-branch <number>

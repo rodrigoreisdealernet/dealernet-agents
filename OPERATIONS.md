@@ -4,6 +4,14 @@
 
 ---
 
+> **⚠️ Status atual (2026-06-25):** somente `.github/workflows/ci.yml` está
+> ativo em GitHub Actions. Os workflows operacionais citados aqui
+> (`monitor-ops.yml`, `alert-incident-bridge.yml`, `deploy-*`, `e2e-dev.yml`,
+> `pipeline-hourly.yml`) estão em `.github/workflows.disabled/` e **não rodam
+> automaticamente hoje**. Use Temporal UI, Grafana/Prometheus e as skills locais
+> (`/ship-issue`, `/ship-batch`) como superfícies ativas; trate instruções de
+> workflows abaixo como inativas até reativação explícita.
+
 ## Source of truth
 
 - Spec: [`docs/specs/operations-factory-agentic-workflows.md`](./docs/specs/operations-factory-agentic-workflows.md)
@@ -264,7 +272,9 @@ Use this as the default until tenant-specific SLAs are configured:
 - **Urgent queue:** review within **4 hours** when either condition is true: (a) finding severity is `high` (from the spec's `high | medium | low` levels), **or** (b) estimated impact meets the tenant-configured urgent threshold (starter placeholder: **$1,000 or more**).
 - **Escalation rule:** any finding older than SLA is treated as an operational incident and escalated.
 
-Ops Monitor should evaluate against these thresholds and raise deduplicated incidents when breached.
+Ops Monitor is a designed checker for these thresholds, but its GitHub Actions
+workflow is currently disabled; evaluate/escalate SLA breaches manually or from
+the Temporal/Grafana surfaces until it is reactivated.
 
 ---
 
@@ -326,7 +336,13 @@ If external auth routing is unstable (redirect loops, cookie/callback mismatch, 
 
 ## Ops Monitor sketch (ticket #8)
 
-**Cadence:** run at the tenant-configured monitor interval (starter default: **15 minutes**, max **30 minutes** for lower-volume environments). Spec §11 defines the Ops Monitor as a 15–30 minute loop.
+> **Inactive in Actions:** `monitor-ops.yml` is parked in
+> `.github/workflows.disabled/`; the cadence below is the intended design, not a
+> live automatic loop today.
+
+**Cadence:** when reactivated, run at the tenant-configured monitor interval
+(starter default: **15 minutes**, max **30 minutes** for lower-volume
+environments). Spec §11 defines the Ops Monitor as a 15–30 minute loop.
 
 **Checks each cycle:**
 1. Query recent ops workflow runs for failures/timeouts.
@@ -386,8 +402,10 @@ When a rule fires, Alertmanager sends an HTTP POST to the incident bridge webhoo
 6. On resolution, adds a "✅ Alert resolved" comment so operators know recovery happened.
 
 The bridge is implemented in `.github/tools/shared/src/alert-incident-bridge.ts`
-and runs as a GitHub Actions job (`alert-incident-bridge.yml`) triggered by
-`repository_dispatch` with `event-type: alertmanager-alert`.
+and is designed to run as a GitHub Actions job (`alert-incident-bridge.yml`)
+triggered by `repository_dispatch` with `event-type: alertmanager-alert`. That
+workflow is currently parked in `.github/workflows.disabled/`, so alerts do not
+open/update GitHub incidents automatically today.
 
 #### Bridge deployment
 
@@ -404,11 +422,9 @@ Actions is:
 3. Configure the relay's `ALERT_BRIDGE_TOKEN` to match the bearer token in
    `alerting.alertmanagerConfig.incidentBridge.bearerTokenSecretName/Key`.
 
-For testing without a live relay, trigger the workflow manually:
-```
-gh workflow run alert-incident-bridge.yml \
-  --field payload='{"version":"4",...}'
-```
+Manual workflow testing is inactive while `alert-incident-bridge.yml` remains in
+`.github/workflows.disabled/`; move/reactivate it deliberately before using
+`gh workflow run`.
 
 ---
 
