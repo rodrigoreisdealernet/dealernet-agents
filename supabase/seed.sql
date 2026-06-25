@@ -2489,3 +2489,74 @@ END
 $$;
 
 commit;
+
+-- ===========================================================================
+-- DIA dealership domain — demo companies + brands (issue #5)
+-- Idempotent namespaces: source_record_id LIKE 'demo-dia-company-%' / '-brand-%'.
+-- Does NOT touch the pre-existing demo-baseline-company-* entries.
+-- Reuses rental_upsert_entity_current_state (the generic SCD2 upsert) under the
+-- service_role write guard.
+-- ===========================================================================
+
+begin;
+set local request.jwt.claim.role = 'service_role';
+
+DO $$
+DECLARE
+  v_companies jsonb := jsonb_build_array(
+    jsonb_build_object('sr','demo-dia-company-1','legal_name','DIA Veículos Matriz Ltda','trade_name','DIA Matriz','cnpj','12.345.678/0001-90','city','São Paulo','state','SP','status','ativo'),
+    jsonb_build_object('sr','demo-dia-company-2','legal_name','DIA Veículos Filial Sul Ltda','trade_name','DIA Sul','cnpj','12.345.678/0002-71','city','Porto Alegre','state','RS','status','ativo')
+  );
+  v_brands jsonb := jsonb_build_array(
+    jsonb_build_object('sr','demo-dia-brand-1','name','Fiat','segment','automoveis','status','ativo'),
+    jsonb_build_object('sr','demo-dia-brand-2','name','Volkswagen','segment','automoveis','status','ativo'),
+    jsonb_build_object('sr','demo-dia-brand-3','name','Volvo','segment','caminhoes','status','ativo')
+  );
+  v_item jsonb;
+BEGIN
+  PERFORM set_config('request.jwt.claim.role', 'service_role', true);
+
+  -- Idempotent: drop prior demo companies/brands, then recreate.
+  DELETE FROM entities
+  WHERE entity_type = 'company'
+    AND source_record_id LIKE 'demo-dia-company-%';
+
+  DELETE FROM entities
+  WHERE entity_type = 'brand'
+    AND source_record_id LIKE 'demo-dia-brand-%';
+
+  FOR v_item IN SELECT * FROM jsonb_array_elements(v_companies)
+  LOOP
+    PERFORM rental_upsert_entity_current_state(
+      p_entity_type => 'company',
+      p_source_record_id => v_item ->> 'sr',
+      p_data => jsonb_build_object(
+        'name', v_item ->> 'trade_name',
+        'legal_name', v_item ->> 'legal_name',
+        'trade_name', v_item ->> 'trade_name',
+        'cnpj', v_item ->> 'cnpj',
+        'city', v_item ->> 'city',
+        'state', v_item ->> 'state',
+        'status', v_item ->> 'status',
+        'source_record_id', v_item ->> 'sr'
+      )
+    );
+  END LOOP;
+
+  FOR v_item IN SELECT * FROM jsonb_array_elements(v_brands)
+  LOOP
+    PERFORM rental_upsert_entity_current_state(
+      p_entity_type => 'brand',
+      p_source_record_id => v_item ->> 'sr',
+      p_data => jsonb_build_object(
+        'name', v_item ->> 'name',
+        'segment', v_item ->> 'segment',
+        'status', v_item ->> 'status',
+        'source_record_id', v_item ->> 'sr'
+      )
+    );
+  END LOOP;
+END
+$$;
+
+commit;

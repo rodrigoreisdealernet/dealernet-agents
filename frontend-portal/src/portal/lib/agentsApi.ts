@@ -321,6 +321,134 @@ export async function deleteVehicle(entityId: string): Promise<void> {
   unwrap(res)
 }
 
+// ── Empresas e Marcas (DIA dealership domain, issue #5) ─────────────────────
+// Leitura direta das views v_dia_company_current / v_dia_brand_current
+// (security_invoker → RLS authenticated). Escrita SEMPRE via RPCs endurecidas
+// (create/update/delete_company|brand): o cliente NÃO faz INSERT/UPDATE direto.
+
+export interface CompanyRow {
+  entity_id: string
+  source_record_id: string | null
+  name: string | null
+  legal_name: string | null
+  trade_name: string | null
+  cnpj: string | null
+  city: string | null
+  state: string | null
+  status: 'ativo' | 'inativo' | string
+}
+
+/** Campos editáveis da empresa (payload das RPCs create/update_company). */
+export interface CompanyInput {
+  legal_name: string
+  trade_name?: string | null
+  cnpj: string
+  city?: string | null
+  state?: string | null
+  status?: 'ativo' | 'inativo'
+}
+
+const COMPANY_COLS =
+  'entity_id, source_record_id, name, legal_name, trade_name, cnpj, city, state, status'
+
+export async function getCompanies(): Promise<CompanyRow[]> {
+  const res = (await supabase
+    .from('v_dia_company_current')
+    .select(COMPANY_COLS)
+    .order('name', { ascending: true })) as PgResponse<CompanyRow[]>
+  return unwrap(res) ?? []
+}
+
+function companyPayload(input: CompanyInput): Record<string, unknown> {
+  const p: Record<string, unknown> = {
+    legal_name: input.legal_name,
+    cnpj: input.cnpj,
+  }
+  if (input.trade_name) p.trade_name = input.trade_name
+  if (input.city) p.city = input.city
+  if (input.state) p.state = input.state
+  if (input.status) p.status = input.status
+  return p
+}
+
+export async function createCompany(input: CompanyInput): Promise<void> {
+  const res = (await supabase.rpc('create_company', {
+    p_data: companyPayload(input),
+  })) as PgResponse<unknown>
+  unwrap(res)
+}
+
+export async function updateCompany(entityId: string, input: Partial<CompanyInput>): Promise<void> {
+  const res = (await supabase.rpc('update_company', {
+    p_entity_id: entityId,
+    p_data: companyPayload(input as CompanyInput),
+  })) as PgResponse<unknown>
+  unwrap(res)
+}
+
+export async function deleteCompany(entityId: string): Promise<void> {
+  const res = (await supabase.rpc('delete_company', {
+    p_entity_id: entityId,
+  })) as PgResponse<unknown>
+  unwrap(res)
+}
+
+export interface BrandRow {
+  entity_id: string
+  source_record_id: string | null
+  name: string | null
+  segment: 'automoveis' | 'caminhoes' | 'motos' | string
+  status: 'ativo' | 'inativo' | string
+}
+
+/** Campos editáveis da marca (payload das RPCs create/update_brand). */
+export interface BrandInput {
+  name: string
+  segment: 'automoveis' | 'caminhoes' | 'motos'
+  status?: 'ativo' | 'inativo'
+}
+
+const BRAND_COLS = 'entity_id, source_record_id, name, segment, status'
+
+export async function getBrands(): Promise<BrandRow[]> {
+  const res = (await supabase
+    .from('v_dia_brand_current')
+    .select(BRAND_COLS)
+    .order('name', { ascending: true })) as PgResponse<BrandRow[]>
+  return unwrap(res) ?? []
+}
+
+function brandPayload(input: BrandInput): Record<string, unknown> {
+  const p: Record<string, unknown> = {
+    name: input.name,
+    segment: input.segment,
+  }
+  if (input.status) p.status = input.status
+  return p
+}
+
+export async function createBrand(input: BrandInput): Promise<void> {
+  const res = (await supabase.rpc('create_brand', {
+    p_data: brandPayload(input),
+  })) as PgResponse<unknown>
+  unwrap(res)
+}
+
+export async function updateBrand(entityId: string, input: Partial<BrandInput>): Promise<void> {
+  const res = (await supabase.rpc('update_brand', {
+    p_entity_id: entityId,
+    p_data: brandPayload(input as BrandInput),
+  })) as PgResponse<unknown>
+  unwrap(res)
+}
+
+export async function deleteBrand(entityId: string): Promise<void> {
+  const res = (await supabase.rpc('delete_brand', {
+    p_entity_id: entityId,
+  })) as PgResponse<unknown>
+  unwrap(res)
+}
+
 // ── Decisão (escrita) via ops-api — POST /api/ops/findings/decision (ver PRD §6.4) ──
 const OPS_API_URL = ENV.VITE_OPS_API_URL || '/api/ops'
 
