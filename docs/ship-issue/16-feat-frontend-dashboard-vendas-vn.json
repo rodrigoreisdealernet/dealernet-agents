@@ -6,22 +6,27 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/16",
   "pr": null,
   "prUrl": null,
-  "updatedAt": "2026-06-25T19:08:10.812Z",
+  "updatedAt": "2026-06-25T19:12:49.773Z",
   "steps": [
     {
       "id": "spec",
       "label": "01 · Spec",
-      "status": "pending",
-      "summary": "",
-      "artifacts": [],
+      "status": "done",
+      "summary": "Spec escrita e postada na issue",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "../specs/16-feat-frontend-dashboard-vendas-vn.md"
+        }
+      ],
       "notes": [],
       "gate": null
     },
     {
       "id": "approve",
       "label": "02 · Approve (human gate)",
-      "status": "pending",
-      "summary": "",
+      "status": "done",
+      "summary": "Auto-approved (batch)",
       "artifacts": [],
       "notes": [],
       "gate": null
@@ -29,8 +34,8 @@
     {
       "id": "code",
       "label": "03 · Code",
-      "status": "pending",
-      "summary": "",
+      "status": "done",
+      "summary": "Tela SalesDashboard + helpers + registry + menu (4 arquivos)",
       "artifacts": [],
       "notes": [],
       "gate": null
@@ -38,8 +43,8 @@
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "pending",
-      "summary": "",
+      "status": "running",
+      "summary": "Teste estrutural node --test",
       "artifacts": [],
       "notes": [],
       "gate": null
