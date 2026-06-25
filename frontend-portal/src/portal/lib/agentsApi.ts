@@ -569,6 +569,64 @@ export async function getServiceOrders(): Promise<ServiceOrderRow[]> {
   return unwrap(res) ?? []
 }
 
+// ── Peças (DIA dealership domain, issue #8) ─────────────────────────────────
+// Leitura direta da view v_dia_part_current (security_invoker → RLS authenticated).
+// Escrita SEMPRE via RPCs endurecidas (create/update/delete_part): o cliente NÃO
+// faz INSERT/UPDATE direto. Mantém o charter "writes go through a guarded path".
+
+export type PartStockStatus = 'zerado' | 'critico' | 'baixo' | 'ok' | string
+
+export interface PartRow {
+  entity_id: string
+  source_record_id: string | null
+  name: string | null
+  part_number: string | null
+  description: string | null
+  manufacturer: string | null
+  unit_cost: number | null
+  unit_price: number | null
+  quantity_in_stock: number | null
+  min_stock: number | null
+  reorder_point: number | null
+  location: string | null
+  status: 'ativo' | 'inativo' | string
+  stock_value: number | null
+  stock_status: PartStockStatus
+}
+
+/** Campos editáveis da peça (payload das RPCs create/update_part). */
+export interface PartInput {
+  part_number: string
+  description: string
+  manufacturer?: string | null
+  unit_cost?: number | null
+  unit_price?: number | null
+  quantity_in_stock?: number | null
+  min_stock?: number | null
+  reorder_point?: number | null
+  location?: string | null
+  status?: 'ativo' | 'inativo'
+}
+
+const PART_COLS =
+  'entity_id, source_record_id, name, part_number, description, manufacturer, unit_cost, unit_price, quantity_in_stock, min_stock, reorder_point, location, status, stock_value, stock_status'
+
+export async function getParts(): Promise<PartRow[]> {
+  const res = (await supabase
+    .from('v_dia_part_current')
+    .select(PART_COLS)
+    .order('part_number', { ascending: true })) as PgResponse<PartRow[]>
+  return unwrap(res) ?? []
+}
+
+/** Peças que precisam de reposição (baixo/critico/zerado), por criticidade. */
+export async function getCriticalParts(): Promise<PartRow[]> {
+  const res = (await supabase
+    .from('v_dia_parts_critical')
+    .select(PART_COLS)) as PgResponse<PartRow[]>
+  return unwrap(res) ?? []
+}
+
 // Remove chaves undefined/null vazias para não sobrescrever no merge do update.
 function serviceOrderPayload(input: ServiceOrderInput): Record<string, unknown> {
   const p: Record<string, unknown> = {
@@ -592,6 +650,29 @@ export async function createServiceOrder(input: ServiceOrderInput): Promise<void
   unwrap(res)
 }
 
+function partPayload(input: PartInput): Record<string, unknown> {
+  const p: Record<string, unknown> = {
+    part_number: input.part_number,
+    description: input.description,
+  }
+  if (input.manufacturer) p.manufacturer = input.manufacturer
+  if (input.unit_cost != null) p.unit_cost = input.unit_cost
+  if (input.unit_price != null) p.unit_price = input.unit_price
+  if (input.quantity_in_stock != null) p.quantity_in_stock = input.quantity_in_stock
+  if (input.min_stock != null) p.min_stock = input.min_stock
+  if (input.reorder_point != null) p.reorder_point = input.reorder_point
+  if (input.location) p.location = input.location
+  if (input.status) p.status = input.status
+  return p
+}
+
+export async function createPart(input: PartInput): Promise<void> {
+  const res = (await supabase.rpc('create_part', {
+    p_data: partPayload(input),
+  })) as PgResponse<unknown>
+  unwrap(res)
+}
+
 export async function updateServiceOrder(entityId: string, input: Partial<ServiceOrderInput>): Promise<void> {
   const res = (await supabase.rpc('update_service_order', {
     p_entity_id: entityId,
@@ -600,8 +681,23 @@ export async function updateServiceOrder(entityId: string, input: Partial<Servic
   unwrap(res)
 }
 
+export async function updatePart(entityId: string, input: Partial<PartInput>): Promise<void> {
+  const res = (await supabase.rpc('update_part', {
+    p_entity_id: entityId,
+    p_data: partPayload(input as PartInput),
+  })) as PgResponse<unknown>
+  unwrap(res)
+}
+
 export async function deleteServiceOrder(entityId: string): Promise<void> {
   const res = (await supabase.rpc('delete_service_order', {
+    p_entity_id: entityId,
+  })) as PgResponse<unknown>
+  unwrap(res)
+}
+
+export async function deletePart(entityId: string): Promise<void> {
+  const res = (await supabase.rpc('delete_part', {
     p_entity_id: entityId,
   })) as PgResponse<unknown>
   unwrap(res)

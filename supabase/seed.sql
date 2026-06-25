@@ -2637,3 +2637,76 @@ END
 $$;
 
 commit;
+
+-- ===========================================================================
+-- DIA dealership domain — demo parts (issue #8)
+-- Idempotent namespace: source_record_id LIKE 'demo-dia-part-%'.
+-- 15 parts covering every stock_status (zerado/critico/baixo/ok) so both
+-- v_dia_part_current and v_dia_parts_critical have representative rows.
+-- Reuses rental_upsert_entity_current_state (the generic SCD2 upsert) under
+-- the service_role write guard.
+-- stock_status precedence (assumes min_stock <= reorder_point):
+--   zerado qty=0 > critico qty<=min_stock > baixo qty<=reorder_point > ok
+-- ===========================================================================
+
+begin;
+set local request.jwt.claim.role = 'service_role';
+
+DO $$
+DECLARE
+  v_parts jsonb := jsonb_build_array(
+    -- part_number, description, manufacturer, unit_cost, unit_price, qty, min_stock, reorder_point, location, status -> expected stock_status
+    -- ok (qty > reorder_point)
+    jsonb_build_object('sr','demo-dia-part-001','part_number','FLT-OIL-001','description','Filtro de óleo motor 1.0','manufacturer','Tecfil','unit_cost',18.50,'unit_price',39.90,'qty',120,'min_stock',10,'reorder_point',30,'location','A1-03','status','ativo'),
+    jsonb_build_object('sr','demo-dia-part-002','part_number','FLT-AIR-002','description','Filtro de ar condicionado','manufacturer','Mann','unit_cost',32.00,'unit_price',74.90,'qty',80,'min_stock',8,'reorder_point',25,'location','A1-04','status','ativo'),
+    jsonb_build_object('sr','demo-dia-part-003','part_number','BRK-PAD-003','description','Pastilha de freio dianteira','manufacturer','Bosch','unit_cost',95.00,'unit_price',189.90,'qty',60,'min_stock',6,'reorder_point',20,'location','B2-01','status','ativo'),
+    jsonb_build_object('sr','demo-dia-part-004','part_number','SPK-PLG-004','description','Vela de ignição iridium','manufacturer','NGK','unit_cost',28.00,'unit_price',59.90,'qty',200,'min_stock',20,'reorder_point',50,'location','B2-02','status','ativo'),
+    jsonb_build_object('sr','demo-dia-part-005','part_number','WPR-BLD-005','description','Palheta limpador 24"','manufacturer','Bosch','unit_cost',22.00,'unit_price',49.90,'qty',45,'min_stock',5,'reorder_point',15,'location','C3-01','status','ativo'),
+    jsonb_build_object('sr','demo-dia-part-006','part_number','BAT-12V-006','description','Bateria 60Ah','manufacturer','Moura','unit_cost',280.00,'unit_price',459.90,'qty',18,'min_stock',3,'reorder_point',8,'location','D4-01','status','ativo'),
+    -- baixo (qty <= reorder_point, > min_stock)
+    jsonb_build_object('sr','demo-dia-part-007','part_number','FLT-FUEL-007','description','Filtro de combustível','manufacturer','Tecfil','unit_cost',24.00,'unit_price',54.90,'qty',12,'min_stock',5,'reorder_point',15,'location','A1-05','status','ativo'),
+    jsonb_build_object('sr','demo-dia-part-008','part_number','BLT-ALT-008','description','Correia do alternador','manufacturer','Gates','unit_cost',45.00,'unit_price',98.90,'qty',9,'min_stock',4,'reorder_point',12,'location','C3-02','status','ativo'),
+    jsonb_build_object('sr','demo-dia-part-009','part_number','LMP-H4-009','description','Lâmpada farol H4','manufacturer','Philips','unit_cost',15.00,'unit_price',34.90,'qty',20,'min_stock',8,'reorder_point',25,'location','C3-03','status','ativo'),
+    -- critico (qty <= min_stock, > 0)
+    jsonb_build_object('sr','demo-dia-part-010','part_number','BRK-DSC-010','description','Disco de freio ventilado','manufacturer','Fremax','unit_cost',140.00,'unit_price',279.90,'qty',3,'min_stock',4,'reorder_point',10,'location','B2-03','status','ativo'),
+    jsonb_build_object('sr','demo-dia-part-011','part_number','SHK-ABS-011','description','Amortecedor dianteiro','manufacturer','Cofap','unit_cost',210.00,'unit_price',389.90,'qty',2,'min_stock',3,'reorder_point',8,'location','D4-02','status','ativo'),
+    jsonb_build_object('sr','demo-dia-part-012','part_number','CLT-KIT-012','description','Kit de embreagem','manufacturer','LuK','unit_cost',420.00,'unit_price',749.90,'qty',1,'min_stock',2,'reorder_point',6,'location','D4-03','status','ativo'),
+    -- zerado (qty = 0)
+    jsonb_build_object('sr','demo-dia-part-013','part_number','RAD-CLN-013','description','Radiador de arrefecimento','manufacturer','Valeo','unit_cost',360.00,'unit_price',629.90,'qty',0,'min_stock',2,'reorder_point',5,'location','D4-04','status','ativo'),
+    jsonb_build_object('sr','demo-dia-part-014','part_number','TBL-FRT-014','description','Bieleta dianteira','manufacturer','Nakata','unit_cost',38.00,'unit_price',84.90,'qty',0,'min_stock',5,'reorder_point',12,'location','C3-04','status','ativo'),
+    jsonb_build_object('sr','demo-dia-part-015','part_number','SNR-O2-015','description','Sensor de oxigênio (sonda lambda)','manufacturer','Bosch','unit_cost',180.00,'unit_price',329.90,'qty',0,'min_stock',3,'reorder_point',7,'location','D4-05','status','ativo')
+  );
+  v_item jsonb;
+BEGIN
+  PERFORM set_config('request.jwt.claim.role', 'service_role', true);
+
+  -- Idempotent: drop prior demo parts, then recreate.
+  DELETE FROM entities
+  WHERE entity_type = 'part'
+    AND source_record_id LIKE 'demo-dia-part-%';
+
+  FOR v_item IN SELECT * FROM jsonb_array_elements(v_parts)
+  LOOP
+    PERFORM rental_upsert_entity_current_state(
+      p_entity_type => 'part',
+      p_source_record_id => v_item ->> 'sr',
+      p_data => jsonb_build_object(
+        'name', concat_ws(' ', v_item ->> 'part_number', v_item ->> 'description'),
+        'part_number', v_item ->> 'part_number',
+        'description', v_item ->> 'description',
+        'manufacturer', v_item ->> 'manufacturer',
+        'unit_cost', (v_item ->> 'unit_cost')::numeric,
+        'unit_price', (v_item ->> 'unit_price')::numeric,
+        'quantity_in_stock', (v_item ->> 'qty')::numeric,
+        'min_stock', (v_item ->> 'min_stock')::numeric,
+        'reorder_point', (v_item ->> 'reorder_point')::numeric,
+        'location', v_item ->> 'location',
+        'status', v_item ->> 'status',
+        'source_record_id', v_item ->> 'sr'
+      )
+    );
+  END LOOP;
+END
+$$;
+
+commit;
