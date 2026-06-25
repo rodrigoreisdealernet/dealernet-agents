@@ -22,6 +22,8 @@ export const componentRegistry: Record<string, LazyExoticComponent<ComponentType
   'admin-users': lazy(() => import('@/portal/renderers/screens/UsersAdmin')),
   // DIA dealership domain (issue #7) — Oficina / ordens de serviço.
   'dia-service-orders': lazy(() => import('@/portal/renderers/screens/ServiceOrders')),
+  // DIA dealership domain (issue #8) — peças + estado de estoque crítico.
+  'dia-parts': lazy(() => import('@/portal/renderers/screens/PartsInventory')),
 }
 
 export function resolveComponent(key: string) {

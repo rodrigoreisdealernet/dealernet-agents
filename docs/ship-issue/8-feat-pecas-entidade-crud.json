@@ -1,0 +1,75 @@
+{
+  "issue": "8",
+  "title": "feat: Peças — entidade + CRUD",
+  "slug": "feat-pecas-entidade-crud",
+  "branch": "feature/8-feat-pecas-entidade-crud",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/8",
+  "pr": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/22",
+  "prUrl": null,
+  "updatedAt": "2026-06-25T18:36:25.801Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "Spec escrita: entidade dedicada 'part' (SCD2), RPCs endurecidas, 2 views, tela portal nativo",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Auto-approved (batch)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": "Migration 20260625150000 (catálogo+RPCs+2 views), seed 15 peças, tela PartsInventory + wiring portal",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "done",
+      "summary": "part_crud.test.mjs: RPCs, SCD2, soft-delete, views, stock_status, RLS",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "done",
+      "summary": "Test-review PASS + code-review APPROVE; sem bloqueios; PR pronto",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "waiting",
+      "summary": "Aguardando aprovação humana de merge",
+      "artifacts": [],
+      "notes": [],
+      "gate": "merge"
+    }
+  ]
+}
