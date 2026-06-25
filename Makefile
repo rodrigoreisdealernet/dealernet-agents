@@ -12,7 +12,7 @@ endif
 
 COMPOSE_CMD=docker compose $(foreach file,$(COMPOSE_FILES),-f $(file))
 
-.PHONY: up down reset logs logs-temporal logs-frontend
+.PHONY: up down reset logs logs-temporal logs-frontend test-vehicle
 
 up:
 	$(COMPOSE_CMD) up -d
@@ -32,3 +32,8 @@ logs-temporal:
 
 logs-frontend:
 	$(COMPOSE_CMD) logs -f frontend
+
+# Teste de contrato SQL do Vehicle CRUD (issue #4) contra o Postgres vivo.
+# Pre-requisito: `make up` (container supabase_db_dealernet-agents no ar).
+test-vehicle:
+	node --test supabase/tests/vehicle_crud.test.mjs
