@@ -45,11 +45,22 @@ import { dirname, join } from 'node:path'
 const CONTAINER = 'supabase_db_dealernet-agents'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-// SQL da migration desta feature — aplicado DENTRO de cada txn (ver cabecalho).
-const MIGRATION_SQL = readFileSync(
-  join(__dirname, '..', 'migrations', '20260625140000_user_management_crud.sql'),
-  'utf8',
-)
+// SQL das migrations desta feature — aplicado DENTRO de cada txn (ver cabecalho).
+// 20260625140000: coluna is_active + RPC admin_update_profile (base).
+// 20260625150000: re-cria admin_update_profile com DUAL-WRITE em auth.users
+//   (sincroniza raw_app_meta_data->>'role' e raw_user_meta_data->>'display_name'
+//   com profiles, preservando tenant) — review follow-up. Aplicado APOS o 140000
+//   na MESMA txn para que todo teste rode contra a definicao mais recente do RPC.
+const MIGRATION_SQL = [
+  readFileSync(
+    join(__dirname, '..', 'migrations', '20260625140000_user_management_crud.sql'),
+    'utf8',
+  ),
+  readFileSync(
+    join(__dirname, '..', 'migrations', '20260625150000_admin_update_profile_sync_app_metadata.sql'),
+    'utf8',
+  ),
+].join('\n')
 
 // JWT claims canonicas. role de requisicao = 'authenticated' (lido pelo guard do
 // RPC); app_metadata.role define o app_role lido por get_my_role().
@@ -452,5 +463,47 @@ rollback;
     out.split('|'),
     ['BySvc', 'branch_manager', 'f'],
     `service_role deveria conseguir atualizar a linha; obtido: ${out}`,
+  )
+})
+
+// ---------------------------------------------------------------------------
+// AC3/AC5 (Dual-write app_metadata — review follow-up, migration 20260625150000):
+// apos um admin_update_profile bem-sucedido que muda role + display_name, a
+// definicao re-criada do RPC tambem escreve em auth.users para manter a authz
+// derivada do JWT em sincronia (get_my_role()/RLS leem
+// auth.users.raw_app_meta_data->'role'). Verificamos que:
+//   * raw_app_meta_data->>'role'        == novo role,
+//   * raw_user_meta_data->>'display_name' == novo nome,
+//   * raw_app_meta_data->>'tenant'      PRESERVADO (igual ao seed).
+// Como on_auth_user_updated (handle_new_user) dispara AFTER UPDATE on auth.users
+// e re-sincroniza profiles a partir desses MESMOS valores, profiles.role tem que
+// continuar = novo role (sem flip-flop) — assert extra.
+// ---------------------------------------------------------------------------
+test('AC3/AC5 dual-write: admin_update_profile sincroniza app_metadata.role/display_name e preserva tenant', () => {
+  const target = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
+  // tenant conhecido no seed p/ a checagem de preservacao ser significativa.
+  const sql = `begin;
+${MIGRATION_SQL}
+${seedUser(target, 'Before', 'read_only', 'acme-tenant')}
+set local role authenticated;
+select set_config('request.jwt.claims', '${claims('admin')}', true) \\g /dev/null
+select public.admin_update_profile('${target}'::uuid, 'After', 'branch_manager'::public.app_role, true) is not null \\g /dev/null
+reset role;
+select
+  u.raw_app_meta_data->>'role',
+  u.raw_user_meta_data->>'display_name',
+  u.raw_app_meta_data->>'tenant',
+  p.role::text
+from auth.users u join public.profiles p on p.id = u.id
+where u.id = '${target}';
+rollback;
+`
+  const { ok, out, err } = psql(sql)
+  assert.ok(ok, `psql falhou: ${err}`)
+  assert.deepEqual(
+    out.split('|'),
+    ['branch_manager', 'After', 'acme-tenant', 'branch_manager'],
+    `esperado app_metadata.role=branch_manager, display_name=After, tenant preservado=acme-tenant, ` +
+      `e profiles.role=branch_manager (sem flip-flop); obtido: ${out}`,
   )
 })
