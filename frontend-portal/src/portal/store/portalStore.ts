@@ -13,7 +13,7 @@ import type {
   WorkspaceMeta,
 } from '@/portal/types'
 import { portalApi } from '@/portal/lib/portalApi'
-import { getMyRole } from '@/portal/lib/agentsApi'
+import { getCompanies, getMyRole, type CompanyRow } from '@/portal/lib/agentsApi'
 import { clampRect, floatingRect, type MdiSize } from '@/portal/lib/layout'
 
 const CASCADE_STEP = 28
@@ -171,14 +171,26 @@ export const usePortalStore = create<PortalState>()(
         return fallback
       }
     }
-    const [config, menu, workspaces, empresas, role] = await Promise.all([
+    const [config, menu, workspaces, companies, role] = await Promise.all([
       safe(portalApi.getConfig(), null as unknown as PortalConfig),
       safe(portalApi.getMenu(), [] as MenuItem[]),
       safe(portalApi.getWorkspaces(), [] as WorkspaceMeta[]),
-      safe(portalApi.getEmpresas(), [] as Empresa[]),
+      // Empresas vivas da view v_dia_company_current (issue #37). Sem sessão/erro
+      // (ex.: modo mock sem Supabase) → []; o EmpresaSelector apenas não renderiza.
+      safe(getCompanies(), [] as CompanyRow[]),
       // Role do Supabase (gating do menu). Sem sessão/erro → null (esconde itens admin).
       safe(getMyRole(), null as unknown as string),
     ])
+    // Adapta as empresas reais ao shape do seletor (id/nome/grupo). O grupo do
+    // dropdown passa a ser a MARCA (brand_name); sem marca cai em "Sem marca".
+    // `ativa` vem do status da view (ativo/inativo) — o boot abaixo seleciona a
+    // primeira empresa ATIVA, caindo na primeira da lista só se nenhuma for ativa.
+    const empresas: Empresa[] = companies.map((c) => ({
+      id: c.entity_id,
+      nome: c.trade_name ?? c.name ?? c.legal_name ?? c.entity_id,
+      grupo: c.brand_name ?? 'Sem marca',
+      ativa: c.status === 'ativo',
+    }))
     set({
       config,
       menu,

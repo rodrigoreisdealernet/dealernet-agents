@@ -164,21 +164,9 @@ const MOCK_MENU: MenuItem[] = [
     children: [
       {
         id: 'dealership-vehicles',
-        text: 'Estoque de Veículos',
+        text: 'Veículos',
         icon: 'fa-car',
-        spec: { title: 'Estoque de Veículos', kind: 'component', componentKey: 'dia-vehicles' },
-      },
-      {
-        id: 'dealership-companies',
-        text: 'Empresas',
-        icon: 'fa-building',
-        spec: { title: 'Empresas', kind: 'component', componentKey: 'dia-companies' },
-      },
-      {
-        id: 'dealership-brands',
-        text: 'Marcas',
-        icon: 'fa-tag',
-        spec: { title: 'Marcas', kind: 'component', componentKey: 'dia-brands' },
+        spec: { title: 'Veículos', kind: 'component', componentKey: 'dia-vehicles' },
       },
       // DIA dealership domain (issue #7) — Oficina / ordens de serviço (/dia/service-orders).
       {
@@ -190,9 +178,9 @@ const MOCK_MENU: MenuItem[] = [
       // DIA dealership domain (issue #8) — Estoque de peças (/dia/parts).
       {
         id: 'dealership-parts',
-        text: 'Estoque de Peças',
+        text: 'Peças',
         icon: 'fa-cog',
-        spec: { title: 'Estoque de Peças', kind: 'component', componentKey: 'dia-parts' },
+        spec: { title: 'Peças', kind: 'component', componentKey: 'dia-parts' },
       },
       // DIA dealership domain (issue #10) — Venda de peças (/dia/part-sales).
       {
@@ -216,6 +204,21 @@ const MOCK_MENU: MenuItem[] = [
         icon: 'UserPlus',
         requiredRole: 'admin',
         spec: { title: 'Usuários', kind: 'component', componentKey: 'admin-users' },
+      },
+      // Dados mestres (issue #37) — movidos de Concessionária para Administração.
+      {
+        id: 'dealership-companies',
+        text: 'Empresas',
+        icon: 'fa-building',
+        requiredRole: 'admin',
+        spec: { title: 'Empresas', kind: 'component', componentKey: 'dia-companies' },
+      },
+      {
+        id: 'dealership-brands',
+        text: 'Marcas',
+        icon: 'fa-tag',
+        requiredRole: 'admin',
+        spec: { title: 'Marcas', kind: 'component', componentKey: 'dia-brands' },
       },
     ],
   },
