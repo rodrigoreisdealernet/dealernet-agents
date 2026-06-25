@@ -1,0 +1,85 @@
+{
+  "issue": "18",
+  "title": "feat(frontend): dashboard Peças (Fast BI)",
+  "slug": "feat-frontend-dashboard-estoque-pecas",
+  "branch": "feature/18-feat-frontend-dashboard-estoque-pecas",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/18",
+  "pr": "29",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/29",
+  "updatedAt": "2026-06-25T19:22:06.095Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "Spec drafted: read-only Peças Fast BI dashboard (KpiCard + ChartCard + critical-parts list)",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "../specs/18-feat-frontend-dashboard-estoque-pecas.md"
+        }
+      ],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Auto-approved (batch)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": "PartsBI screen + nav (Fast BI) + agentsApi helpers (getPartsSummary/getDiaOwnerKpis). Commit cf93940",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "done",
+      "summary": "Structural test verify-parts-bi.mjs: 9 pass; full suite 34/34. Draft PR #29 opened.",
+      "artifacts": [
+        {
+          "label": "PR #29",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/29"
+        }
+      ],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "done",
+      "summary": "Test audit: adequate. Hardened month-sales filter + critical-row fields (commit 5092551). 34/34 green.",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "done",
+      "summary": "Reviewer APPROVED PR #29: ACs met, UNION split + month filter correct, RLS-safe reads. PR marked ready.",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "waiting",
+      "summary": "Awaiting human merge gate. PR #29 ready, all checks green (34/34 tests).",
+      "artifacts": [],
+      "notes": [],
+      "gate": "merge"
+    }
+  ]
+}
