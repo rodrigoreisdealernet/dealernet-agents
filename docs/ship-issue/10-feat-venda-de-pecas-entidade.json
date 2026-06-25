@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/10",
   "pr": null,
   "prUrl": null,
-  "updatedAt": "2026-06-25T19:13:54.974Z",
+  "updatedAt": "2026-06-25T19:19:50.466Z",
   "steps": [
     {
       "id": "spec",
@@ -34,16 +34,21 @@
     {
       "id": "code",
       "label": "03 · Code",
-      "status": "running",
-      "summary": "",
-      "artifacts": [],
+      "status": "done",
+      "summary": "Migration 20260626120000 (part_sale entity, create/cancel RPCs, view, seed) + native PartSales screen wired into registry+nav",
+      "artifacts": [
+        {
+          "label": "Migration",
+          "href": "../../supabase/migrations/20260626120000_dia_part_sale_entity_crud.sql"
+        }
+      ],
       "notes": [],
       "gate": null
     },
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "pending",
+      "status": "running",
       "summary": "",
       "artifacts": [],
       "notes": [],
