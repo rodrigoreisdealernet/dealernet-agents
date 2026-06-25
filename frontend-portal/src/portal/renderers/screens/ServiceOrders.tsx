@@ -14,7 +14,7 @@ import {
 } from '@/portal/lib/agentsApi'
 import { KpiCard, Badge, ScreenShell, RowActions, RowActionButton, type Tone } from './ui'
 import { Pencil, XCircle } from 'lucide-react'
-import { formatBRL, formatDateTime } from './format'
+import { formatBRL, formatBRLKpi, formatDateTime } from './format'
 
 type FormState = ServiceOrderInput & { entity_id?: string }
 
@@ -126,6 +126,7 @@ export default function ServiceOrders() {
     <ScreenShell
       title="Ordens de Serviço"
       subtitle="Oficina — registre, acompanhe e finalize ordens de serviço; tempo de atendimento calculado para as concluídas."
+      legend="Valores em R$"
     >
       {error && <p className="text-sm text-destructive">Erro: {error}</p>}
 
@@ -133,7 +134,7 @@ export default function ServiceOrders() {
         <KpiCard label="Total" value={kpis.total} />
         <KpiCard label="Em aberto" value={kpis.abertas} />
         <KpiCard label="Concluídas" value={kpis.concluidas} />
-        <KpiCard label="Receita acum." value={formatBRL(kpis.receita)} />
+        <KpiCard label="Receita acum." value={formatBRLKpi(kpis.receita)} />
       </div>
 
       <div className="flex items-center justify-between">

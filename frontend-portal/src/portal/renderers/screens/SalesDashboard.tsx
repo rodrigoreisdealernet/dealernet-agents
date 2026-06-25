@@ -11,7 +11,7 @@ import {
 } from '@/portal/lib/agentsApi'
 import { ChartCard } from './ChartCard'
 import { KpiCard, ScreenShell } from './ui'
-import { formatBRL } from './format'
+import { formatBRLKpi } from './format'
 
 const ALL = '__all__'
 
@@ -141,6 +141,7 @@ export default function SalesDashboard() {
     <ScreenShell
       title="Vendas (VN/VU)"
       subtitle="Desempenho de vendas de veículos novos e usados — KPIs do mês e tendências."
+      legend="Valores em R$"
     >
       {error && <p className="text-sm text-destructive">Erro: {error}</p>}
 
@@ -182,10 +183,10 @@ export default function SalesDashboard() {
         <KpiCard label="Unidades VU" value={kpis.vuUnits} />
         <KpiCard label="Unidades total" value={kpis.totalUnits} />
         <KpiCard label="Dias p/ vender" value={Math.round(kpis.avgDaysToSell)} />
-        <KpiCard label="Receita VN" value={formatBRL(kpis.vnRevenue)} />
-        <KpiCard label="Receita VU" value={formatBRL(kpis.vuRevenue)} />
-        <KpiCard label="Receita total" value={formatBRL(kpis.totalRevenue)} />
-        <KpiCard label="Margem média" value={formatBRL(kpis.avgMargin)} />
+        <KpiCard label="Receita VN" value={formatBRLKpi(kpis.vnRevenue)} />
+        <KpiCard label="Receita VU" value={formatBRLKpi(kpis.vuRevenue)} />
+        <KpiCard label="Receita total" value={formatBRLKpi(kpis.totalRevenue)} />
+        <KpiCard label="Margem média" value={formatBRLKpi(kpis.avgMargin)} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

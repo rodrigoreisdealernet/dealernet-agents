@@ -96,15 +96,17 @@ test('AC KPIs: renderiza quatro KpiCard com campos reais, fallbacks e +90 dias d
   const kpiCount = (src.match(/<KpiCard\b/g) ?? []).length
   assert.ok(kpiCount >= 4, `deve renderizar ao menos 4 KpiCard; encontrados ${kpiCount}`)
   assert.ok(src.includes('KpiCard'), 'VehicleInventoryBI deve usar o componente KpiCard')
+  // Issue #54: KPI cards usam formatBRLKpi (sem R$/decimais). A tabela de
+  // veiculos abaixo mantem formatBRL (precisao preservada).
   assert.match(
     src,
-    /formatBRL\(\s*kpis\?\.inventory_vehicle_value\s*\?\?\s*0\s*\)/,
-    'KPI valor do estoque deve usar kpis?.inventory_vehicle_value ?? 0 via formatBRL',
+    /formatBRLKpi\(\s*kpis\?\.inventory_vehicle_value\s*\?\?\s*0\s*\)/,
+    'KPI valor do estoque deve usar kpis?.inventory_vehicle_value ?? 0 via formatBRLKpi (issue #54)',
   )
   assert.match(
     src,
-    /formatBRL\(\s*kpis\?\.floor_plan_total\s*\?\?\s*0\s*\)/,
-    'KPI floor plan total deve usar kpis?.floor_plan_total ?? 0 via formatBRL',
+    /formatBRLKpi\(\s*kpis\?\.floor_plan_total\s*\?\?\s*0\s*\)/,
+    'KPI floor plan total deve usar kpis?.floor_plan_total ?? 0 via formatBRLKpi (issue #54)',
   )
   assert.match(
     src,

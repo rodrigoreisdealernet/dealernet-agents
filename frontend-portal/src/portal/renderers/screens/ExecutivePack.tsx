@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { getFindingKpis, getHomeKpis, type FindingKpis, type HomeKpis } from '@/portal/lib/agentsApi'
 import { KpiCard, ScreenShell } from './ui'
-import { formatBRL, formatPct } from './format'
+import { formatBRLKpi, formatPct } from './format'
 
 export default function ExecutivePack() {
   const [home, setHome] = useState<HomeKpis | null>(null)
@@ -28,12 +28,13 @@ export default function ExecutivePack() {
     <ScreenShell
       title="Executive Pack — Painel do Dono"
       subtitle="Os números do negócio + o dinheiro que a IA encontrou para recuperar."
+      legend="Valores em R$"
     >
       {error && <p className="text-sm text-destructive">Erro: {error}</p>}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
         <KpiCard
           label="Receita do período"
-          value={formatBRL(home?.period_revenue)}
+          value={formatBRLKpi(home?.period_revenue)}
           hint={
             revDelta != null
               ? `${revDelta >= 0 ? '▲' : '▼'} ${Math.abs(Math.round(revDelta))}% vs anterior`
@@ -42,7 +43,7 @@ export default function ExecutivePack() {
         />
         <KpiCard
           label="Recuperável (IA)"
-          value={formatBRL(kpis?.recoverable_delta)}
+          value={formatBRLKpi(kpis?.recoverable_delta)}
           hint={`${kpis?.pending_count ?? 0} pendentes de aprovação`}
         />
         <KpiCard label="Aprovados no ciclo" value={kpis?.approved_this_cycle ?? '—'} />

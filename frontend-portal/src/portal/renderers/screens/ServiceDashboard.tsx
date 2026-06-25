@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getServiceOrders, type ServiceOrderRow } from '@/portal/lib/agentsApi'
 import { ChartCard } from './ChartCard'
-import { formatBRL, formatDateTime } from './format'
+import { formatBRLKpi, formatDateTime } from './format'
 import { Badge, KpiCard, ScreenShell, type Tone } from './ui'
 
 // Rótulos pt-BR para os status de OS (a view entrega o status em pt-BR já).
@@ -139,6 +139,7 @@ export default function ServiceDashboard() {
     <ScreenShell
       title="Oficina — Fast BI"
       subtitle="Volume, faturamento e turnaround das ordens de serviço."
+      legend="Valores em R$"
     >
       {error && <p className="text-sm text-destructive">Erro: {error}</p>}
 
@@ -146,7 +147,7 @@ export default function ServiceDashboard() {
         <KpiCard label="OS abertas" value={kpis.open} />
         <KpiCard label="Em andamento" value={kpis.inProgress} />
         <KpiCard label="Concluídas no mês" value={kpis.closedThisMonth} />
-        <KpiCard label="Faturamento do mês" value={formatBRL(kpis.revenueThisMonth)} />
+        <KpiCard label="Faturamento do mês" value={formatBRLKpi(kpis.revenueThisMonth)} />
         <KpiCard
           label="Turnaround médio (h)"
           value={kpis.avgTurnaround ?? '—'}

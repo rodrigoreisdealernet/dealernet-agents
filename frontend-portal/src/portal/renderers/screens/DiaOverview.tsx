@@ -11,7 +11,7 @@ import {
 } from '@/portal/lib/agentsApi'
 import { KpiCard, ScreenShell } from './ui'
 import { ChartCard } from './ChartCard'
-import { formatBRL } from './format'
+import { formatBRLKpi } from './format'
 
 export default function DiaOverview() {
   const [kpis, setKpis] = useState<OwnerKpis | null>(null)
@@ -42,6 +42,7 @@ export default function DiaOverview() {
     <ScreenShell
       title="Visão do Dono"
       subtitle="Brief matinal do negócio: vendas, oficina, estoque e peças num só lugar."
+      legend="Valores em R$"
     >
       {error && <p className="text-sm text-destructive">Erro: {error}</p>}
       {loading && !kpis && <p className="text-sm text-muted-foreground">Carregando…</p>}
@@ -50,14 +51,14 @@ export default function DiaOverview() {
         <KpiCard
           label="Vendas do mês"
           value={kpis?.sales_units_month ?? '—'}
-          hint={formatBRL(kpis?.sales_revenue_month)}
+          hint={formatBRLKpi(kpis?.sales_revenue_month)}
         />
-        <KpiCard label="Margem do mês" value={formatBRL(kpis?.margin_month)} />
+        <KpiCard label="Margem do mês" value={formatBRLKpi(kpis?.margin_month)} />
         <KpiCard label="OS abertas" value={kpis?.service_orders_open ?? '—'} />
-        <KpiCard label="Faturamento de oficina" value={formatBRL(kpis?.service_revenue_month)} />
-        <KpiCard label="Estoque de veículos" value={formatBRL(kpis?.inventory_vehicle_value)} />
-        <KpiCard label="Floor plan total" value={formatBRL(kpis?.floor_plan_total)} />
-        <KpiCard label="Estoque de peças" value={formatBRL(kpis?.parts_inventory_value)} />
+        <KpiCard label="Faturamento de oficina" value={formatBRLKpi(kpis?.service_revenue_month)} />
+        <KpiCard label="Estoque de veículos" value={formatBRLKpi(kpis?.inventory_vehicle_value)} />
+        <KpiCard label="Floor plan total" value={formatBRLKpi(kpis?.floor_plan_total)} />
+        <KpiCard label="Estoque de peças" value={formatBRLKpi(kpis?.parts_inventory_value)} />
         <KpiCard label="Peças críticas" value={kpis?.parts_critical_count ?? '—'} />
       </div>
 

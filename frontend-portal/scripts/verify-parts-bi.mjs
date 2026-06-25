@@ -106,11 +106,12 @@ test("AC2: portalApi.ts tem item 'Pecas' -> componentKey 'dia-parts-bi' na secao
 test('AC3: a tela renderiza KpiCard com valor de estoque, criticas/zeradas e vendas do mes', () => {
   const src = read(PARTS_BI_PATH)
   assert.ok(src.includes('KpiCard'), 'PartsBI deve usar o componente KpiCard')
-  // KPI: valor de estoque via formatBRL(kpis.parts_inventory_value).
+  // KPI: valor de estoque via formatBRLKpi(kpis.parts_inventory_value) — issue
+  // #54: KPI cards sem R$/decimais.
   assert.match(
     src,
-    /formatBRL\(\s*kpis\??\.?parts_inventory_value/,
-    'deve exibir o valor de estoque a partir de parts_inventory_value via formatBRL',
+    /formatBRLKpi\(\s*kpis\??\.?parts_inventory_value/,
+    'deve exibir o valor de estoque a partir de parts_inventory_value via formatBRLKpi (issue #54)',
   )
   // KPI: contagem de pecas criticas/zeradas.
   assert.match(
@@ -126,8 +127,8 @@ test('AC3: a tela renderiza KpiCard com valor de estoque, criticas/zeradas e ven
   )
   assert.match(
     src,
-    /formatBRL\(\s*monthSales\.revenue/,
-    'deve exibir a receita do mes em R$ via formatBRL(monthSales.revenue)',
+    /formatBRLKpi\(\s*monthSales\.revenue/,
+    'deve exibir a receita do mes via formatBRLKpi(monthSales.revenue) (KPI card, issue #54)',
   )
   // O KPI de vendas do mes deve ser ESCOPADO ao mes corrente — nao um total
   // de todo o periodo. A useMemo monthSales (PartsBI.tsx l.72-79) deriva o
@@ -242,12 +243,12 @@ test('AC6: cada ChartCard recebe emptyMessage (estado vazio gracioso, >= 2)', ()
 })
 
 // AC6: KPIs caem para 0/— quando os dados analiticos estao vazios.
-test('AC6: KPIs caem para 0/formatBRL(nullish) quando os dados estao vazios', () => {
+test('AC6: KPIs caem para 0/formatBRLKpi(nullish) quando os dados estao vazios', () => {
   const src = read(PARTS_BI_PATH)
-  // Valor de estoque: formatBRL com fallback nullish (?? 0 ou optional chaining).
+  // Valor de estoque: formatBRLKpi com fallback nullish (?? 0). Issue #54.
   assert.match(
     src,
-    /formatBRL\(\s*kpis\?\.parts_inventory_value\s*\?\?\s*0\s*\)/,
+    /formatBRLKpi\(\s*kpis\?\.parts_inventory_value\s*\?\?\s*0\s*\)/,
     'o KPI de valor de estoque deve usar fallback ?? 0',
   )
   // Contagem critica: fallback ?? 0 quando ausente.

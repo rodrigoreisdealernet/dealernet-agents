@@ -13,7 +13,7 @@ import {
 } from '@/portal/lib/agentsApi'
 import { KpiCard, Badge, ScreenShell, RowActions, RowActionButton, type Tone } from './ui'
 import { Pencil, Trash2 } from 'lucide-react'
-import { formatBRL } from './format'
+import { formatBRL, formatBRLKpi } from './format'
 
 type FormState = VehicleInput & { entity_id?: string }
 
@@ -114,6 +114,7 @@ export default function VehiclesInventory() {
     <ScreenShell
       title="Estoque de Veículos"
       subtitle="Inventário de veículos novos e usados — custo de floor plan calculado pela idade em estoque."
+      legend="Valores em R$"
     >
       {error && <p className="text-sm text-destructive">Erro: {error}</p>}
 
@@ -121,7 +122,7 @@ export default function VehiclesInventory() {
         <KpiCard label="Total" value={kpis.total} />
         <KpiCard label="Novos" value={kpis.novos} />
         <KpiCard label="Usados" value={kpis.usados} />
-        <KpiCard label="Floor plan acum." value={formatBRL(kpis.floorPlan)} />
+        <KpiCard label="Floor plan acum." value={formatBRLKpi(kpis.floorPlan)} />
       </div>
 
       <div className="flex items-center justify-between">
