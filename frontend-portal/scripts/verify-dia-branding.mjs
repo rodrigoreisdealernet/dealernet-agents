@@ -34,13 +34,28 @@ test('AC1: index.html tem o <title> com a marca DIA', () => {
   )
 })
 
+test('AC2: TopBar.tsx renderiza config?.portalName com fallback da marca DIA', () => {
+  const topbar = read('src/portal/components/TopBar.tsx')
+  // Casa a expressao completa: {config?.portalName ?? 'DIA — Dealernet Intelligence Agents'}
+  // Exige portalName E o fallback DIA juntos no mesmo nullish-coalescing,
+  // pegando regressao tanto na fonte do nome quanto no texto de fallback.
+  assert.match(
+    topbar,
+    new RegExp(`config\\?\\.portalName\\s*\\?\\?\\s*['"]${escapeRe(BRAND)}['"]`),
+    "TopBar.tsx deve renderizar {config?.portalName ?? 'DIA — Dealernet Intelligence Agents'}",
+  )
+})
+
 test('AC3: Sidebar.tsx exibe o badge "DIA" na sidebar recolhida', () => {
   const sidebar = read('src/portal/components/Sidebar.tsx')
-  // O badge recolhido renderiza o texto "DIA" dentro de um <span>.
+  // O badge recolhido renderiza o texto "DIA" dentro de um <span>, e SO no
+  // estado recolhido (ramo `collapsed ?` do ternario). Ancorar no `collapsed ?`
+  // (com .*? em modo dotall) liga a assercao ao contexto do badge recolhido,
+  // evitando casar com qualquer "DIA" solto no arquivo.
   assert.match(
     sidebar,
-    />\s*DIA\s*</,
-    'Sidebar.tsx deve renderizar o texto "DIA" como badge da sidebar recolhida',
+    /collapsed \?[\s\S]*?>\s*DIA\s*</,
+    'Sidebar.tsx deve renderizar o texto "DIA" como badge da sidebar recolhida (ramo collapsed)',
   )
 })
 

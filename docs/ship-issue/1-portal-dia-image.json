@@ -4,9 +4,9 @@
   "slug": "portal-dia-image",
   "branch": "feature/1-portal-dia-image",
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/1",
-  "pr": null,
-  "prUrl": null,
-  "updatedAt": "2026-06-25T15:27:00.904Z",
+  "pr": "2",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/2",
+  "updatedAt": "2026-06-25T15:39:28.234Z",
   "steps": [
     {
       "id": "spec",
@@ -30,37 +30,57 @@
     {
       "id": "approve",
       "label": "02 · Approve (human gate)",
-      "status": "waiting",
-      "summary": "Aguardando aprovação humana da spec",
+      "status": "done",
+      "summary": "Spec aprovada pelo humano",
       "artifacts": [],
       "notes": [],
-      "gate": "spec-approval"
+      "gate": null
     },
     {
       "id": "code",
       "label": "03 · Code",
-      "status": "pending",
-      "summary": "",
-      "artifacts": [],
-      "notes": [],
+      "status": "done",
+      "summary": "SVG DIA criado + 6 arquivos rebrandeados; build OK (commit f6aa37d)",
+      "artifacts": [
+        {
+          "label": "Commit",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/commit/f6aa37d"
+        }
+      ],
+      "notes": [
+        "Lendo arquivos-alvo e spec; vou gerar o SVG da marca DIA e aplicar o rebrand no frontend-portal",
+        "SVG dia-logo.svg criado em public/; aplicando edits em index.html, Sidebar.tsx, TopBar.tsx, portalApi.ts e portalApiReal.ts",
+        "Edits aplicados; rodando npm run build (tsc -b && vite build) e npm run lint no frontend-portal",
+        "Rebrand DIA aplicado; build (tsc -b && vite build) OK; lint indisponivel no ambiente (eslint nao instalado); commit f6aa37d na branch feature/1-portal-dia-image (sem push/PR)"
+      ],
       "gate": null
     },
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "pending",
-      "summary": "",
+      "status": "done",
+      "summary": "8 asserts dependency-free, verdes (commit 72fcb6e)",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "Escrevendo teste de verificacao dependency-free (node:test) para os criterios de aceite do rebrand DIA",
+        "Teste verde: 8/8 passando (node --test). Commitando testes e abrindo PR draft",
+        "PR draft #2 aberto (base main); testes 8/8 verdes commitados em 72fcb6e"
+      ],
       "gate": null
     },
     {
       "id": "test-review",
       "label": "05 · Test review",
-      "status": "pending",
-      "summary": "",
+      "status": "running",
+      "summary": "Revisando cobertura e qualidade dos testes",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "Auditando cobertura de testes (AC1-AC6 vs spec)",
+        "Achado bloqueante: AC2 (TopBar.tsx) não tem teste. Veredito: PRECISA-CORRIGIR",
+        "Iteração 1: bloqueante AC2 (TopBar sem teste) devolvido ao tester",
+        "loop correcao 1/2: adicionando caso de teste AC2 (TopBar) ao verify-dia-branding.mjs",
+        "9 testes verdes: AC2 (TopBar) coberto + AC3 endurecido (ramo collapsed). Commitando."
+      ],
       "gate": null
     },
     {
