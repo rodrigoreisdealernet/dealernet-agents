@@ -1,0 +1,83 @@
+{
+  "issue": "4",
+  "title": "Veículo — entidade + CRUD (fatia de validação)",
+  "slug": "vehicle-crud",
+  "branch": "feature/4-vehicle-crud",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/4",
+  "pr": null,
+  "prUrl": null,
+  "updatedAt": "2026-06-25T16:14:35.187Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "7 critérios; padrões RPC/RLS/view/UIEngine/seed aterrados com file:line",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "../../docs/specs/4-vehicle-crud.md"
+        }
+      ],
+      "notes": [
+        "iniciando investigação dos padrões: RPC endurecida, helper upsert, view com security_invoker, RLS, UIEngine, seed",
+        "padrões mapeados: RPC hardening, helper upsert, security_invoker views, RLS, UIEngine routes, seed idempotente"
+      ],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "waiting",
+      "summary": "Aguardando aprovação humana da spec",
+      "artifacts": [],
+      "notes": [],
+      "gate": "spec-approval"
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    }
+  ]
+}
