@@ -349,3 +349,108 @@ rollback;
   assert.ok(ok, `psql falhou: ${err}`)
   assert.equal(out, 'SQLSTATE=P0002', `esperado P0002 para id inexistente; obtido: ${out}`)
 })
+
+// ---------------------------------------------------------------------------
+// AC1 (Deactivation flag — backfill de linhas pre-existentes): uma linha que ja'
+// existia ANTES da coluna ser adicionada deve ganhar is_active = true via o
+// NOT NULL DEFAULT true. Como MIGRATION_SQL e' lido como um unico blob, simulamos
+// o caso seedando user+profile e entao executando, dentro da txn, o MESMO statement
+// de coluna da migration (literal, identico verbatim a' linha 20-21 de
+// 20260625140000_user_management_crud.sql) e provando o backfill na linha previa.
+// ---------------------------------------------------------------------------
+test('AC1 backfill: linha pre-existente ganha is_active=true ao aplicar o ADD COLUMN', () => {
+  const id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+  const sql = `begin;
+-- 1) Cria o schema base SEM a coluna is_active (remove-a se a migration ja foi
+--    aplicada no banco compartilhado) para reproduzir um banco pre-migration.
+alter table public.profiles drop column if exists is_active;
+-- 2) Seeda user+profile ANTES de existir a coluna is_active.
+${seedUser(id, 'Legacy', 'read_only')}
+-- 3) Aplica o ADD COLUMN da migration. Espelha VERBATIM o DDL da coluna em
+--    20260625140000_user_management_crud.sql (linhas 20-21).
+alter table public.profiles
+  add column if not exists is_active boolean not null default true;
+-- 4) A linha pre-existente deve ter sido backfilada com true.
+select is_active from public.profiles where id = '${id}';
+rollback;
+`
+  const { ok, out, err } = psql(sql)
+  assert.ok(ok, `psql falhou: ${err}`)
+  assert.equal(out, 't', `linha pre-existente deveria ser backfilada com is_active=true; obtido: ${out}`)
+})
+
+// ---------------------------------------------------------------------------
+// AC4/AC6 (RLS SELECT visibility): com a migration aplicada e dois profiles
+// seedados (um admin, um non-admin), a RLS de SELECT separa a visibilidade:
+//   * non-admin (profiles_select_own): enxerga SO' a propria linha; NAO ve' o admin.
+//   * admin (profiles_select_admin):   enxerga TODAS as linhas seedadas.
+// ---------------------------------------------------------------------------
+test('AC4/AC6 RLS-select: non-admin ve so a propria linha; admin ve todas', () => {
+  const adminId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
+  const userId = 'cccccccc-cccc-cccc-cccc-cccccccccccc'
+
+  // (a) Como o non-admin: count do total e count das linhas do admin (deve ser 0).
+  const sqlNonAdmin = `begin;
+${MIGRATION_SQL}
+${seedUser(adminId, 'Admin', 'admin')}
+${seedUser(userId, 'Regular', 'read_only')}
+set local role authenticated;
+select set_config('request.jwt.claims', '${claims('read_only', userId)}', true) \\g /dev/null
+select
+  (select count(*) from public.profiles),
+  (select count(*) from public.profiles where id = '${userId}'),
+  (select count(*) from public.profiles where id = '${adminId}');
+rollback;
+`
+  const r1 = psql(sqlNonAdmin)
+  assert.ok(r1.ok, `psql falhou (non-admin): ${r1.err}`)
+  assert.deepEqual(
+    r1.out.split('|'),
+    ['1', '1', '0'],
+    `non-admin deveria ver SO' a propria linha (1 total, 1 propria, 0 do admin); obtido: ${r1.out}`,
+  )
+
+  // (b) Como o admin: deve enxergar ambas as linhas seedadas.
+  const sqlAdmin = `begin;
+${MIGRATION_SQL}
+${seedUser(adminId, 'Admin', 'admin')}
+${seedUser(userId, 'Regular', 'read_only')}
+set local role authenticated;
+select set_config('request.jwt.claims', '${claims('admin', adminId)}', true) \\g /dev/null
+select count(*) from public.profiles where id in ('${adminId}', '${userId}');
+rollback;
+`
+  const r2 = psql(sqlAdmin)
+  assert.ok(r2.ok, `psql falhou (admin): ${r2.err}`)
+  assert.equal(
+    r2.out,
+    '2',
+    `admin deveria ver ambas as linhas seedadas (2); obtido: ${r2.out}`,
+  )
+})
+
+// ---------------------------------------------------------------------------
+// AC3/AC5 (service_role allow-path do guard): o guard de admin_update_profile
+// permite role de requisicao = 'service_role' (sem app_metadata.role / sem ser
+// admin) — caminho do qual a edge function depende. Aqui a role de requisicao e'
+// service_role e o RPC SUCEDE, alterando a linha.
+// ---------------------------------------------------------------------------
+test('AC3/AC5 service_role: admin_update_profile como service_role SUCEDE e altera a linha', () => {
+  const target = 'dddddddd-dddd-dddd-dddd-dddddddddddd'
+  const sql = `begin;
+${MIGRATION_SQL}
+${seedUser(target, 'Before', 'read_only')}
+-- role de requisicao = service_role; SEM app_metadata.role (nao depende de get_my_role).
+select set_config('request.jwt.claims', '{"role":"service_role"}', true) \\g /dev/null
+select display_name, role::text, is_active
+from public.admin_update_profile('${target}'::uuid, 'BySvc', 'branch_manager'::public.app_role, false);
+rollback;
+`
+  const { ok, out, err } = psql(sql)
+  assert.ok(ok, `psql falhou: ${err}`)
+  assert.deepEqual(
+    out.split('|'),
+    ['BySvc', 'branch_manager', 'f'],
+    `service_role deveria conseguir atualizar a linha; obtido: ${out}`,
+  )
+})

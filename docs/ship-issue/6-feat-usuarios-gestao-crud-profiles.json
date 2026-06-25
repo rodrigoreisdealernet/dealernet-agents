@@ -4,9 +4,9 @@
   "slug": "feat-usuarios-gestao-crud-profiles",
   "branch": "feature/6-feat-usuarios-gestao-crud-profiles",
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/6",
-  "pr": null,
-  "prUrl": null,
-  "updatedAt": "2026-06-25T18:26:31.218Z",
+  "pr": "25",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/25",
+  "updatedAt": "2026-06-25T18:36:05.439Z",
   "steps": [
     {
       "id": "spec",
@@ -29,8 +29,8 @@
     {
       "id": "code",
       "label": "03 · Code",
-      "status": "pending",
-      "summary": "",
+      "status": "done",
+      "summary": "Coder: migration + edge fn + UsersAdmin screen + nav gating + seed",
       "artifacts": [],
       "notes": [],
       "gate": null
@@ -38,8 +38,8 @@
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "pending",
-      "summary": "",
+      "status": "done",
+      "summary": "11 SQL tests green; draft PR #25 opened",
       "artifacts": [],
       "notes": [],
       "gate": null
