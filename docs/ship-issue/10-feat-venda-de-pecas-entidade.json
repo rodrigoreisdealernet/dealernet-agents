@@ -1,0 +1,85 @@
+{
+  "issue": "10",
+  "title": "feat: Venda de Peças — entidade transacional + CRUD com baixa de estoque",
+  "slug": "feat-venda-de-pecas-entidade",
+  "branch": "feature/10-feat-venda-de-pecas-entidade",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/10",
+  "pr": "30",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/30",
+  "updatedAt": "2026-06-25T19:25:50.815Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "Spec written + posted as issue comment",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "../specs/10-feat-venda-de-pecas-entidade.md"
+        }
+      ],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Auto-approved (batch)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": "Migration 20260626120000 (part_sale entity, create/cancel RPCs, view, seed) + native PartSales screen wired into registry+nav",
+      "artifacts": [
+        {
+          "label": "Migration",
+          "href": "../../supabase/migrations/20260626120000_dia_part_sale_entity_crud.sql"
+        }
+      ],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "done",
+      "summary": "11 contract tests (decrement, status transitions, over-stock reject, restock, idempotent cancel, validation, RLS 42501); draft PR opened",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "done",
+      "summary": "Test suite audited: 11 scenarios, strong assertions, no blocking gaps",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "done",
+      "summary": "Approved (no blocking). Atomicity/no-negative-stock, SCD2, idempotent cancel, RLS 42501, view grants all verified. PR ready.",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "waiting",
+      "summary": "Awaiting human merge gate",
+      "artifacts": [],
+      "notes": [],
+      "gate": "merge"
+    }
+  ]
+}
