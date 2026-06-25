@@ -141,6 +141,19 @@ test('AC seletor: changeEmpresa/empresaAtualId continuam intactos (sem regressao
   assert.match(store, /changeEmpresa/, 'a acao changeEmpresa deve continuar existindo no store')
 })
 
+// AC#3 (regressao) — boot() ainda estabelece a empresa ativa a partir das
+// empresas carregadas. Asserta a expressao real de derivacao (ativa -> primeira
+// -> null) dentro do corpo de boot(); falharia se essa logica fosse removida ao
+// trocar a fonte de dados para getCompanies().
+test('AC seletor (regressao boot): boot() deriva empresaAtualId de empresas.find(e.ativa) ?? empresas[0] ?? null', () => {
+  const boot = bootBody(read(STORE))
+  assert.match(
+    boot,
+    /empresaAtualId:\s*empresas\.find\(\(e\)\s*=>\s*e\.ativa\)\?\.id\s*\?\?\s*empresas\[0\]\?\.id\s*\?\?\s*null/,
+    "boot() deve setar empresaAtualId = empresas.find((e) => e.ativa)?.id ?? empresas[0]?.id ?? null",
+  )
+})
+
 // ===========================================================================
 // AC seletor (componente): EmpresaSelector agrupa por e.grupo e o chip da marca
 // renderiza atual.grupo. Negativo: nao referencia MOCK_EMPRESAS.
@@ -169,6 +182,46 @@ test('AC seletor (regressao): EmpresaSelector NAO referencia MOCK_EMPRESAS', () 
   assert.ok(
     !/MOCK_EMPRESAS/.test(src),
     'EmpresaSelector nao deve referenciar a lista hardcoded MOCK_EMPRESAS',
+  )
+})
+
+// AC#3 — selecao: o item do dropdown chama changeEmpresa(e.id) no onSelect.
+// Falharia se a troca de empresa estivesse desconectada do clique.
+test('AC seletor (selecao): o item do dropdown liga onSelect a changeEmpresa(e.id)', () => {
+  const src = read(SELECTOR)
+  assert.match(
+    src,
+    /onSelect=\{\s*\(\)\s*=>\s*changeEmpresa\(e\.id\)\s*\}/,
+    'cada DropdownMenu.Item deve ter onSelect={() => changeEmpresa(e.id)} (clicar troca a empresa)',
+  )
+})
+
+// AC#3 — indicador da selecao atual: o Check so renderiza para a empresa ativa.
+// Falharia se o indicador de empresa atual fosse removido ou desvinculado.
+test('AC seletor (selecao atual): renderiza o Check condicionado a e.id === empresaAtualId', () => {
+  const src = read(SELECTOR)
+  assert.match(
+    src,
+    /\{\s*e\.id\s*===\s*empresaAtualId\s*&&\s*<Check\b/,
+    'o marcador Check deve aparecer so quando e.id === empresaAtualId (empresa ativa)',
+  )
+})
+
+// AC#2 — agrupamento por marca renderizado: itera os grupos e renderiza o nome
+// do grupo (marca) como rotulo de secao. Falharia se o dropdown deixasse de
+// renderizar a divisao por marca (mesmo que o store ainda agrupasse os dados).
+test('AC seletor (agrupamento): renderiza um DropdownMenu.Label por grupo (marca) iterando grupos.entries()', () => {
+  const src = read(SELECTOR)
+  assert.match(
+    src,
+    /\[\.\.\.grupos\.entries\(\)\]\.map\(\(\[grupo,\s*lista\]/,
+    'EmpresaSelector deve iterar [...grupos.entries()].map(([grupo, lista], ...)) para renderizar as secoes',
+  )
+  // E o nome do grupo (marca) deve aparecer como rotulo de secao no dropdown.
+  assert.match(
+    src,
+    /<DropdownMenu\.Label[^>]*>\s*\{grupo\}\s*<\/DropdownMenu\.Label>/,
+    'cada secao deve renderizar <DropdownMenu.Label>{grupo}</DropdownMenu.Label> (rotulo da marca)',
   )
 })
 

@@ -4,9 +4,9 @@
   "slug": "37-portal-empresas-por-marca-no",
   "branch": "feature/37-portal-empresas-por-marca-no",
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/37",
-  "pr": null,
-  "prUrl": null,
-  "updatedAt": "2026-06-25T20:38:53.673Z",
+  "pr": "38",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/38",
+  "updatedAt": "2026-06-25T20:44:08.404Z",
   "steps": [
     {
       "id": "spec",
@@ -50,21 +50,25 @@
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "running",
-      "summary": "",
+      "status": "done",
+      "summary": "21 testes de wiring, todos verdes",
       "artifacts": [],
       "notes": [
-        "estudando verify-issue31 e escrevendo verify-issue37-wiring.mjs"
+        "estudando verify-issue31 e escrevendo verify-issue37-wiring.mjs",
+        "21 testes de wiring verdes; PR draft #38 aberto"
       ],
       "gate": null
     },
     {
       "id": "test-review",
       "label": "05 · Test review",
-      "status": "pending",
+      "status": "running",
       "summary": "",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "21/21 tests pass; gaps: changeEmpresa state verification, dropdown grouping/interaction coverage (AC#2/3)",
+        "tester: reforçando asserções do EmpresaSelector (iteração 1)"
+      ],
       "gate": null
     },
     {
