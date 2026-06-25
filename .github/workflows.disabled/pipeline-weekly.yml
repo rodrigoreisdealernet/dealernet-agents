@@ -1,0 +1,197 @@
+name: Pipeline — Weekly
+
+# Staged cadence pipeline per ADR-0025 — the reflective + roadmap-building lane.
+#
+# TEMPORARILY DAILY (07:00 UTC) to build up the operating-model roadmap quickly while we are
+# getting going. Revert the cron to weekly ('0 7 * * 0') once the map is well-populated.
+# The agentic-reflector tags along daily but is expected to mostly no-op (it only proposes a
+# charter change when there is real new evidence), so the charter does not thrash.
+#
+# Stage order:
+#   1. agentic-reflector  — PROPOSES evidence-backed refinements to docs/agentic-charter.md.
+#   2. (publish)          — opens the charter PR (no-op on quiet days).
+#   3. domain-cartographer— extends the operating model (docs/discovery/domain/): roles + cited tasks.
+#   4. reconcile          — FEEDBACK LOOP: closed `<role>:<task-id>`-tagged stories → task `supported`.
+#   5. (publish)          — opens the operating-model PR (docs/discovery/domain changes).
+#   6. epics-sync         — TICKET BRIDGE: upsert ONE epic per populated role (queue:product / triage).
+#
+# Each agent writes files only; the publish steps turn them into PRs. Reconcile/epics-sync are
+# deterministic. A quiet day (no change) is a valid outcome — steps no-op.
+
+on:
+  schedule:
+    - cron: '0 7 * * *'   # daily 07:00 UTC (TEMP — bootstrap; revert to '0 7 * * 0' for weekly)
+  workflow_dispatch:
+
+concurrency:
+  group: pipeline-weekly
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+  actions: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 85
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: .github/tools/shared/package-lock.json
+
+      - name: Install shared runtime
+        run: npm ci
+        working-directory: .github/tools/shared
+
+      - name: Initialise step summary
+        run: |
+          {
+            echo "## Weekly pipeline — $(date -u '+%Y-%m-%d %H:%M UTC')"
+            echo ""
+            echo "| Stage | Status |"
+            echo "|-------|--------|"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Stage 1: Agentic Reflector ─────────────────────────────────────────────
+      - name: Stage — Agentic Reflector
+        id: agentic_reflector
+        continue-on-error: true
+        timeout-minutes: 18
+        working-directory: .github/tools/shared
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGER_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+          FACTORY_CONFIG_PATH: ${{ github.workspace }}/.github/factory.yml
+          AGENTS_PATH: ${{ github.workspace }}/.github/agents
+        run: npx tsx src/run-agent.ts --agent agentic-reflector
+
+      - name: Summarise — Agentic Reflector
+        if: always()
+        env:
+          OUTCOME: ${{ steps.agentic_reflector.outcome }}
+        run: |
+          STATUS="✅ ok"
+          [ "$OUTCOME" != "success" ] && STATUS="⚠️ $OUTCOME"
+          echo "| agentic-reflector | $STATUS |" >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Stage 2: Publish charter PR (deterministic, not an agent) ──────────────
+      - name: Stage — Publish charter PR
+        id: charter_publish
+        if: always()
+        continue-on-error: true
+        timeout-minutes: 5
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGER_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: bash scripts/agentic-charter-publish.sh
+
+      - name: Summarise — Publish charter PR
+        if: always()
+        env:
+          OUTCOME: ${{ steps.charter_publish.outcome }}
+        run: |
+          STATUS="✅ ok"
+          [ "$OUTCOME" != "success" ] && STATUS="⚠️ $OUTCOME"
+          echo "| charter-publish | $STATUS |" >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Stage 3: Domain Cartographer (operating model) ─────────────────────────
+      - name: Stage — Domain Cartographer
+        id: domain_cartographer
+        continue-on-error: true
+        timeout-minutes: 48
+        working-directory: .github/tools/shared
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGER_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+          FACTORY_CONFIG_PATH: ${{ github.workspace }}/.github/factory.yml
+          AGENTS_PATH: ${{ github.workspace }}/.github/agents
+        run: npx tsx src/run-agent.ts --agent domain-cartographer
+
+      - name: Summarise — Domain Cartographer
+        if: always()
+        env:
+          OUTCOME: ${{ steps.domain_cartographer.outcome }}
+        run: |
+          STATUS="✅ ok"
+          [ "$OUTCOME" != "success" ] && STATUS="⚠️ $OUTCOME"
+          echo "| domain-cartographer | $STATUS |" >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Stage 3b: Reconcile implementation status (feedback loop, deterministic) ─
+      - name: Stage — Reconcile operating-model implementation
+        id: operating_model_reconcile
+        if: always()
+        continue-on-error: true
+        timeout-minutes: 6
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGER_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: bash scripts/operating-model-reconcile.sh equipment-rental-enterprise
+
+      - name: Summarise — Reconcile
+        if: always()
+        env:
+          OUTCOME: ${{ steps.operating_model_reconcile.outcome }}
+        run: |
+          STATUS="✅ ok"
+          [ "$OUTCOME" != "success" ] && STATUS="⚠️ $OUTCOME"
+          echo "| operating-model-reconcile | $STATUS |" >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Stage 4: Publish operating-model PR (deterministic, not an agent) ──────
+      - name: Stage — Publish operating-model PR
+        id: operating_model_publish
+        if: always()
+        continue-on-error: true
+        timeout-minutes: 5
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGER_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: bash scripts/operating-model-publish.sh
+
+      - name: Summarise — Publish operating-model PR
+        if: always()
+        env:
+          OUTCOME: ${{ steps.operating_model_publish.outcome }}
+        run: |
+          STATUS="✅ ok"
+          [ "$OUTCOME" != "success" ] && STATUS="⚠️ $OUTCOME"
+          echo "| operating-model-publish | $STATUS |" >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Stage 5: Epics sync — research→ticket bridge (deterministic) ───────────
+      - name: Stage — Sync operating-model epics
+        id: operating_model_epics
+        if: always()
+        continue-on-error: true
+        timeout-minutes: 6
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGER_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: bash scripts/operating-model-epics.sh equipment-rental-enterprise
+
+      - name: Summarise — Epics sync
+        if: always()
+        env:
+          OUTCOME: ${{ steps.operating_model_epics.outcome }}
+        run: |
+          STATUS="✅ ok"
+          [ "$OUTCOME" != "success" ] && STATUS="⚠️ $OUTCOME"
+          echo "| operating-model-epics | $STATUS |" >> "$GITHUB_STEP_SUMMARY"

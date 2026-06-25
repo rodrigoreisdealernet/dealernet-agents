@@ -1,0 +1,138 @@
+{{- if and .Values.observability.enabled .Values.observability.grafana.dashboards.enabled -}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "app.fullname" . }}-grafana-ops-api-dashboard
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    {{ .Values.observability.grafana.dashboards.label }}: {{ .Values.observability.grafana.dashboards.labelValue | quote }}
+    grafana_folder: {{ .Values.observability.grafana.dashboards.folder | quote }}
+data:
+  ops-api-dashboard.json: |-
+    {
+      "title": "Wynne \u2014 Ops API",
+      "uid": "wynne-ops-api",
+      "schemaVersion": 36,
+      "refresh": "30s",
+      "time": { "from": "now-1h", "to": "now" },
+      "panels": [
+        {
+          "id": 1,
+          "type": "timeseries",
+          "title": "Request rate (req/s)",
+          "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+          "targets": [
+            {
+              "expr": "sum(rate(ops_api_http_requests_total[2m])) by (method, path)",
+              "legendFormat": "{{ "{{" }}method{{ "}}" }} {{ "{{" }}path{{ "}}" }}"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "type": "timeseries",
+          "title": "Error rate (5xx %)",
+          "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+          "targets": [
+            {
+              "expr": "sum(rate(ops_api_http_requests_total{status_code=~\"5..\"}[2m])) / (sum(rate(ops_api_http_requests_total[2m])) + 1e-9) * 100",
+              "legendFormat": "5xx %"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "type": "timeseries",
+          "title": "Request latency p50/p95/p99 (s)",
+          "gridPos": { "x": 0, "y": 8, "w": 24, "h": 8 },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.50, sum(rate(ops_api_http_request_duration_seconds_bucket[2m])) by (le))",
+              "legendFormat": "p50"
+            },
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(ops_api_http_request_duration_seconds_bucket[2m])) by (le))",
+              "legendFormat": "p95"
+            },
+            {
+              "expr": "histogram_quantile(0.99, sum(rate(ops_api_http_request_duration_seconds_bucket[2m])) by (le))",
+              "legendFormat": "p99"
+            }
+          ]
+        }
+      ]
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "app.fullname" . }}-grafana-temporal-dashboard
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    {{ .Values.observability.grafana.dashboards.label }}: {{ .Values.observability.grafana.dashboards.labelValue | quote }}
+    grafana_folder: {{ .Values.observability.grafana.dashboards.folder | quote }}
+data:
+  temporal-worker-dashboard.json: |-
+    {
+      "title": "Wynne \u2014 Temporal Worker",
+      "uid": "wynne-temporal-worker",
+      "schemaVersion": 36,
+      "refresh": "30s",
+      "time": { "from": "now-1h", "to": "now" },
+      "panels": [
+        {
+          "id": 1,
+          "type": "timeseries",
+          "title": "Workflow completions/s",
+          "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+          "targets": [
+            {
+              "expr": "sum(rate(temporal_workflow_completed_total[2m]))",
+              "legendFormat": "completed/s"
+            },
+            {
+              "expr": "sum(rate(temporal_workflow_failed_total[2m]))",
+              "legendFormat": "failed/s"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "type": "timeseries",
+          "title": "Schedule-to-start latency p95 (s)",
+          "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(temporal_schedule_to_start_latency_seconds_bucket[2m])) by (le, task_queue))",
+              "legendFormat": "p95 {{ "{{" }}task_queue{{ "}}" }}"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "type": "timeseries",
+          "title": "Activity completions/s",
+          "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+          "targets": [
+            {
+              "expr": "sum(rate(temporal_activity_execution_total[2m])) by (activity_type)",
+              "legendFormat": "{{ "{{" }}activity_type{{ "}}" }}"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "type": "timeseries",
+          "title": "Poller count (active pollers)",
+          "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+          "targets": [
+            {
+              "expr": "sum(temporal_worker_task_slots_available) by (task_queue)",
+              "legendFormat": "slots-available {{ "{{" }}task_queue{{ "}}" }}"
+            }
+          ]
+        }
+      ]
+    }
+{{- end }}

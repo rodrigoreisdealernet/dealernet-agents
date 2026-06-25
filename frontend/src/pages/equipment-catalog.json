@@ -1,0 +1,425 @@
+{
+  "id": "equipment-catalog",
+  "title": "Equipment Catalog",
+  "state": {
+    "selectedCategory": "",
+    "selectedBranch": "",
+    "searchText": ""
+  },
+  "dataSources": {
+    "assets": {
+      "type": "supabase",
+      "table": "entities",
+      "select": "id, entity_type, created_at, entity_versions!inner(id, data, is_current)",
+      "filters": [
+        { "field": "entity_type", "op": "eq", "value": "asset" },
+        { "field": "entity_versions.is_current", "op": "eq", "value": true }
+      ],
+      "order": [{ "column": "created_at", "ascending": true }]
+    },
+    "categories": {
+      "type": "supabase",
+      "table": "entities",
+      "select": "id, entity_versions!inner(id, data, is_current)",
+      "filters": [
+        { "field": "entity_type", "op": "eq", "value": "asset_category" },
+        { "field": "entity_versions.is_current", "op": "eq", "value": true }
+      ],
+      "order": [{ "column": "created_at", "ascending": true }]
+    },
+    "branches": {
+      "type": "supabase",
+      "table": "entities",
+      "select": "id, entity_versions!inner(id, data, is_current)",
+      "filters": [
+        { "field": "entity_type", "op": "eq", "value": "branch" },
+        { "field": "entity_versions.is_current", "op": "eq", "value": true }
+      ],
+      "order": [{ "column": "created_at", "ascending": true }]
+    }
+  },
+  "layout": {
+    "type": "Stack",
+    "props": { "spacing": 6 },
+    "children": [
+      {
+        "type": "Stack",
+        "props": { "spacing": 1 },
+        "children": [
+          {
+            "type": "Heading",
+            "props": { "level": 1, "children": "Equipment Catalog" }
+          },
+          {
+            "type": "Text",
+            "props": {
+              "variant": "muted",
+              "children": "Job-site requisition catalog. Browse rentable fleet by category, then use Create Requisition to open a pre-scoped order form for dispatch handoff."
+            }
+          }
+        ]
+      },
+      {
+        "type": "Input",
+        "props": {
+          "type": "search",
+          "placeholder": "Search equipment by name, make, or identifier",
+          "value": "{{state.searchText}}",
+          "onChange": {
+            "action": "setState",
+            "key": "searchText",
+            "value": "{{event.target.value}}"
+          }
+        }
+      },
+      {
+        "type": "Stack",
+        "props": { "direction": "horizontal", "spacing": 6, "align": "start", "className": "flex-col lg:flex-row" },
+        "children": [
+          {
+            "type": "Stack",
+            "props": {
+              "spacing": 1,
+              "className": "w-full lg:w-56 shrink-0"
+            },
+            "children": [
+              {
+                "type": "Text",
+                "props": {
+                  "weight": "semibold",
+                  "size": "sm",
+                  "className": "uppercase tracking-wide text-muted-foreground px-2 pb-1",
+                  "children": "Category"
+                }
+              },
+              {
+                "type": "Button",
+                "props": {
+                  "variant": "{{state.selectedCategory === '' ? 'default' : 'ghost'}}",
+                  "className": "w-full justify-start",
+                  "size": "sm",
+                  "children": "All Equipment",
+                  "onClick": { "action": "setState", "key": "selectedCategory", "value": "" }
+                }
+              },
+              {
+                "type": "Stack",
+                "if": "{{data.categories && data.categories.length > 0}}",
+                "each": "{{data.categories}}",
+                "as": "cat",
+                "key": "{{cat.id}}",
+                "props": { "spacing": 0 },
+                "children": [
+                  {
+                    "type": "Button",
+                    "props": {
+                      "variant": "{{state.selectedCategory === cat.id ? 'secondary' : 'ghost'}}",
+                      "className": "w-full justify-start text-left",
+                      "size": "sm",
+                      "children": "{{cat.entity_versions[0].data.name}}",
+                      "onClick": {
+                        "action": "setState",
+                        "key": "selectedCategory",
+                        "value": "{{cat.id}}"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "Stack",
+            "props": {
+              "spacing": 1,
+              "className": "w-full lg:w-56 shrink-0"
+            },
+            "children": [
+              {
+                "type": "Text",
+                "props": {
+                  "weight": "semibold",
+                  "size": "sm",
+                  "className": "uppercase tracking-wide text-muted-foreground px-2 pb-1",
+                  "children": "Branch"
+                }
+              },
+              {
+                "type": "Button",
+                "props": {
+                  "variant": "{{state.selectedBranch === '' ? 'default' : 'ghost'}}",
+                  "className": "w-full justify-start",
+                  "size": "sm",
+                  "children": "All Branches",
+                  "onClick": { "action": "setState", "key": "selectedBranch", "value": "" }
+                }
+              },
+              {
+                "type": "Stack",
+                "if": "{{data.branches && data.branches.length > 0}}",
+                "each": "{{data.branches}}",
+                "as": "branch",
+                "key": "{{branch.id}}",
+                "props": { "spacing": 0 },
+                "children": [
+                  {
+                    "type": "Button",
+                    "props": {
+                      "variant": "{{state.selectedBranch === branch.id ? 'secondary' : 'ghost'}}",
+                      "className": "w-full justify-start text-left",
+                      "size": "sm",
+                      "children": "{{branch.entity_versions[0].data.name}}",
+                      "onClick": {
+                        "action": "setState",
+                        "key": "selectedBranch",
+                        "value": "{{branch.id}}"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "Stack",
+            "props": { "spacing": 4, "className": "flex-1 min-w-0" },
+            "children": [
+              {
+                "type": "EmptyState",
+                "if": "{{countCatalogAssets(data.assets, state.selectedCategory, state.selectedBranch, state.searchText) === 0}}",
+                "props": {
+                  "icon": "Package",
+                  "title": "No equipment found",
+                  "hint": "Try adjusting your category, branch, or search filters.",
+                  "to": "/rental/orders",
+                  "linkLabel": "Create a requisition"
+                }
+              },
+              {
+                "type": "Grid",
+                "if": "{{countCatalogAssets(data.assets, state.selectedCategory, state.selectedBranch, state.searchText) > 0}}",
+                "props": {
+                  "columns": "repeat(auto-fill, minmax(17rem, 1fr))",
+                  "gap": 4
+                },
+                "children": [
+                  {
+                    "type": "Card",
+                    "each": "{{filterCatalogAssets(data.assets, state.selectedCategory, state.selectedBranch, state.searchText)}}",
+                    "as": "asset",
+                    "key": "{{asset.id}}",
+                    "props": {
+                      "interactive": true,
+                      "className": "overflow-hidden",
+                      "contentClassName": "p-0"
+                    },
+                    "children": [
+                      {
+                        "type": "Stack",
+                        "props": { "spacing": 0 },
+                        "children": [
+                          {
+                            "type": "Image",
+                            "props": {
+                              "src": "{{asset.entity_versions[0].data.image_url}}",
+                              "alt": "{{asset.entity_versions[0].data.name}}",
+                              "height": 200,
+                              "fallbackText": "{{asset.entity_versions[0].data.name}}",
+                              "placeholderIcon": "Package",
+                              "objectFit": "cover",
+                              "className": "rounded-none"
+                            }
+                          },
+                          {
+                            "type": "Stack",
+                            "props": { "spacing": 3, "className": "p-4" },
+                            "children": [
+                              {
+                                "type": "Stack",
+                                "props": { "spacing": 1 },
+                                "children": [
+                                  {
+                                    "type": "Stack",
+                                    "props": { "direction": "horizontal", "justify": "between", "align": "start" },
+                                    "children": [
+                                      {
+                                        "type": "Text",
+                                        "props": {
+                                          "weight": "semibold",
+                                          "className": "leading-tight",
+                                          "children": "{{asset.entity_versions[0].data.name}}"
+                                        }
+                                      },
+                                      {
+                                        "type": "Badge",
+                                        "props": {
+                                        "status": "{{asset.entity_versions[0].data.status || 'draft'}}",
+                                         "children": "{{asset.entity_versions[0].data.status || 'draft'}}"
+                                        }
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "type": "Text",
+                                    "props": {
+                                      "size": "sm",
+                                      "variant": "muted",
+                                      "children": "{{asset.entity_versions[0].data.make}} · {{asset.entity_versions[0].data.year}} · {{asset.entity_versions[0].data.identifier}}"
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "Stack",
+                                "props": { "spacing": 1 },
+                                "children": [
+                                  {
+                                    "type": "Text",
+                                    "props": {
+                                      "size": "xs",
+                                      "weight": "semibold",
+                                      "className": "uppercase tracking-wide text-muted-foreground",
+                                      "children": "Rates"
+                                    }
+                                  },
+                                  {
+                                    "type": "Text",
+                                    "if": "{{!asset.entity_versions[0].data.daily_rate && !asset.entity_versions[0].data.weekly_rate && !asset.entity_versions[0].data.monthly_rate}}",
+                                    "props": {
+                                      "size": "sm",
+                                      "variant": "muted",
+                                      "className": "italic",
+                                      "children": "Rates on request"
+                                    }
+                                  },
+                                  {
+                                    "type": "Stack",
+                                    "if": "{{asset.entity_versions[0].data.daily_rate || asset.entity_versions[0].data.weekly_rate || asset.entity_versions[0].data.monthly_rate}}",
+                                    "props": { "direction": "horizontal", "spacing": 4 },
+                                    "children": [
+                                      {
+                                        "type": "Stack",
+                                        "props": { "spacing": 0, "align": "center" },
+                                        "children": [
+                                          {
+                                            "type": "Text",
+                                            "props": {
+                                              "weight": "bold",
+                                              "size": "sm",
+                                              "children": "{{asset.entity_versions[0].data.daily_rate ? formatCurrency(asset.entity_versions[0].data.daily_rate) : '—'}}"
+                                            }
+                                          },
+                                          {
+                                            "type": "Text",
+                                            "props": {
+                                              "size": "xs",
+                                              "variant": "muted",
+                                              "children": "day"
+                                            }
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "type": "Stack",
+                                        "props": { "spacing": 0, "align": "center" },
+                                        "children": [
+                                          {
+                                            "type": "Text",
+                                            "props": {
+                                              "weight": "bold",
+                                              "size": "sm",
+                                              "children": "{{asset.entity_versions[0].data.weekly_rate ? formatCurrency(asset.entity_versions[0].data.weekly_rate) : '—'}}"
+                                            }
+                                          },
+                                          {
+                                            "type": "Text",
+                                            "props": {
+                                              "size": "xs",
+                                              "variant": "muted",
+                                              "children": "week"
+                                            }
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "type": "Stack",
+                                        "props": { "spacing": 0, "align": "center" },
+                                        "children": [
+                                          {
+                                            "type": "Text",
+                                            "props": {
+                                              "weight": "bold",
+                                              "size": "sm",
+                                              "children": "{{asset.entity_versions[0].data.monthly_rate ? formatCurrency(asset.entity_versions[0].data.monthly_rate) : '—'}}"
+                                            }
+                                          },
+                                          {
+                                            "type": "Text",
+                                            "props": {
+                                              "size": "xs",
+                                              "variant": "muted",
+                                              "children": "month"
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "Stack",
+                                "props": { "direction": "horizontal", "spacing": 3, "align": "center", "justify": "between", "className": "pt-2 border-t" },
+                                "children": [
+                                  {
+                                    "type": "Stack",
+                                    "props": { "direction": "horizontal", "spacing": 3 },
+                                    "children": [
+                                      {
+                                        "type": "Link",
+                                        "props": {
+                                          "to": "/rental/orders?branch_id={{asset.entity_versions[0].data.branch_id}}&category_id={{asset.entity_versions[0].data.asset_category_id || asset.entity_versions[0].data.category_id}}",
+                                          "appearance": "action",
+                                          "children": "Create Requisition"
+                                        }
+                                      },
+                                      {
+                                        "type": "Link",
+                                        "props": {
+                                          "to": "/entities/$entityType/$id",
+                                          "params": { "entityType": "asset", "id": "{{asset.id}}" },
+                                          "appearance": "action",
+                                          "children": "View Details"
+                                        }
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "type": "Link",
+                                    "props": {
+                                      "to": "/storefront/cart",
+                                      "search": {
+                                        "asset_id": "{{asset.id}}",
+                                        "rental_days": "7"
+                                      },
+                                      "appearance": "button",
+                                      "children": "Add to Cart"
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

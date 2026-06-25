@@ -1,0 +1,62 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: temporal-server
+  namespace: {{ .Values.namespaceOverride }}
+  labels:
+    {{- include "observability.labels" . | nindent 4 }}
+    release: {{ .Release.Name }}
+spec:
+  namespaceSelector:
+    matchNames:
+      - {{ .Values.targets.temporalServer.namespace }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: temporal-server-metrics
+  endpoints:
+    - port: {{ .Values.targets.temporalServer.metrics.portName }}
+      path: {{ .Values.targets.temporalServer.metrics.path }}
+      interval: {{ .Values.targets.temporalServer.metrics.interval }}
+      scrapeTimeout: {{ .Values.targets.temporalServer.metrics.scrapeTimeout }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: temporal-worker
+  namespace: {{ .Values.namespaceOverride }}
+  labels:
+    {{- include "observability.labels" . | nindent 4 }}
+    release: {{ .Release.Name }}
+spec:
+  namespaceSelector:
+    matchNames:
+      - {{ .Values.targets.temporalWorker.namespace }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: temporal-worker-metrics
+  endpoints:
+    - port: {{ .Values.targets.temporalWorker.metrics.portName }}
+      path: {{ .Values.targets.temporalWorker.metrics.path }}
+      interval: {{ .Values.targets.temporalWorker.metrics.interval }}
+      scrapeTimeout: {{ .Values.targets.temporalWorker.metrics.scrapeTimeout }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: ops-api
+  namespace: {{ .Values.namespaceOverride }}
+  labels:
+    {{- include "observability.labels" . | nindent 4 }}
+    release: {{ .Release.Name }}
+spec:
+  namespaceSelector:
+    matchNames:
+      - {{ .Values.targets.opsApi.namespace }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: ops-api-metrics
+  endpoints:
+    - port: {{ .Values.targets.opsApi.metrics.portName }}
+      path: {{ .Values.targets.opsApi.metrics.path }}
+      interval: {{ .Values.targets.opsApi.metrics.interval }}
+      scrapeTimeout: {{ .Values.targets.opsApi.metrics.scrapeTimeout }}

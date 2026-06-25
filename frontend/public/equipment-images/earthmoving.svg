@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1f7a7a"/>
+      <stop offset="100%" stop-color="#0f4f4f"/>
+    </linearGradient>
+  </defs>
+  <rect width="480" height="320" fill="url(#bg)"/>
+  <rect x="74" y="194" width="180" height="46" rx="12" fill="#0c1f2f"/>
+  <rect x="190" y="144" width="78" height="48" rx="10" fill="#0c1f2f"/>
+  <path d="M268 164h54l58-42 18 18-62 46h-68z" fill="#f3b11d"/>
+  <circle cx="118" cy="248" r="24" fill="#111827"/>
+  <circle cx="220" cy="248" r="24" fill="#111827"/>
+  <text x="30" y="44" fill="#e6fffb" font-size="30" font-family="Inter, Arial, sans-serif" font-weight="700">Earthmoving</text>
+</svg>

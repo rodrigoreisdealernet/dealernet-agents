@@ -1,0 +1,368 @@
+name: Pipeline — Hourly
+
+# Staged cadence pipeline per ADR-0025.
+# Runs at :30 each hour (offset from the fast pipeline at :00) so the two
+# pipelines do not compete for the same runner slot or API quota.
+#
+# Stage order:
+#   Public lane (github-hosted):
+#     1. factory-architect  — converts backlog items into implementation-ready specs/ADRs
+#     2. qa-manager         — reviews test coverage gaps and filed UX/quality improvements
+#     3. operations-manager — public-only posture checks (OPS_CHECK_SCOPE=public)
+#   Private lane (self-hosted/private-access):
+#     4. operations-manager — private runtime checks (OPS_CHECK_SCOPE=private)
+#     5. cluster-guardian   — wynne-* namespace health check (read-only)
+#
+# The private lane is explicit and separate from the public lane so private/runtime
+# coverage does not appear healthy when private prerequisites are missing.
+#
+# Each stage is an independent GitHub Actions step with continue-on-error: true and
+# a per-stage timeout so a failing/hung stage never blocks the next one.
+# Stage outcome is appended to $GITHUB_STEP_SUMMARY.
+
+on:
+  schedule:
+    - cron: '30 * * * *'   # hourly at :30, offset from pipeline-fast (:00)
+  workflow_dispatch:
+
+concurrency:
+  group: pipeline-hourly
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+  actions: read
+  security-events: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  pipeline_public:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: .github/tools/shared/package-lock.json
+
+      - name: Install shared runtime
+        run: npm ci
+        working-directory: .github/tools/shared
+
+      - name: Initialise step summary
+        run: |
+          {
+            echo "## Hourly pipeline (public lane) — $(date -u '+%Y-%m-%d %H:%M UTC')"
+            echo ""
+            echo "| Stage | Status |"
+            echo "|-------|--------|"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Stage 1: Factory Architect ──────────────────────────────────────────────
+      - name: Stage — Factory Architect
+        id: factory_architect
+        continue-on-error: true
+        timeout-minutes: 12
+        working-directory: .github/tools/shared
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGER_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+          FACTORY_CONFIG_PATH: ${{ github.workspace }}/.github/factory.yml
+          AGENTS_PATH: ${{ github.workspace }}/.github/agents
+        run: npx tsx src/run-agent.ts --agent factory-architect
+
+      - name: Summarise — Factory Architect
+        if: always()
+        env:
+          OUTCOME: ${{ steps.factory_architect.outcome }}
+        run: |
+          STATUS="✅ ok"
+          [ "$OUTCOME" != "success" ] && STATUS="⚠️ $OUTCOME"
+          echo "| factory-architect | $STATUS |" >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Stage 2: QA Manager ────────────────────────────────────────────────────
+      - name: Stage — QA Manager
+        id: qa_manager
+        continue-on-error: true
+        timeout-minutes: 20
+        working-directory: .github/tools/shared
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGER_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+          FACTORY_CONFIG_PATH: ${{ github.workspace }}/.github/factory.yml
+          AGENTS_PATH: ${{ github.workspace }}/.github/agents
+        run: npx tsx src/run-agent.ts --agent qa-manager
+
+      - name: Summarise — QA Manager
+        if: always()
+        env:
+          OUTCOME: ${{ steps.qa_manager.outcome }}
+        run: |
+          STATUS="✅ ok"
+          [ "$OUTCOME" != "success" ] && STATUS="⚠️ $OUTCOME"
+          echo "| qa-manager | $STATUS |" >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Stage 3: Operations Manager ────────────────────────────────────────────
+      - name: Stage — Operations Manager
+        id: ops_manager_public
+        continue-on-error: true
+        timeout-minutes: 18
+        working-directory: .github/tools/shared
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGER_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+          FACTORY_CONFIG_PATH: ${{ github.workspace }}/.github/factory.yml
+          AGENTS_PATH: ${{ github.workspace }}/.github/agents
+          OPS_CHECK_SCOPE: public
+        run: npx tsx src/run-agent.ts --agent operations-manager
+
+      - name: Summarise — Operations Manager
+        if: always()
+        env:
+          OUTCOME: ${{ steps.ops_manager_public.outcome }}
+        run: |
+          STATUS="✅ ok"
+          [ "$OUTCOME" != "success" ] && STATUS="⚠️ $OUTCOME"
+          echo "| operations-manager (public) | $STATUS |" >> "$GITHUB_STEP_SUMMARY"
+
+  private_lane_preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      private_ready: ${{ steps.preflight.outputs.private_ready }}
+      missing_requirements: ${{ steps.preflight.outputs.missing_requirements }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Check private lane prerequisites
+        id: preflight
+        env:
+          HAS_COPILOT_TOKEN: ${{ secrets.COPILOT_TOKEN != '' }}
+          HAS_PROJECT_MANAGER_PAT: ${{ secrets.PROJECT_MANAGER_PAT != '' }}
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGER_PAT }}
+        run: |
+          set -euo pipefail
+          missing=()
+
+          if [ "${HAS_COPILOT_TOKEN}" != "true" ]; then
+            missing+=("COPILOT_TOKEN secret")
+          fi
+          if [ "${HAS_PROJECT_MANAGER_PAT}" != "true" ]; then
+            missing+=("PROJECT_MANAGER_PAT secret")
+          fi
+
+          active_runner_profile="$(awk -F: '/^[[:space:]]*active_runner_profile:/ {print $2; exit}' .github/factory.yml | xargs)"
+          if [ -z "$active_runner_profile" ] || [ "$active_runner_profile" = "github-hosted-mvp" ]; then
+            missing+=("factory.yml active_runner_profile must be set and must not be github-hosted-mvp")
+          fi
+
+          cluster_guardian_labels="$(
+            awk '
+              /^[[:space:]]*cluster_guardian:/ {
+                line = $0
+                sub(/^[^:]*:[[:space:]]*/, "", line)
+                if (length(line) > 0) {
+                  print line
+                  exit
+                }
+                capture = 1
+                next
+              }
+              capture && /^[[:space:]]*-/ {
+                item = $0
+                sub(/^[[:space:]]*-[[:space:]]*/, "", item)
+                labels = labels " " item
+                next
+              }
+              capture {
+                print labels
+                exit
+              }
+              END {
+                if (capture) print labels
+              }
+            ' .github/factory.yml | xargs
+          )"
+          [[ "$cluster_guardian_labels" != *"self-hosted"* ]] && missing+=("factory.yml runners.self_hosted.cluster_guardian missing self-hosted")
+          [[ "$cluster_guardian_labels" != *"linux"* ]] && missing+=("factory.yml runners.self_hosted.cluster_guardian missing linux")
+          [[ "$cluster_guardian_labels" != *"x64"* ]] && missing+=("factory.yml runners.self_hosted.cluster_guardian missing x64")
+          [[ "$cluster_guardian_labels" != *"factory-cluster-guardian"* ]] && missing+=("factory.yml runners.self_hosted.cluster_guardian missing factory-cluster-guardian")
+
+          if [ "${HAS_PROJECT_MANAGER_PAT}" = "true" ]; then
+            runner_response="$(mktemp)"
+            if gh api \
+              -H "Accept: application/vnd.github+json" \
+              "/repos/${GITHUB_REPOSITORY}/actions/runners?per_page=100" > "$runner_response"; then
+              guardian_runner_counts="$(
+                python -c 'import json,sys; payload=json.load(open(sys.argv[1], "r", encoding="utf-8")); runners=payload.get("runners", []); registered=sum(1 for runner in runners if "factory-cluster-guardian" in {label.get("name") for label in runner.get("labels", [])}); online=sum(1 for runner in runners if "factory-cluster-guardian" in {label.get("name") for label in runner.get("labels", [])} and runner.get("status") == "online"); print(f"{registered}:{online}")' "$runner_response" \
+                  || echo "__runner_parse_error__"
+              )"
+              if [ "$guardian_runner_counts" = "__runner_parse_error__" ]; then
+                missing+=("factory-cluster-guardian runner availability payload parse failed")
+              else
+                IFS=":" read -r registered_guardian_runners online_guardian_runners <<< "$guardian_runner_counts"
+                if [ "${registered_guardian_runners:-0}" -lt 1 ]; then
+                  missing+=("factory-cluster-guardian runner label is not registered")
+                elif [ "${online_guardian_runners:-0}" -lt 1 ]; then
+                  missing+=("factory-cluster-guardian runner is registered but offline")
+                fi
+              fi
+            else
+              missing+=("factory-cluster-guardian runner availability check failed")
+            fi
+            rm -f "$runner_response"
+          fi
+
+          if [ "${#missing[@]}" -gt 0 ]; then
+            {
+              echo "private_ready=false"
+              echo "missing_requirements=${missing[*]}"
+            } >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo "private_ready=true"
+              echo "missing_requirements="
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Summarise private lane preflight
+        if: always()
+        env:
+          PRIVATE_READY: ${{ steps.preflight.outputs.private_ready }}
+          MISSING_REQUIREMENTS: ${{ steps.preflight.outputs.missing_requirements }}
+        run: |
+          {
+            echo "## Hourly pipeline (private lane preflight)"
+            echo ""
+            echo "| Check | Status |"
+            echo "|-------|--------|"
+            if [ "$PRIVATE_READY" = "true" ]; then
+              echo "| private lane prerequisites | ✅ ready |"
+            else
+              echo "| private lane prerequisites | ❌ missing: ${MISSING_REQUIREMENTS:-unknown} |"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  pipeline_private:
+    needs: private_lane_preflight
+    if: needs.private_lane_preflight.outputs.private_ready == 'true'
+    runs-on: [self-hosted, linux, x64, factory-cluster-guardian]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: .github/tools/shared/package-lock.json
+
+      - name: Install shared runtime
+        run: npm ci
+        working-directory: .github/tools/shared
+
+      - name: Initialise private step summary
+        run: |
+          {
+            echo "## Hourly pipeline (private lane) — $(date -u '+%Y-%m-%d %H:%M UTC')"
+            echo ""
+            echo "| Stage | Status |"
+            echo "|-------|--------|"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Stage — Operations Manager (private)
+        id: ops_manager_private
+        continue-on-error: true
+        timeout-minutes: 18
+        working-directory: .github/tools/shared
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGER_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+          FACTORY_CONFIG_PATH: ${{ github.workspace }}/.github/factory.yml
+          AGENTS_PATH: ${{ github.workspace }}/.github/agents
+          OPS_CHECK_SCOPE: private
+        run: npx tsx src/run-agent.ts --agent operations-manager
+
+      - name: Summarise — Operations Manager (private)
+        if: always()
+        env:
+          OUTCOME: ${{ steps.ops_manager_private.outcome }}
+        run: |
+          STATUS="✅ ok"
+          [ "$OUTCOME" != "success" ] && STATUS="⚠️ $OUTCOME"
+          echo "| operations-manager (private) | $STATUS |" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Stage — Cluster Guardian
+        id: cluster_guardian_private
+        continue-on-error: true
+        timeout-minutes: 18
+        working-directory: .github/tools/shared
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGER_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+          FACTORY_CONFIG_PATH: ${{ github.workspace }}/.github/factory.yml
+          AGENTS_PATH: ${{ github.workspace }}/.github/agents
+        run: npx tsx src/run-agent.ts --agent cluster-guardian
+
+      - name: Summarise — Cluster Guardian
+        if: always()
+        env:
+          OUTCOME: ${{ steps.cluster_guardian_private.outcome }}
+        run: |
+          STATUS="✅ ok"
+          [ "$OUTCOME" != "success" ] && STATUS="⚠️ $OUTCOME"
+          echo "| cluster-guardian (private) | $STATUS |" >> "$GITHUB_STEP_SUMMARY"
+
+  private_lane_degraded:
+    needs: private_lane_preflight
+    if: needs.private_lane_preflight.outputs.private_ready != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fail with explicit degraded-monitoring status
+        env:
+          MISSING_REQUIREMENTS: ${{ needs.private_lane_preflight.outputs.missing_requirements }}
+        run: |
+          {
+            echo "## ⚠️ Degraded monitoring — private lane not executed"
+            echo ""
+            echo "Private runtime monitoring is required but prerequisites were missing."
+            echo ""
+            echo "- Missing prerequisites: ${MISSING_REQUIREMENTS:-unknown}"
+            echo "- Affected checks: operations-manager (private), cluster-guardian"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::error::Degraded monitoring: private hourly runtime lane prerequisites missing (${MISSING_REQUIREMENTS:-unknown})."
+          exit 1

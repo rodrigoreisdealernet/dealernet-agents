@@ -1,0 +1,53 @@
+{{- if and .Values.adminAccess.enabled .Values.adminAccess.prometheus.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "app.prometheusUpstream.fullname" . }}
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: prometheus-admin-upstream
+spec:
+  type: ExternalName
+  externalName: {{ .Values.adminAccess.prometheus.upstreamHost | quote }}
+  ports:
+    - name: http
+      port: {{ .Values.adminAccess.prometheus.upstreamPort }}
+      protocol: TCP
+---
+{{ if and .Values.adminAccess.oauth2Proxy.enabled .Values.adminAccess.prometheus.oauth2Proxy.enabled .Values.adminAccess.prometheus.ingress.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "app.fullname" . }}-prometheus-admin
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: prometheus-admin-ingress
+  {{- with .Values.adminAccess.prometheus.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.adminAccess.prometheus.ingress.className }}
+  ingressClassName: {{ .Values.adminAccess.prometheus.ingress.className }}
+  {{- end }}
+  {{- if .Values.adminAccess.prometheus.ingress.tls }}
+  tls:
+    {{- toYaml .Values.adminAccess.prometheus.ingress.tls | nindent 4 }}
+  {{- end }}
+  rules:
+    {{- range .Values.adminAccess.prometheus.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "app.prometheusOauth2Proxy.fullname" $ }}
+                port:
+                  name: http
+          {{- end }}
+    {{- end }}
+{{- end }}
+{{- end }}

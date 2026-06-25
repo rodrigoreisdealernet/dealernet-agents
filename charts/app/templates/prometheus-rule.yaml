@@ -1,0 +1,196 @@
+{{- if .Values.alerting.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "app.fullname" . }}-alerting
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: alerting
+    {{- with .Values.alerting.prometheusRule.additionalLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  groups:
+
+    # ── Temporal worker health ────────────────────────────────────────────────
+    - name: temporal-worker
+      rules:
+
+        # Fire when no temporal-worker pod is in a ready / scrapeable state for
+        # workerDownForMinutes.  Uses the standard kube_pod_container_status_ready
+        # metric from kube-state-metrics so it does not require the Temporal SDK to
+        # export custom metrics.
+        - alert: TemporalWorkerDown
+          expr: |
+            absent(
+              kube_pod_container_status_ready{
+                namespace="{{ .Release.Namespace }}",
+                container="temporal-worker"
+              } == 1
+            )
+          for: {{ .Values.alerting.prometheusRule.temporal.workerDownForMinutes }}m
+          labels:
+            severity: critical
+            env: {{ .Release.Namespace }}
+            app: {{ include "app.name" . }}
+            component: temporal-worker
+          annotations:
+            summary: "Temporal worker is down in {{ .Release.Namespace }}"
+            description: >
+              No temporal-worker pod has been ready for
+              {{ .Values.alerting.prometheusRule.temporal.workerDownForMinutes }} minutes
+              in namespace {{ .Release.Namespace }}.
+              All task queues are stalled — no workflow or activity tasks will be processed.
+            runbook: "See OPERATIONS.md § TemporalWorkerDown"
+
+        # Fire when p95 schedule-to-start latency across all task queues exceeds the
+        # configured threshold.  Uses the SDK histogram metric exported by the
+        # temporal-worker when TEMPORAL_METRICS_ENDPOINT is configured.
+        - alert: TemporalTaskQueueBacklogHigh
+          expr: |
+            histogram_quantile(
+              0.95,
+              sum by (task_queue, le) (
+                rate(temporal_schedule_to_start_latency_bucket{
+                  namespace="{{ .Release.Namespace }}"
+                }[5m])
+              )
+            ) > {{ .Values.alerting.prometheusRule.temporal.backlogLatencySeconds }}
+          for: {{ .Values.alerting.prometheusRule.temporal.backlogForMinutes }}m
+          labels:
+            severity: warning
+            env: {{ .Release.Namespace }}
+            app: {{ include "app.name" . }}
+            component: temporal-worker
+          annotations:
+            summary: "Task queue backlog high (p95 schedule-to-start > {{ .Values.alerting.prometheusRule.temporal.backlogLatencySeconds }}s) in {{ .Release.Namespace }}"
+            description: >
+              p95 schedule-to-start latency for task queue {{ "{{" }} $labels.task_queue {{ "}}" }}
+              has exceeded {{ .Values.alerting.prometheusRule.temporal.backlogLatencySeconds }}s
+              for {{ .Values.alerting.prometheusRule.temporal.backlogForMinutes }} minutes.
+              Workers may be undersized or a polling stall has developed.
+            runbook: "See OPERATIONS.md § TemporalTaskQueueBacklogHigh"
+
+        # Fire when the workflow failure rate (failed / (failed + completed)) exceeds
+        # the configured threshold over the last 10-minute window.
+        - alert: TemporalWorkflowFailureRateHigh
+          expr: |
+            (
+              sum by (namespace) (
+                rate(temporal_workflow_failed_count{namespace="{{ .Release.Namespace }}"}[10m])
+              )
+            )
+            /
+            (
+              sum by (namespace) (
+                rate(temporal_workflow_failed_count{namespace="{{ .Release.Namespace }}"}[10m])
+              )
+              +
+              sum by (namespace) (
+                rate(temporal_workflow_completed_count{namespace="{{ .Release.Namespace }}"}[10m])
+              )
+            ) > {{ .Values.alerting.prometheusRule.temporal.failureRateThreshold }}
+          for: {{ .Values.alerting.prometheusRule.temporal.failureRateForMinutes }}m
+          labels:
+            severity: warning
+            env: {{ .Release.Namespace }}
+            app: {{ include "app.name" . }}
+            component: temporal-worker
+          annotations:
+            summary: "Temporal workflow failure rate > {{ .Values.alerting.prometheusRule.temporal.failureRateThreshold | float64 | mulf 100 }}% in {{ .Release.Namespace }}"
+            description: >
+              Workflow failure rate in namespace {{ .Release.Namespace }} has exceeded
+              {{ .Values.alerting.prometheusRule.temporal.failureRateThreshold | float64 | mulf 100 }}%
+              for {{ .Values.alerting.prometheusRule.temporal.failureRateForMinutes }} minutes.
+              Check Temporal UI for failing workflow types and error patterns.
+            runbook: "See OPERATIONS.md § TemporalWorkflowFailureRateHigh"
+
+        # Fire when Temporal's schedule service reports missed catchup windows,
+        # indicating a schedule was not triggered within its configured window.
+        - alert: TemporalScheduleMissed
+          expr: |
+            rate(temporal_schedule_missed_catchup_window_count{
+              namespace="{{ .Release.Namespace }}"
+            }[5m]) > 0
+          for: {{ .Values.alerting.prometheusRule.temporal.scheduleMissedForMinutes }}m
+          labels:
+            severity: warning
+            env: {{ .Release.Namespace }}
+            app: {{ include "app.name" . }}
+            component: temporal-worker
+          annotations:
+            summary: "Temporal schedule missed catchup window in {{ .Release.Namespace }}"
+            description: >
+              Temporal schedule {{ "{{" }} $labels.schedule_id {{ "}}" }} missed its catchup
+              window in namespace {{ .Release.Namespace }}.
+              Scheduled workflows (rev-rec, fleet, credit) may have been skipped.
+            runbook: "See OPERATIONS.md § TemporalScheduleMissed"
+
+    # ── Ops API SLO ───────────────────────────────────────────────────────────
+    - name: ops-api
+      rules:
+
+        # Fire when the ops-api 5xx error fraction exceeds the configured threshold.
+        - alert: OpsApiErrorRateHigh
+          expr: |
+            (
+              sum by (namespace) (
+                rate(http_requests_total{
+                  namespace="{{ .Release.Namespace }}",
+                  job=~".*ops-api.*",
+                  status=~"5.."
+                }[5m])
+              )
+            )
+            /
+            (
+              sum by (namespace) (
+                rate(http_requests_total{
+                  namespace="{{ .Release.Namespace }}",
+                  job=~".*ops-api.*"
+                }[5m])
+              )
+            ) > {{ .Values.alerting.prometheusRule.opsApi.errorRateThreshold }}
+          for: {{ .Values.alerting.prometheusRule.opsApi.errorRateForMinutes }}m
+          labels:
+            severity: critical
+            env: {{ .Release.Namespace }}
+            app: {{ include "app.name" . }}
+            component: ops-api
+          annotations:
+            summary: "Ops API error rate > {{ .Values.alerting.prometheusRule.opsApi.errorRateThreshold | float64 | mulf 100 }}% in {{ .Release.Namespace }}"
+            description: >
+              The ops-api 5xx error rate in namespace {{ .Release.Namespace }} has exceeded
+              {{ .Values.alerting.prometheusRule.opsApi.errorRateThreshold | float64 | mulf 100 }}%
+              for {{ .Values.alerting.prometheusRule.opsApi.errorRateForMinutes }} minutes.
+              Approval signals and finding surfacing are degraded.
+            runbook: "See OPERATIONS.md § OpsApiErrorRateHigh"
+
+        # Fire when p99 request latency on the ops-api exceeds the configured threshold.
+        - alert: OpsApiLatencyHigh
+          expr: |
+            histogram_quantile(
+              0.99,
+              sum by (namespace, le) (
+                rate(http_request_duration_seconds_bucket{
+                  namespace="{{ .Release.Namespace }}",
+                  job=~".*ops-api.*"
+                }[5m])
+              )
+            ) > {{ .Values.alerting.prometheusRule.opsApi.latencyP99Seconds }}
+          for: {{ .Values.alerting.prometheusRule.opsApi.latencyForMinutes }}m
+          labels:
+            severity: warning
+            env: {{ .Release.Namespace }}
+            app: {{ include "app.name" . }}
+            component: ops-api
+          annotations:
+            summary: "Ops API p99 latency > {{ .Values.alerting.prometheusRule.opsApi.latencyP99Seconds }}s in {{ .Release.Namespace }}"
+            description: >
+              p99 request latency for the ops-api in namespace {{ .Release.Namespace }} has
+              exceeded {{ .Values.alerting.prometheusRule.opsApi.latencyP99Seconds }}s
+              for {{ .Values.alerting.prometheusRule.opsApi.latencyForMinutes }} minutes.
+              Human approvers may experience slow UI responses.
+            runbook: "See OPERATIONS.md § OpsApiLatencyHigh"
+{{- end }}

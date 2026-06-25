@@ -1,0 +1,785 @@
+{
+  "id": "rental-order-list",
+  "title": "Rental Orders",
+  "state": {
+    "newOrder_scope_branch_id": "",
+    "newOrder_scope_category_id": "",
+    "newOrder_requester_id": "",
+    "newOrder_customer_name": "",
+    "newOrder_customer_email": "",
+    "newOrder_rental_type": "",
+    "newOrder_notes": "",
+    "newOrder_line_category_id": "",
+    "newOrder_line_quantity": "",
+    "newOrder_line_planned_start": "",
+    "newOrder_line_planned_end": "",
+    "newOrder_line_job_site_id": "",
+    "newOrder_line_rate_type": "",
+    "newOrder_line_dispatch_contact": "",
+    "newOrder_line_dispatch_phone": "",
+    "newOrder_line_dispatch_notes": "",
+    "newOrder_submit_error": ""
+  },
+  "dataSources": {
+    "orders": {
+      "type": "supabase",
+      "table": "entities",
+      "select": "id, entity_type, created_at, entity_versions!inner(id, data, is_current, version_number)",
+      "filters": [
+        { "field": "entity_type", "op": "eq", "value": "rental_order" },
+        { "field": "entity_versions.is_current", "op": "eq", "value": true }
+      ],
+      "order": [{ "column": "created_at", "ascending": false }]
+    },
+    "requesters": {
+      "type": "supabase",
+      "table": "entities",
+      "select": "id, source_record_id, entity_versions!inner(data, is_current)",
+      "filters": [
+        { "field": "entity_type", "op": "eq", "value": "customer" },
+        { "field": "entity_versions.is_current", "op": "eq", "value": true }
+      ],
+      "order": [{ "column": "source_record_id", "ascending": true }]
+    },
+    "asset_categories": {
+      "type": "supabase",
+      "table": "entities",
+      "select": "id, source_record_id, entity_versions!inner(data, is_current)",
+      "filters": [
+        { "field": "entity_type", "op": "eq", "value": "asset_category" },
+        { "field": "entity_versions.is_current", "op": "eq", "value": true }
+      ],
+      "order": [{ "column": "source_record_id", "ascending": true }]
+    },
+    "job_sites": {
+      "type": "supabase",
+      "table": "entities",
+      "select": "id, source_record_id, entity_versions!inner(data, is_current)",
+      "filters": [
+        { "field": "entity_type", "op": "eq", "value": "job_site" },
+        { "field": "entity_versions.is_current", "op": "eq", "value": true }
+      ],
+      "order": [{ "column": "source_record_id", "ascending": true }]
+    },
+    "availability": {
+      "type": "supabase",
+      "table": "rental_asset_availability_current",
+      "select": "branch_id, branch_name, asset_category_id, asset_category_name, total_assets, available_assets",
+      "order": [
+        { "column": "branch_name", "ascending": true },
+        { "column": "asset_category_name", "ascending": true }
+      ]
+    }
+  },
+  "layout": {
+    "type": "Stack",
+    "props": { "spacing": 6 },
+    "children": [
+      {
+        "type": "Stack",
+        "props": { "direction": "horizontal", "justify": "between", "align": "center" },
+        "children": [
+          {
+            "type": "Stack",
+            "props": { "spacing": 1 },
+            "children": [
+              {
+                "type": "Heading",
+                "props": { "level": 1, "children": "Rental Orders" }
+              },
+              {
+                "type": "Text",
+                "props": { "variant": "muted", "children": "Capture and track equipment rental requests" }
+              }
+            ]
+          },
+          {
+            "type": "Button",
+            "props": {
+              "children": "New Rental Order",
+              "onClick": { "action": "openModal", "modalId": "createOrder" }
+            }
+          }
+        ]
+      },
+      {
+        "type": "Grid",
+        "props": { "columns": 3, "gap": 6 },
+        "children": [
+          {
+            "type": "Card",
+            "props": { "className": "col-span-2" },
+            "children": [
+              {
+                "type": "Stack",
+                "props": { "spacing": 4 },
+                "children": [
+                  {
+                    "type": "Heading",
+                    "props": { "level": 3, "children": "Orders" }
+                  },
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 2 },
+                    "children": [
+                      {
+                        "type": "Grid",
+                        "props": {
+                          "columns": "minmax(0,2fr) minmax(0,1.2fr) auto",
+                          "gap": 2,
+                          "className": "px-4 py-2 rounded-md bg-muted/50 border text-sm font-medium"
+                        },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "props": { "size": "sm", "children": "Order" }
+                          },
+                          {
+                            "type": "Text",
+                            "props": { "size": "sm", "children": "Status / Requester" }
+                          },
+                          {
+                            "type": "Text",
+                            "props": { "size": "sm", "children": "Action" }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "if": "{{isLoading.orders}}",
+                        "props": {
+                          "variant": "muted",
+                          "className": "text-center py-8",
+                          "children": "Loading rental orders..."
+                        }
+                      },
+                      {
+                        "type": "Alert",
+                        "if": "{{errors.orders}}",
+                        "props": {
+                          "variant": "destructive",
+                          "title": "Unable to load rental orders",
+                          "description": "{{errors.orders.message || 'Please refresh and try again.'}}"
+                        }
+                      },
+                      {
+                        "type": "Stack",
+                        "if": "{{data.orders && data.orders.length > 0}}",
+                        "each": "{{data.orders}}",
+                        "as": "order",
+                        "key": "{{order.id}}",
+                        "props": {
+                          "direction": "horizontal",
+                          "justify": "between",
+                          "align": "center",
+                          "className": "p-4 border rounded-lg hover:bg-muted/50 cursor-pointer"
+                        },
+                        "children": [
+                          {
+                            "type": "Stack",
+                            "props": { "spacing": 1 },
+                            "children": [
+                              {
+                                "type": "Text",
+                                "props": {
+                                  "weight": "medium",
+                                  "children": "{{order.entity_versions[0].data.order_number || 'Draft Order'}}"
+                                }
+                              },
+                              {
+                                "type": "Stack",
+                                "props": { "direction": "horizontal", "spacing": 2, "align": "center" },
+                                "children": [
+                                  {
+                                    "type": "Badge",
+                                    "props": {
+                                      "status": "{{order.entity_versions[0].data.status || 'draft'}}",
+                                      "children": "{{order.entity_versions[0].data.status || 'draft'}}"
+                                    }
+                                  },
+                                  {
+                                    "type": "Badge",
+                                    "props": {
+                                      "status": "{{order.entity_versions[0].data.rental_type || 'external'}}",
+                                      "children": "{{order.entity_versions[0].data.rental_type || 'external'}}"
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "Text",
+                                "props": {
+                                  "variant": "muted",
+                                  "size": "sm",
+                                  "children": "Requester: {{order.entity_versions[0].data.requester_name || order.entity_versions[0].data.requester_email || lookupRecordFieldById(data.requesters, order.entity_versions[0].data.requester_id, 'entity_versions[0].data.name', 'source_record_id') || 'Unassigned'}}"
+                                }
+                              },
+                              {
+                                "type": "Text",
+                                "props": {
+                                  "variant": "muted",
+                                  "size": "sm",
+                                 "children": "Job Site: {{order.entity_versions[0].data.lines[0].job_site_name || lookupRecordFieldById(data.job_sites, order.entity_versions[0].data.lines[0].job_site_id, 'entity_versions[0].data.name', 'source_record_id') || 'TBD'}} · Rental Window: {{order.entity_versions[0].data.lines[0].planned_start || 'TBD'}} → {{order.entity_versions[0].data.lines[0].planned_end || 'TBD'}}"
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "type": "Link",
+                            "props": {
+                              "to": "/rental/orders/{{order.id}}",
+                              "appearance": "action",
+                              "children": "View"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Stack",
+                    "if": "{{!isLoading.orders && !errors.orders}}",
+                    "children": [
+                      {
+                        "type": "EmptyState",
+                        "if": "{{!data.orders || data.orders.length === 0}}",
+                        "props": {
+                          "icon": "ClipboardList",
+                          "title": "No orders yet",
+                          "hint": "Create your first rental order from the equipment catalog.",
+                          "to": "/rental/catalog",
+                          "linkLabel": "Browse the catalog"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "Card",
+            "children": [
+              {
+                "type": "Stack",
+                "props": { "spacing": 3 },
+                "children": [
+                  {
+                    "type": "Heading",
+                    "props": { "level": 3, "children": "Asset Availability" }
+                  },
+                  {
+                    "type": "Text",
+                    "props": {
+                      "variant": "muted",
+                      "size": "sm",
+                      "children": "Current fleet availability by branch and category"
+                    }
+                  },
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 2 },
+                    "children": [
+                      {
+                        "type": "Stack",
+                        "each": "{{data.availability}}",
+                        "as": "row",
+                        "key": "{{row.branch_id}}-{{row.asset_category_id}}",
+                        "props": {
+                          "spacing": 1,
+                          "className": "p-3 border rounded-lg"
+                        },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "props": {
+                              "size": "sm",
+                              "weight": "semibold",
+                              "children": "{{row.branch_name}} — {{row.asset_category_name}}"
+                            }
+                          },
+                          {
+                            "type": "Stack",
+                            "props": { "direction": "horizontal", "spacing": 2 },
+                            "children": [
+                              {
+                                "type": "Badge",
+                                "props": {
+                                  "variant": "secondary",
+                                  "children": "{{row.available_assets}} available"
+                                }
+                              },
+                              {
+                                "type": "Text",
+                                "props": {
+                                  "size": "sm",
+                                  "variant": "muted",
+                                  "children": "of {{row.total_assets}} total"
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Text",
+                    "if": "{{!data.availability || data.availability.length === 0}}",
+                    "props": {
+                      "variant": "muted",
+                      "size": "sm",
+                      "className": "text-center py-4",
+                      "children": "No availability data."
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "modals": {
+    "createOrder": {
+      "title": "New Rental Order",
+      "size": "lg",
+      "content": {
+        "type": "Stack",
+        "props": { "spacing": 5 },
+        "children": [
+          {
+            "type": "Heading",
+            "props": { "level": 4, "children": "Order Details" }
+          },
+          {
+            "type": "Text",
+            "if": "{{state.newOrder_scope_branch_id || state.newOrder_scope_category_id}}",
+            "props": {
+              "size": "sm",
+              "variant": "muted",
+              "children": "Scoped from availability: Branch {{lookupRecordFieldById(data.availability, state.newOrder_scope_branch_id, 'branch_name', 'branch_id') || state.newOrder_scope_branch_id || 'Any'}} · Category {{lookupRecordFieldById(data.asset_categories, state.newOrder_scope_category_id, 'entity_versions[0].data.name', 'source_record_id') || state.newOrder_scope_category_id || 'Any'}}"
+            }
+          },
+          {
+            "type": "Grid",
+            "props": { "columns": 2, "gap": 4 },
+            "children": [
+              {
+                "type": "Select",
+                "props": {
+                  "label": "Requester / Customer",
+                  "placeholder": "Select requester...",
+                  "name": "requester_id",
+                  "value": "{{state.newOrder_requester_id || ''}}",
+                  "options": "{{data.requesters || []}}",
+                  "optionValueField": "source_record_id",
+                  "optionLabelField": "entity_versions[0].data.name",
+                  "onChange": {
+                    "action": "setState",
+                    "key": "newOrder_requester_id",
+                    "value": "{{event.target.value}}"
+                  }
+                }
+              },
+              {
+                "type": "Input",
+                "props": {
+                  "label": "Storefront Customer Name",
+                  "placeholder": "Use when requester does not already exist",
+                  "name": "customer_name",
+                  "value": "{{state.newOrder_customer_name || ''}}",
+                  "onChange": {
+                    "action": "setState",
+                    "key": "newOrder_customer_name",
+                    "value": "{{event.target.value}}"
+                  }
+                }
+              },
+              {
+                "type": "Input",
+                "props": {
+                  "label": "Storefront Customer Email",
+                  "placeholder": "customer@example.com",
+                  "name": "customer_email",
+                  "value": "{{state.newOrder_customer_email || ''}}",
+                  "onChange": {
+                    "action": "setState",
+                    "key": "newOrder_customer_email",
+                    "value": "{{event.target.value}}"
+                  }
+                }
+              },
+              {
+                "type": "Select",
+                "props": {
+                  "label": "Rental Type",
+                  "name": "rental_type",
+                  "value": "{{state.newOrder_rental_type || ''}}",
+                  "placeholder": "Select rental type...",
+                  "options": [
+                    { "value": "external", "label": "External" },
+                    { "value": "internal", "label": "Internal" }
+                  ],
+                  "onChange": {
+                    "action": "setState",
+                    "key": "newOrder_rental_type",
+                    "value": "{{event.target.value}}"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "type": "Textarea",
+            "props": {
+              "label": "Notes",
+              "placeholder": "Optional order notes",
+              "name": "notes",
+              "value": "{{state.newOrder_notes || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "newOrder_notes",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Heading",
+            "props": { "level": 4, "children": "First Order Line" }
+          },
+          {
+            "type": "Grid",
+            "props": { "columns": 2, "gap": 4 },
+            "children": [
+              {
+                "type": "Select",
+                "props": {
+                  "label": "Asset Category",
+                  "placeholder": "Select asset category...",
+                  "name": "line_category_id",
+                  "value": "{{state.newOrder_line_category_id || ''}}",
+                  "options": "{{data.asset_categories || []}}",
+                  "optionValueField": "source_record_id",
+                  "optionLabelField": "entity_versions[0].data.name",
+                  "onChange": {
+                    "action": "setState",
+                    "key": "newOrder_line_category_id",
+                    "value": "{{event.target.value}}"
+                  }
+                }
+              },
+              {
+                "type": "Input",
+                "props": {
+                  "label": "Quantity",
+                  "placeholder": "1",
+                  "name": "line_quantity",
+                  "value": "{{state.newOrder_line_quantity || ''}}",
+                  "onChange": {
+                    "action": "setState",
+                    "key": "newOrder_line_quantity",
+                    "value": "{{event.target.value}}"
+                  }
+                }
+              },
+              {
+                "type": "Input",
+                "props": {
+                  "label": "Planned Start",
+                  "placeholder": "YYYY-MM-DD",
+                  "name": "line_planned_start",
+                  "value": "{{state.newOrder_line_planned_start || ''}}",
+                  "onChange": {
+                    "action": "setState",
+                    "key": "newOrder_line_planned_start",
+                    "value": "{{event.target.value}}"
+                  }
+                }
+              },
+              {
+                "type": "Input",
+                "props": {
+                  "label": "Planned End",
+                  "placeholder": "YYYY-MM-DD",
+                  "name": "line_planned_end",
+                  "value": "{{state.newOrder_line_planned_end || ''}}",
+                  "onChange": {
+                    "action": "setState",
+                    "key": "newOrder_line_planned_end",
+                    "value": "{{event.target.value}}"
+                  }
+                }
+              },
+              {
+                "type": "Select",
+                "props": {
+                  "label": "Job Site",
+                  "placeholder": "Select job site...",
+                  "name": "line_job_site_id",
+                  "value": "{{state.newOrder_line_job_site_id || ''}}",
+                  "options": "{{data.job_sites || []}}",
+                  "optionValueField": "source_record_id",
+                  "optionLabelField": "entity_versions[0].data.name",
+                  "onChange": {
+                    "action": "setState",
+                    "key": "newOrder_line_job_site_id",
+                    "value": "{{event.target.value}}"
+                  }
+                }
+              },
+              {
+                "type": "Select",
+                "props": {
+                  "label": "Rate Type",
+                  "name": "line_rate_type",
+                  "value": "{{state.newOrder_line_rate_type || ''}}",
+                  "placeholder": "Select rate type...",
+                  "options": [
+                    { "value": "daily", "label": "Daily" },
+                    { "value": "weekly", "label": "Weekly" },
+                    { "value": "monthly", "label": "Monthly" },
+                    { "value": "fixed", "label": "Fixed" }
+                  ],
+                  "onChange": {
+                    "action": "setState",
+                    "key": "newOrder_line_rate_type",
+                    "value": "{{event.target.value}}"
+                  }
+                }
+              },
+              {
+                "type": "Input",
+                "props": {
+                  "label": "Dispatch Contact",
+                  "placeholder": "Foreman or on-site contact",
+                  "name": "line_dispatch_contact",
+                  "value": "{{state.newOrder_line_dispatch_contact || ''}}",
+                  "onChange": {
+                    "action": "setState",
+                    "key": "newOrder_line_dispatch_contact",
+                    "value": "{{event.target.value}}"
+                  }
+                }
+              },
+              {
+                "type": "Input",
+                "props": {
+                  "label": "Dispatch Phone",
+                  "placeholder": "On-site dispatch phone",
+                  "name": "line_dispatch_phone",
+                  "value": "{{state.newOrder_line_dispatch_phone || ''}}",
+                  "onChange": {
+                    "action": "setState",
+                    "key": "newOrder_line_dispatch_phone",
+                    "value": "{{event.target.value}}"
+                  }
+                }
+              },
+              {
+                "type": "Input",
+                "props": {
+                  "label": "Dispatch Notes",
+                  "placeholder": "Gate code, access instructions, and delivery notes",
+                  "name": "line_dispatch_notes",
+                  "value": "{{state.newOrder_line_dispatch_notes || ''}}",
+                  "onChange": {
+                    "action": "setState",
+                    "key": "newOrder_line_dispatch_notes",
+                    "value": "{{event.target.value}}"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "type": "Stack",
+            "props": { "direction": "horizontal", "justify": "end", "spacing": 2 },
+            "children": [
+              {
+                "type": "Button",
+                "props": {
+                  "variant": "outline",
+                  "children": "Cancel",
+                  "onClick": { "action": "closeModal" }
+                }
+              },
+              {
+                "type": "Button",
+                "props": {
+                  "children": "Create Order",
+                  "onClick": {
+                    "action": "sequence",
+                    "actions": [
+                      { "action": "setState", "key": "newOrder_submit_error", "value": "" },
+                      {
+                        "action": "conditional",
+                        "condition": "{{state.newOrder_requester_id || state.newOrder_customer_email}}",
+                        "then": {
+                          "action": "sequence",
+                          "actions": [
+                            {
+                              "action": "conditional",
+                              "condition": "{{!state.newOrder_requester_id && state.newOrder_customer_email}}",
+                              "then": {
+                                "action": "apiCall",
+                                "operation": "rpc",
+                                "function": "rental_upsert_entity_current_state",
+                                "data": {
+                                  "p_entity_type": "customer",
+                                  "p_source_record_id": "{{state.newOrder_customer_email}}",
+                                  "p_data": {
+                                    "name": "{{state.newOrder_customer_name || state.newOrder_customer_email}}",
+                                    "email": "{{state.newOrder_customer_email}}"
+                                  }
+                                },
+                                "onSuccess": {
+                                  "action": "apiCall",
+                                  "operation": "rpc",
+                                  "function": "create_entity_with_version",
+                                  "data": {
+                                    "p_entity_type": "rental_order",
+                                    "p_data": {
+                                      "status": "{{!state.newOrder_requester_id ? 'quoted' : 'draft'}}",
+                                      "requester_id": "{{state.newOrder_requester_id || state.newOrder_customer_email}}",
+                                      "branch_id": "{{state.newOrder_scope_branch_id || null}}",
+                                      "rental_type": "{{state.newOrder_rental_type}}",
+                                      "notes": "{{state.newOrder_notes}}",
+                                      "lines": [
+                                        {
+                                          "status": "pending",
+                                          "branch_id": "{{state.newOrder_scope_branch_id || null}}",
+                                          "category_id": "{{state.newOrder_line_category_id}}",
+                                          "quantity": "{{state.newOrder_line_quantity}}",
+                                          "planned_start": "{{state.newOrder_line_planned_start}}",
+                                          "planned_end": "{{state.newOrder_line_planned_end}}",
+                                          "job_site_id": "{{state.newOrder_line_job_site_id}}",
+                                          "rate_type": "{{state.newOrder_line_rate_type}}",
+                                          "dispatch_contact": "{{state.newOrder_line_dispatch_contact}}",
+                                          "dispatch_phone": "{{state.newOrder_line_dispatch_phone}}",
+                                          "dispatch_notes": "{{state.newOrder_line_dispatch_notes}}"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "onSuccess": {
+                                    "action": "sequence",
+                                    "actions": [
+                                      { "action": "closeModal" },
+                                      { "action": "setState", "key": "newOrder_requester_id", "value": "" },
+                                      { "action": "setState", "key": "newOrder_customer_name", "value": "" },
+                                      { "action": "setState", "key": "newOrder_customer_email", "value": "" },
+                                      { "action": "setState", "key": "newOrder_rental_type", "value": "" },
+                                      { "action": "setState", "key": "newOrder_notes", "value": "" },
+                                      { "action": "setState", "key": "newOrder_line_category_id", "value": "" },
+                                      { "action": "setState", "key": "newOrder_line_quantity", "value": "" },
+                                      { "action": "setState", "key": "newOrder_line_planned_start", "value": "" },
+                                      { "action": "setState", "key": "newOrder_line_planned_end", "value": "" },
+                                      { "action": "setState", "key": "newOrder_line_job_site_id", "value": "" },
+                                      { "action": "setState", "key": "newOrder_line_rate_type", "value": "" },
+                                      { "action": "setState", "key": "newOrder_line_dispatch_contact", "value": "" },
+                                      { "action": "setState", "key": "newOrder_line_dispatch_phone", "value": "" },
+                                      { "action": "setState", "key": "newOrder_line_dispatch_notes", "value": "" },
+                                      { "action": "setState", "key": "newOrder_submit_error", "value": "" },
+                                      { "action": "refetch", "source": "orders" }
+                                    ]
+                                  },
+                                  "onError": {
+                                    "action": "setState",
+                                    "key": "newOrder_submit_error",
+                                    "value": "Please sign in with write access to create rental orders."
+                                  }
+                                },
+                                "onError": {
+                                  "action": "setState",
+                                  "key": "newOrder_submit_error",
+                                  "value": "Unable to create storefront customer record. Check permissions and try again."
+                                }
+                              },
+                              "else": {
+                                "action": "apiCall",
+                                "operation": "rpc",
+                                "function": "create_entity_with_version",
+                                "data": {
+                                  "p_entity_type": "rental_order",
+                                  "p_data": {
+                                    "status": "{{!state.newOrder_requester_id ? 'quoted' : 'draft'}}",
+                                    "requester_id": "{{state.newOrder_requester_id || state.newOrder_customer_email}}",
+                                    "branch_id": "{{state.newOrder_scope_branch_id || null}}",
+                                    "rental_type": "{{state.newOrder_rental_type}}",
+                                    "notes": "{{state.newOrder_notes}}",
+                                    "lines": [
+                                      {
+                                        "status": "pending",
+                                        "branch_id": "{{state.newOrder_scope_branch_id || null}}",
+                                        "category_id": "{{state.newOrder_line_category_id}}",
+                                        "quantity": "{{state.newOrder_line_quantity}}",
+                                        "planned_start": "{{state.newOrder_line_planned_start}}",
+                                        "planned_end": "{{state.newOrder_line_planned_end}}",
+                                        "job_site_id": "{{state.newOrder_line_job_site_id}}",
+                                        "rate_type": "{{state.newOrder_line_rate_type}}",
+                                        "dispatch_contact": "{{state.newOrder_line_dispatch_contact}}",
+                                        "dispatch_phone": "{{state.newOrder_line_dispatch_phone}}",
+                                        "dispatch_notes": "{{state.newOrder_line_dispatch_notes}}"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "onSuccess": {
+                                  "action": "sequence",
+                                  "actions": [
+                                    { "action": "closeModal" },
+                                    { "action": "setState", "key": "newOrder_requester_id", "value": "" },
+                                    { "action": "setState", "key": "newOrder_customer_name", "value": "" },
+                                    { "action": "setState", "key": "newOrder_customer_email", "value": "" },
+                                    { "action": "setState", "key": "newOrder_rental_type", "value": "" },
+                                    { "action": "setState", "key": "newOrder_notes", "value": "" },
+                                    { "action": "setState", "key": "newOrder_line_category_id", "value": "" },
+                                    { "action": "setState", "key": "newOrder_line_quantity", "value": "" },
+                                    { "action": "setState", "key": "newOrder_line_planned_start", "value": "" },
+                                    { "action": "setState", "key": "newOrder_line_planned_end", "value": "" },
+                                    { "action": "setState", "key": "newOrder_line_job_site_id", "value": "" },
+                                    { "action": "setState", "key": "newOrder_line_rate_type", "value": "" },
+                                    { "action": "setState", "key": "newOrder_line_dispatch_contact", "value": "" },
+                                    { "action": "setState", "key": "newOrder_line_dispatch_phone", "value": "" },
+                                    { "action": "setState", "key": "newOrder_line_dispatch_notes", "value": "" },
+                                    { "action": "setState", "key": "newOrder_submit_error", "value": "" },
+                                    { "action": "refetch", "source": "orders" }
+                                  ]
+                                },
+                                "onError": {
+                                  "action": "setState",
+                                  "key": "newOrder_submit_error",
+                                  "value": "Please sign in with write access to create rental orders."
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        "else": {
+                          "action": "setState",
+                          "key": "newOrder_submit_error",
+                          "value": "Select a requester or provide storefront customer email."
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "type": "Alert",
+            "if": "{{state.newOrder_submit_error}}",
+            "props": {
+              "variant": "destructive",
+              "title": "Order creation blocked",
+              "description": "{{state.newOrder_submit_error}}"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

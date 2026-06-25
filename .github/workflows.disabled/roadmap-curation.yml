@@ -1,0 +1,89 @@
+name: Roadmap curation (daily)
+
+# Daily roadmap hygiene for org Project #15 "Wynne ERP Factory": the roadmap-curator agent
+# sweeps the whole board and keeps the Initiative → Epic → Story sub-issue hierarchy tight —
+# attaching orphan stories to epics and orphan epics to initiatives (creating initiatives/epics
+# as needed), and adding off-board issues. It operates directly via the gh CLI.
+#
+# Standalone (not a pipeline-daily stage) because a ~450-issue sweep + GraphQL sub-issue work
+# needs its own time budget, separate from the packed daily content pipeline.
+
+on:
+  schedule:
+    - cron: '30 3 * * *'   # daily 03:30 UTC (before pipeline-daily at 06:00)
+  workflow_dispatch:
+
+concurrency:
+  group: roadmap-curation
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  curate:
+    name: Roadmap curator → tighten Project #15 hierarchy
+    runs-on: ubuntu-latest
+    # Job budget: ~3 min setup + 35 min curate step (30 min agent + 3 min summary + 2 buffer) +
+    # 1 min for the Summarise/fail-gate steps = 40 min total with a comfortable margin.
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      # Node 22 — the Copilot SDK's bundled CLI server requires node:sqlite (Node >= 22).
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: .github/tools/shared/package-lock.json
+
+      - name: Install shared agent runtime
+        working-directory: .github/tools/shared
+        run: npm ci
+
+      # Preflight: COPILOT_TOKEN must be configured; exit 0 skips in run-agent.ts would
+      # silently pass the fail gate, violating the ADR-0070 contract.
+      - name: Preflight — verify COPILOT_TOKEN is configured
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+        run: |
+          if [ -z "$COPILOT_GITHUB_TOKEN" ]; then
+            echo "::error::COPILOT_TOKEN secret is not configured — roadmap-curator cannot run. Add the secret to this repository to enable the daily sweep."
+            exit 1
+          fi
+
+      - name: Roadmap curator
+        id: curate
+        continue-on-error: true
+        # Step budget: 30 min agent (frontmatter timeout_minutes) + 3 min Phase-2 summary
+        # (SUMMARY_TIMEOUT_MS in run-agent.ts) + 2 min buffer = 35 min.
+        timeout-minutes: 35
+        working-directory: .github/tools/shared
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+          # PAT with project + issues write so the agent can edit the org Project and link sub-issues.
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGER_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+          FACTORY_CONFIG_PATH: ${{ github.workspace }}/.github/factory.yml
+          AGENTS_PATH: ${{ github.workspace }}/.github/agents
+        run: npx tsx src/run-agent.ts --agent roadmap-curator
+
+      - name: Summarise
+        if: always()
+        env:
+          OUTCOME: ${{ steps.curate.outcome }}
+        run: |
+          STATUS="✅ ok"; [ "$OUTCOME" != "success" ] && STATUS="⚠️ $OUTCOME"
+          echo "## Roadmap curation — $STATUS" >> "$GITHUB_STEP_SUMMARY"
+          echo "Agent run summary above (Project #15 hierarchy sweep)." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail job on curator error
+        if: steps.curate.outcome != 'success'
+        run: |
+          echo "Roadmap curator step did not succeed (outcome: ${{ steps.curate.outcome }}). Marking job as failed."
+          exit 1

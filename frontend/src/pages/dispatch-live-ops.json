@@ -1,0 +1,516 @@
+{
+  "id": "dispatch-live-ops",
+  "title": "Dispatch Live Operations",
+  "state": {
+    "driverFilter": "",
+    "truckFilter": "",
+    "branchFilter": "",
+    "routeStatusFilter": "%",
+    "exceptionFilter": "%"
+  },
+  "dataSources": {
+    "active_routes": {
+      "type": "supabase",
+      "table": "v_dispatch_route_live",
+      "select": "line_id, contract_id, asset_id, asset_name, asset_serial, line_status, assigned_driver, assigned_truck, departure_at, actual_start, actual_end, route_status, exception_state, branch_id, telemetry_position_status, eld_compliance_status, driver_log_status, telemetry_event_at, telemetry_sync_status, updated_at",
+      "filters": [
+        { "field": "route_status", "op": "ilike", "value": "{{state.routeStatusFilter || '%'}}" },
+        { "field": "exception_state", "op": "ilike", "value": "{{state.exceptionFilter || '%'}}" },
+        { "field": "assigned_driver", "op": "ilike", "value": "{{state.driverFilter ? '%' + state.driverFilter + '%' : '%'}}" },
+        { "field": "assigned_truck", "op": "ilike", "value": "{{state.truckFilter ? '%' + state.truckFilter + '%' : '%'}}" },
+        { "field": "branch_id", "op": "ilike", "value": "{{state.branchFilter ? '%' + state.branchFilter + '%' : '%'}}" }
+      ],
+      "order": [
+        { "column": "updated_at", "ascending": false }
+      ],
+      "limit": 100,
+      "refetchInterval": 15000
+    },
+    "efficiency_summary": {
+      "type": "supabase",
+      "table": "v_transport_efficiency_summary",
+      "select": "total_routes, loaded_routes, empty_routes, load_utilization_pct, active_routes, completed_routes, missing_driver_count, overdue_count, eld_warning_count, eld_violation_count, stale_position_count",
+      "refetchInterval": 15000
+    }
+  },
+  "layout": {
+    "type": "Stack",
+    "props": { "spacing": 6 },
+    "children": [
+      {
+        "type": "Stack",
+        "props": { "spacing": 1 },
+        "children": [
+          {
+            "type": "Heading",
+            "props": { "level": 1, "children": "Dispatch Live Operations" }
+          },
+          {
+            "type": "Text",
+            "props": {
+              "variant": "muted",
+              "children": "Live fleet map: route progress, ETA status, driver/truck assignments, and transport-efficiency metrics."
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "props": { "title": "Transport Efficiency Summary" },
+        "children": [
+          {
+            "type": "Stack",
+            "props": { "spacing": 3 },
+            "children": [
+              {
+                "type": "Text",
+                "if": "{{isLoading.efficiency_summary}}",
+                "props": {
+                  "variant": "muted",
+                  "className": "text-center py-4",
+                  "children": "Loading efficiency metrics..."
+                }
+              },
+              {
+                "type": "Alert",
+                "if": "{{errors.efficiency_summary}}",
+                "props": {
+                  "variant": "destructive",
+                  "title": "Unable to load efficiency metrics",
+                  "description": "{{errors.efficiency_summary.message || 'Please refresh and try again.'}}"
+                }
+              },
+              {
+                "type": "Grid",
+                "if": "{{!isLoading.efficiency_summary && !errors.efficiency_summary && data.efficiency_summary && data.efficiency_summary.length > 0}}",
+                "props": { "columns": "repeat(auto-fit, minmax(9rem, 1fr))", "gap": 3 },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 0, "className": "border rounded-lg p-3 text-center" },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": { "size": "xs", "variant": "muted", "children": "Active Routes" }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "2xl",
+                          "weight": "bold",
+                          "children": "{{data.efficiency_summary[0].active_routes ?? 0}}"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 0, "className": "border rounded-lg p-3 text-center" },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": { "size": "xs", "variant": "muted", "children": "Load Utilization" }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "2xl",
+                          "weight": "bold",
+                          "children": "{{(data.efficiency_summary[0].load_utilization_pct ?? 0) + '%'}}"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 0, "className": "border rounded-lg p-3 text-center" },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": { "size": "xs", "variant": "muted", "children": "Empty Routes" }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "2xl",
+                          "weight": "bold",
+                          "children": "{{data.efficiency_summary[0].empty_routes ?? 0}}"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 0, "className": "border rounded-lg p-3 text-center" },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": { "size": "xs", "variant": "muted", "children": "Overdue" }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "2xl",
+                          "weight": "bold",
+                          "children": "{{data.efficiency_summary[0].overdue_count ?? 0}}"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 0, "className": "border rounded-lg p-3 text-center" },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": { "size": "xs", "variant": "muted", "children": "Missing Driver" }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "2xl",
+                          "weight": "bold",
+                          "children": "{{data.efficiency_summary[0].missing_driver_count ?? 0}}"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 0, "className": "border rounded-lg p-3 text-center" },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": { "size": "xs", "variant": "muted", "children": "Completed" }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "2xl",
+                          "weight": "bold",
+                          "children": "{{data.efficiency_summary[0].completed_routes ?? 0}}"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 0, "className": "border rounded-lg p-3 text-center" },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": { "size": "xs", "variant": "muted", "children": "ELD Violations" }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "2xl",
+                          "weight": "bold",
+                          "children": "{{data.efficiency_summary[0].eld_violation_count ?? 0}}"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 0, "className": "border rounded-lg p-3 text-center" },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": { "size": "xs", "variant": "muted", "children": "Stale GPS" }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "2xl",
+                          "weight": "bold",
+                          "children": "{{data.efficiency_summary[0].stale_position_count ?? 0}}"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "Text",
+                "if": "{{!isLoading.efficiency_summary && !errors.efficiency_summary && !data.efficiency_summary.length}}",
+                "props": {
+                  "variant": "muted",
+                  "className": "text-center py-4",
+                  "children": "No active routes in the current window. Adjust filters or wait for route assignments."
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "props": { "title": "Filter Routes" },
+        "children": [
+          {
+            "type": "Grid",
+            "props": { "columns": "repeat(auto-fit, minmax(11rem, 1fr))", "gap": 3 },
+            "children": [
+              {
+                "type": "Select",
+                "props": {
+                  "label": "Route Status",
+                  "value": "{{state.routeStatusFilter}}",
+                  "options": [
+                    { "value": "%", "label": "All Statuses" },
+                    { "value": "pending_departure", "label": "Pending Departure" },
+                    { "value": "in_transit", "label": "In Transit" },
+                    { "value": "delivered", "label": "Delivered" }
+                  ],
+                  "onChange": {
+                    "action": "setState",
+                    "key": "routeStatusFilter",
+                    "value": "{{event.target.value}}"
+                  }
+                }
+              },
+              {
+                "type": "Select",
+                "props": {
+                  "label": "Exception State",
+                  "value": "{{state.exceptionFilter}}",
+                  "options": [
+                    { "value": "%", "label": "All" },
+                    { "value": "missing_driver", "label": "Missing Driver" },
+                    { "value": "overdue", "label": "Overdue" }
+                  ],
+                  "onChange": {
+                    "action": "setState",
+                    "key": "exceptionFilter",
+                    "value": "{{event.target.value}}"
+                  }
+                }
+              },
+              {
+                "type": "Input",
+                "props": {
+                  "label": "Driver",
+                  "placeholder": "Search driver...",
+                  "value": "{{state.driverFilter}}",
+                  "onChange": {
+                    "action": "setState",
+                    "key": "driverFilter",
+                    "value": "{{event.target.value}}"
+                  }
+                }
+              },
+              {
+                "type": "Input",
+                "props": {
+                  "label": "Truck",
+                  "placeholder": "Search truck...",
+                  "value": "{{state.truckFilter}}",
+                  "onChange": {
+                    "action": "setState",
+                    "key": "truckFilter",
+                    "value": "{{event.target.value}}"
+                  }
+                }
+              },
+              {
+                "type": "Input",
+                "props": {
+                  "label": "Branch",
+                  "placeholder": "Branch ID or name...",
+                  "value": "{{state.branchFilter}}",
+                  "onChange": {
+                    "action": "setState",
+                    "key": "branchFilter",
+                    "value": "{{event.target.value}}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "props": { "title": "Live Route Progress" },
+        "children": [
+          {
+            "type": "Stack",
+            "props": { "spacing": 3 },
+            "children": [
+              {
+                "type": "Text",
+                "if": "{{isLoading.active_routes}}",
+                "props": {
+                  "variant": "muted",
+                  "className": "text-center py-8",
+                  "children": "Loading routes..."
+                }
+              },
+              {
+                "type": "Alert",
+                "if": "{{errors.active_routes}}",
+                "props": {
+                  "variant": "destructive",
+                  "title": "Unable to load routes",
+                  "description": "{{errors.active_routes.message || 'Please refresh and try again.'}}"
+                }
+              },
+              {
+                "type": "Stack",
+                "if": "{{!isLoading.active_routes && !errors.active_routes && data.active_routes && data.active_routes.length > 0}}",
+                "each": "{{data.active_routes}}",
+                "as": "route",
+                "key": "{{route.line_id}}",
+                "props": {
+                  "spacing": 2,
+                  "className": "border rounded-lg p-4"
+                },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": { "direction": "horizontal", "justify": "between", "align": "center" },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": {
+                          "weight": "semibold",
+                          "children": "{{route.asset_name || route.asset_id}}"
+                        }
+                      },
+                      {
+                        "type": "Stack",
+                        "props": { "direction": "horizontal", "spacing": 2 },
+                        "children": [
+                          {
+                            "type": "Badge",
+                            "props": {
+                              "variant": "{{route.route_status === 'in_transit' ? 'default' : route.route_status === 'delivered' ? 'secondary' : 'outline'}}",
+                              "children": "{{route.route_status}}"
+                            }
+                          },
+                          {
+                            "type": "Badge",
+                            "if": "{{route.exception_state}}",
+                            "props": {
+                              "variant": "destructive",
+                              "children": "{{route.exception_state}}"
+                            }
+                          },
+                          {
+                            "type": "Badge",
+                            "props": {
+                              "variant": "{{route.eld_compliance_status === 'violation' ? 'destructive' : route.eld_compliance_status === 'warning' ? 'secondary' : 'outline'}}",
+                              "children": "ELD: {{route.eld_compliance_status || 'unknown'}}"
+                            }
+                          },
+                          {
+                            "type": "Badge",
+                            "props": {
+                              "variant": "{{route.telemetry_position_status === 'stale' || route.telemetry_position_status === 'missing' ? 'secondary' : 'outline'}}",
+                              "children": "GPS: {{route.telemetry_position_status || 'unknown'}}"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Grid",
+                    "props": { "columns": "repeat(auto-fit, minmax(10rem, 1fr))", "gap": 2 },
+                    "children": [
+                      {
+                        "type": "Stack",
+                        "props": { "spacing": 0 },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "props": { "size": "xs", "variant": "muted", "children": "Driver" }
+                          },
+                          {
+                            "type": "Text",
+                            "props": {
+                              "size": "sm",
+                              "children": "{{route.assigned_driver || '—'}}"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Stack",
+                        "props": { "spacing": 0 },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "props": { "size": "xs", "variant": "muted", "children": "Truck" }
+                          },
+                          {
+                            "type": "Text",
+                            "props": {
+                              "size": "sm",
+                              "children": "{{route.assigned_truck || '—'}}"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Stack",
+                        "props": { "spacing": 0 },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "props": { "size": "xs", "variant": "muted", "children": "Departed" }
+                          },
+                          {
+                            "type": "Text",
+                            "props": {
+                              "size": "sm",
+                              "children": "{{route.departure_at || '—'}}"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Stack",
+                        "props": { "spacing": 0 },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "props": { "size": "xs", "variant": "muted", "children": "Serial" }
+                          },
+                          {
+                            "type": "Text",
+                            "props": {
+                              "size": "sm",
+                              "children": "{{route.asset_serial || '—'}}"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Link",
+                    "props": {
+                      "to": "/rental/contracts/{{route.contract_id}}",
+                      "children": "View Contract"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "Text",
+                "if": "{{!isLoading.active_routes && !errors.active_routes && (!data.active_routes || data.active_routes.length === 0)}}",
+                "props": {
+                  "variant": "muted",
+                  "className": "text-center py-8",
+                  "children": "No active routes match the current filters."
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

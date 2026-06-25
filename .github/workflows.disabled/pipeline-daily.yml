@@ -1,0 +1,330 @@
+name: Pipeline — Daily
+
+# Staged cadence pipeline per ADR-0025.
+# Runs once per day at 06:00 UTC for heavier, less time-sensitive sweeps.
+#
+# Stage order:
+#   1. docs-improver        — watches PR feedback / drift and files targeted dev-docs issues
+#   2. user-docs-manager    — reviews user-facing PRs since last run, files end-user doc tickets
+#   3. release-notes-curator— RELEASE NOTES: turns the last 24h of user-facing merged PRs into
+#                             plain-language end-user entries; cross-checks each for a guide and
+#                             links/files a user-docs ticket so every entry points somewhere
+#   4. release-marketer     — RELEASE NOTES: drafts the day's marketing plan from those entries
+#   5. (publish)            — commits docs/release-notes changes + opens the nightly RN PR
+#   6. trend-analyst        — reviews the 24h ticket corpus for cross-ticket TRENDS (clusters
+#                             sharing one root cause, recurring incidents, triage anomalies)
+#                             and files ONE deduped roll-up per trend
+#   7. market-scout         — discovery pipeline: captures fresh, cited market signal as evidence
+#   8. product-strategist   — discovery pipeline: enriches/scores dossiers, advances ideas one rung
+#   9. discovery-critic     — discovery pipeline: verifies citations, promotes design-ready ideas
+#  10. (publish)            — commits docs/discovery changes + opens the nightly discovery PR
+#
+# Stages 3-5 are the RELEASE NOTES sub-pipeline (docs/release-notes/README.md): they record
+# "what shipped + how we promote it" for end users. They run AFTER user-docs-manager so the
+# doc-gap tickets it files exist for the curator to reference (shared user-docs fingerprint).
+#
+# Stages 7-9 are the DISCOVERY PIPELINE (docs/discovery/README.md): they research and mature
+# product ideas over time. Both sub-pipelines write files only; a publish step turns those
+# files into one PR each.
+#
+# (operations-manager and cluster-guardian moved to the HOURLY pipeline so env/runtime
+#  and namespace health surface within the hour, per ADR-0025.)
+#
+# Each stage is an independent GitHub Actions step with continue-on-error: true and
+# a per-stage timeout so a failing/hung stage never blocks the next one.
+# Stage outcome is appended to $GITHUB_STEP_SUMMARY.
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # daily at 06:00 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: pipeline-daily
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+  actions: read
+  security-events: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: .github/tools/shared/package-lock.json
+
+      - name: Install shared runtime
+        run: npm ci
+        working-directory: .github/tools/shared
+
+      - name: Initialise step summary
+        run: |
+          {
+            echo "## Daily pipeline — $(date -u '+%Y-%m-%d %H:%M UTC')"
+            echo ""
+            echo "| Stage | Status |"
+            echo "|-------|--------|"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Stage 1: Docs Improver ─────────────────────────────────────────────────
+      - name: Stage — Docs Improver
+        id: docs_improver
+        continue-on-error: true
+        timeout-minutes: 12
+        working-directory: .github/tools/shared
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGER_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+          FACTORY_CONFIG_PATH: ${{ github.workspace }}/.github/factory.yml
+          AGENTS_PATH: ${{ github.workspace }}/.github/agents
+        run: npx tsx src/run-agent.ts --agent docs-improver
+
+      - name: Summarise — Docs Improver
+        if: always()
+        env:
+          OUTCOME: ${{ steps.docs_improver.outcome }}
+        run: |
+          STATUS="✅ ok"
+          [ "$OUTCOME" != "success" ] && STATUS="⚠️ $OUTCOME"
+          echo "| docs-improver | $STATUS |" >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Stage 2: User Docs Manager ─────────────────────────────────────────────
+      - name: Stage — User Docs Manager
+        id: user_docs_manager
+        continue-on-error: true
+        timeout-minutes: 12
+        working-directory: .github/tools/shared
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGER_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+          FACTORY_CONFIG_PATH: ${{ github.workspace }}/.github/factory.yml
+          AGENTS_PATH: ${{ github.workspace }}/.github/agents
+        run: npx tsx src/run-agent.ts --agent user-docs-manager
+
+      - name: Summarise — User Docs Manager
+        if: always()
+        env:
+          OUTCOME: ${{ steps.user_docs_manager.outcome }}
+        run: |
+          STATUS="✅ ok"
+          [ "$OUTCOME" != "success" ] && STATUS="⚠️ $OUTCOME"
+          echo "| user-docs-manager | $STATUS |" >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Stage 3: Release Notes Curator (release-notes sub-pipeline) ────────────
+      - name: Stage — Release Notes Curator
+        id: release_notes_curator
+        continue-on-error: true
+        timeout-minutes: 12
+        working-directory: .github/tools/shared
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGER_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+          FACTORY_CONFIG_PATH: ${{ github.workspace }}/.github/factory.yml
+          AGENTS_PATH: ${{ github.workspace }}/.github/agents
+        run: npx tsx src/run-agent.ts --agent release-notes-curator
+
+      - name: Summarise — Release Notes Curator
+        if: always()
+        env:
+          OUTCOME: ${{ steps.release_notes_curator.outcome }}
+        run: |
+          STATUS="✅ ok"
+          [ "$OUTCOME" != "success" ] && STATUS="⚠️ $OUTCOME"
+          echo "| release-notes-curator | $STATUS |" >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Stage 4: Release Marketer (release-notes sub-pipeline) ─────────────────
+      - name: Stage — Release Marketer
+        id: release_marketer
+        continue-on-error: true
+        timeout-minutes: 12
+        working-directory: .github/tools/shared
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGER_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+          FACTORY_CONFIG_PATH: ${{ github.workspace }}/.github/factory.yml
+          AGENTS_PATH: ${{ github.workspace }}/.github/agents
+        run: npx tsx src/run-agent.ts --agent release-marketer
+
+      - name: Summarise — Release Marketer
+        if: always()
+        env:
+          OUTCOME: ${{ steps.release_marketer.outcome }}
+        run: |
+          STATUS="✅ ok"
+          [ "$OUTCOME" != "success" ] && STATUS="⚠️ $OUTCOME"
+          echo "| release-marketer | $STATUS |" >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Stage 5: Publish nightly release-notes PR (deterministic, not an agent) ─
+      - name: Stage — Publish release-notes PR
+        id: release_notes_publish
+        if: always()
+        continue-on-error: true
+        timeout-minutes: 5
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGER_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: bash scripts/release-notes-publish.sh
+
+      - name: Summarise — Publish release-notes PR
+        if: always()
+        env:
+          OUTCOME: ${{ steps.release_notes_publish.outcome }}
+        run: |
+          STATUS="✅ ok"
+          [ "$OUTCOME" != "success" ] && STATUS="⚠️ $OUTCOME"
+          echo "| release-notes-publish | $STATUS |" >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Stage 6: Trend Analyst ─────────────────────────────────────────────────
+      - name: Stage — Trend Analyst
+        id: trend_analyst
+        continue-on-error: true
+        timeout-minutes: 12
+        working-directory: .github/tools/shared
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGER_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+          FACTORY_CONFIG_PATH: ${{ github.workspace }}/.github/factory.yml
+          AGENTS_PATH: ${{ github.workspace }}/.github/agents
+        run: npx tsx src/run-agent.ts --agent trend-analyst
+
+      - name: Summarise — Trend Analyst
+        if: always()
+        env:
+          OUTCOME: ${{ steps.trend_analyst.outcome }}
+        run: |
+          STATUS="✅ ok"
+          [ "$OUTCOME" != "success" ] && STATUS="⚠️ $OUTCOME"
+          echo "| trend-analyst | $STATUS |" >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Stage 4: Market Scout (discovery pipeline) ─────────────────────────────
+      - name: Stage — Market Scout
+        id: market_scout
+        continue-on-error: true
+        timeout-minutes: 12
+        working-directory: .github/tools/shared
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGER_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+          FACTORY_CONFIG_PATH: ${{ github.workspace }}/.github/factory.yml
+          AGENTS_PATH: ${{ github.workspace }}/.github/agents
+        run: npx tsx src/run-agent.ts --agent market-scout
+
+      - name: Summarise — Market Scout
+        if: always()
+        env:
+          OUTCOME: ${{ steps.market_scout.outcome }}
+        run: |
+          STATUS="✅ ok"
+          [ "$OUTCOME" != "success" ] && STATUS="⚠️ $OUTCOME"
+          echo "| market-scout | $STATUS |" >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Stage 5: Product Strategist (discovery pipeline) ───────────────────────
+      - name: Stage — Product Strategist
+        id: product_strategist
+        continue-on-error: true
+        timeout-minutes: 15
+        working-directory: .github/tools/shared
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGER_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+          FACTORY_CONFIG_PATH: ${{ github.workspace }}/.github/factory.yml
+          AGENTS_PATH: ${{ github.workspace }}/.github/agents
+        run: npx tsx src/run-agent.ts --agent product-strategist
+
+      - name: Summarise — Product Strategist
+        if: always()
+        env:
+          OUTCOME: ${{ steps.product_strategist.outcome }}
+        run: |
+          STATUS="✅ ok"
+          [ "$OUTCOME" != "success" ] && STATUS="⚠️ $OUTCOME"
+          echo "| product-strategist | $STATUS |" >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Stage 6: Discovery Critic (discovery pipeline) ─────────────────────────
+      - name: Stage — Discovery Critic
+        id: discovery_critic
+        continue-on-error: true
+        timeout-minutes: 12
+        working-directory: .github/tools/shared
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGER_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+          FACTORY_CONFIG_PATH: ${{ github.workspace }}/.github/factory.yml
+          AGENTS_PATH: ${{ github.workspace }}/.github/agents
+        run: npx tsx src/run-agent.ts --agent discovery-critic
+
+      - name: Summarise — Discovery Critic
+        if: always()
+        env:
+          OUTCOME: ${{ steps.discovery_critic.outcome }}
+        run: |
+          STATUS="✅ ok"
+          [ "$OUTCOME" != "success" ] && STATUS="⚠️ $OUTCOME"
+          echo "| discovery-critic | $STATUS |" >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Stage 7: Publish nightly discovery PR (deterministic, not an agent) ─────
+      - name: Stage — Publish discovery PR
+        id: discovery_publish
+        if: always()
+        continue-on-error: true
+        timeout-minutes: 5
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGER_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: bash scripts/discovery-publish.sh
+
+      - name: Summarise — Publish discovery PR
+        if: always()
+        env:
+          OUTCOME: ${{ steps.discovery_publish.outcome }}
+        run: |
+          STATUS="✅ ok"
+          [ "$OUTCOME" != "success" ] && STATUS="⚠️ $OUTCOME"
+          echo "| discovery-publish | $STATUS |" >> "$GITHUB_STEP_SUMMARY"

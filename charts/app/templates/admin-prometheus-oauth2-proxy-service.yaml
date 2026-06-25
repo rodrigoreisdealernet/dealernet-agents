@@ -1,0 +1,18 @@
+{{- if and .Values.adminAccess.enabled .Values.adminAccess.oauth2Proxy.enabled .Values.adminAccess.prometheus.enabled .Values.adminAccess.prometheus.oauth2Proxy.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "app.prometheusOauth2Proxy.fullname" . }}
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: oauth2-proxy-prometheus
+spec:
+  type: {{ .Values.adminAccess.oauth2Proxy.service.type }}
+  selector:
+    {{- include "app.prometheusOauth2Proxy.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.adminAccess.oauth2Proxy.service.port }}
+      targetPort: http
+      protocol: TCP
+{{- end }}

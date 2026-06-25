@@ -1,0 +1,14 @@
+-- Drop portal_get_catalog_assets(text, text) before the search-path fix in
+-- 20260610195000_fix_portal_catalog_digest_search_path.sql can be applied.
+--
+-- 20260610114000_portal_inventory_projection.sql changed the function's return
+-- type from 13 columns to 21 columns using DROP + CREATE FUNCTION.
+-- 20260610195000 was written against the original 13-column signature and uses
+-- CREATE OR REPLACE, which PostgreSQL rejects when the existing function has a
+-- different row type (ERROR: cannot change return type of existing function).
+--
+-- Dropping here allows 195000 to create the 13-column + extensions-search-path
+-- variant from a clean slate.  The full 21-column signature with the
+-- extensions search-path fix is restored in
+-- 20260610196000_restore_portal_catalog_assets_extended.sql which runs after 195000.
+drop function if exists public.portal_get_catalog_assets(text, text);

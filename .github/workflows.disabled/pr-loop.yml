@@ -1,0 +1,114 @@
+name: PR Loop
+
+# The per-PR agentic loop (owner-mandated architecture, 2026-06-10):
+# GitHub Actions provides the CODED structure — fetch EVERY open PR, then loop
+# over them one by one in run-pr-pipeline.ts, invoking the Copilot SDK once per
+# PR with the `.github/agents/project-manager.agent.md` prompt. If there are
+# 124 open PRs, the loop makes 124 agent invocations — each session sees ONE
+# work item, so the agentic layer is never overwhelmed by backlog scale. After
+# the loop, one short PM assignment session runs (code-gated by the
+# factory.yml concurrency cap).
+#
+# WHY A DEDICATED WORKFLOW: as a tail stage of pipeline-fast this loop got
+# ~20 minutes of a shared 60-minute job (~15 sessions/pass). With 121 open PRs
+# each pass touched only the oldest dozen — the queue grew while every run
+# "succeeded". Here it has its own concurrency group and a multi-hour budget,
+# so a full sweep covers the WHOLE queue without starving the 15-minute agent
+# cadence in pipeline-fast (which still runs triage, specialist lanes, and the
+# Tech Reviewer that produces the approvals this loop merges on).
+#
+# The loop also opens with a deterministic CI re-trigger pre-pass (ci-retrigger.ts):
+# Copilot-authored pushes gate at action_required with zero reported checks, so
+# the pre-pass pushes a trusted empty commit (GitHub API, PAT actor) to every
+# settled gated head — code, not agent sessions, wakes the queue's CI.
+#
+# Regression contract: temporal/tests/test_pipeline_fast_workflow_contract.py.
+
+on:
+  # Event-driven trigger: sweep the queue immediately when PR CI completes, so a
+  # PR that just went green is merged within minutes instead of waiting for the
+  # next cron tick. GitHub throttles short crons hard under load (observed
+  # 2026-06-12: the */30 cron fired every 75-100 min while sweeps took only
+  # 3-6 min — the factory sat idle >90% of the time and each review round-trip
+  # cost a full tick). This is the SAME coalescing pattern proven safe on
+  # agent-tech-reviewer.yml: the fixed group + cancel-in-progress: false below
+  # mean at most one running + one pending sweep, so a CI completion wave can
+  # never fan out or cancel an in-flight pass (the 2026-06-08 pipeline-fast
+  # thrash was caused by cancel-in-progress: TRUE, not by event triggering —
+  # that workflow stays timer-only per its contract test; this one does not).
+  workflow_run:
+    workflows: ["Build Images"]
+    types: [completed]
+  schedule:
+    - cron: '*/30 * * * *'   # backstop when workflow_run delivery is delayed; a long sweep just holds the group and the next tick queues
+  workflow_dispatch:
+
+concurrency:
+  # Own serialising group — independent of pipeline-fast so a multi-hour sweep
+  # never blocks the 15-minute agent cadence. cancel-in-progress: false so a
+  # scheduled or event tick queues behind an in-flight sweep rather than
+  # killing it (queued ticks coalesce: GitHub keeps at most one pending run).
+  group: pr-loop
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+  actions: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  pr-loop:
+    runs-on: ubuntu-latest
+    # Hard self-terminate well above the loop budget below (and under GitHub's
+    # 6-hour job ceiling). A full 124-PR sweep at ~1-2 min/session is ~3-4 h.
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: .github/tools/shared/package-lock.json
+
+      - name: Install shared runtime
+        run: npm ci
+        working-directory: .github/tools/shared
+
+      - name: Per-PR loop (one agent session per open PR)
+        working-directory: .github/tools/shared
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGER_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+          FACTORY_CONFIG_PATH: ${{ github.workspace }}/.github/factory.yml
+          AGENTS_PATH: ${{ github.workspace }}/.github/agents
+          # Whole-queue budgets (minutes). The loop is merge-first then strictly
+          # oldest-first, so budget exhaustion only ever defers the newest work.
+          PR_PIPELINE_BUDGET_MIN: '270'
+          PER_PR_TIMEOUT_MIN: '8'
+          ASSIGN_TIMEOUT_MIN: '5'
+          # High cap: a dark queue (zero-check PRs) must be woken in ONE sweep,
+          # not rationed over hours — CI runs queue on GitHub's side anyway.
+          CI_RETRIGGER_CAP: '75'
+        run: |
+          set -uo pipefail
+
+          # Inject write-capable PAT as git credential only for this step.
+          # Checkout uses persist-credentials: false (no job-wide token); the PAT
+          # is scoped here (--local, current repo only) so only this step's push
+          # paths have write/trigger access.
+          git config --local url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
+
+          # No shell looping — the per-PR loop (and its summary) lives in
+          # run-pr-pipeline.ts. timeout is the in-step backstop under the job cap.
+          timeout 17400 npx tsx src/run-pr-pipeline.ts

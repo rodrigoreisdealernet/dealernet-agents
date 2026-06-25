@@ -1,0 +1,13 @@
+slug: equipment-rental-enterprise
+name: Enterprise multi-branch equipment rental
+segment: Enterprise, multi-branch, contractor/project rental (Wynne RentalMan ICP)
+north_star: >-
+  What does it take to operate an enterprise multi-branch equipment-rental
+  business?
+# ASSUMPTION (90% CI, Hubbard-style) — fully-loaded hourly cost for US rental-ops roles.
+# Deliberately wide because uncalibrated; validate/narrow with real SME + payroll data.
+default_loaded_hourly_rate:
+  low: 30
+  high: 75
+hours_per_fte_year: 1800
+created: '2026-06-14'

@@ -1,0 +1,260 @@
+{
+  "id": "ops-account-health-queue",
+  "title": "Account Health Queue",
+  "state": {
+    "signalFilter": "%",
+    "priorityFilter": "%",
+    "statusFilter": "pending_approval",
+    "customerFilter": "%"
+  },
+  "dataSources": {
+    "findings": {
+      "type": "supabase",
+      "table": "ops_findings_view",
+      "select": "id, agent_key, finding_type, severity, status, customer_name, expected, confidence, rationale, created_at",
+      "filters": [
+        { "field": "agent_key", "op": "eq", "value": "account-health-queue" },
+        { "field": "finding_type", "op": "ilike", "value": "{{state.signalFilter || '%'}}" },
+        { "field": "severity", "op": "ilike", "value": "{{state.priorityFilter || '%'}}" },
+        { "field": "status", "op": "ilike", "value": "{{state.statusFilter || '%'}}" },
+        { "field": "customer_name", "op": "ilike", "value": "{{state.customerFilter || '%'}}" }
+      ],
+      "order": [
+        { "column": "created_at", "ascending": false }
+      ],
+      "refetchInterval": 15000
+    }
+  },
+  "layout": {
+    "type": "Stack",
+    "props": { "spacing": 6 },
+    "children": [
+      {
+        "type": "Stack",
+        "props": { "spacing": 1 },
+        "children": [
+          { "type": "Heading", "props": { "level": 1, "children": "Account Health Queue" } },
+          {
+            "type": "Text",
+            "props": {
+              "variant": "muted",
+              "children": "Ranked dormant, lost, at-risk, and growth accounts. Review the evidence and edit or reject the suggested outreach angle before any contact is made."
+            }
+          }
+        ]
+      },
+      {
+        "type": "Grid",
+        "props": { "columns": "repeat(auto-fit, minmax(12rem, 1fr))", "gap": 3 },
+        "children": [
+          {
+            "type": "Select",
+            "props": {
+              "label": "Health Signal",
+              "value": "{{state.signalFilter}}",
+              "options": [
+                { "value": "%", "label": "All signals" },
+                { "value": "lost", "label": "Lost" },
+                { "value": "dormant", "label": "Dormant" },
+                { "value": "at_risk", "label": "At Risk" },
+                { "value": "growth_opportunity", "label": "Growth Opportunity" }
+              ],
+              "onChange": {
+                "action": "setState",
+                "key": "signalFilter",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Select",
+            "props": {
+              "label": "Priority",
+              "value": "{{state.priorityFilter}}",
+              "options": [
+                { "value": "%", "label": "All priorities" },
+                { "value": "critical", "label": "Critical" },
+                { "value": "high", "label": "High" },
+                { "value": "medium", "label": "Medium" },
+                { "value": "low", "label": "Low" }
+              ],
+              "onChange": {
+                "action": "setState",
+                "key": "priorityFilter",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Select",
+            "props": {
+              "label": "Status",
+              "value": "{{state.statusFilter}}",
+              "options": [
+                { "value": "%", "label": "All statuses" },
+                { "value": "pending_approval", "label": "Pending approval" },
+                { "value": "approved", "label": "Approved" },
+                { "value": "rejected", "label": "Rejected" },
+                { "value": "informational", "label": "Informational" }
+              ],
+              "onChange": {
+                "action": "setState",
+                "key": "statusFilter",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Input",
+            "props": {
+              "label": "Account",
+              "placeholder": "Use % for contains",
+              "value": "{{state.customerFilter === '%' ? '' : state.customerFilter}}",
+              "onChange": {
+                "action": "setState",
+                "key": "customerFilter",
+                "value": "{{event.target.value || '%'}}"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "type": "Text",
+        "if": "{{isLoading.findings}}",
+        "props": {
+          "variant": "muted",
+          "children": "Loading account health queue..."
+        }
+      },
+      {
+        "type": "Alert",
+        "if": "{{errors.findings}}",
+        "props": {
+          "variant": "destructive",
+          "title": "Unable to load account health queue",
+          "description": "Check filters or retry shortly."
+        }
+      },
+      {
+        "type": "Alert",
+        "if": "{{!isLoading.findings && !errors.findings && data.findings.length === 0}}",
+        "props": {
+          "variant": "info",
+          "title": "No account health signals",
+          "description": "Your territory looks healthy or there are no materially new dormant, at-risk, or growth signals to act on right now."
+        }
+      },
+      {
+        "type": "Stack",
+        "if": "{{data.findings.length > 0}}",
+        "props": { "spacing": 3 },
+        "children": [
+          {
+            "type": "Card",
+            "each": "{{data.findings}}",
+            "as": "finding",
+            "key": "{{finding.id}}",
+            "props": {
+              "className": "{{finding.severity === 'critical' ? 'border-red-500' : finding.severity === 'high' ? 'border-amber-500' : ''}}"
+            },
+            "children": [
+              {
+                "type": "Stack",
+                "props": { "spacing": 2 },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": { "direction": "horizontal", "justify": "between", "align": "center" },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": {
+                          "weight": "semibold",
+                          "children": "{{finding.customer_name || 'Unknown account'}}"
+                        }
+                      },
+                      {
+                        "type": "Stack",
+                        "props": { "direction": "horizontal", "spacing": 2, "align": "center" },
+                        "children": [
+                          {
+                            "type": "Badge",
+                            "props": {
+                              "variant": "{{finding.severity === 'critical' ? 'destructive' : 'secondary'}}",
+                              "children": "{{finding.severity}}"
+                            }
+                          },
+                          {
+                            "type": "Badge",
+                            "props": {
+                              "variant": "outline",
+                              "children": "{{formatFindingType(finding.finding_type)}}"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Text",
+                    "props": {
+                      "size": "sm",
+                      "children": "{{finding.expected && finding.expected.recommended_angle ? finding.expected.recommended_angle : finding.rationale || ''}}"
+                    }
+                  },
+                  {
+                    "type": "Text",
+                    "if": "{{finding.expected && finding.expected.contact_gap_days}}",
+                    "props": {
+                      "size": "sm",
+                      "variant": "muted",
+                      "children": "Contact gap: {{finding.expected.contact_gap_days}} days · Last rental: {{finding.expected.last_rental_date ? formatDate(finding.expected.last_rental_date) : 'N/A'}} · Utilization: {{finding.expected.utilization_trend || 'unknown'}}"
+                    }
+                  },
+                  {
+                    "type": "Alert",
+                    "if": "{{finding.expected && finding.expected.is_stale_data}}",
+                    "props": {
+                      "variant": "warning",
+                      "title": "Stale signals",
+                      "description": "{{finding.expected.stale_signals && finding.expected.stale_signals.length > 0 ? finding.expected.stale_signals[0] : 'One or more signals for this account may be outdated. Verify before outreach.'}}"
+                    }
+                  },
+                  {
+                    "type": "Stack",
+                    "props": { "direction": "horizontal", "justify": "between", "align": "center" },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "sm",
+                          "variant": "muted",
+                          "children": "{{formatDateTime(finding.created_at)}}"
+                        }
+                      },
+                      {
+                        "type": "Link",
+                        "props": {
+                          "to": "/ops/findings/{{finding.id}}",
+                          "search": {
+                            "source": "account-health-queue",
+                            "returnSignal": "{{state.signalFilter || '%'}}",
+                            "returnPriority": "{{state.priorityFilter || '%'}}",
+                            "returnStatus": "{{state.statusFilter || '%'}}",
+                            "returnCustomer": "{{state.customerFilter || '%'}}"
+                          },
+                          "children": "Review thread →"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

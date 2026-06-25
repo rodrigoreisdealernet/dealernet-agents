@@ -1,32 +1,82 @@
-# Dependencies
-node_modules/
-.pnpm-store/
-**/__pycache__/
+# Python build artefacts
+__pycache__/
 *.py[cod]
-.venv/
-venv/
+*.egg-info/
+*.egg
 
-# Build output
+# Dependencies and build output
+node_modules/
 dist/
-build/
-.vite/
 *.tsbuildinfo
 
-# Env / secrets (repo pode ser público — NUNCA commitar segredos)
+# Environment
 .env
+.env.local
 .env.*
 !.env.example
-*.local
+.env.temporal
+.env.temporal.local
+!.env.temporal.example
+.npm-cache
 
-# Supabase
-supabase/.branches/
-supabase/.temp/
-
-# Logs / OS
+# Logs and temp
 *.log
-.DS_Store
-Thumbs.db
+logs/
+.npm-cache/
 
-# IDE
-.idea/
-.vscode/
+# Supabase local state
+supabase/.branches
+supabase/.temp
+supabase/.env
+
+# OS/editor
+.DS_Store
+
+# Node tooling
+node_modules
+temporal/worker/node_modules
+temporal/worker/dist
+temporal/worker/node_modules.bak*
+**/node_modules.bak*
+*.swp
+
+volaris_test_data-main
+
+# Python build artifacts
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.egg-info/
+**/*.egg-info/
+.pytest_cache/
+**/.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+temporal/build/
+
+# Playwright / E2E test output
+frontend/e2e-results.json
+frontend/test-results/
+frontend/playwright-report/
+visual-artifacts/
+frontend/visual-artifacts/
+
+# CI test-trend machine-readable reports (uploaded as artifacts, charted on ci-history)
+frontend/vitest-results.json
+temporal/pytest-report.json
+helm-results.json
+frontend/coverage/
+coverage-results.json
+seed-results.json
+
+# Static-analysis outputs (emitted by tsc -b composite build + code-quality scans)
+frontend/vite.config.js
+frontend/vite.config.d.ts
+quality-results.json
+results/

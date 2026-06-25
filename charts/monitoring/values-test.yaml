@@ -1,0 +1,6 @@
+# charts/monitoring/values-test.yaml
+# Test environment overrides (namespace: monitoring)
+
+grafana:
+  namespace: monitoring
+  prometheusUrl: "http://prometheus-operated:9090"

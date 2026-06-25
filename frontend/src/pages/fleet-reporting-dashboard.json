@@ -1,0 +1,608 @@
+{
+  "id": "fleet-reporting-dashboard",
+  "title": "Fleet Utilization & Revenue Reporting",
+  "state": {},
+  "dataSources": {
+    "utilization_by_branch": {
+      "type": "supabase",
+      "table": "v_branch_utilization",
+      "select": "branch_id, branch_name, on_rent_count, utilization_rate_pct, last_updated",
+      "order": [
+        { "column": "branch_name", "ascending": true }
+      ]
+    },
+    "utilization_by_category": {
+      "type": "supabase",
+      "table": "rental_asset_availability_current",
+      "select": "branch_id, branch_name, asset_category_id, asset_category_name, total_assets, available_assets, unavailable_assets",
+      "order": [
+        { "column": "branch_name", "ascending": true },
+        { "column": "asset_category_name", "ascending": true }
+      ]
+    },
+    "invoice_revenue": {
+      "type": "supabase",
+      "table": "entities",
+      "select": "id, source_record_id, entity_versions!inner(data, is_current, valid_from)",
+      "filters": [
+        { "field": "entity_type", "op": "eq", "value": "invoice" },
+        { "field": "entity_versions.is_current", "op": "eq", "value": true }
+      ],
+      "order": [
+        { "column": "created_at", "ascending": false }
+      ],
+      "limit": 25
+    },
+    "asset_downtime": {
+      "type": "supabase",
+      "table": "v_asset_downtime_history",
+      "select": "asset_id, downtime_recorded_at, downtime_minutes, maintenance_record_id",
+      "order": [
+        { "column": "downtime_recorded_at", "ascending": false }
+      ],
+      "limit": 25
+    },
+    "category_downtime": {
+      "type": "supabase",
+      "table": "v_asset_category_downtime_summary",
+      "select": "asset_category_id, asset_category_name, asset_count, downtime_intervals, total_downtime_minutes, average_interval_minutes, maintenance_downtime_minutes, inspection_downtime_minutes, last_downtime_recorded_at",
+      "order": [
+        { "column": "total_downtime_minutes", "ascending": false }
+      ],
+      "limit": 12
+    },
+    "asset_analytics": {
+      "type": "supabase",
+      "table": "v_asset_analytics_current",
+      "select": "asset_id, asset_name, asset_category_name, branch_name, ownership_type, lifetime_revenue, utilization_pct, downtime_pct, total_downtime_minutes, rental_frequency, roi_pct, roi_status, last_order_at",
+      "order": [
+        { "column": "lifetime_revenue", "ascending": false }
+      ],
+      "limit": 20
+    },
+    "asset_identity": {
+      "type": "supabase",
+      "table": "rental_current_assets",
+      "select": "entity_id, name, data, current_asset_category_name, current_branch_name",
+      "order": [
+        { "column": "name", "ascending": true }
+      ]
+    }
+  },
+  "layout": {
+    "type": "Stack",
+    "props": { "spacing": 6 },
+    "children": [
+      {
+        "type": "Stack",
+        "props": { "spacing": 1 },
+        "children": [
+          {
+            "type": "Heading",
+            "props": { "level": 1, "children": "Fleet Utilization & Revenue Reporting" }
+          },
+          {
+            "type": "Text",
+            "props": {
+              "variant": "muted",
+              "children": "Operational analytics from utilization, invoice, and downtime facts."
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "props": { "title": "Fleet Utilization by Branch" },
+        "children": [
+          {
+            "type": "Stack",
+            "props": { "spacing": 3 },
+            "children": [
+              {
+                "type": "Text",
+                "if": "{{isLoading.utilization_by_branch}}",
+                "props": {
+                  "variant": "muted",
+                  "className": "text-center py-8",
+                  "children": "Loading branch utilization..."
+                }
+              },
+              {
+                "type": "Alert",
+                "if": "{{errors.utilization_by_branch}}",
+                "props": {
+                  "variant": "destructive",
+                  "title": "Unable to load branch utilization",
+                  "description": "{{errors.utilization_by_branch.message || 'Please refresh and try again.'}}"
+                }
+              },
+              {
+                "type": "Stack",
+                "if": "{{!isLoading.utilization_by_branch && !errors.utilization_by_branch}}",
+                "props": { "spacing": 3 },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "if": "{{data.utilization_by_branch && data.utilization_by_branch.length > 0}}",
+                    "each": "{{data.utilization_by_branch}}",
+                    "as": "branch",
+                    "key": "{{branch.branch_id}}",
+                    "props": {
+                      "spacing": 1,
+                      "className": "border rounded-lg p-4"
+                    },
+                    "children": [
+                      {
+                        "type": "Stack",
+                        "props": { "direction": "horizontal", "justify": "between", "align": "center" },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "props": { "weight": "semibold", "children": "{{branch.branch_name || 'Unknown branch'}}" }
+                          },
+                          {
+                            "type": "Badge",
+                            "props": { "variant": "secondary", "children": "{{branch.on_rent_count || 0}} on rent" }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "props": { "size": "sm", "variant": "muted", "children": "Utilization: {{branch.utilization_rate_pct || 0}}%" }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Text",
+                    "if": "{{!data.utilization_by_branch || !data.utilization_by_branch.length}}",
+                    "props": {
+                      "variant": "muted",
+                      "className": "text-center py-8",
+                      "children": "No branch utilization data for this period."
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "props": { "title": "Fleet Utilization by Branch / Category" },
+        "children": [
+          {
+            "type": "Stack",
+            "props": { "spacing": 3 },
+            "children": [
+              {
+                "type": "Text",
+                "if": "{{isLoading.utilization_by_category}}",
+                "props": {
+                  "variant": "muted",
+                  "className": "text-center py-8",
+                  "children": "Loading category utilization..."
+                }
+              },
+              {
+                "type": "Alert",
+                "if": "{{errors.utilization_by_category}}",
+                "props": {
+                  "variant": "destructive",
+                  "title": "Unable to load category utilization",
+                  "description": "{{errors.utilization_by_category.message || 'Please refresh and try again.'}}"
+                }
+              },
+              {
+                "type": "Stack",
+                "if": "{{!isLoading.utilization_by_category && !errors.utilization_by_category}}",
+                "props": { "spacing": 3 },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "if": "{{data.utilization_by_category && data.utilization_by_category.length > 0}}",
+                    "each": "{{data.utilization_by_category}}",
+                    "as": "row",
+                    "key": "{{row.branch_id}}-{{row.asset_category_id}}",
+                    "props": {
+                      "spacing": 1,
+                      "className": "border rounded-lg p-4"
+                    },
+                    "children": [
+                      {
+                        "type": "Stack",
+                        "props": { "direction": "horizontal", "justify": "between", "align": "center" },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "props": { "weight": "semibold", "children": "{{row.branch_name || 'Unknown branch'}} • {{row.asset_category_name || 'Unknown category'}}" }
+                          },
+                          {
+                            "type": "Badge",
+                            "props": { "variant": "outline", "children": "{{row.unavailable_assets || 0}} unavailable" }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "props": { "size": "sm", "variant": "muted", "children": "{{row.available_assets || 0}} available / {{row.total_assets || 0}} total" }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Text",
+                    "if": "{{!data.utilization_by_category || !data.utilization_by_category.length}}",
+                    "props": {
+                      "variant": "muted",
+                      "className": "text-center py-8",
+                      "children": "No branch/category utilization data for this period."
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "props": { "title": "Rental Revenue (Invoice Data)" },
+        "children": [
+          {
+            "type": "Stack",
+            "props": { "spacing": 3 },
+            "children": [
+              {
+                "type": "Text",
+                "if": "{{isLoading.invoice_revenue}}",
+                "props": {
+                  "variant": "muted",
+                  "className": "text-center py-8",
+                  "children": "Loading invoice revenue..."
+                }
+              },
+              {
+                "type": "Alert",
+                "if": "{{errors.invoice_revenue}}",
+                "props": {
+                  "variant": "destructive",
+                  "title": "Unable to load invoice revenue",
+                  "description": "{{errors.invoice_revenue.message || 'Please refresh and try again.'}}"
+                }
+              },
+              {
+                "type": "Stack",
+                "if": "{{!isLoading.invoice_revenue && !errors.invoice_revenue}}",
+                "props": { "spacing": 3 },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "if": "{{data.invoice_revenue && data.invoice_revenue.length > 0}}",
+                    "each": "{{data.invoice_revenue}}",
+                    "as": "invoice",
+                    "key": "{{invoice.id}}",
+                    "props": {
+                      "spacing": 1,
+                      "className": "border rounded-lg p-4"
+                    },
+                    "children": [
+                      {
+                        "type": "Stack",
+                        "props": { "direction": "horizontal", "justify": "between", "align": "center" },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "props": { "weight": "semibold", "children": "{{invoice.source_record_id || invoice.id || 'Invoice (unlabeled)'}}" }
+                          },
+                          {
+                            "type": "Badge",
+                            "props": { "variant": "secondary", "children": "Total ${{invoice.entity_versions[0].data.total || 0}}" }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "sm",
+                          "variant": "muted",
+                          "children": "Subtotal ${{invoice.entity_versions[0].data.subtotal || 0}} · Tax ${{invoice.entity_versions[0].data.tax || 0}}"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Text",
+                    "if": "{{!data.invoice_revenue || !data.invoice_revenue.length}}",
+                    "props": {
+                      "variant": "muted",
+                      "className": "text-center py-8",
+                      "children": "No invoice revenue data for this period."
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "props": { "title": "Per-Asset Analytics" },
+        "children": [
+          {
+            "type": "Stack",
+            "props": { "spacing": 3 },
+            "children": [
+              {
+                "type": "Text",
+                "if": "{{isLoading.asset_analytics}}",
+                "props": {
+                  "variant": "muted",
+                  "className": "text-center py-8",
+                  "children": "Loading per-asset analytics..."
+                }
+              },
+              {
+                "type": "Text",
+                "if": "{{errors.asset_analytics}}",
+                "props": {
+                  "variant": "muted",
+                  "className": "text-center py-8",
+                  "children": "No per-asset analytics data for this period."
+                }
+              },
+              {
+                "type": "Stack",
+                "if": "{{!isLoading.asset_analytics && !errors.asset_analytics}}",
+                "props": { "spacing": 3 },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "if": "{{data.asset_analytics && data.asset_analytics.length > 0}}",
+                    "each": "{{data.asset_analytics}}",
+                    "as": "asset",
+                    "key": "{{asset.asset_id}}",
+                    "props": {
+                      "spacing": 1,
+                      "className": "border rounded-lg p-4"
+                    },
+                    "children": [
+                      {
+                        "type": "Stack",
+                        "props": { "direction": "horizontal", "justify": "between", "align": "center", "wrap": true },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "props": { "weight": "semibold", "children": "{{asset.asset_name || asset.asset_id}}" }
+                          },
+                          {
+                            "type": "Badge",
+                            "props": { "variant": "secondary", "children": "Revenue ${{asset.lifetime_revenue || 0}}" }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "sm",
+                          "variant": "muted",
+                          "children": "{{asset.branch_name || 'Unknown branch'}} • {{asset.asset_category_name || 'Unassigned category'}} • {{asset.ownership_type || 'unknown ownership'}}"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "sm",
+                          "variant": "muted",
+                          "children": "Utilization {{asset.utilization_pct || 0}}% · Downtime {{asset.downtime_pct || 0}}% · Frequency {{asset.rental_frequency || 0}}"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "sm",
+                          "variant": "muted",
+                          "children": "ROI {{asset.roi_pct !== null && asset.roi_pct !== undefined ? (asset.roi_pct + '%') : 'Unavailable'}} · Last order {{asset.last_order_at || 'N/A'}}"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Text",
+                    "if": "{{!data.asset_analytics || !data.asset_analytics.length}}",
+                    "props": {
+                      "variant": "muted",
+                      "className": "text-center py-8",
+                      "children": "No per-asset analytics data for this period."
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "props": { "title": "Downtime by Category" },
+        "children": [
+          {
+            "type": "Stack",
+            "props": { "spacing": 3 },
+            "children": [
+              {
+                "type": "Text",
+                "if": "{{isLoading.category_downtime}}",
+                "props": {
+                  "variant": "muted",
+                  "className": "text-center py-8",
+                  "children": "Loading category downtime..."
+                }
+              },
+              {
+                "type": "Text",
+                "if": "{{errors.category_downtime}}",
+                "props": {
+                  "variant": "muted",
+                  "className": "text-center py-8",
+                  "children": "No category downtime data for this period."
+                }
+              },
+              {
+                "type": "Stack",
+                "if": "{{!isLoading.category_downtime && !errors.category_downtime}}",
+                "props": { "spacing": 3 },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "if": "{{data.category_downtime && data.category_downtime.length > 0}}",
+                    "each": "{{data.category_downtime}}",
+                    "as": "row",
+                    "key": "{{row.asset_category_id}}",
+                    "props": {
+                      "spacing": 1,
+                      "className": "border rounded-lg p-4"
+                    },
+                    "children": [
+                      {
+                        "type": "Stack",
+                        "props": { "direction": "horizontal", "justify": "between", "align": "center" },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "props": { "weight": "semibold", "children": "{{row.asset_category_name || 'Unassigned category'}}" }
+                          },
+                          {
+                            "type": "Badge",
+                            "props": { "variant": "destructive", "children": "{{row.total_downtime_minutes}} downtime min" }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "sm",
+                          "variant": "muted",
+                          "children": "{{row.asset_count}} assets · {{row.downtime_intervals}} intervals · Avg {{row.average_interval_minutes}} min"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "sm",
+                          "variant": "muted",
+                          "children": "Maintenance {{row.maintenance_downtime_minutes}} min · Inspection {{row.inspection_downtime_minutes}} min"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Text",
+                    "if": "{{!data.category_downtime || data.category_downtime.length === 0}}",
+                    "props": {
+                      "variant": "muted",
+                      "className": "text-center py-8",
+                      "children": "No category downtime data for this period."
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "props": { "title": "Asset Downtime" },
+        "children": [
+          {
+            "type": "Stack",
+            "props": { "spacing": 3 },
+            "children": [
+              {
+                "type": "Text",
+                "if": "{{isLoading.asset_downtime}}",
+                "props": {
+                  "variant": "muted",
+                  "className": "text-center py-8",
+                  "children": "Loading asset downtime..."
+                }
+              },
+              {
+                "type": "Alert",
+                "if": "{{errors.asset_downtime}}",
+                "props": {
+                  "variant": "destructive",
+                  "title": "Unable to load asset downtime",
+                  "description": "{{errors.asset_downtime.message || 'Please refresh and try again.'}}"
+                }
+              },
+              {
+                "type": "Stack",
+                "if": "{{!isLoading.asset_downtime && !errors.asset_downtime}}",
+                "props": { "spacing": 3 },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "if": "{{data.asset_downtime && data.asset_downtime.length > 0}}",
+                    "each": "{{data.asset_downtime}}",
+                    "as": "row",
+                    "key": "{{row.asset_id}}-{{row.downtime_recorded_at}}",
+                    "props": {
+                      "spacing": 1,
+                      "className": "border rounded-lg p-4"
+                    },
+                    "children": [
+                      {
+                        "type": "Stack",
+                        "props": { "direction": "horizontal", "justify": "between", "align": "center" },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "props": {
+                              "weight": "semibold",
+                              "children": "{{lookupRecordFieldById(data.asset_identity, row.asset_id, 'name', 'entity_id') || row.asset_id || 'Unknown asset'}} · {{lookupRecordFieldById(data.asset_identity, row.asset_id, 'data.serial_number', 'entity_id') || 'Serial unavailable'}}"
+                            }
+                          },
+                          {
+                            "type": "Badge",
+                            "props": { "variant": "destructive", "children": "{{row.downtime_minutes || 0}} min downtime" }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "sm",
+                          "variant": "muted",
+                          "children": "{{lookupRecordFieldById(data.asset_identity, row.asset_id, 'current_branch_name', 'entity_id') || 'Unknown branch'}} • {{lookupRecordFieldById(data.asset_identity, row.asset_id, 'current_asset_category_name', 'entity_id') || 'Unassigned category'}}"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "sm",
+                          "variant": "muted",
+                          "children": "Recorded at {{row.downtime_recorded_at || 'unknown'}} · Maintenance {{row.maintenance_record_id || 'n/a'}} · Asset ID {{row.asset_id || 'unknown'}}"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Text",
+                    "if": "{{!data.asset_downtime || !data.asset_downtime.length}}",
+                    "props": {
+                      "variant": "muted",
+                      "className": "text-center py-8",
+                      "children": "No asset downtime data for this period."
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

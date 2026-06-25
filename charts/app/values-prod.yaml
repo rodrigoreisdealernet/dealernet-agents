@@ -1,0 +1,280 @@
+# Production profile for charts/app
+# Intended namespace: wynne-prod (use: helm install/upgrade ... -n wynne-prod)
+
+frontend:
+  replicaCount: 3
+  image:
+    # Production should only use immutable release tags/digests.
+    # Replace <release-tag> during deployment automation.
+    tag: "prod-<release-tag>"
+    # Digest is set at deploy time to pin the exact promoted image (ADR-0010).
+    # When set, the image is referenced as repo@sha256:… (tag is kept for audit).
+    digest: ""
+    pullPolicy: IfNotPresent
+  ingress:
+    enabled: true
+    className: nginx
+    hosts:
+      - host: frontend.wynne.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+  resources:
+    requests:
+      cpu: 300m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1024Mi
+  env:
+    supabaseUrl: "https://supabase.wynne.example.com"
+    apiUrl: "https://api.wynne.example.com/functions/v1"
+  secrets:
+    supabaseAnonKey:
+      secretName: "frontend-secrets-wynne-prod"
+      key: "VITE_SUPABASE_ANON_KEY"
+
+temporalWorker:
+  replicaCount: 2
+  image:
+    # Production should only use immutable release tags/digests.
+    # Replace <release-tag> during deployment automation.
+    tag: "prod-<release-tag>"
+    # Digest is set at deploy time to pin the exact promoted image (ADR-0010).
+    digest: ""
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 300m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1024Mi
+  temporal:
+    address: "temporal-frontend.temporal.svc.cluster.local:7233"
+    namespace: "wynne-prod"
+    taskQueue: "wynne-prod-main"
+  supabase:
+    url: "https://supabase.wynne.example.com"
+  secrets:
+    supabaseServiceRoleKey:
+      secretName: "temporal-worker-secrets-wynne-prod"
+      key: "SUPABASE_SERVICE_ROLE_KEY"
+
+opsApi:
+  replicaCount: 2
+  image:
+    # Production should only use immutable release tags/digests.
+    # Replace <release-tag> during deployment automation.
+    tag: "prod-<release-tag>"
+    # Digest is set at deploy time to pin the exact promoted image (ADR-0010).
+    digest: ""
+    pullPolicy: IfNotPresent
+  temporal:
+    address: "temporal-frontend.temporal.svc.cluster.local:7233"
+    namespace: "wynne-prod"
+  supabase:
+    url: "https://supabase.wynne.example.com"
+  secrets:
+    supabaseServiceRoleKey:
+      secretName: "temporal-worker-secrets-wynne-prod"
+      key: "SUPABASE_SERVICE_ROLE_KEY"
+
+alerting:
+  enabled: true
+  prometheusRule:
+    additionalLabels:
+      release: kube-prometheus-stack
+  alertmanagerConfig:
+    incidentBridge:
+      # Set to the deployed incident bridge endpoint; update before enabling.
+      webhookUrl: ""
+      bearerTokenSecretName: "alert-bridge-secrets-wynne-prod"
+      bearerTokenSecretKey: "ALERT_BRIDGE_TOKEN"
+
+adminAccess:
+  enabled: true
+  oauth2Proxy:
+    enabled: true
+    oidc:
+      issuerUrl: "https://keycloak.wynne.example.com/realms/wynne"
+      # Must match temporalUi.ingress.hosts[*].host + /oauth2/callback for this env.
+      redirectUrl: "https://temporal.wynne.example.com/oauth2/callback"
+      groupsClaim: "groups"
+      adminGroup: "admin"
+    secrets:
+      clientId:
+        secretName: "oauth2-proxy-secrets-wynne-prod"
+        key: "OAUTH2_PROXY_CLIENT_ID"
+      clientSecret:
+        secretName: "oauth2-proxy-secrets-wynne-prod"
+        key: "OAUTH2_PROXY_CLIENT_SECRET"
+      cookieSecret:
+        secretName: "oauth2-proxy-secrets-wynne-prod"
+        key: "OAUTH2_PROXY_COOKIE_SECRET"
+  temporalUi:
+    enabled: true
+    # Point to the in-namespace Temporal UI service deployed by temporalUi.enabled below.
+    upstreamHost: "rental-app-temporal-ui.wynne-prod.svc.cluster.local"
+    upstreamPort: 8080
+    ingress:
+      enabled: true
+      className: nginx
+      hosts:
+        - host: temporal.wynne.example.com
+          paths:
+            - path: /
+              pathType: Prefix
+  grafana:
+    enabled: true
+    # kube-prometheus-stack is deployed as Helm release "observability" in the
+    # wynne-observability namespace (charts/observability, PR #789).
+    upstreamHost: "observability-grafana.wynne-observability.svc.cluster.local"
+    upstreamPort: 80
+    nativeOidc:
+      enabled: true
+      issuerUrl: "https://keycloak.wynne.example.com/realms/wynne"
+      # Must match grafana.ingress.hosts[*].host + /login/generic_oauth for this env.
+      redirectUrl: "https://grafana.wynne.example.com/login/generic_oauth"
+      secrets:
+        clientId:
+          secretName: "grafana-oidc-secrets-wynne-prod"
+          key: "GF_AUTH_GENERIC_OAUTH_CLIENT_ID"
+        clientSecret:
+          secretName: "grafana-oidc-secrets-wynne-prod"
+          key: "GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET"
+    ingress:
+      enabled: true
+      className: nginx
+      hosts:
+        - host: grafana.wynne.example.com
+          paths:
+            - path: /
+              pathType: Prefix
+  studio:
+    enabled: true
+    upstreamHost: "supabase-supabase-studio.wynne-supabase.svc.cluster.local"
+    upstreamPort: 3000
+    oauth2Proxy:
+      enabled: true
+      # Must match studio.ingress.hosts[*].host + /oauth2/callback for this env.
+      redirectUrl: "https://studio.wynne.example.com/oauth2/callback"
+      secrets:
+        clientId:
+          secretName: "oauth2-proxy-studio-secrets-wynne-prod"
+          key: "OAUTH2_PROXY_CLIENT_ID"
+        clientSecret:
+          secretName: "oauth2-proxy-studio-secrets-wynne-prod"
+          key: "OAUTH2_PROXY_CLIENT_SECRET"
+        cookieSecret:
+          secretName: "oauth2-proxy-studio-secrets-wynne-prod"
+          key: "OAUTH2_PROXY_COOKIE_SECRET"
+    ingress:
+      enabled: true
+      className: nginx
+      hosts:
+        - host: studio.wynne.example.com
+          paths:
+            - path: /
+              pathType: Prefix
+  prometheus:
+    enabled: true
+    upstreamHost: "observability-kube-prometheus-stack-prometheus.wynne-observability.svc.cluster.local"
+    upstreamPort: 9090
+    oauth2Proxy:
+      enabled: true
+      # Must match prometheus.ingress.hosts[*].host + /oauth2/callback for this env.
+      redirectUrl: "https://prometheus.wynne.example.com/oauth2/callback"
+      secrets:
+        clientId:
+          secretName: "oauth2-proxy-prometheus-secrets-wynne-prod"
+          key: "OAUTH2_PROXY_CLIENT_ID"
+        clientSecret:
+          secretName: "oauth2-proxy-prometheus-secrets-wynne-prod"
+          key: "OAUTH2_PROXY_CLIENT_SECRET"
+        cookieSecret:
+          secretName: "oauth2-proxy-prometheus-secrets-wynne-prod"
+          key: "OAUTH2_PROXY_COOKIE_SECRET"
+    ingress:
+      enabled: true
+      className: nginx
+      hosts:
+        - host: prometheus.wynne.example.com
+          paths:
+            - path: /
+              pathType: Prefix
+  alertmanager:
+    enabled: true
+    upstreamHost: "observability-kube-prometheus-stack-alertmanager.wynne-observability.svc.cluster.local"
+    upstreamPort: 9093
+    oauth2Proxy:
+      enabled: true
+      # Must match alertmanager.ingress.hosts[*].host + /oauth2/callback for this env.
+      redirectUrl: "https://alertmanager.wynne.example.com/oauth2/callback"
+      secrets:
+        clientId:
+          secretName: "oauth2-proxy-alertmanager-secrets-wynne-prod"
+          key: "OAUTH2_PROXY_CLIENT_ID"
+        clientSecret:
+          secretName: "oauth2-proxy-alertmanager-secrets-wynne-prod"
+          key: "OAUTH2_PROXY_CLIENT_SECRET"
+        cookieSecret:
+          secretName: "oauth2-proxy-alertmanager-secrets-wynne-prod"
+          key: "OAUTH2_PROXY_COOKIE_SECRET"
+    ingress:
+      enabled: true
+      className: nginx
+      hosts:
+        - host: alertmanager.wynne.example.com
+          paths:
+            - path: /
+              pathType: Prefix
+
+# ---------------------------------------------------------------------------
+# In-cluster Temporal Web UI
+# ---------------------------------------------------------------------------
+temporalUi:
+  enabled: true
+  temporalGrpcAddress: "temporal-frontend.temporal.svc.cluster.local:7233"
+  temporalDefaultNamespace: "wynne-prod"
+
+# ---------------------------------------------------------------------------
+# Observability
+# ---------------------------------------------------------------------------
+observability:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    additionalLabels:
+      release: observability
+  prometheusRule:
+    enabled: true
+    additionalLabels:
+      release: observability
+  grafana:
+    dashboards:
+      enabled: true
+
+# ---------------------------------------------------------------------------
+# External Secrets Operator — prod (wynne-prod)
+# ---------------------------------------------------------------------------
+externalSecrets:
+  enabled: false
+  refreshInterval: "1h"
+  secretStore:
+    name: "openbao-prod"
+    kind: "ClusterSecretStore"
+  keys:
+    supabaseAnonKey: "wynne/prod/runtime"
+    supabaseServiceRoleKey: "wynne/prod/runtime"
+    acrPullDockerConfig: ""
+    oauth2ProxyClientId: "wynne/prod/oauth2-proxy"
+    oauth2ProxyClientSecret: "wynne/prod/oauth2-proxy"
+    oauth2ProxyCookieSecret: "wynne/prod/oauth2-proxy"
+  properties:
+    supabaseAnonKey: "anon-key"
+    supabaseServiceRoleKey: "service-role-key"
+    acrPullDockerConfig: ""
+    oauth2ProxyClientId: "client-id"
+    oauth2ProxyClientSecret: "client-secret"
+    oauth2ProxyCookieSecret: "cookie-secret"

@@ -1,0 +1,31 @@
+# Test observability profile (namespace: wynne-observability)
+kube-prometheus-stack:
+  prometheus:
+    prometheusSpec:
+      retention: 7d
+      storageSpec:
+        volumeClaimTemplate:
+          spec:
+            resources:
+              requests:
+                storage: 10Gi
+  grafana:
+    extraEnvFrom:
+      - configMapRef:
+          name: grafana-oidc-config
+      - secretRef:
+          name: "grafana-oidc-secrets-wynne-test"
+
+targets:
+  temporalServer:
+    namespace: temporal
+  temporalWorker:
+    namespace: wynne-test
+  opsApi:
+    namespace: wynne-test
+
+grafanaOidc:
+  enabled: true
+  issuerUrl: "https://keycloak.wynne-test.example.com/realms/wynne"
+  redirectUrl: "https://grafana.wynne-test.example.com/login/generic_oauth"
+  secretName: "grafana-oidc-secrets-wynne-test"

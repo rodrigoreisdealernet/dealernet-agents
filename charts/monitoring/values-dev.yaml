@@ -1,0 +1,6 @@
+# charts/monitoring/values-dev.yaml
+# Development environment overrides (namespace: wynne-dev / monitoring)
+
+grafana:
+  namespace: monitoring
+  prometheusUrl: "http://prometheus-operated:9090"

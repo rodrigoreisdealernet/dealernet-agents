@@ -1,0 +1,121 @@
+# charts/monitoring/values-kube-prometheus-stack.yaml
+#
+# Recommended kube-prometheus-stack values for the Wynne monitoring stack.
+# Install kube-prometheus-stack separately with these values, then install
+# charts/monitoring in the same namespace to provision datasources and dashboards.
+#
+# Usage:
+#   helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+#   helm repo update
+#   helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+#     --namespace monitoring --create-namespace \
+#     -f charts/monitoring/values-kube-prometheus-stack.yaml
+#
+# kube-prometheus-stack version tested: 60.x+ (Grafana 10.x, Prometheus 2.x)
+
+fullnameOverride: ""
+
+# ---------------------------------------------------------------------------
+# Grafana
+# ---------------------------------------------------------------------------
+grafana:
+  enabled: true
+
+  # Grafana admin credentials are managed via a pre-created Secret.
+  # Create the secret before installing: kubectl create secret generic grafana-admin-credentials \
+  #   --from-literal=admin-user=admin \
+  #   --from-literal=admin-password='<choose-a-strong-password>' -n monitoring
+  admin:
+    existingSecret: "grafana-admin-credentials"
+    userKey: admin-user
+    passwordKey: admin-password
+
+  # Expose Grafana only inside the cluster (internal-first per ADR-0034).
+  # Enable external access via charts/app adminAccess.grafana settings.
+  service:
+    type: ClusterIP
+    port: 80
+
+  # Persist dashboards/settings across pod restarts.
+  persistence:
+    enabled: true
+    size: 1Gi
+
+  # ---------------------------------------------------------------------------
+  # Dashboard sidecar — watches ConfigMaps with label grafana_dashboard="1"
+  # ---------------------------------------------------------------------------
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      # Look for ConfigMaps in all namespaces (use namespace selector to restrict).
+      searchNamespace: monitoring
+      # Organise dashboards into Grafana folders by wynne/dashboard-folder label value.
+      # The sidecar creates the necessary Grafana provisioning configuration automatically;
+      # no separate provider ConfigMap is required.
+      folderAnnotation: wynne/dashboard-folder
+      provider:
+        allowUiUpdates: false
+        disableDelete: true
+    datasources:
+      enabled: true
+      label: grafana_datasource
+      labelValue: "1"
+      searchNamespace: monitoring
+
+  # Grafana INI overrides.
+  grafana.ini:
+    analytics:
+      check_for_updates: false
+    server:
+      root_url: "%(protocol)s://%(domain)s/"
+    security:
+      disable_gravatar: true
+    # Disable sign-up; admin manages users.
+    users:
+      allow_sign_up: false
+    # auth.generic_oauth populated once Keycloak/OIDC is ready (ADR-0034).
+    # Leave disabled until identity story (#679) is complete.
+
+# ---------------------------------------------------------------------------
+# Prometheus
+# ---------------------------------------------------------------------------
+prometheus:
+  enabled: true
+  prometheusSpec:
+    # Retain 15 days of metrics.
+    retention: 15d
+    # Scrape interval.
+    scrapeInterval: "15s"
+    # Watch ServiceMonitors across all namespaces.
+    serviceMonitorNamespaceSelector: {}
+    serviceMonitorSelector: {}
+    podMonitorNamespaceSelector: {}
+    podMonitorSelector: {}
+    # Persistent storage for metrics.
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 20Gi
+
+# ---------------------------------------------------------------------------
+# Alertmanager
+# ---------------------------------------------------------------------------
+alertmanager:
+  enabled: true
+
+# ---------------------------------------------------------------------------
+# kube-state-metrics (pod/node resource metrics)
+# ---------------------------------------------------------------------------
+kube-state-metrics:
+  enabled: true
+
+# ---------------------------------------------------------------------------
+# node-exporter (host-level metrics)
+# ---------------------------------------------------------------------------
+prometheus-node-exporter:
+  enabled: true

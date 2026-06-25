@@ -1,0 +1,1173 @@
+{
+  "id": "entity-detail",
+  "title": "Entity Details",
+  "state": {
+    "isEditing": false
+  },
+  "dataSources": {
+    "entity": {
+      "type": "supabase",
+      "table": "entities",
+      "select": "*, entity_versions(*)",
+      "filters": [
+        { "field": "id", "op": "eq", "value": "{{params.id}}" }
+      ],
+      "order": [
+        { "column": "version_number", "ascending": false, "referencedTable": "entity_versions" }
+      ],
+      "single": true
+    },
+    "customers": {
+      "type": "supabase",
+      "table": "entities",
+      "select": "id, entity_versions!inner(data, is_current)",
+      "filters": [
+        { "field": "entity_type", "op": "eq", "value": "customer" },
+        { "field": "entity_versions.is_current", "op": "eq", "value": true }
+      ]
+    },
+    "billingAccounts": {
+      "type": "supabase",
+      "table": "entities",
+      "select": "id, entity_versions!inner(data, is_current)",
+      "filters": [
+        { "field": "entity_type", "op": "eq", "value": "billing_account" },
+        { "field": "entity_versions.is_current", "op": "eq", "value": true }
+      ]
+    },
+    "contracts": {
+      "type": "supabase",
+      "table": "entities",
+      "select": "id, entity_versions!inner(data, is_current)",
+      "filters": [
+        { "field": "entity_type", "op": "eq", "value": "rental_contract" },
+        { "field": "entity_versions.is_current", "op": "eq", "value": true }
+      ]
+    },
+    "jobSites": {
+      "type": "supabase",
+      "table": "entities",
+      "select": "id, entity_versions!inner(data, is_current)",
+      "filters": [
+        { "field": "entity_type", "op": "eq", "value": "job_site" },
+        { "field": "entity_versions.is_current", "op": "eq", "value": true }
+      ]
+    },
+    "branches": {
+      "type": "supabase",
+      "table": "entities",
+      "select": "id, entity_versions!inner(data, is_current)",
+      "filters": [
+        { "field": "entity_type", "op": "eq", "value": "branch" },
+        { "field": "entity_versions.is_current", "op": "eq", "value": true }
+      ]
+    },
+    "assetCategories": {
+      "type": "supabase",
+      "table": "entities",
+      "select": "id, entity_versions!inner(data, is_current)",
+      "filters": [
+        { "field": "entity_type", "op": "eq", "value": "asset_category" },
+        { "field": "entity_versions.is_current", "op": "eq", "value": true }
+      ]
+    },
+    "maintenanceDownState": {
+      "type": "supabase",
+      "table": "rental_current_assets",
+      "select": "entity_id, down_severity, down_reason, down_expected_return_at",
+      "filters": [
+        { "field": "entity_id", "op": "eq", "value": "{{params.id}}" }
+      ],
+      "single": true,
+      "enabled": "{{params.entityType === 'asset'}}"
+    },
+    "assetServiceHistory": {
+      "type": "supabase",
+      "table": "v_asset_service_history",
+      "select": "asset_id, service_record_id, service_record_type, service_name, service_type, opened_at, completed_at, outcome, status, cost_summary, downtime_minutes, service_sort_at",
+      "filters": [
+        { "field": "asset_id", "op": "eq", "value": "{{params.id}}" }
+      ],
+      "order": [
+        { "column": "service_sort_at", "ascending": false }
+      ],
+      "enabled": "{{params.entityType === 'asset'}}"
+    },
+    "assetDowntimeAnalytics": {
+      "type": "supabase",
+      "table": "v_asset_downtime_analytics",
+      "select": "asset_id, asset_name, asset_category_id, asset_category_name, downtime_intervals, total_downtime_minutes, inspection_downtime_minutes, maintenance_downtime_minutes, last_downtime_recorded_at",
+      "filters": [
+        { "field": "asset_id", "op": "eq", "value": "{{params.id}}" }
+      ],
+      "single": true,
+      "enabled": "{{params.entityType === 'asset'}}"
+    },
+    "assetAnalytics": {
+      "type": "supabase",
+      "table": "v_asset_analytics_current",
+      "select": "asset_id, asset_name, asset_category_id, asset_category_name, branch_id, branch_name, ownership_type, cost_basis, lifetime_revenue, utilization_pct, downtime_pct, total_downtime_minutes, rental_frequency, roi_pct, roi_status, last_order_at, calendar_minutes, rental_minutes, analytics_updated_at, formula_reference",
+      "filters": [
+        { "field": "asset_id", "op": "eq", "value": "{{params.id}}" }
+      ],
+      "single": true,
+      "enabled": "{{params.entityType === 'asset'}}"
+    },
+    "projectEquipmentCostRollup": {
+      "type": "supabase",
+      "table": "v_project_equipment_cost_rollups",
+      "select": "job_site_id, project_name, project_equipment_budget, actual_equipment_cost, budget_variance, owned_equipment_cost, external_rental_equipment_cost, on_rent_line_count, off_rent_line_count, allocation_line_count, latest_lifecycle_at, reporting_currency_code, formula_reference",
+      "filters": [
+        { "field": "job_site_id", "op": "eq", "value": "{{params.id}}" }
+      ],
+      "single": true,
+      "enabled": "{{params.entityType === 'job_site'}}"
+    }
+  },
+  "layout": {
+    "type": "Stack",
+    "props": { "spacing": 6 },
+    "children": [
+      {
+        "type": "Stack",
+        "if": "{{isLoading.entity}}",
+        "props": { "spacing": 4 },
+        "children": [
+          {
+            "type": "Skeleton",
+            "props": { "height": 18, "width": "7rem" }
+          },
+          {
+            "type": "Skeleton",
+            "props": { "height": 40, "width": "18rem" }
+          },
+          {
+            "type": "Grid",
+            "props": { "columns": "repeat(auto-fit, minmax(280px, 1fr))", "gap": 4 },
+            "children": [
+              {
+                "type": "Card",
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 3 },
+                    "children": [
+                      { "type": "Skeleton", "props": { "height": 24, "width": "12rem" } },
+                      { "type": "Skeleton", "props": { "height": 16, "width": "100%" } },
+                      { "type": "Skeleton", "props": { "height": 16, "width": "75%" } },
+                      { "type": "Skeleton", "props": { "height": 16, "width": "60%" } }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "Card",
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 3 },
+                    "children": [
+                      { "type": "Skeleton", "props": { "height": 24, "width": "10rem" } },
+                      { "type": "Skeleton", "props": { "height": 16, "width": "100%" } },
+                      { "type": "Skeleton", "props": { "height": 16, "width": "90%" } },
+                      { "type": "Skeleton", "props": { "height": 16, "width": "55%" } }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "Text",
+            "props": {
+              "variant": "muted",
+              "children": "Loading {{params.entityLabelSingularLower}} details..."
+            }
+          }
+        ]
+      },
+      {
+        "type": "Alert",
+        "if": "{{errors.entity}}",
+        "props": {
+          "variant": "destructive",
+          "title": "Unable to load {{params.entityLabelSingularLower}} details",
+          "description": "{{errors.entity.message || 'Please refresh and try again.'}}"
+        }
+      },
+      {
+        "type": "Alert",
+        "if": "{{!isLoading.entity && !errors.entity && !data.entity}}",
+        "props": {
+          "variant": "warning",
+          "title": "{{params.entityLabelSingular}} not found",
+          "description": "The requested {{params.entityLabelSingularLower}} could not be located or may no longer exist."
+        }
+      },
+      {
+        "type": "Stack",
+        "if": "{{!isLoading.entity && !errors.entity && data.entity}}",
+        "props": { "spacing": 6 },
+        "children": [
+          {
+            "type": "Card",
+            "props": {
+              "className": "border-primary/20 bg-gradient-to-br from-background via-background to-muted/40",
+              "contentClassName": "pt-6"
+            },
+            "children": [
+              {
+                "type": "Stack",
+                "props": {
+                  "direction": "horizontal",
+                  "justify": "between",
+                  "align": "start",
+                  "wrap": true,
+                  "spacing": 4
+                },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 3 },
+                    "children": [
+                      {
+                        "type": "Link",
+                        "props": {
+                          "to": "/entities/{{params.entityType}}",
+                          "children": "Back to list"
+                        }
+                      },
+                      {
+                        "type": "Heading",
+                        "props": {
+                          "level": 1,
+                          "children": "{{params.entityType === 'invoice' ? data.entity.entity_versions[0].data.invoice_number || data.entity.entity_versions[0].data.document_number || data.entity.entity_versions[0].data.name || data.entity.source_record_id || params.entityLabelSingular : data.entity.entity_versions[0].data.name || data.entity.source_record_id || params.entityLabelSingular}}"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "variant": "muted",
+                          "children": "{{data.entity.entity_versions[0].data.description || 'Review the current version, operational context, and linked records for this'}} {{params.entityLabelSingularLower}}."
+                        }
+                      },
+                      {
+                        "type": "Stack",
+                        "props": {
+                          "direction": "horizontal",
+                          "spacing": 2,
+                          "align": "center",
+                          "wrap": true
+                        },
+                        "children": [
+                          {
+                            "type": "Badge",
+                            "props": {
+                              "variant": "secondary",
+                              "children": "{{params.entityLabelSingular}}"
+                            }
+                          },
+                          {
+                            "type": "Badge",
+                            "props": {
+                              "variant": "outline",
+                              "children": "{{data.entity.entity_versions[0].data.status || data.entity.entity_versions[0].data.operational_status || 'draft'}}"
+                            }
+                          },
+                          {
+                            "type": "Badge",
+                            "props": {
+                              "variant": "outline",
+                              "children": "v{{data.entity.entity_versions[0].version_number}}"
+                            }
+                          },
+                          {
+                            "type": "Badge",
+                            "props": {
+                              "variant": "outline",
+                              "children": "Record {{data.entity.source_record_id || 'Not assigned'}}"
+                            }
+                          },
+                          {
+                            "type": "Badge",
+                            "if": "{{data.maintenanceDownState && data.maintenanceDownState.down_severity === 'hard_down'}}",
+                            "props": {
+                              "variant": "destructive",
+                              "children": "Hard Down{{data.maintenanceDownState.down_reason ? ': ' + data.maintenanceDownState.down_reason : ''}}"
+                            }
+                          },
+                          {
+                            "type": "Badge",
+                            "if": "{{data.maintenanceDownState && data.maintenanceDownState.down_severity === 'soft_down'}}",
+                            "props": {
+                              "variant": "secondary",
+                              "children": "Soft Down{{data.maintenanceDownState.down_reason ? ': ' + data.maintenanceDownState.down_reason : ''}}"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Stack",
+                    "props": {
+                      "direction": "horizontal",
+                      "spacing": 2,
+                      "wrap": true,
+                      "justify": "end"
+                    },
+                    "children": [
+                      {
+                        "type": "Button",
+                        "if": "{{auth.canWrite && !state.isEditing}}",
+                        "props": {
+                          "variant": "outline",
+                          "children": "Edit",
+                          "onClick": { "action": "setState", "key": "isEditing", "value": true }
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "if": "{{auth.canWrite && state.isEditing}}",
+                        "props": {
+                          "variant": "outline",
+                          "children": "Cancel",
+                          "onClick": { "action": "setState", "key": "isEditing", "value": false }
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "if": "{{auth.canWrite}}",
+                        "props": {
+                          "variant": "destructive",
+                          "children": "Delete",
+                          "onClick": { "action": "openModal", "modalId": "confirmDelete" }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "Grid",
+            "props": {
+              "columns": "repeat(auto-fit, minmax(280px, 1fr))",
+              "gap": 6
+            },
+            "children": [
+              {
+                "type": "Card",
+                "props": {
+                  "title": "Snapshot",
+                  "description": "Identity, lifecycle, and audit details for the current {{params.entityLabelSingularLower}}."
+                },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 4 },
+                    "children": [
+                      {
+                        "type": "Stack",
+                        "props": { "spacing": 1 },
+                        "children": [
+                          { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "ID" } },
+                          { "type": "Text", "props": { "children": "{{data.entity.id}}" } }
+                        ]
+                      },
+                      {
+                        "type": "Stack",
+                        "props": { "spacing": 1 },
+                        "children": [
+                          { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Type" } },
+                          { "type": "Text", "props": { "children": "{{params.entityLabelSingular}}" } }
+                        ]
+                      },
+                      {
+                        "type": "Stack",
+                        "props": { "spacing": 1 },
+                        "children": [
+                          { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Source Record" } },
+                          { "type": "Text", "props": { "children": "{{data.entity.source_record_id || 'Not assigned'}}" } }
+                        ]
+                      },
+                      {
+                        "type": "Stack",
+                        "props": { "spacing": 1 },
+                        "children": [
+                          { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Created" } },
+                          { "type": "Text", "props": { "children": "{{formatDate(data.entity.created_at) || data.entity.created_at}}" } }
+                        ]
+                      },
+                      {
+                        "type": "Stack",
+                        "props": { "spacing": 1 },
+                        "children": [
+                          { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Updated" } },
+                          { "type": "Text", "props": { "children": "{{formatDate(data.entity.updated_at) || data.entity.updated_at}}" } }
+                        ]
+                      },
+                      {
+                        "type": "Stack",
+                        "props": { "spacing": 1 },
+                        "children": [
+                          { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Current Since" } },
+                          { "type": "Text", "props": { "children": "{{formatDate(data.entity.entity_versions[0].valid_from) || data.entity.entity_versions[0].valid_from || 'N/A'}}" } }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "Card",
+                "if": "{{!state.isEditing}}",
+                "props": {
+                  "title": "{{params.entityLabelSingular}} Details",
+                  "description": "Current master-data values grouped for fast review."
+                },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 4 },
+                    "children": [
+                      {
+                        "type": "Stack",
+                        "props": { "spacing": 1 },
+                        "children": [
+                          { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Name" } },
+                          { "type": "Text", "props": { "children": "{{data.entity.entity_versions[0].data.name || 'N/A'}}" } }
+                        ]
+                      },
+                      {
+                        "type": "Stack",
+                        "props": { "spacing": 1 },
+                        "children": [
+                          { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Description" } },
+                          { "type": "Text", "props": { "children": "{{data.entity.entity_versions[0].data.description || 'No description'}}" } }
+                        ]
+                      },
+                      {
+                        "type": "Stack",
+                        "props": { "spacing": 1 },
+                        "children": [
+                          { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Status" } },
+                          {
+                            "type": "Text",
+                            "props": {
+                              "children": "{{data.entity.entity_versions[0].data.status || data.entity.entity_versions[0].data.operational_status || 'N/A'}}"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Stack",
+                        "if": "{{params.entityType === 'invoice'}}",
+                        "props": { "spacing": 1 },
+                        "children": [
+                          { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Billing Context" } },
+                          {
+                            "type": "Text",
+                            "props": {
+                              "children": "Customer {{lookupEntityFieldById(data.customers, data.entity.entity_versions[0].data.customer_id, 'name') || data.entity.entity_versions[0].data.customer_id || 'N/A'}} · Billing Account {{lookupEntityFieldById(data.billingAccounts, data.entity.entity_versions[0].data.billing_account_id, 'name', 'account_number') || data.entity.entity_versions[0].data.billing_account_id || 'N/A'}} · Contract {{lookupEntityFieldById(data.contracts, data.entity.entity_versions[0].data.contract_id, 'contract_number', 'name') || data.entity.entity_versions[0].data.contract_id || 'N/A'}} · Job Site {{data.entity.entity_versions[0].data.job_site_id || 'N/A'}} · Exception {{data.entity.entity_versions[0].data.billing_exception_reason || 'none'}}"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Stack",
+                        "if": "{{params.entityType === 'transfer'}}",
+                        "props": { "spacing": 1 },
+                        "children": [
+                          { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Transfer Coordination" } },
+                          {
+                            "type": "Text",
+                            "props": {
+                              "children": "Origin {{lookupEntityFieldById(data.branches, data.entity.entity_versions[0].data.origin_branch_id || data.entity.entity_versions[0].data.from_branch_id, 'name') || data.entity.entity_versions[0].data.origin_branch_id || data.entity.entity_versions[0].data.from_branch_id || 'N/A'}} · Destination {{lookupEntityFieldById(data.branches, data.entity.entity_versions[0].data.destination_branch_id || data.entity.entity_versions[0].data.to_branch_id, 'name') || data.entity.entity_versions[0].data.destination_branch_id || data.entity.entity_versions[0].data.to_branch_id || 'N/A'}} · Scope {{data.entity.entity_versions[0].data.asset_scope || data.entity.entity_versions[0].data.asset_id || 'N/A'}} · Sourcing Decision {{data.entity.entity_versions[0].data.sourcing_decision_id || 'manual'}}"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "props": {
+                              "children": "Requested Ship {{data.entity.entity_versions[0].data.requested_ship_date || 'N/A'}} · Expected Receive {{data.entity.entity_versions[0].data.expected_receive_date || 'N/A'}} · Internal Cost {{data.entity.entity_versions[0].data.internal_cost || 'N/A'}} · Exception {{data.entity.entity_versions[0].data.transfer_exception_reason || 'none'}}"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Stack",
+                        "if": "{{params.entityType === 'customer'}}",
+                        "props": { "spacing": 1 },
+                        "children": [
+                          { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Customer Type" } },
+                          { "type": "Text", "props": { "children": "{{data.entity.entity_versions[0].data.customer_type || 'N/A'}}" } }
+                        ]
+                      },
+                      {
+                        "type": "Stack",
+                        "if": "{{params.entityType === 'billing_account'}}",
+                        "props": { "spacing": 1 },
+                        "children": [
+                          { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Payment Terms" } },
+                          { "type": "Text", "props": { "children": "{{data.entity.entity_versions[0].data.payment_terms || 'N/A'}}" } },
+                          { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Credit Limit" } },
+                          { "type": "Text", "props": { "children": "{{data.entity.entity_versions[0].data.credit_limit || 'N/A'}}" } }
+                        ]
+                      },
+                      {
+                        "type": "Stack",
+                        "if": "{{params.entityType === 'contact'}}",
+                        "props": { "spacing": 1 },
+                        "children": [
+                          { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Role" } },
+                          { "type": "Text", "props": { "children": "{{data.entity.entity_versions[0].data.role || 'N/A'}}" } },
+                          { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Customer Link" } },
+                          { "type": "Text", "props": { "children": "{{data.entity.entity_versions[0].data.customer_id || 'N/A'}}" } },
+                          { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Job Site Link" } },
+                          { "type": "Text", "props": { "children": "{{data.entity.entity_versions[0].data.job_site_id || 'N/A'}}" } }
+                        ]
+                      },
+                      {
+                        "type": "Stack",
+                        "if": "{{params.entityType === 'job_site'}}",
+                        "props": { "spacing": 1 },
+                        "children": [
+                          { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Address" } },
+                          { "type": "Text", "props": { "children": "{{data.entity.entity_versions[0].data.address || 'N/A'}}" } },
+                          { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Customer Link" } },
+                          { "type": "Text", "props": { "children": "{{data.entity.entity_versions[0].data.customer_id || 'N/A'}}" } }
+                        ]
+                      },
+                      {
+                        "type": "Stack",
+                        "if": "{{params.entityType === 'asset_category'}}",
+                        "props": { "spacing": 1 },
+                        "children": [
+                          { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Default Rate Type" } },
+                          { "type": "Text", "props": { "children": "{{data.entity.entity_versions[0].data.default_rate_type || 'N/A'}}" } },
+                          { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Default Rate Amount" } },
+                          { "type": "Text", "props": { "children": "{{data.entity.entity_versions[0].data.default_rate_amount || 'N/A'}}" } },
+                          { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Utilization Group" } },
+                          { "type": "Text", "props": { "children": "{{data.entity.entity_versions[0].data.utilization_group || 'N/A'}}" } }
+                        ]
+                      },
+                      {
+                        "type": "Stack",
+                        "if": "{{params.entityType === 'asset'}}",
+                        "props": { "spacing": 1 },
+                        "children": [
+                          { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Image URL" } },
+                          { "type": "Text", "props": { "children": "{{data.entity.entity_versions[0].data.image_url || 'No image submitted'}}" } },
+                          { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Identifier" } },
+                          { "type": "Text", "props": { "children": "{{data.entity.entity_versions[0].data.identifier || 'N/A'}}" } },
+                          { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Category Link ID" } },
+                          { "type": "Text", "props": { "children": "{{data.entity.entity_versions[0].data.asset_category_id || 'N/A'}}" } },
+                          { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Branch Link" } },
+                          { "type": "Text", "props": { "children": "{{data.entity.entity_versions[0].data.branch_id || 'N/A'}}" } },
+                          { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Damage Summary" } },
+                          { "type": "Text", "props": { "children": "{{data.entity.entity_versions[0].data.damage_report_summary || 'No active damage report'}}" } },
+                          { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Availability Status" } },
+                          { "type": "Text", "props": { "children": "{{data.entity.entity_versions[0].data.status || 'N/A'}}" } }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "Card",
+                "if": "{{state.isEditing}}",
+                "props": {
+                  "title": "Edit {{params.entityLabelSingular}}",
+                  "description": "Save a new current version while preserving the historical record."
+                },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 4 },
+                    "children": [
+                      {
+                        "type": "Input",
+                        "props": {
+                          "label": "Name",
+                          "value": "{{state.editName !== undefined ? state.editName : data.entity.entity_versions[0].data.name || ''}}",
+                          "onChange": {
+                            "action": "setState",
+                            "key": "editName",
+                            "value": "{{event.target.value}}"
+                          }
+                        }
+                      },
+                      {
+                        "type": "Textarea",
+                        "props": {
+                          "label": "Description",
+                          "value": "{{state.editDescription !== undefined ? state.editDescription : data.entity.entity_versions[0].data.description || ''}}",
+                          "onChange": {
+                            "action": "setState",
+                            "key": "editDescription",
+                            "value": "{{event.target.value}}"
+                          }
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "props": {
+                          "label": "Status",
+                          "value": "{{state.editStatus !== undefined ? state.editStatus : data.entity.entity_versions[0].data.status || data.entity.entity_versions[0].data.operational_status || ''}}",
+                          "onChange": {
+                            "action": "setState",
+                            "key": "editStatus",
+                            "value": "{{event.target.value}}"
+                          }
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "children": "Save Changes",
+                          "onClick": {
+                            "action": "sequence",
+                            "actions": [
+                              {
+                                "action": "apiCall",
+                                "operation": "insert",
+                                "table": "entity_versions",
+                                "data": {
+                                  "entity_id": "{{data.entity.id}}",
+                                  "version_number": "{{data.entity.entity_versions[0].version_number + 1}}",
+                                  "data": {
+                                    "name": "{{state.editName !== undefined ? state.editName : data.entity.entity_versions[0].data.name}}",
+                                    "description": "{{state.editDescription !== undefined ? state.editDescription : data.entity.entity_versions[0].data.description}}",
+                                    "status": "{{state.editStatus !== undefined ? state.editStatus : data.entity.entity_versions[0].data.status || data.entity.entity_versions[0].data.operational_status}}"
+                                  },
+                                  "is_current": true
+                                },
+                                "onSuccess": {
+                                  "action": "sequence",
+                                  "actions": [
+                                    { "action": "setState", "key": "isEditing", "value": false },
+                                    { "action": "refetch", "source": "entity" }
+                                  ]
+                                },
+                                "onError": {
+                                  "action": "setState",
+                                  "key": "isEditing",
+                                  "value": false
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "Card",
+                "if": "{{params.entityType === 'contact'}}",
+                "props": {
+                  "title": "Related Context",
+                  "description": "Linked records that provide operational context for this {{params.entityLabelSingularLower}}."
+                },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 1 },
+                    "children": [
+                      { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Customer" } },
+                      { "type": "Text", "props": { "children": "{{lookupEntityFieldById(data.customers, data.entity.entity_versions[0].data.customer_id, 'name')}}" } },
+                      { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Job Site" } },
+                      { "type": "Text", "props": { "children": "{{lookupEntityFieldById(data.jobSites, data.entity.entity_versions[0].data.job_site_id, 'name')}}" } }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "Card",
+                "if": "{{params.entityType === 'job_site'}}",
+                "props": {
+                  "title": "Related Context",
+                  "description": "Linked records that provide operational context for this {{params.entityLabelSingularLower}}."
+                },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 1 },
+                    "children": [
+                      { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Customer" } },
+                      { "type": "Text", "props": { "children": "{{lookupEntityFieldById(data.customers, data.entity.entity_versions[0].data.customer_id, 'name')}}" } }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "Card",
+                "if": "{{params.entityType === 'job_site'}}",
+                "props": {
+                  "title": "Project Equipment Cost Rollup",
+                  "description": "Budget versus actual equipment cost with owned-versus-rented treatment in a single project view."
+                },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 3 },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "if": "{{isLoading.projectEquipmentCostRollup}}",
+                        "props": {
+                          "variant": "muted",
+                          "children": "Loading project equipment cost rollup..."
+                        }
+                      },
+                      {
+                        "type": "Alert",
+                        "if": "{{errors.projectEquipmentCostRollup}}",
+                        "props": {
+                          "variant": "destructive",
+                          "title": "Unable to load project equipment cost rollup",
+                          "description": "{{errors.projectEquipmentCostRollup.message || 'Please refresh and try again.'}}"
+                        }
+                      },
+                      {
+                        "type": "Stack",
+                        "if": "{{!isLoading.projectEquipmentCostRollup && !errors.projectEquipmentCostRollup && data.projectEquipmentCostRollup}}",
+                        "props": { "spacing": 1 },
+                        "children": [
+                          { "type": "Text", "props": { "weight": "semibold", "children": "Budget: {{formatCurrency(data.projectEquipmentCostRollup.project_equipment_budget || 0, data.projectEquipmentCostRollup.reporting_currency_code || 'USD')}} · Actual: {{formatCurrency(data.projectEquipmentCostRollup.actual_equipment_cost || 0, data.projectEquipmentCostRollup.reporting_currency_code || 'USD')}}" } },
+                          { "type": "Text", "props": { "size": "sm", "variant": "muted", "children": "Variance (budget - actual): {{formatCurrency(data.projectEquipmentCostRollup.budget_variance || 0, data.projectEquipmentCostRollup.reporting_currency_code || 'USD')}}" } },
+                          { "type": "Text", "props": { "size": "sm", "variant": "muted", "children": "Owned cost: {{formatCurrency(data.projectEquipmentCostRollup.owned_equipment_cost || 0, data.projectEquipmentCostRollup.reporting_currency_code || 'USD')}} · External-rental cost: {{formatCurrency(data.projectEquipmentCostRollup.external_rental_equipment_cost || 0, data.projectEquipmentCostRollup.reporting_currency_code || 'USD')}}" } },
+                          { "type": "Text", "props": { "size": "sm", "variant": "muted", "children": "Lifecycle activity: {{data.projectEquipmentCostRollup.on_rent_line_count || 0}} on-rent · {{data.projectEquipmentCostRollup.off_rent_line_count || 0}} off-rent · {{data.projectEquipmentCostRollup.allocation_line_count || 0}} total allocations" } },
+                          { "type": "Text", "props": { "size": "sm", "variant": "muted", "children": "Latest lifecycle update: {{formatDate(data.projectEquipmentCostRollup.latest_lifecycle_at) || data.projectEquipmentCostRollup.latest_lifecycle_at || 'N/A'}}" } },
+                          { "type": "Text", "props": { "size": "xs", "variant": "muted", "children": "{{data.projectEquipmentCostRollup.formula_reference}}" } }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "if": "{{!isLoading.projectEquipmentCostRollup && !errors.projectEquipmentCostRollup && !data.projectEquipmentCostRollup}}",
+                        "props": {
+                          "variant": "muted",
+                          "children": "No equipment cost rollup has been recorded for this project yet."
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "Card",
+                "if": "{{params.entityType === 'asset'}}",
+                "props": {
+                  "title": "Asset Analytics",
+                  "description": "Per-asset revenue, utilization, ROI, downtime, rental frequency, and last-order metrics from live rental/invoice/maintenance data."
+                },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 3 },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "if": "{{isLoading.assetAnalytics}}",
+                        "props": {
+                          "variant": "muted",
+                          "children": "Loading asset analytics..."
+                        }
+                      },
+                      {
+                        "type": "Alert",
+                        "if": "{{errors.assetAnalytics}}",
+                        "props": {
+                          "variant": "destructive",
+                          "title": "Unable to load asset analytics",
+                          "description": "{{errors.assetAnalytics.message || 'Please refresh and try again.'}}"
+                        }
+                      },
+                      {
+                        "type": "Stack",
+                        "if": "{{!isLoading.assetAnalytics && !errors.assetAnalytics && data.assetAnalytics}}",
+                        "props": { "spacing": 1 },
+                        "children": [
+                          { "type": "Text", "props": { "weight": "semibold", "children": "Lifetime revenue: ${{data.assetAnalytics.lifetime_revenue || 0}}" } },
+                          { "type": "Text", "props": { "size": "sm", "variant": "muted", "children": "Utilization: {{data.assetAnalytics.utilization_pct || 0}}% · Downtime: {{data.assetAnalytics.downtime_pct || 0}}%" } },
+                          { "type": "Text", "props": { "size": "sm", "variant": "muted", "children": "Rental frequency: {{data.assetAnalytics.rental_frequency || 0}} contracts · Last order: {{formatDate(data.assetAnalytics.last_order_at) || data.assetAnalytics.last_order_at || 'N/A'}}" } },
+                          { "type": "Text", "props": { "size": "sm", "variant": "muted", "children": "ROI: {{data.assetAnalytics.roi_pct !== null && data.assetAnalytics.roi_pct !== undefined ? (data.assetAnalytics.roi_pct + '%') : 'Unavailable (missing cost basis)'}}" } },
+                          { "type": "Text", "props": { "size": "xs", "variant": "muted", "children": "{{data.assetAnalytics.formula_reference}}" } }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "if": "{{!isLoading.assetAnalytics && !errors.assetAnalytics && !data.assetAnalytics}}",
+                        "props": {
+                          "variant": "muted",
+                          "children": "No analytics recorded for this asset yet."
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "Card",
+                "if": "{{params.entityType === 'asset'}}",
+                "props": {
+                  "title": "Related Context",
+                  "description": "Linked records that provide operational context for this {{params.entityLabelSingularLower}}."
+                },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 1 },
+                    "children": [
+                      { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Asset Category" } },
+                      { "type": "Text", "props": { "children": "{{lookupEntityFieldById(data.assetCategories, data.entity.entity_versions[0].data.asset_category_id || data.entity.entity_versions[0].data.category_id, 'name')}}" } },
+                      { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Branch" } },
+                      { "type": "Text", "props": { "children": "{{lookupEntityFieldById(data.branches, data.entity.entity_versions[0].data.branch_id, 'name')}}" } }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "Card",
+                "if": "{{params.entityType === 'invoice'}}",
+                "props": {
+                  "title": "Related Context",
+                  "description": "Linked records that provide operational context for this {{params.entityLabelSingularLower}}."
+                },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 1 },
+                    "children": [
+                      { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Customer" } },
+                      { "type": "Text", "props": { "children": "{{lookupEntityFieldById(data.customers, data.entity.entity_versions[0].data.customer_id, 'name')}}" } },
+                      { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Billing Account" } },
+                      { "type": "Text", "props": { "children": "{{lookupEntityFieldById(data.billingAccounts, data.entity.entity_versions[0].data.billing_account_id, 'name', 'account_number')}}" } },
+                      { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Contract" } },
+                      { "type": "Text", "props": { "children": "{{lookupEntityFieldById(data.contracts, data.entity.entity_versions[0].data.contract_id, 'contract_number', 'name')}}" } },
+                      { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Job Site" } },
+                      { "type": "Text", "props": { "children": "{{lookupEntityFieldById(data.jobSites, data.entity.entity_versions[0].data.job_site_id, 'name')}}" } }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "Card",
+                "if": "{{params.entityType === 'asset'}}",
+                "props": {
+                  "title": "Downtime Analytics",
+                  "description": "Asset-level downtime rollups derived from the same maintenance and inspection events used for operational availability."
+                },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 3 },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "if": "{{isLoading.assetDowntimeAnalytics}}",
+                        "props": {
+                          "variant": "muted",
+                          "children": "Loading downtime analytics..."
+                        }
+                      },
+                      {
+                        "type": "Alert",
+                        "if": "{{errors.assetDowntimeAnalytics}}",
+                        "props": {
+                          "variant": "destructive",
+                          "title": "Unable to load downtime analytics",
+                          "description": "{{errors.assetDowntimeAnalytics.message || 'Please refresh and try again.'}}"
+                        }
+                      },
+                      {
+                        "type": "Stack",
+                        "if": "{{!isLoading.assetDowntimeAnalytics && !errors.assetDowntimeAnalytics && data.assetDowntimeAnalytics}}",
+                        "props": { "spacing": 1 },
+                        "children": [
+                          { "type": "Text", "props": { "weight": "semibold", "children": "{{data.assetDowntimeAnalytics.total_downtime_minutes}} total downtime minutes" } },
+                          { "type": "Text", "props": { "size": "sm", "variant": "muted", "children": "{{data.assetDowntimeAnalytics.downtime_intervals}} completed downtime intervals" } },
+                          { "type": "Text", "props": { "size": "sm", "variant": "muted", "children": "Maintenance: {{data.assetDowntimeAnalytics.maintenance_downtime_minutes}} min · Inspection: {{data.assetDowntimeAnalytics.inspection_downtime_minutes}} min" } },
+                          { "type": "Text", "props": { "size": "sm", "variant": "muted", "children": "Category: {{data.assetDowntimeAnalytics.asset_category_name || 'Unassigned'}}" } },
+                          { "type": "Text", "props": { "size": "sm", "variant": "muted", "children": "Last recorded: {{formatDate(data.assetDowntimeAnalytics.last_downtime_recorded_at) || data.assetDowntimeAnalytics.last_downtime_recorded_at || 'N/A'}}" } }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "if": "{{!isLoading.assetDowntimeAnalytics && !errors.assetDowntimeAnalytics && !data.assetDowntimeAnalytics}}",
+                        "props": {
+                          "variant": "muted",
+                          "children": "No downtime analytics recorded for this asset yet."
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "Card",
+                "if": "{{params.entityType === 'asset'}}",
+                "props": {
+                  "title": "Service History",
+                  "description": "Chronological maintenance and inspection activity for this asset."
+                },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 3 },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "if": "{{isLoading.assetServiceHistory}}",
+                        "props": {
+                          "variant": "muted",
+                          "children": "Loading service history..."
+                        }
+                      },
+                      {
+                        "type": "Alert",
+                        "if": "{{errors.assetServiceHistory}}",
+                        "props": {
+                          "variant": "destructive",
+                          "title": "Unable to load service history",
+                          "description": "{{errors.assetServiceHistory.message || 'Please refresh and try again.'}}"
+                        }
+                      },
+                      {
+                        "type": "Stack",
+                        "if": "{{!isLoading.assetServiceHistory && !errors.assetServiceHistory && data.assetServiceHistory && data.assetServiceHistory.length > 0}}",
+                        "props": { "spacing": 3 },
+                        "children": [
+                          {
+                            "type": "Stack",
+                            "each": "{{data.assetServiceHistory}}",
+                            "as": "service",
+                            "key": "{{service.service_record_id}}",
+                            "props": {
+                              "spacing": 1,
+                              "className": "rounded-lg border p-3"
+                            },
+                            "children": [
+                              {
+                                "type": "Stack",
+                                "props": { "direction": "horizontal", "justify": "between", "align": "center", "wrap": true },
+                                "children": [
+                                  { "type": "Text", "props": { "weight": "semibold", "children": "{{service.service_name || service.service_record_type}}" } },
+                                  { "type": "Badge", "props": { "variant": "outline", "children": "{{service.service_record_type}}" } }
+                                ]
+                              },
+                              { "type": "Text", "props": { "size": "sm", "variant": "muted", "children": "Type: {{service.service_type || 'N/A'}} · Outcome: {{service.outcome || service.status || 'N/A'}}" } },
+                              { "type": "Text", "props": { "size": "sm", "variant": "muted", "children": "Opened: {{formatDate(service.opened_at) || service.opened_at || 'N/A'}} · Completed: {{formatDate(service.completed_at) || service.completed_at || 'N/A'}}" } },
+                              { "type": "Text", "if": "{{service.cost_summary}}", "props": { "size": "sm", "variant": "muted", "children": "{{service.cost_summary}}" } },
+                              { "type": "Text", "if": "{{service.downtime_minutes !== null && service.downtime_minutes !== undefined}}", "props": { "size": "sm", "variant": "muted", "children": "Downtime: {{service.downtime_minutes}} minutes" } }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "if": "{{data.assetServiceHistory && data.assetServiceHistory.length === 0}}",
+                        "props": {
+                          "variant": "muted",
+                          "children": "No service history recorded for this asset yet."
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "Alert",
+            "if": "{{params.entityType === 'invoice' ? data.entity.entity_versions[0].data.billing_exception_reason : false}}",
+            "props": {
+              "variant": "warning",
+              "title": "Billing exception",
+              "description": "{{data.entity.entity_versions[0].data.billing_exception_reason || 'Review invoice billing exceptions before progression.'}}"
+            }
+          },
+          {
+            "type": "Alert",
+            "if": "{{params.entityType === 'transfer' ? data.entity.entity_versions[0].data.transfer_exception_reason : false}}",
+            "props": {
+              "variant": "warning",
+              "title": "Transfer exception",
+              "description": "{{data.entity.entity_versions[0].data.transfer_exception_reason || 'Review branch coordination exceptions before shipment.'}}"
+            }
+          },
+          {
+            "type": "Alert",
+            "if": "{{data.entity.entity_versions[0].data.operational_status === 'on_transfer' ? true : data.entity.entity_versions[0].data.status === 'on_transfer'}}",
+            "props": {
+              "variant": "warning",
+              "title": "Checkout blocked: on transfer",
+              "description": "This asset is currently in transfer and unavailable for assignment."
+            }
+          },
+          {
+            "type": "Alert",
+            "if": "{{data.entity.entity_versions[0].data.operational_status === 'in_maintenance' ? true : data.entity.entity_versions[0].data.status === 'in_maintenance'}}",
+            "props": {
+              "variant": "warning",
+              "title": "Checkout blocked: in maintenance",
+              "description": "This asset is in maintenance and cannot be dispatched."
+            }
+          },
+          {
+            "type": "Alert",
+            "if": "{{data.entity.entity_versions[0].data.operational_status === 'on_inspection_hold' ? true : data.entity.entity_versions[0].data.status === 'on_inspection_hold'}}",
+            "props": {
+              "variant": "warning",
+              "title": "Checkout blocked: inspection hold",
+              "description": "This asset failed inspection and must clear hold before rental."
+            }
+          },
+          {
+            "type": "Alert",
+            "if": "{{data.entity.entity_versions[0].data.operational_status === 'retired' ? true : data.entity.entity_versions[0].data.status === 'retired'}}",
+            "props": {
+              "variant": "destructive",
+              "title": "Checkout blocked: retired",
+              "description": "This asset is retired from rental operations."
+            }
+          },
+          {
+            "type": "Alert",
+            "if": "{{data.entity.entity_versions[0].data.operational_status === 'lost' ? true : data.entity.entity_versions[0].data.status === 'lost'}}",
+            "props": {
+              "variant": "destructive",
+              "title": "Checkout blocked: lost",
+              "description": "This asset is marked lost and unavailable for assignment."
+            }
+          },
+          {
+            "type": "Alert",
+            "if": "{{data.entity.entity_versions[0].data.operational_status === 'conflicting_assignment' ? true : data.entity.entity_versions[0].data.status === 'conflicting_assignment'}}",
+            "props": {
+              "variant": "warning",
+              "title": "Checkout blocked: conflicting assignment",
+              "description": "This asset already has a conflicting rental assignment."
+            }
+          },
+          {
+            "type": "Card",
+            "props": {
+              "title": "Version History",
+              "description": "Every revision remains visible so users can confirm the current version and prior history."
+            },
+            "children": [
+              {
+                "type": "Stack",
+                "props": { "spacing": 2 },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "each": "{{data.entity.entity_versions}}",
+                    "as": "version",
+                    "key": "{{version.id}}",
+                    "props": {
+                      "direction": "horizontal",
+                      "justify": "between",
+                      "align": "center",
+                      "wrap": true,
+                      "className": "rounded-lg border p-3"
+                    },
+                    "children": [
+                      {
+                        "type": "Stack",
+                        "props": { "direction": "horizontal", "spacing": 4, "align": "center", "wrap": true },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "props": {
+                              "weight": "medium",
+                              "children": "Version {{version.version_number}}"
+                            }
+                          },
+                          {
+                            "type": "Badge",
+                            "if": "{{version.is_current}}",
+                            "props": { "children": "Current" }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "variant": "muted",
+                          "size": "sm",
+                          "children": "{{formatDate(version.valid_from) || version.valid_from || 'No valid-from timestamp'}}"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "modals": {
+    "confirmDelete": {
+      "title": "Delete Entity",
+      "size": "sm",
+      "content": {
+        "type": "Stack",
+        "props": { "spacing": 4 },
+        "children": [
+          {
+            "type": "Alert",
+            "props": {
+              "variant": "destructive",
+              "title": "Are you sure?",
+              "description": "This action cannot be undone. This will permanently delete the entity and all its versions."
+            }
+          },
+          {
+            "type": "Stack",
+            "props": { "direction": "horizontal", "justify": "end", "spacing": 2 },
+            "children": [
+              {
+                "type": "Button",
+                "props": {
+                  "variant": "outline",
+                  "children": "Cancel",
+                  "onClick": { "action": "closeModal" }
+                }
+              },
+              {
+                "type": "Button",
+                "props": {
+                  "variant": "destructive",
+                  "children": "Delete",
+                  "onClick": {
+                    "action": "sequence",
+                    "actions": [
+                      {
+                        "action": "apiCall",
+                        "operation": "rpc",
+                        "function": "delete_entity",
+                        "data": { "p_entity_id": "{{params.id}}" },
+                        "onSuccess": {
+                          "action": "navigate",
+                          "to": "/entities/{{params.entityType}}",
+                          "replace": true
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

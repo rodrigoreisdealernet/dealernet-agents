@@ -1,0 +1,42 @@
+# charts/monitoring/values.yaml
+#
+# Configures Grafana dashboard + datasource provisioning for Wynne.
+# These values govern the ConfigMaps managed by this chart.
+# kube-prometheus-stack must be installed in the same namespace;
+# see values-kube-prometheus-stack.yaml for recommended stack settings.
+#
+# Dashboards are organised into Grafana folders via the
+# wynne/dashboard-folder label on each ConfigMap. The kube-prometheus-stack
+# Grafana sidecar reads that annotation (configured via
+# grafana.sidecar.dashboards.folderAnnotation in values-kube-prometheus-stack.yaml)
+# and creates the folder structure automatically.
+
+# -- Override the chart name
+nameOverride: ""
+# -- Override the full release name
+fullnameOverride: ""
+
+# ---------------------------------------------------------------------------
+# Grafana sidecar integration
+# ---------------------------------------------------------------------------
+grafana:
+  # -- Namespace where Grafana is running (used in ConfigMap labels / selector).
+  #    Set to the namespace where kube-prometheus-stack is installed.
+  namespace: monitoring
+
+  # -- Label key that the Grafana dashboard sidecar watches on ConfigMaps.
+  #    Must match grafana.sidecar.dashboards.label in your kube-prometheus-stack values.
+  dashboardLabel: grafana_dashboard
+
+  # -- Label value the sidecar filters on.
+  dashboardLabelValue: "1"
+
+  # -- Label key the Grafana datasource sidecar watches (grafana.sidecar.datasources.label).
+  datasourceLabel: grafana_datasource
+
+  # -- Label value for the datasource sidecar.
+  datasourceLabelValue: "1"
+
+  # -- Prometheus datasource URL visible from within the Grafana pod.
+  #    Default points to the kube-prometheus-stack Prometheus service in the same namespace.
+  prometheusUrl: "http://prometheus-operated:9090"

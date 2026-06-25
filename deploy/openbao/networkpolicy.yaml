@@ -1,0 +1,53 @@
+# Default-deny ingress for OpenBao; allow only ESO + intra-cluster Raft peers (ADR-0040).
+# NOTE: enforcement requires a NetworkPolicy-capable CNI (Azure CNI Overlay/Cilium).
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: openbao-default-deny-ingress
+  namespace: wynne-vault
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: openbao
+  policyTypes: ["Ingress"]
+  ingress: []          # deny all ingress not explicitly allowed below
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: openbao-allow-eso-and-peers
+  namespace: wynne-vault
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: openbao
+  policyTypes: ["Ingress"]
+  ingress:
+    # ESO controller reaches the API port.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: external-secrets
+      ports:
+        - protocol: TCP
+          port: 8200
+    # Raft peers (other OpenBao pods) reach API + cluster ports.
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: openbao
+      ports:
+        - protocol: TCP
+          port: 8200
+        - protocol: TCP
+          port: 8201
+    # Snapshot CronJob reaches the API port for DR operations.
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: openbao-snapshot
+              app.kubernetes.io/component: backup
+      ports:
+        - protocol: TCP
+          port: 8200

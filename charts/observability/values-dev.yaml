@@ -1,0 +1,26 @@
+# Development observability profile (namespace: wynne-observability)
+# Keep this profile lightweight to reduce dev cluster spend/noise.
+kube-prometheus-stack:
+  prometheus:
+    prometheusSpec:
+      retention: 3d
+      storageSpec:
+        volumeClaimTemplate:
+          spec:
+            resources:
+              requests:
+                storage: 5Gi
+  kube-state-metrics:
+    enabled: false
+  prometheus-node-exporter:
+    enabled: false
+
+targets:
+  temporalServer:
+    # Dev Temporal server is deployed in namespace `dev` (not `temporal`) in the
+    # current AKS runtime, matching charts/app/values-dev.yaml temporal wiring.
+    namespace: dev
+  temporalWorker:
+    namespace: wynne-dev
+  opsApi:
+    namespace: wynne-dev

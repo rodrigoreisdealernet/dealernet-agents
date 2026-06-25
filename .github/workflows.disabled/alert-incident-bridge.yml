@@ -1,0 +1,106 @@
+name: Alert — Incident Bridge
+
+# Translates Alertmanager webhook notifications into deduplicated GitHub incidents
+# following the repo's auto:alert / queue:ops incident pattern.
+#
+# Trigger paths:
+#   1. repository_dispatch with event-type "alertmanager-alert"
+#      (called by the Alertmanager webhook adapter; see OPERATIONS.md § Alert bridge deployment)
+#   2. workflow_dispatch with a JSON payload for testing and synthetic alert injection
+#
+# Required secrets: none — the built-in GITHUB_TOKEN is sufficient.
+# The workflow permissions block below grants the minimum required scope (issues: write).
+
+on:
+  repository_dispatch:
+    types: [alertmanager-alert]
+  workflow_dispatch:
+    inputs:
+      payload:
+        description: >
+          Alertmanager JSON payload (https://prometheus.io/docs/alerting/latest/configuration/#webhook_config).
+          Use a firing TemporalWorkerDown alert for synthetic end-to-end testing.
+        required: true
+        type: string
+        default: |
+          {
+            "version": "4",
+            "groupKey": "{}:{alertname=\"TemporalWorkerDown\"}",
+            "truncatedAlerts": 0,
+            "status": "firing",
+            "receiver": "incident-bridge",
+            "groupLabels": {"alertname": "TemporalWorkerDown"},
+            "commonLabels": {"env": "test"},
+            "commonAnnotations": {},
+            "externalURL": "https://alertmanager.example.com",
+            "alerts": [
+              {
+                "status": "firing",
+                "labels": {
+                  "alertname": "TemporalWorkerDown",
+                  "severity": "critical",
+                  "env": "test",
+                  "component": "temporal-worker",
+                  "namespace": "wynne-test"
+                },
+                "annotations": {
+                  "summary": "Temporal worker is down in wynne-test",
+                  "description": "No temporal-worker pod has been ready for 2 minutes in namespace wynne-test. All task queues are stalled.",
+                  "runbook": "See OPERATIONS.md \u00a7 TemporalWorkerDown"
+                },
+                "startsAt": "2024-01-15T10:00:00Z",
+                "endsAt": "0001-01-01T00:00:00Z",
+                "generatorURL": "https://prometheus.example.com/graph"
+              }
+            ]
+          }
+
+concurrency:
+  group: alert-incident-bridge
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  bridge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: .github/tools/shared/package-lock.json
+
+      - name: Install shared runtime
+        run: npm ci
+        working-directory: .github/tools/shared
+
+      - name: Resolve payload
+        id: payload
+        run: |
+          if [[ "${{ github.event_name }}" == "repository_dispatch" ]]; then
+            # Alertmanager webhook adapter calls repository_dispatch with client_payload
+            # containing the Alertmanager JSON under the key "payload".
+            PAYLOAD='${{ toJSON(github.event.client_payload.payload) }}'
+          else
+            PAYLOAD='${{ inputs.payload }}'
+          fi
+          # Validate it is parseable JSON before passing to the bridge.
+          echo "$PAYLOAD" | node -e "process.stdin.resume(); let d=''; process.stdin.on('data',c=>d+=c); process.stdin.on('end',()=>{JSON.parse(d); console.log('payload OK');})"
+          # Write to a temp file to avoid shell quoting issues with large payloads.
+          echo "$PAYLOAD" > /tmp/alert-payload.json
+
+      - name: Run incident bridge
+        run: |
+          npx tsx src/alert-incident-bridge.ts --payload "$(cat /tmp/alert-payload.json)"
+        working-directory: .github/tools/shared
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}

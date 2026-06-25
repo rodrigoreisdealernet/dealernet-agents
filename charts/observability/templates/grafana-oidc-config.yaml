@@ -1,0 +1,37 @@
+{{- if .Values.grafanaOidc.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-oidc-config
+  namespace: wynne-observability
+  labels:
+    app.kubernetes.io/part-of: wynne-observability
+    app.kubernetes.io/component: grafana-oidc-config
+data:
+  GF_AUTH_GENERIC_OAUTH_ENABLED: "true"
+  GF_AUTH_GENERIC_OAUTH_NAME: "Keycloak"
+  # Deny sign-up for users whose groups claim matches no mapped role.
+  # Combined with ROLE_ATTRIBUTE_STRICT_MODE this prevents any Keycloak user who is not
+  # in an explicitly mapped group from completing the Grafana sign-in flow.
+  GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP: "false"
+  GF_AUTH_GENERIC_OAUTH_SCOPES: "openid email profile groups"
+  GF_AUTH_GENERIC_OAUTH_AUTH_URL: {{ printf "%s/protocol/openid-connect/auth" .Values.grafanaOidc.issuerUrl | quote }}
+  GF_AUTH_GENERIC_OAUTH_TOKEN_URL: {{ printf "%s/protocol/openid-connect/token" .Values.grafanaOidc.issuerUrl | quote }}
+  GF_AUTH_GENERIC_OAUTH_API_URL: {{ printf "%s/protocol/openid-connect/userinfo" .Values.grafanaOidc.issuerUrl | quote }}
+  # Map Keycloak groups to Grafana roles — explicit groups only; no catch-all fallback.
+  # Users whose groups claim does not match any entry are denied by ROLE_ATTRIBUTE_STRICT_MODE.
+  #   wynne-admin              → Admin
+  #   wynne-branch-manager     → Editor
+  #   wynne-field-operator     → Editor
+  #   (no matching group)      → denied
+  GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH: >-
+    contains(groups[*], 'wynne-admin') && 'Admin' || (contains(groups[*], 'wynne-branch-manager') || contains(groups[*], 'wynne-field-operator')) && 'Editor'
+  # Fail-closed: deny sign-in if ROLE_ATTRIBUTE_PATH resolves to an empty/unrecognised value.
+  GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_STRICT_MODE: "true"
+  GF_AUTH_GENERIC_OAUTH_GROUPS_ATTRIBUTE_PATH: "groups"
+  GF_AUTH_GENERIC_OAUTH_REDIRECT_URL: {{ .Values.grafanaOidc.redirectUrl | quote }}
+  GF_AUTH_SIGNOUT_REDIRECT_URL: {{ printf "%s/protocol/openid-connect/logout" .Values.grafanaOidc.issuerUrl | quote }}
+  GF_AUTH_GENERIC_OAUTH_USE_PKCE: "true"
+  GF_AUTH_GENERIC_OAUTH_EMAIL_ATTRIBUTE_PATH: "email"
+  GF_AUTH_GENERIC_OAUTH_NAME_ATTRIBUTE_PATH: "name"
+{{- end }}

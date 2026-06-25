@@ -1,0 +1,882 @@
+name: Deploy Dev
+
+# Phase 2 (#41/#44): deploy freshly-built images to the `wynne-dev` namespace.
+#
+# GATED: until Phase 2 is enabled the deploy job is skipped cleanly (the preflight
+# runs on ubuntu-latest and never queues a missing runner). To enable, see
+# PHASE2-DEPLOYMENT.md (registry creds, namespaces+RBAC applied, KUBE_CONFIG_DEV
+# secret, dev environment, K8S_DEPLOY_ENABLED=true, WYNNE_DEV_NAMESPACE=wynne-dev).
+#
+# Dev deploys run on ubuntu-latest against the cluster's PUBLIC API using a
+# namespace-scoped gha-deployer kubeconfig (KUBE_CONFIG_DEV). Test/prod must still
+# move to the gated self-hosted runners per docs/specs/live-cluster-deploy-smoke-rollback.md.
+
+on:
+  workflow_run:
+    workflows: ["Build Images"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: 'Run ID of the Build Images workflow run to deploy (find it in the Actions tab)'
+        required: true
+        type: string
+      sha_tag:
+        description: 'Commit SHA for audit display (optional; defaults to "build-<run_id>" when omitted)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: deploy-dev
+  # Let the in-progress deploy RUN TO COMPLETION; do not cancel it when a newer
+  # merge arrives.
+  #
+  # Why this was flipped from `true`: with `cancel-in-progress: true` a *sustained*
+  # merge burst starves the deploy entirely — every run is superseded before it
+  # finishes (observed: 10 consecutive deploys cancelled across ~30 min, so the
+  # Helm self-heal never executed and dev never updated). The old comment assumed
+  # merges always "ease even briefly", which does not hold under load.
+  #
+  # `false` does NOT build an ever-growing serial queue: GitHub keeps only the
+  # in-progress run plus the single most-recent pending run and cancels older
+  # pending ones. So we get "current deploy completes, then jump to newest" —
+  # guaranteed completion, at most ~1 deploy behind. Completion matters here
+  # because the deploy carries the Helm pending-state self-heal; a perpetually
+  # cancelled deploy can never recover a stuck release.
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: Preflight (gate)
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    outputs:
+      # Two INDEPENDENT gates. The app deploy must never depend on DB-bootstrap
+      # availability — coupling them (pre-2026-06-07) silently skipped ALL app
+      # deploys when the DB-bootstrap secrets were unset, freezing the frontend on
+      # a stale image while the run still showed "success".
+      app_enabled: ${{ steps.gate.outputs.app_enabled }}
+      bootstrap_enabled: ${{ steps.gate.outputs.bootstrap_enabled }}
+    steps:
+      - id: gate
+        env:
+          DEPLOY_ENABLED: ${{ vars.K8S_DEPLOY_ENABLED }}
+          DEV_NAMESPACE: ${{ vars.WYNNE_DEV_NAMESPACE }}
+          HAS_DEPLOY_KUBECONFIG: ${{ secrets.KUBE_CONFIG_DEV != '' }}
+          HAS_DB_BOOTSTRAP_KUBECONFIG: ${{ secrets.KUBE_CONFIG_DEV_DB_BOOTSTRAP != '' }}
+          HAS_DB_BOOTSTRAP_USER: ${{ vars.WYNNE_DB_BOOTSTRAP_USER != '' }}
+          HAS_DB_BOOTSTRAP_DB_NAME: ${{ vars.WYNNE_DB_BOOTSTRAP_DB_NAME != '' }}
+        run: |
+          APP_ENABLED=false
+          BOOTSTRAP_ENABLED=false
+          # App deploy (frontend + worker) — depends ONLY on the app prerequisites.
+          if [[ "$DEPLOY_ENABLED" == "true" && -n "$DEV_NAMESPACE" && "$HAS_DEPLOY_KUBECONFIG" == "true" ]]; then
+            APP_ENABLED=true
+          fi
+          # DB bootstrap — additionally needs its own scoped creds. Skipping it must
+          # NOT skip the app deploy.
+          if [[ "$APP_ENABLED" == "true" && "$HAS_DB_BOOTSTRAP_KUBECONFIG" == "true" && "$HAS_DB_BOOTSTRAP_USER" == "true" && "$HAS_DB_BOOTSTRAP_DB_NAME" == "true" ]]; then
+            BOOTSTRAP_ENABLED=true
+          fi
+          echo "app_enabled=$APP_ENABLED" >> "$GITHUB_OUTPUT"
+          echo "bootstrap_enabled=$BOOTSTRAP_ENABLED" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Deploy Dev preflight"
+            echo ""
+            echo "| Gate | Status |"
+            echo "|------|--------|"
+            if [ "$APP_ENABLED" = true ]; then
+              echo "| App deploy (frontend + worker) | ✅ enabled → \`$DEV_NAMESPACE\` |"
+            else
+              echo "| App deploy (frontend + worker) | ⏭️ skipped — needs K8S_DEPLOY_ENABLED + WYNNE_DEV_NAMESPACE + KUBE_CONFIG_DEV |"
+            fi
+            if [ "$BOOTSTRAP_ENABLED" = true ]; then
+              echo "| DB bootstrap | ✅ enabled |"
+            else
+              echo "| DB bootstrap | ⏭️ skipped — needs KUBE_CONFIG_DEV_DB_BOOTSTRAP + explicit least-privilege WYNNE_DB_BOOTSTRAP_USER + WYNNE_DB_BOOTSTRAP_DB_NAME |"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$APP_ENABLED" == "true" && "$BOOTSTRAP_ENABLED" != "true" ]]; then
+            echo "::warning::App deploy enabled but DB bootstrap SKIPPED — DB-bootstrap secret/explicit vars not configured. The app deploys normally; the DB is not auto-seeded."
+          fi
+
+  deploy:
+    name: Deploy app to wynne-dev
+    needs: preflight
+    if: needs.preflight.outputs.app_enabled == 'true'
+    runs-on: ubuntu-latest
+    environment: dev
+    env:
+      DEV_NAMESPACE: ${{ vars.WYNNE_DEV_NAMESPACE }}
+      OBSERVABILITY_NAMESPACE: wynne-observability
+      IMAGE_REGISTRY: ${{ vars.ACR_LOGIN_SERVER }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.18.3
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.32.4
+
+      - name: Configure kubeconfig (namespace-scoped gha-deployer)
+        run: |
+          install -m 600 /dev/null "$RUNNER_TEMP/kubeconfig"
+          echo "${{ secrets.KUBE_CONFIG_DEV }}" > "$RUNNER_TEMP/kubeconfig"
+          echo "KUBECONFIG=$RUNNER_TEMP/kubeconfig" >> "$GITHUB_ENV"
+
+      - name: Resolve build run reference
+        id: run_ref
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            echo "build_run_id=${{ github.event.workflow_run.id }}" >> "$GITHUB_OUTPUT"
+            echo "sha_tag=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "build_run_id=${{ inputs.build_run_id }}" >> "$GITHUB_OUTPUT"
+            SHA_TAG="${{ inputs.sha_tag }}"
+            echo "sha_tag=${SHA_TAG:-build-${{ inputs.build_run_id }}}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download image digests from Build Images run
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ steps.run_ref.outputs.build_run_id }}
+          pattern: image-digest-*
+          path: /tmp/digests/
+          merge-multiple: false
+
+      - name: Resolve and validate image digests
+        id: digests
+        run: |
+          set -euo pipefail
+          FRONTEND_DIGEST=""
+          WORKER_DIGEST=""
+          if [[ -f /tmp/digests/image-digest-frontend/digest.txt ]]; then
+            FRONTEND_DIGEST=$(tr -d '[:space:]' < /tmp/digests/image-digest-frontend/digest.txt)
+          fi
+          if [[ -f /tmp/digests/image-digest-temporal-worker/digest.txt ]]; then
+            WORKER_DIGEST=$(tr -d '[:space:]' < /tmp/digests/image-digest-temporal-worker/digest.txt)
+          fi
+          if [[ -z "${FRONTEND_DIGEST}" ]]; then
+            echo "::error::frontend image digest missing from build run ${{ steps.run_ref.outputs.build_run_id }} — ADR-0010 requires pinned digests for promotion" >&2
+            exit 1
+          fi
+          if [[ -z "${WORKER_DIGEST}" ]]; then
+            echo "::error::temporal-worker image digest missing from build run ${{ steps.run_ref.outputs.build_run_id }} — ADR-0010 requires pinned digests for promotion" >&2
+            exit 1
+          fi
+          echo "frontend=${FRONTEND_DIGEST}" >> "$GITHUB_OUTPUT"
+          echo "worker=${WORKER_DIGEST}" >> "$GITHUB_OUTPUT"
+
+      - name: Clear stuck Helm release state (if pending)
+        run: |
+          set -euo pipefail
+          # A cancelled or interrupted deploy can leave the release stuck in
+          # pending-upgrade, pending-install, or pending-rollback, which blocks
+          # any subsequent helm upgrade --install with:
+          #   "UPGRADE FAILED: another operation ... is in progress"
+          # Detect and clear the stuck state before attempting the upgrade so
+          # that re-runs self-heal without requiring manual cluster access.
+          HELM_STATUS=$(helm status rental-app --namespace "$DEV_NAMESPACE" -o json 2>/dev/null \
+            | jq -r '.info.status // empty' 2>/dev/null || true)
+          if [[ ! "$HELM_STATUS" =~ ^pending- ]]; then
+            echo "Release status: '${HELM_STATUS:-not found}' — no cleanup needed."
+            exit 0
+          fi
+          echo "::warning::Release 'rental-app' is stuck in '$HELM_STATUS'. Clearing pending state."
+          # Prefer rollback to the last successfully-deployed revision; this
+          # transitions the release back to 'deployed' cleanly.
+          LAST_DEPLOYED=$(helm history rental-app --namespace "$DEV_NAMESPACE" -o json 2>/dev/null \
+            | jq -r '[.[] | select(.status == "deployed")] | last | .revision // ""' 2>/dev/null || true)
+          if [[ -n "$LAST_DEPLOYED" && "$LAST_DEPLOYED" != "null" ]]; then
+            echo "Rolling back to last deployed revision $LAST_DEPLOYED to clear pending state..."
+            helm rollback rental-app "$LAST_DEPLOYED" --namespace "$DEV_NAMESPACE"
+          else
+            # No deployed revision (e.g. first install stuck). Remove the
+            # specific pending Helm state secret so the upgrade can proceed.
+            echo "No deployed revision found. Removing stuck pending Helm state secrets..."
+            kubectl delete secret \
+              -n "$DEV_NAMESPACE" \
+              -l "owner=helm,name=rental-app,status=${HELM_STATUS}" \
+              --ignore-not-found
+          fi
+
+      - name: Helm upgrade (wynne-dev)
+        run: |
+          set -euo pipefail
+          helm upgrade --install rental-app charts/app \
+            -f charts/app/values-dev.yaml \
+            --namespace "$DEV_NAMESPACE" \
+            --set "imageRegistry=${IMAGE_REGISTRY}" \
+            --set "frontend.image.digest=${{ steps.digests.outputs.frontend }}" \
+            --set "frontend.image.tag=${{ steps.run_ref.outputs.sha_tag }}" \
+            --set "temporalWorker.image.digest=${{ steps.digests.outputs.worker }}" \
+            --set "temporalWorker.image.tag=${{ steps.run_ref.outputs.sha_tag }}" \
+            --set "opsApi.image.digest=${{ steps.digests.outputs.worker }}" \
+            --set "opsApi.image.tag=${{ steps.run_ref.outputs.sha_tag }}" \
+            --wait --timeout 10m
+
+      # Observability install is GATED (#1186): the dev-profile stack renders
+      # cluster-scoped resources (ClusterRoles, webhooks, operator CRDs) that the
+      # namespace-scoped gha-deployer identity can never apply — the step has
+      # never succeeded and was previously masked by the app-release failure
+      # (#1183/#1184). Set repo variable OBSERVABILITY_DEPLOY_ENABLED=true only
+      # once #1186 lands a privileged install path.
+      - name: Observability deploy gate notice
+        if: vars.OBSERVABILITY_DEPLOY_ENABLED != 'true'
+        run: |
+          echo "::notice title=Observability deploy skipped::OBSERVABILITY_DEPLOY_ENABLED is not 'true' — kube-prometheus-stack install requires a cluster-scoped identity (see #1186)."
+
+      - name: Prepare observability chart dependencies
+        if: vars.OBSERVABILITY_DEPLOY_ENABLED == 'true'
+        run: |
+          set -euo pipefail
+          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts >/dev/null 2>&1 || true
+          helm repo update >/dev/null
+          helm dependency build charts/observability >/dev/null
+
+      - name: Helm upgrade observability stack (dev profile)
+        if: vars.OBSERVABILITY_DEPLOY_ENABLED == 'true'
+        run: |
+          set -euo pipefail
+          helm upgrade --install observability charts/observability \
+            -f charts/observability/values-dev.yaml \
+            --namespace "$OBSERVABILITY_NAMESPACE" \
+            --create-namespace \
+            --wait --timeout 10m
+
+      - name: Diagnose rollout failure (pods, events, logs)
+        if: failure()
+        # `helm upgrade --wait` fails opaquely with only "context deadline exceeded"
+        # when pods never become Ready — it does NOT say WHY (ImagePullBackOff vs
+        # CrashLoopBackOff vs failing probe). Capture the cluster-side detail here so
+        # the failure is actionable in the run log (and to the deploy-failure sentinel),
+        # instead of needing manual kubectl access to wynne-dev to diagnose.
+        run: |
+          set +e
+          ns="$DEV_NAMESPACE"
+          release_name='rental-app'
+          worker_deployment="${release_name}-temporal-worker"
+          worker_selector="app.kubernetes.io/component=temporal-worker,app.kubernetes.io/instance=${release_name}"
+          rbac_manifest='deploy/k8s/rbac-nonprod.yaml'
+          can_read_pod_logs=true
+          can_read_events=true
+          if ! kubectl auth can-i get pods/log -n "$ns" >/dev/null 2>&1; then
+            can_read_pod_logs=false
+          fi
+          if ! kubectl auth can-i list events -n "$ns" >/dev/null 2>&1; then
+            can_read_events=false
+          fi
+          echo "::group::helm status rental-app"
+          helm status "$release_name" -n "$ns" 2>&1 | tail -40
+          echo "::endgroup::"
+          echo "::group::pods (-o wide)"
+          kubectl get pods -n "$ns" -o wide 2>&1
+          echo "::endgroup::"
+          if [ "$can_read_events" = true ]; then
+            echo "::group::recent events"
+            kubectl get events -n "$ns" --sort-by=.lastTimestamp 2>&1 | tail -50
+            echo "::endgroup::"
+          else
+            echo "::warning::Cannot list events in namespace '$ns' for the current deploy identity. Apply or re-apply ${rbac_manifest} so gha-deployer rollout diagnostics stay actionable."
+          fi
+          echo "::group::temporal-worker rollout context"
+          printf 'image: '
+          kubectl get deployment "$worker_deployment" -n "$ns" -o jsonpath='{.spec.template.spec.containers[?(@.name=="temporal-worker")].image}' 2>&1
+          echo
+          printf 'SUPABASE_SERVICE_ROLE_KEY secret: '
+          kubectl get deployment "$worker_deployment" -n "$ns" -o jsonpath='{.spec.template.spec.containers[?(@.name=="temporal-worker")].env[?(@.name=="SUPABASE_SERVICE_ROLE_KEY")].valueFrom.secretKeyRef.name}' 2>&1
+          echo
+          printf 'SUPABASE_SERVICE_ROLE_KEY key: '
+          kubectl get deployment "$worker_deployment" -n "$ns" -o jsonpath='{.spec.template.spec.containers[?(@.name=="temporal-worker")].env[?(@.name=="SUPABASE_SERVICE_ROLE_KEY")].valueFrom.secretKeyRef.key}' 2>&1
+          echo
+          kubectl get rs -n "$ns" -l "$worker_selector" -o custom-columns='NAME:.metadata.name,DESIRED:.spec.replicas,CURRENT:.status.replicas,READY:.status.readyReplicas,IMAGE:.spec.template.spec.containers[0].image' 2>&1
+          kubectl get pods -n "$ns" -l "$worker_selector" --sort-by=.metadata.creationTimestamp -o custom-columns='NAME:.metadata.name,READY:.status.containerStatuses[0].ready,RESTARTS:.status.containerStatuses[0].restartCount,IMAGE:.spec.containers[0].image' 2>&1
+          mapfile -t worker_pods < <(kubectl get pods -n "$ns" -l "$worker_selector" --sort-by=.metadata.creationTimestamp -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}')
+          worker_count=${#worker_pods[@]}
+          if [ "$worker_count" -gt 0 ]; then
+            newest_idx=$((worker_count - 1))
+            newest_pod="${worker_pods[$newest_idx]}"
+            echo "::group::describe newest temporal-worker pod ($newest_pod)"
+            kubectl describe pod "$newest_pod" -n "$ns" 2>&1 | tail -120
+            echo "::endgroup::"
+          fi
+          if [ "$worker_count" -gt 1 ]; then
+            previous_idx=$((worker_count - 2))
+            previous_pod="${worker_pods[$previous_idx]}"
+            echo "::group::describe previous temporal-worker pod ($previous_pod)"
+            kubectl describe pod "$previous_pod" -n "$ns" 2>&1 | tail -120
+            echo "::endgroup::"
+          fi
+          echo "::endgroup::"
+          # Describe + dump logs for every pod that is not Running/all-Ready — this is
+          # what reveals the real cause (image pull, crash loop, OOM, probe).
+          for pod in $(kubectl get pods -n "$ns" -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null); do
+            phase=$(kubectl get pod "$pod" -n "$ns" -o jsonpath='{.status.phase}' 2>/dev/null)
+            ready=$(kubectl get pod "$pod" -n "$ns" -o jsonpath='{.status.containerStatuses[*].ready}' 2>/dev/null)
+            if [ "$phase" != "Running" ] || printf '%s' "$ready" | grep -qiw false; then
+              echo "::group::describe $pod (phase=$phase ready=[$ready])"
+              kubectl describe pod "$pod" -n "$ns" 2>&1 | tail -80
+              echo "::endgroup::"
+              if [ "$can_read_pod_logs" = true ]; then
+                echo "::group::logs $pod (current, last 60)"
+                kubectl logs "$pod" -n "$ns" --all-containers --tail=60 2>&1
+                echo "::endgroup::"
+                echo "::group::logs $pod (previous, last 60)"
+                kubectl logs "$pod" -n "$ns" --all-containers --previous --tail=60 2>&1 || true
+                echo "::endgroup::"
+              else
+                echo "::warning::Cannot read pod logs in namespace '$ns' for the current deploy identity. Apply or re-apply ${rbac_manifest} so gha-deployer pods/log diagnostics are available."
+              fi
+            fi
+          done
+          # Diagnostic-only: the job is already failed by the Helm step above; do not
+          # mask that. Exit 0 so this step's own status doesn't confuse the report.
+          exit 0
+
+  bootstrap-db:
+    name: Bootstrap Supabase DB (migrations + demo seed)
+    needs: [preflight, deploy]
+    if: needs.preflight.outputs.bootstrap_enabled == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      failure_class: ${{ steps.ensure-bootstrap-rbac.outputs.failure_class }}
+    environment: dev
+    env:
+      DEV_NAMESPACE: ${{ vars.WYNNE_DEV_NAMESPACE }}
+      SUPABASE_NAMESPACE: ${{ vars.WYNNE_SUPABASE_NAMESPACE || 'wynne-supabase' }}
+      DB_BOOTSTRAP_USER: ${{ vars.WYNNE_DB_BOOTSTRAP_USER }}
+      DB_BOOTSTRAP_DB_NAME: ${{ vars.WYNNE_DB_BOOTSTRAP_DB_NAME }}
+      DB_BOOTSTRAP_SERVICE_ACCOUNT: wynne-db-bootstrap
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.32.4
+
+      - name: Configure kubeconfig (DB bootstrap scoped credential)
+        run: |
+          install -m 600 /dev/null "$RUNNER_TEMP/kubeconfig-db-bootstrap"
+          echo "${{ secrets.KUBE_CONFIG_DEV_DB_BOOTSTRAP }}" > "$RUNNER_TEMP/kubeconfig-db-bootstrap"
+          echo "KUBECONFIG=$RUNNER_TEMP/kubeconfig-db-bootstrap" >> "$GITHUB_ENV"
+
+      - name: Ensure bootstrap RBAC is applied (self-heal)
+        id: ensure-bootstrap-rbac
+        # Apply the RBAC manifest for the wynne-db-bootstrap service account
+        # idempotently before launching the bootstrap job. This self-heals RBAC
+        # drift that causes the in-cluster job pod to fail immediately with
+        # "Bootstrap service account must be allowed: create pods/exec".
+        #
+        # If the scoped GHA credential lacks rbac.authorization.k8s.io permissions
+        # the apply will fail; the step warns clearly and continues so the
+        # bootstrap job can attempt to run (and will fail fast with the RBAC error
+        # and the manual-apply instructions below).
+        run: |
+          set -euo pipefail
+          rbac_apply_log="$RUNNER_TEMP/bootstrap-rbac-apply.log"
+          echo "Applying bootstrap RBAC manifest (deploy/k8s/rbac-dev-db-bootstrap.yaml)..."
+          if kubectl apply -f deploy/k8s/rbac-dev-db-bootstrap.yaml >"$rbac_apply_log" 2>&1; then
+            cat "$rbac_apply_log"
+            echo "failure_class=none" >> "$GITHUB_OUTPUT"
+            echo "Bootstrap RBAC applied successfully."
+          else
+            cat "$rbac_apply_log"
+            if grep -Eqi '\bforbidden\b' "$rbac_apply_log" && \
+               grep -Eqi '\bserviceaccounts?\b|\broles?\b|\brolebindings?\b' "$rbac_apply_log"; then
+              echo "failure_class=rbac_forbidden" >> "$GITHUB_OUTPUT"
+              echo "::warning::Detected RBAC forbidden signature for ServiceAccount/Role/RoleBinding operations."
+            else
+              echo "failure_class=none" >> "$GITHUB_OUTPUT"
+            fi
+            echo "::warning::Could not apply bootstrap RBAC manifest — the credential may lack rbac.authorization.k8s.io permissions."
+            echo "::warning::If the bootstrap job fails with 'Bootstrap service account must be allowed: create pods/exec',"
+            echo "::warning::apply the manifest manually with a cluster-admin credential:"
+            echo "::warning::  kubectl apply -f deploy/k8s/rbac-dev-db-bootstrap.yaml"
+          fi
+
+      - name: Apply Supabase migrations + demo seed (in-cluster job)
+        run: |
+          set -euo pipefail
+
+          for required_var in DB_BOOTSTRAP_USER DB_BOOTSTRAP_DB_NAME; do
+            if [[ -z "${!required_var:-}" ]]; then
+              echo "Missing required DB bootstrap setting '$required_var'" >&2
+              exit 1
+            fi
+          done
+
+          if ! kubectl -n "$SUPABASE_NAMESPACE" get serviceaccount "$DB_BOOTSTRAP_SERVICE_ACCOUNT" >/dev/null 2>&1; then
+            echo "Bootstrap service account '$DB_BOOTSTRAP_SERVICE_ACCOUNT' is not accessible in namespace '$SUPABASE_NAMESPACE'" >&2
+            exit 1
+          fi
+
+          mapfile -t migrations < <(find supabase/migrations -maxdepth 1 -type f -name '*.sql' | sort)
+          if [[ ${#migrations[@]} -eq 0 ]]; then
+            echo "No migration files found in supabase/migrations" >&2
+            exit 1
+          fi
+
+          bootstrap_job="wynne-db-bootstrap-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          migrations_configmap="${bootstrap_job}-migrations"
+          checks_configmap="${bootstrap_job}-checks"
+
+          cleanup() {
+            kubectl -n "$SUPABASE_NAMESPACE" delete job "$bootstrap_job" --ignore-not-found >/dev/null 2>&1 || true
+            kubectl -n "$SUPABASE_NAMESPACE" delete configmap "$migrations_configmap" "$checks_configmap" --ignore-not-found >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          # Plain `create` (not `... | kubectl apply`): client-side apply stores the
+          # whole object in the last-applied-configuration annotation, which is capped
+          # at 256KiB — the migrations payload outgrew it (764KB across 82 files on
+          # 2026-06-11, failing every bootstrap). The name is run-unique and deleted
+          # on EXIT, so create-only semantics are sufficient.
+          #
+          # ConfigMap data is capped at 1MiB. The raw SQL payload (1.9MB+ as of
+          # 2026-06-17, 155 files) now exceeds this limit. Compress migrations into
+          # a tarball (≈288KB) before packaging — well within the ConfigMap ceiling.
+          # The bootstrap pod extracts the tarball before applying migrations.
+          tar -czf "$RUNNER_TEMP/migrations.tar.gz" -C supabase/migrations .
+          kubectl -n "$SUPABASE_NAMESPACE" create configmap "$migrations_configmap" \
+            --from-file=migrations.tar.gz="$RUNNER_TEMP/migrations.tar.gz"
+
+          # Verify the tarball was packaged into the ConfigMap.
+          # --from-file with a binary payload stores the entry under .binaryData, not .data.
+          migration_configmap_entries="$(kubectl -n "$SUPABASE_NAMESPACE" get configmap "$migrations_configmap" \
+            -o go-template='{{range $k, $v := .binaryData}}{{$k}}{{"\n"}}{{end}}' | grep -E '\.tar\.gz$' || true)"
+          if [[ -z "$migration_configmap_entries" ]]; then
+            echo "Generated migrations configmap '$migrations_configmap' has no .tar.gz entries in .binaryData" >&2
+            kubectl -n "$SUPABASE_NAMESPACE" get configmap "$migrations_configmap" -o yaml >&2 || true
+            exit 1
+          fi
+
+          kubectl -n "$SUPABASE_NAMESPACE" create configmap "$checks_configmap" \
+            --from-file=seed.sql=supabase/seed.sql \
+            --from-file=demo_baseline_seed.sql=supabase/tests/demo_baseline_seed.sql \
+            --from-file=demo_ops_seed.sql=supabase/tests/demo_ops_seed.sql
+
+          cat > "$RUNNER_TEMP/db-bootstrap-job.yaml" <<'YAML'
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: __JOB_NAME__
+          spec:
+            ttlSecondsAfterFinished: 600
+            backoffLimit: 0
+            template:
+              spec:
+                restartPolicy: Never
+                serviceAccountName: __SERVICE_ACCOUNT__
+                containers:
+                  - name: db-bootstrap
+                    # bitnami/kubectl:1.32.4 no longer resolves from the primary
+                    # repository; pin the matching legacy image digest so the
+                    # in-cluster bootstrap job can still start deterministically.
+                    image: bitnamilegacy/kubectl@sha256:9524faf8e3cefb47fa28244a5d15f95ec21a73d963273798e593e61f80712333
+                    imagePullPolicy: IfNotPresent
+                    command: ["/bin/sh", "-ceu"]
+                    args:
+                      - |
+                        if ! printf '%s' "$DB_BOOTSTRAP_USER" | grep -Eq '^[a-zA-Z0-9_][a-zA-Z0-9_-]*$'; then
+                          echo "Invalid DB bootstrap user '$DB_BOOTSTRAP_USER'" >&2
+                          exit 1
+                        fi
+                        if ! printf '%s' "$DB_BOOTSTRAP_DB_NAME" | grep -Eq '^[a-zA-Z0-9_][a-zA-Z0-9_-]*$'; then
+                          echo "Invalid DB bootstrap database name '$DB_BOOTSTRAP_DB_NAME'" >&2
+                          exit 1
+                        fi
+
+                        require_can_i() {
+                          verb="$1"
+                          resource="$2"
+                          subresource="${3:-}"
+                          set -- auth can-i "$verb" "$resource" -n "$SUPABASE_NAMESPACE"
+                          [ -n "$subresource" ] && set -- "$@" --subresource="$subresource"
+                          if ! kubectl "$@" >/dev/null; then
+                            echo "Bootstrap service account must be allowed: $verb $resource${subresource:+/$subresource}" >&2
+                            exit 1
+                          fi
+                        }
+
+                        require_cannot_i() {
+                          verb="$1"
+                          resource="$2"
+                          subresource="${3:-}"
+                          set -- auth can-i "$verb" "$resource" -n "$SUPABASE_NAMESPACE"
+                          [ -n "$subresource" ] && set -- "$@" --subresource="$subresource"
+                          if kubectl "$@" >/dev/null; then
+                            echo "Bootstrap service account must NOT be allowed: $verb $resource${subresource:+/$subresource}" >&2
+                            exit 1
+                          fi
+                        }
+
+                        require_can_i get pods
+                        require_can_i list pods
+                        # Use --subresource (kubectl >= 1.30) instead of the legacy
+                        # "pods/exec" slash form, which newer kubectl evaluates as a
+                        # literal resource and reports as denied even when RBAC grants
+                        # create on pods/exec — a false negative that blocked Deploy Dev.
+                        require_can_i create pods exec
+                        require_cannot_i create jobs.batch
+                        require_cannot_i create configmaps
+                        require_cannot_i delete pods
+
+                        # The Supabase Helm chart labels its DB pod (StatefulSet
+                        # supabase-supabase-db) with app.kubernetes.io/name=supabase-db,
+                        # NOT app.kubernetes.io/component=db. The old selector matched
+                        # zero pods → "Could not find Supabase DB pod" → bootstrap failed.
+                        DB_POD_SELECTOR="${DB_POD_SELECTOR:-app.kubernetes.io/name=supabase-db}"
+                        db_pods="$(kubectl get pods -n "$SUPABASE_NAMESPACE" -l "$DB_POD_SELECTOR" -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}')"
+                        db_pod_count="$(printf '%s\n' "$db_pods" | sed '/^$/d' | wc -l | tr -d '[:space:]')"
+                        if [ "$db_pod_count" = "0" ]; then
+                          echo "Could not find Supabase DB pod in namespace '$SUPABASE_NAMESPACE' (label selector: $DB_POD_SELECTOR)" >&2
+                          exit 1
+                        fi
+                        if [ "$db_pod_count" != "1" ]; then
+                          echo "Found multiple DB pods in '$SUPABASE_NAMESPACE'; probing each pod for writable-primary status." >&2
+                          printf 'Pods:\n%s\n' "$db_pods" >&2
+                        fi
+
+                        db_pod=""
+                        writable_primary_count=0
+                        while IFS= read -r candidate_pod; do
+                          [ -z "$candidate_pod" ] && continue
+                          probe_error_log="$(mktemp)"
+                          if ! recovery_state="$(kubectl exec -i -n "$SUPABASE_NAMESPACE" "$candidate_pod" -- \
+                            psql -qtAX -U "$DB_BOOTSTRAP_USER" -d "$DB_BOOTSTRAP_DB_NAME" \
+                              -c "SELECT pg_is_in_recovery();" 2>"$probe_error_log")"; then
+                            cat "$probe_error_log" >&2
+                            rm -f "$probe_error_log"
+                            echo "Failed probing DB pod '$candidate_pod' for writable-primary status (check pod reachability and DB credentials)." >&2
+                            exit 1
+                          fi
+                          rm -f "$probe_error_log"
+                          if [ "$recovery_state" = "f" ]; then
+                            writable_primary_count=$((writable_primary_count + 1))
+                            db_pod="$candidate_pod"
+                          fi
+                          echo "DB pod '$candidate_pod' pg_is_in_recovery()=$recovery_state" >&2
+                        done <<PODS
+                        $db_pods
+                        PODS
+
+                        if [ "$writable_primary_count" = "0" ]; then
+                          echo "No writable primary DB pod found among selector matches." >&2
+                          exit 1
+                        fi
+                        if [ "$writable_primary_count" -gt 1 ]; then
+                          echo "Multiple writable primary DB pods found ($writable_primary_count); refusing to pick a target." >&2
+                          exit 1
+                        fi
+                        echo "Using writable primary database pod: $db_pod"
+
+                        # Extract compressed migrations tarball to a writable directory.
+                        # The ConfigMap holds migrations.tar.gz (compressed to ~290KB)
+                        # instead of raw .sql files to stay within the 1MiB ConfigMap limit.
+                        mkdir -p /tmp/migrations
+                        tar -xzf /bootstrap/migrations/migrations.tar.gz -C /tmp/migrations
+
+                        migration_list="$(find /tmp/migrations -maxdepth 1 -name '*.sql' | sort)"
+                        if [ -z "$migration_list" ]; then
+                          echo "No migration files available in bootstrap config map" >&2
+                          exit 1
+                        fi
+
+                        psql_exec() {
+                          kubectl exec -i -n "$SUPABASE_NAMESPACE" "$db_pod" -- \
+                            psql -v ON_ERROR_STOP=1 -U "$DB_BOOTSTRAP_USER" -d "$DB_BOOTSTRAP_DB_NAME" "$@"
+                        }
+
+                        psql_exec -c \
+                          "CREATE TABLE IF NOT EXISTS public.wynne_deploy_migrations (filename text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now());"
+
+                        applied_migrations="$(psql_exec -qtAX -c "SELECT filename FROM public.wynne_deploy_migrations;")"
+
+                        while IFS= read -r migration; do
+                          if [ -z "$migration" ]; then
+                            continue
+                          fi
+                          migration_name="$(basename "$migration")"
+                          if printf '%s\n' "$applied_migrations" | grep -Fxq "$migration_name"; then
+                            echo "Skipping $migration_name (already applied)"
+                            continue
+                          fi
+
+                          echo "Applying $migration_name"
+                          migration_error_log="$(mktemp)"
+                          if ! {
+                            printf 'BEGIN;\n'
+                            cat "$migration"
+                            printf '\nCOMMIT;\n'
+                          } | kubectl exec -i -n "$SUPABASE_NAMESPACE" "$db_pod" -- \
+                            psql -v ON_ERROR_STOP=1 -U "$DB_BOOTSTRAP_USER" -d "$DB_BOOTSTRAP_DB_NAME" 2>"$migration_error_log"; then
+                            cat "$migration_error_log" >&2
+                            if grep -Eqi 'ERROR: .*(relation|trigger|function|type|table|view|index|policy|schema|extension).*already exists' "$migration_error_log"; then
+                              echo "Migration $migration_name failed with 'already exists'; refusing auto-adoption without explicit schema verification. Verify schema manually before recording migration history." >&2
+                            else
+                              echo "Migration $migration_name failed with a non-idempotent error; review the error output above and fix the migration or target schema before retrying." >&2
+                            fi
+                            rm -f "$migration_error_log"
+                            exit 1
+                          fi
+                          rm -f "$migration_error_log"
+                          psql_exec -v migration_name="$migration_name" <<'SQL'
+                          INSERT INTO public.wynne_deploy_migrations (filename)
+                          VALUES (:'migration_name')
+                          ON CONFLICT (filename) DO NOTHING;
+                          SQL
+                          applied_migrations="$(printf '%s\n%s' "$applied_migrations" "$migration_name" | sed '/^$/d')"
+                        done <<MIGRATIONS
+                        $migration_list
+                        MIGRATIONS
+
+                        if ! grep -Eqi "set[[:space:]]+(local[[:space:]]+)?request\\.jwt\\.claim\\.role[[:space:]]*=[[:space:]]*['\"]service_role['\"]" /bootstrap/checks/seed.sql; then
+                          echo "seed.sql must set request.jwt.claim.role = 'service_role' before calling write RPCs" >&2
+                          exit 1
+                        fi
+
+                        echo "Applying demo baseline seed (pass 1)"
+                        kubectl exec -i -n "$SUPABASE_NAMESPACE" "$db_pod" -- \
+                          psql -v ON_ERROR_STOP=1 -U "$DB_BOOTSTRAP_USER" -d "$DB_BOOTSTRAP_DB_NAME" < /bootstrap/checks/seed.sql
+
+                        echo "Running demo baseline assertions (pass 1)"
+                        kubectl exec -i -n "$SUPABASE_NAMESPACE" "$db_pod" -- \
+                          psql -v ON_ERROR_STOP=1 -U "$DB_BOOTSTRAP_USER" -d "$DB_BOOTSTRAP_DB_NAME" < /bootstrap/checks/demo_baseline_seed.sql
+
+                        echo "Running demo ops assertions (pass 1)"
+                        kubectl exec -i -n "$SUPABASE_NAMESPACE" "$db_pod" -- \
+                          psql -v ON_ERROR_STOP=1 -U "$DB_BOOTSTRAP_USER" -d "$DB_BOOTSTRAP_DB_NAME" < /bootstrap/checks/demo_ops_seed.sql
+
+                        echo "Re-applying demo baseline seed for idempotency validation (pass 2)"
+                        kubectl exec -i -n "$SUPABASE_NAMESPACE" "$db_pod" -- \
+                          psql -v ON_ERROR_STOP=1 -U "$DB_BOOTSTRAP_USER" -d "$DB_BOOTSTRAP_DB_NAME" < /bootstrap/checks/seed.sql
+
+                        echo "Running demo baseline assertions (pass 2)"
+                        kubectl exec -i -n "$SUPABASE_NAMESPACE" "$db_pod" -- \
+                          psql -v ON_ERROR_STOP=1 -U "$DB_BOOTSTRAP_USER" -d "$DB_BOOTSTRAP_DB_NAME" < /bootstrap/checks/demo_baseline_seed.sql
+
+                        echo "Running demo ops assertions (pass 2)"
+                        kubectl exec -i -n "$SUPABASE_NAMESPACE" "$db_pod" -- \
+                          psql -v ON_ERROR_STOP=1 -U "$DB_BOOTSTRAP_USER" -d "$DB_BOOTSTRAP_DB_NAME" < /bootstrap/checks/demo_ops_seed.sql
+                    env:
+                      - name: SUPABASE_NAMESPACE
+                        value: __SUPABASE_NAMESPACE__
+                      - name: DB_BOOTSTRAP_USER
+                        value: __DB_BOOTSTRAP_USER__
+                      - name: DB_BOOTSTRAP_DB_NAME
+                        value: __DB_BOOTSTRAP_DB_NAME__
+                    volumeMounts:
+                      - name: bootstrap-migrations
+                        mountPath: /bootstrap/migrations
+                      - name: bootstrap-checks
+                        mountPath: /bootstrap/checks
+                volumes:
+                  - name: bootstrap-migrations
+                    configMap:
+                      name: __MIGRATIONS_CONFIGMAP_NAME__
+                  - name: bootstrap-checks
+                    configMap:
+                      name: __CHECKS_CONFIGMAP_NAME__
+          YAML
+
+          sed -i \
+            -e "s|__JOB_NAME__|$bootstrap_job|g" \
+            -e "s|__MIGRATIONS_CONFIGMAP_NAME__|$migrations_configmap|g" \
+            -e "s|__CHECKS_CONFIGMAP_NAME__|$checks_configmap|g" \
+            -e "s|__SERVICE_ACCOUNT__|$DB_BOOTSTRAP_SERVICE_ACCOUNT|g" \
+            -e "s|__SUPABASE_NAMESPACE__|$SUPABASE_NAMESPACE|g" \
+            -e "s|__DB_BOOTSTRAP_USER__|$DB_BOOTSTRAP_USER|g" \
+            -e "s|__DB_BOOTSTRAP_DB_NAME__|$DB_BOOTSTRAP_DB_NAME|g" \
+            "$RUNNER_TEMP/db-bootstrap-job.yaml"
+
+          kubectl -n "$SUPABASE_NAMESPACE" apply -f "$RUNNER_TEMP/db-bootstrap-job.yaml"
+
+          # Poll for terminal state (Complete OR Failed) without relying on multiple
+          # --for flags, which are ANDed and would never match a single terminal state.
+          # Each iteration tries Complete then Failed with a short window; the loop
+          # exits as soon as either is satisfied, typically within seconds of pod exit.
+          DEADLINE=$(( $(date +%s) + 600 ))
+          while true; do
+            if kubectl -n "$SUPABASE_NAMESPACE" wait --for=condition=Complete \
+                "job/$bootstrap_job" --timeout=5s 2>/dev/null; then
+              break
+            fi
+            if kubectl -n "$SUPABASE_NAMESPACE" wait --for=condition=Failed \
+                "job/$bootstrap_job" --timeout=5s 2>/dev/null; then
+              break
+            fi
+            if [[ $(date +%s) -ge $DEADLINE ]]; then
+              echo "Bootstrap job did not reach a terminal state within 10m."
+              break
+            fi
+            sleep 2
+          done
+
+          JOB_STATUS=$(kubectl -n "$SUPABASE_NAMESPACE" get job "$bootstrap_job" \
+            -o jsonpath='{range .status.conditions[*]}{.type}={.status}{"\n"}{end}' \
+            2>/dev/null || echo "unknown")
+          echo "Bootstrap job conditions: $JOB_STATUS"
+
+          if [[ "$JOB_STATUS" == "unknown" ]]; then
+            echo "::error::Could not retrieve bootstrap job status — kubectl failed or the job was removed prematurely."
+            exit 1
+          fi
+
+          if ! echo "$JOB_STATUS" | grep -q "^Complete=True"; then
+            echo "::error::Bootstrap job did not complete successfully."
+            if echo "$JOB_STATUS" | grep -q "^Failed=True"; then
+              echo "::error::Job reached Failed state. Check pod logs below for the root cause."
+            else
+              echo "::error::Job timed out — it was still running or pending after 10m."
+            fi
+            echo ""
+            echo "Common fix: if the error below is"
+            echo "  'Bootstrap service account must be allowed: create pods/exec'"
+            echo "the RBAC manifest has not been applied to the cluster. Apply it with a"
+            echo "cluster-admin credential and rerun Deploy Dev:"
+            echo "  kubectl apply -f deploy/k8s/rbac-dev-db-bootstrap.yaml"
+            echo ""
+            # Capture pod-level logs and describe for diagnostics
+            for pod in $(kubectl -n "$SUPABASE_NAMESPACE" get pods \
+              --selector="job-name=$bootstrap_job" \
+              -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null); do
+              echo "::group::Pod logs: $pod"
+              kubectl -n "$SUPABASE_NAMESPACE" logs "$pod" --all-containers=true 2>&1 || true
+              echo "::endgroup::"
+              echo "::group::Pod describe: $pod"
+              kubectl -n "$SUPABASE_NAMESPACE" describe pod "$pod" 2>&1 | tail -80 || true
+              echo "::endgroup::"
+            done
+            kubectl -n "$SUPABASE_NAMESPACE" describe "job/$bootstrap_job" 2>&1 || true
+            exit 1
+          fi
+
+          kubectl -n "$SUPABASE_NAMESPACE" logs "job/$bootstrap_job" --all-containers=true
+
+      - name: Deploy summary
+        if: always()
+        run: |
+          {
+            echo "## Deploy Dev → $DEV_NAMESPACE"
+            echo "- release: rental-app upgraded in $DEV_NAMESPACE"
+            echo "- db: in-cluster bootstrap Job executed with scoped service account in $SUPABASE_NAMESPACE"
+            echo "- db: migrations + demo baseline + ops seed assertions passed (including seed idempotency re-run)"
+            echo "- next: smoke-dev-test-prod.yml (Phase 2 follow-up)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-failure-sentinel:
+    name: File / update deploy incident
+    needs: [preflight, deploy]
+    if: >-
+      always() &&
+      !cancelled() &&
+      needs.preflight.outputs.app_enabled == 'true' &&
+      needs.deploy.result == 'failure'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    env:
+      DEV_NAMESPACE: ${{ vars.WYNNE_DEV_NAMESPACE }}
+    steps:
+      - name: File / update critical deploy incident
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          FP="<!-- fingerprint:deploy-dev-failure -->"
+          BODY="$(
+            cat <<EOF
+          🚨 Deploy Dev failure blocking dev publish
+
+          **Deploy Dev failed** before publishing the latest main commit to \`$DEV_NAMESPACE\`.
+
+          **Why this is critical:** merged changes are not reaching the deployed dev environment.
+
+          Evidence: $RUN_URL
+
+          Suggested platform action:
+          1. Inspect: \`helm history $DEV_NAMESPACE -n $DEV_NAMESPACE\`
+          2. If the release is stuck in \`pending-upgrade\`, first roll back to the last \`DEPLOYED\` revision; if rollback is not feasible, delete only the pending-upgrade secret (\`kubectl delete secret -n $DEV_NAMESPACE -l owner=helm,name=$DEV_NAMESPACE,status=pending-upgrade\`).
+          3. Re-run \`Deploy Dev\`.
+
+          $FP
+          EOF
+          )"
+          EXISTING="$(gh issue list --state open --limit 300 --json number,body \
+            --jq "[.[] | select(.body | contains(\"$FP\"))] | min_by(.number).number // empty")"
+          if [ -n "$EXISTING" ]; then
+            COMMENT_BODY="Still failing as of ${RUN_URL}"$'\n\n'"Deploy Dev is still blocked before publishing to \`${DEV_NAMESPACE}\`."
+            gh issue comment "$EXISTING" --body "$COMMENT_BODY"
+            echo "updated incident #$EXISTING"
+          else
+            gh issue create --title "Deploy Dev failing for $DEV_NAMESPACE (publish outage)" \
+              --label "auto:alert,priority:critical,queue:platform" --body "$BODY"
+          fi
+
+  bootstrap-failure-sentinel:
+    name: File / update bootstrap RBAC incident
+    needs: [preflight, deploy, bootstrap-db]
+    if: >-
+      always() &&
+      !cancelled() &&
+      needs.preflight.outputs.bootstrap_enabled == 'true' &&
+      needs.bootstrap-db.result == 'failure' &&
+      needs.bootstrap-db.outputs.failure_class == 'rbac_forbidden'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    env:
+      SUPABASE_NAMESPACE: ${{ vars.WYNNE_SUPABASE_NAMESPACE || 'wynne-supabase' }}
+    steps:
+      - name: File / update critical bootstrap incident
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          FP="<!-- fingerprint:deploy-dev-bootstrap-rbac-failure -->"
+          BODY="$(
+            cat <<EOF
+          🚨 Deploy Dev bootstrap RBAC outage (dev publish risk)
+
+          **Bootstrap Supabase DB** failed in namespace \`$SUPABASE_NAMESPACE\`.
+
+          This failure bucket is usually a live runtime access outage for the bootstrap identity (forbidden on ServiceAccount/Role/RoleBinding operations), not a repo-code regression.
+
+          Evidence: $RUN_URL
+
+          Suggested ops action:
+          1. Restore RBAC for \`system:serviceaccount:$SUPABASE_NAMESPACE:wynne-db-bootstrap-runner\` so it can create/patch the bootstrap ServiceAccount and read/apply \`gha-db-bootstrap\` + \`wynne-db-bootstrap\` Role/RoleBinding resources in \`$SUPABASE_NAMESPACE\`.
+          2. Alternatively rotate \`KUBE_CONFIG_DEV_DB_BOOTSTRAP\` to an identity that already has those rights.
+          3. Re-run \`Deploy Dev\` and confirm bootstrap + downstream dev E2E recover.
+
+          $FP
+          EOF
+          )"
+          EXISTING="$(gh issue list --state open --limit 300 --json number,body \
+            --jq "[.[] | select(.body | contains(\"$FP\"))] | min_by(.number).number // empty")"
+          if [ -n "$EXISTING" ]; then
+            COMMENT_BODY="Still failing as of ${RUN_URL}"$'\n\n'"Bootstrap RBAC/bootstrap identity is still blocking Deploy Dev."
+            gh issue comment "$EXISTING" --body "$COMMENT_BODY"
+            echo "updated incident #$EXISTING"
+          else
+            gh issue create --title "Deploy Dev bootstrap failing in $SUPABASE_NAMESPACE (RBAC outage)" \
+              --label "auto:alert,priority:critical,queue:ops" --body "$BODY"
+          fi

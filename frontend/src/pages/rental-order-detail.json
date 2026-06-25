@@ -1,0 +1,1367 @@
+{
+  "id": "rental-order-detail",
+  "title": "Rental Order",
+  "state": {
+    "newLine_category_id": "",
+    "newLine_quantity": "",
+    "newLine_planned_start": "",
+    "newLine_planned_end": "",
+    "newLine_job_site_id": "",
+    "newLine_rate_type": "",
+    "availability_scope": "current",
+    "availability_search": "",
+    "rerent_line_entity_id": "",
+    "rerent_existing_line_data": {},
+    "rerent_category_id": "",
+    "rerent_requested_quantity": "",
+    "rerent_available_quantity": "",
+    "rerent_vendor_path": "primary_preferred",
+    "rerent_fulfillment_status": "pending_vendor_confirmation",
+    "rerent_override_reason": "",
+    "conversion_result": null,
+    "conversion_error": ""
+  },
+  "dataSources": {
+    "order": {
+      "type": "supabase",
+      "table": "entities",
+      "select": "*, entity_versions(*)",
+      "filters": [
+        { "field": "id", "op": "eq", "value": "{{params.id}}" }
+      ],
+      "single": true
+    },
+    "lines": {
+      "type": "supabase",
+      "table": "entities",
+      "select": "id, entity_type, created_at, entity_versions!inner(id, data, is_current, version_number)",
+      "filters": [
+        { "field": "entity_type", "op": "eq", "value": "rental_order_line" },
+        { "field": "entity_versions.is_current", "op": "eq", "value": true },
+        { "field": "entity_versions.data->>order_id", "op": "eq", "value": "{{params.id}}" }
+      ],
+      "order": [{ "column": "created_at", "ascending": true }]
+    },
+    "requesters": {
+      "type": "supabase",
+      "table": "entities",
+      "select": "id, source_record_id, entity_versions!inner(data, is_current)",
+      "filters": [
+        { "field": "entity_type", "op": "eq", "value": "customer" },
+        { "field": "entity_versions.is_current", "op": "eq", "value": true }
+      ],
+      "order": [{ "column": "source_record_id", "ascending": true }]
+    },
+    "job_sites": {
+      "type": "supabase",
+      "table": "entities",
+      "select": "id, source_record_id, entity_versions!inner(data, is_current)",
+      "filters": [
+        { "field": "entity_type", "op": "eq", "value": "job_site" },
+        { "field": "entity_versions.is_current", "op": "eq", "value": true }
+      ],
+      "order": [{ "column": "source_record_id", "ascending": true }]
+    },
+    "asset_categories": {
+      "type": "supabase",
+      "table": "entities",
+      "select": "id, source_record_id, entity_versions!inner(data, is_current)",
+      "filters": [
+        { "field": "entity_type", "op": "eq", "value": "asset_category" },
+        { "field": "entity_versions.is_current", "op": "eq", "value": true }
+      ],
+      "order": [{ "column": "source_record_id", "ascending": true }]
+    },
+    "availability": {
+      "type": "supabase",
+      "table": "rental_asset_availability_current",
+      "select": "branch_id, branch_name, asset_category_id, asset_category_name, total_assets, available_assets, unavailable_assets, maintenance_due_assets, maintenance_overdue_assets",
+      "order": [
+        { "column": "branch_name", "ascending": true },
+        { "column": "asset_category_name", "ascending": true }
+      ]
+    },
+    "quote_availability": {
+      "type": "supabase",
+      "table": "rental_quote_line_availability_current",
+      "select": "line_entity_id, order_id, order_status, branch_id, asset_category_id, requested_quantity, planned_start, planned_end, available_quantity, is_available, shortage_quantity, shortage_reason, alternatives",
+      "filters": [
+        { "field": "order_id", "op": "eq", "value": "{{params.id}}" }
+      ],
+      "order": [{ "column": "line_entity_id", "ascending": true }]
+    },
+    "rerent_unit_status": {
+      "type": "supabase",
+      "table": "v_rerent_unit_current_status",
+      "select": "order_line_id, status_key, status_label, changed_at, changed_by, notes",
+      "order": [{ "column": "order_line_id", "ascending": true }]
+    }
+  },
+  "layout": {
+    "type": "Stack",
+    "props": { "spacing": 6 },
+    "children": [
+      {
+        "type": "Stack",
+        "props": { "direction": "horizontal", "justify": "between", "align": "start" },
+        "children": [
+          {
+            "type": "Stack",
+            "props": { "spacing": 2 },
+            "children": [
+              {
+                "type": "Link",
+                "props": {
+                  "to": "/rental/orders",
+                  "children": "← Back to Rental Orders"
+                }
+              },
+              {
+                "type": "Heading",
+                "props": {
+                  "level": 1,
+                  "children": "{{data.order.entity_versions[0].data.order_number || 'Rental Order'}}"
+                }
+              },
+              {
+                "type": "Stack",
+                "props": { "direction": "horizontal", "spacing": 2, "align": "center" },
+                "children": [
+                  {
+                    "type": "Badge",
+                    "props": {
+                      "variant": "secondary",
+                      "children": "{{data.order.entity_versions[0].data.status || 'draft'}}"
+                    }
+                  },
+                  {
+                    "type": "Badge",
+                    "props": {
+                      "variant": "outline",
+                      "children": "{{data.order.entity_versions[0].data.rental_type || 'external'}}"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "Stack",
+            "props": { "direction": "horizontal", "spacing": 2, "align": "center" },
+            "children": [
+              {
+            "type": "Button",
+            "if": "{{data.order.entity_versions[0].data.status === 'quoted' || data.order.entity_versions[0].data.status === 'approved'}}",
+            "props": {
+             "variant": "outline",
+              "children": "Convert to Reservation",
+              "onClick": {
+                "action": "apiCall",
+                "operation": "rpc",
+                "function": "rental_convert_quote_to_reservation",
+                "data": { "p_order_id": "{{params.id}}" },
+                "onSuccess": {
+                  "action": "sequence",
+                  "actions": [
+                    { "action": "setState", "key": "conversion_error", "value": "" },
+                    { "action": "setState", "key": "conversion_result", "value": "{{event.result.data[0]}}" },
+                    { "action": "refetch", "source": "order" },
+                    { "action": "refetch", "source": "lines" },
+                    { "action": "refetch", "source": "quote_availability" }
+                  ]
+                },
+                "onError": {
+                  "action": "sequence",
+                  "actions": [
+                    { "action": "setState", "key": "conversion_result", "value": null },
+                    { "action": "setState", "key": "conversion_error", "value": "{{event.error.message || 'Reservation conversion failed. Please retry.'}}" }
+                  ]
+                }
+              }
+            }
+              },
+              {
+            "type": "Button",
+            "if": "{{data.order.entity_versions[0].data.status === 'draft'}}",
+            "props": {
+             "children": "Direct Book",
+             "onClick": {
+               "action": "apiCall",
+               "operation": "rpc",
+               "function": "rental_convert_quote_to_reservation",
+               "data": { "p_order_id": "{{params.id}}" },
+               "onSuccess": {
+                 "action": "sequence",
+                 "actions": [
+                   { "action": "setState", "key": "conversion_error", "value": "" },
+                   { "action": "setState", "key": "conversion_result", "value": "{{event.result.data[0]}}" },
+                   { "action": "refetch", "source": "order" },
+                   { "action": "refetch", "source": "lines" },
+                   { "action": "refetch", "source": "quote_availability" }
+                 ]
+               },
+               "onError": {
+                 "action": "sequence",
+                 "actions": [
+                   { "action": "setState", "key": "conversion_result", "value": null },
+                   { "action": "setState", "key": "conversion_error", "value": "{{event.error.message || 'Reservation conversion failed. Please retry.'}}" }
+                 ]
+               }
+             }
+            }
+              },
+              {
+            "type": "Button",
+            "props": {
+              "children": "Add Line",
+              "onClick": { "action": "openModal", "modalId": "addLine" }
+            }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "props": { "title": "Order Lifecycle" },
+        "children": [
+          {
+            "type": "Stack",
+            "props": { "direction": "horizontal", "spacing": 2, "align": "center" },
+            "children": [
+              {
+                "type": "Badge",
+                "props": {
+                  "variant": "{{data.order.entity_versions[0].data.status === 'draft' ? 'default' : 'outline'}}",
+                  "children": "1. Draft"
+                }
+              },
+              {
+                "type": "Text",
+                "props": { "variant": "muted", "children": "→" }
+              },
+              {
+                "type": "Badge",
+                "props": {
+                  "variant": "{{data.order.entity_versions[0].data.status === 'quoted' ? 'default' : 'outline'}}",
+                  "children": "2. Quoted"
+                }
+              },
+              {
+                "type": "Text",
+                "props": { "variant": "muted", "children": "→" }
+              },
+              {
+                "type": "Badge",
+                "props": {
+                  "variant": "{{data.order.entity_versions[0].data.status === 'approved' ? 'default' : 'outline'}}",
+                  "children": "3. Approved"
+                }
+              },
+              {
+                "type": "Text",
+                "props": { "variant": "muted", "children": "→" }
+              },
+              {
+                "type": "Badge",
+                "props": {
+                  "variant": "{{data.order.entity_versions[0].data.status === 'converted' ? 'default' : 'outline'}}",
+                  "children": "4. Converted"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "Alert",
+        "if": "{{state.conversion_error}}",
+        "props": {
+          "variant": "destructive",
+          "title": "Reservation conversion failed",
+          "description": "{{state.conversion_error}}"
+        }
+      },
+      {
+        "type": "Alert",
+        "if": "{{state.conversion_result && state.conversion_result.success}}",
+        "props": {
+          "variant": "default",
+          "title": "Reservation created",
+          "description": "{{state.conversion_result.message || 'Quote converted successfully.'}}"
+        }
+      },
+      {
+        "type": "Card",
+        "props": { "title": "Quote Availability (Advisory)" },
+        "children": [
+          {
+            "type": "Stack",
+            "props": { "spacing": 3 },
+            "children": [
+              {
+                "type": "Text",
+                "props": {
+                  "size": "sm",
+                  "variant": "muted",
+                  "children": "Live availability check over each requested date range. Conversion revalidates server-side to prevent overbooking."
+                }
+              },
+              {
+                "type": "Stack",
+                "if": "{{data.quote_availability && data.quote_availability.length > 0}}",
+                "each": "{{ensureArray(data.quote_availability)}}",
+                "as": "quoteLine",
+                "key": "{{quoteLine.line_entity_id}}",
+                "props": { "spacing": 2, "className": "p-4 border rounded-lg" },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": { "direction": "horizontal", "justify": "between", "align": "center", "className": "flex-wrap gap-2" },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": {
+                          "weight": "semibold",
+                          "children": "{{lookupRecordFieldById(data.lines, quoteLine.line_entity_id, 'entity_versions[0].data.category_name', 'id') || lookupRecordFieldById(data.asset_categories, lookupRecordFieldById(data.lines, quoteLine.line_entity_id, 'entity_versions[0].data.category_id', 'id') || quoteLine.asset_category_id, 'entity_versions[0].data.name', 'source_record_id') || lookupRecordFieldById(data.availability, quoteLine.asset_category_id, 'asset_category_name', 'asset_category_id') || quoteLine.asset_category_id || 'Uncategorized'}}"
+                        }
+                      },
+                      {
+                        "type": "Badge",
+                        "props": {
+                          "variant": "{{quoteLine.is_available ? 'secondary' : 'destructive'}}",
+                          "children": "{{quoteLine.is_available ? 'Available' : 'Unavailable'}}"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Text",
+                    "props": {
+                      "size": "sm",
+                      "variant": "muted",
+                      "children": "Job Site: {{lookupRecordFieldById(data.lines, quoteLine.line_entity_id, 'entity_versions[0].data.job_site_name', 'id') || lookupRecordFieldById(data.job_sites, lookupRecordFieldById(data.lines, quoteLine.line_entity_id, 'entity_versions[0].data.job_site_id', 'id'), 'entity_versions[0].data.name', 'source_record_id') || lookupRecordFieldById(data.lines, quoteLine.line_entity_id, 'entity_versions[0].data.job_site_id', 'id') || 'N/A'}} · Line ID: {{quoteLine.line_entity_id}}"
+                    }
+                  },
+                  {
+                    "type": "Text",
+                    "props": {
+                      "size": "sm",
+                      "variant": "muted",
+                      "children": "Requested {{quoteLine.requested_quantity}} for {{quoteLine.planned_start}} to {{quoteLine.planned_end}} · {{quoteLine.available_quantity}} currently available"
+                    }
+                  },
+                  {
+                    "type": "Text",
+                    "if": "{{!quoteLine.is_available}}",
+                    "props": {
+                      "size": "sm",
+                      "variant": "muted",
+                      "children": "Shortage: {{quoteLine.shortage_quantity}} · reason: {{quoteLine.shortage_reason || 'insufficient_quantity'}}"
+                    }
+                  },
+                  {
+                    "type": "Stack",
+                    "if": "{{!quoteLine.is_available && quoteLine.alternatives && quoteLine.alternatives.length > 0}}",
+                    "props": { "spacing": 1 },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": { "size": "sm", "weight": "medium", "children": "Suggested alternatives" }
+                      },
+                      {
+                        "type": "Stack",
+                        "each": "{{ensureArray(quoteLine.alternatives)}}",
+                        "as": "alternative",
+                        "key": "{{alternative.branch_id}}-{{alternative.asset_category_id}}",
+                         "props": { "spacing": 1 },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "props": {
+                              "size": "sm",
+                              "variant": "muted",
+                              "children": "• {{alternative.recommendation_rank ? '#' + alternative.recommendation_rank + ' ' : ''}}{{alternative.asset_category_name}} @ {{alternative.branch_name}} · {{alternative.available_quantity}} available"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "props": {
+                              "size": "xs",
+                              "variant": "muted",
+                              "children": "Reason: {{alternative.recommendation_reason_code || alternative.fit_type}}"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "props": {
+                              "size": "xs",
+                              "variant": "muted",
+                              "children": "Transfer-cost context: {{alternative.transfer_cost_band || 'unknown'}}"
+                            }
+                           },
+                           {
+                             "type": "Button",
+                             "props": {
+                               "size": "sm",
+                               "variant": "outline",
+                               "children": "Use this recommendation",
+                               "onClick": {
+                                 "action": "apiCall",
+                                 "operation": "rpc",
+                                 "function": "rental_upsert_entity_current_state",
+                                 "data": {
+                                   "p_entity_type": "rental_order_line",
+                                   "p_entity_id": "{{quoteLine.line_entity_id}}",
+                                   "p_data": "{{buildSubstituteLineData(lookupRecordFieldById(data.lines, quoteLine.line_entity_id, 'entity_versions[0].data'), quoteLine, alternative, auth.role || 'unknown_role')}}"
+                                 },
+                                 "onSuccess": {
+                                   "action": "sequence",
+                                   "actions": [
+                                     { "action": "setState", "key": "conversion_error", "value": "" },
+                                     { "action": "setState", "key": "conversion_result", "value": null },
+                                     { "action": "refetch", "source": "lines" },
+                                     { "action": "refetch", "source": "quote_availability" }
+                                   ]
+                                 }
+                               }
+                             }
+                           },
+                           {
+                             "type": "Text",
+                             "if": "{{lookupRecordFieldById(data.lines, quoteLine.line_entity_id, 'entity_versions[0].data.fulfillment_source') === 'internal_substitute' && lookupRecordFieldById(data.lines, quoteLine.line_entity_id, 'entity_versions[0].data.branch_id') === alternative.branch_id && lookupRecordFieldById(data.lines, quoteLine.line_entity_id, 'entity_versions[0].data.category_id') === alternative.asset_category_id}}",
+                             "props": {
+                               "size": "sm",
+                               "variant": "muted",
+                               "children": "Selected for fulfillment"
+                             }
+                           }
+                         ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "Text",
+                "if": "{{!data.quote_availability || data.quote_availability.length === 0}}",
+                "props": {
+                  "size": "sm",
+                  "variant": "muted",
+                  "children": "No quote lines available to evaluate."
+                }
+              },
+              {
+                "type": "Alert",
+                "if": "{{state.conversion_result && state.conversion_result.success === false && state.conversion_result.conflicts && state.conversion_result.conflicts.length > 0}}",
+                "props": {
+                  "variant": "destructive",
+                  "title": "Conversion blocked to prevent overbooking",
+                  "description": "Review conflicts and choose one of the suggested alternatives before converting."
+                }
+              },
+              {
+                "type": "Stack",
+                "if": "{{state.conversion_result && state.conversion_result.success === false && state.conversion_result.conflicts && state.conversion_result.conflicts.length > 0}}",
+                "each": "{{ensureArray(state.conversion_result.conflicts)}}",
+                "as": "conflict",
+                "key": "{{conflict.line_entity_id || conflict.asset_category_id}}",
+                "props": { "spacing": 1, "className": "p-3 rounded-md border border-destructive/30 bg-destructive/5" },
+                "children": [
+                  {
+                    "type": "Text",
+                    "props": {
+                      "size": "sm",
+                      "weight": "medium",
+                      "children": "Line {{conflict.line_entity_id || 'N/A'}} shortage: requested {{conflict.requested_quantity}} / available {{conflict.available_quantity}}"
+                    }
+                  },
+                  {
+                    "type": "Text",
+                    "props": {
+                      "size": "sm",
+                      "variant": "muted",
+                      "children": "Reason: {{conflict.shortage_reason || 'insufficient_quantity'}}"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "Grid",
+        "props": { "columns": 2, "gap": 6 },
+        "children": [
+          {
+            "type": "Card",
+            "props": { "title": "Order Information" },
+            "children": [
+              {
+                "type": "Stack",
+                "props": { "spacing": 4 },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 1 },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": { "variant": "muted", "size": "sm", "children": "Order ID" }
+                      },
+                      {
+                        "type": "Text",
+                        "props": { "children": "{{data.order.id}}" }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 1 },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": { "variant": "muted", "size": "sm", "children": "Status" }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "children": "{{data.order.entity_versions[0].data.status || 'draft'}}"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 1 },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": { "variant": "muted", "size": "sm", "children": "Requester" }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "children": "{{data.order.entity_versions[0].data.requester_name || data.order.entity_versions[0].data.requester_email || lookupRecordFieldById(data.requesters, data.order.entity_versions[0].data.requester_id, 'entity_versions[0].data.name', 'source_record_id') || data.order.entity_versions[0].data.requester_id || 'N/A'}}"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 1 },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": { "variant": "muted", "size": "sm", "children": "Rental Type" }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "children": "{{data.order.entity_versions[0].data.rental_type || 'external'}}"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 1 },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": { "variant": "muted", "size": "sm", "children": "Notes" }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "children": "{{data.order.entity_versions[0].data.notes || '—'}}"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 1 },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": { "variant": "muted", "size": "sm", "children": "Created" }
+                      },
+                      {
+                        "type": "Text",
+                        "props": { "children": "{{data.order.created_at}}" }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "Card",
+            "props": { "title": "Select Items" },
+            "children": [
+              {
+                "type": "Stack",
+                "props": { "spacing": 3 },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": { "direction": "horizontal", "justify": "between", "align": "center", "className": "flex-wrap gap-3" },
+                    "children": [
+                      {
+                        "type": "Stack",
+                        "props": { "direction": "horizontal", "spacing": 2, "className": "rounded-md border bg-muted/30 p-1" },
+                        "children": [
+                          {
+                            "type": "Button",
+                            "props": {
+                              "size": "sm",
+                              "variant": "{{state.availability_scope === 'current' ? 'secondary' : 'ghost'}}",
+                              "children": "Current Location",
+                              "onClick": { "action": "setState", "key": "availability_scope", "value": "current" }
+                            }
+                          },
+                          {
+                            "type": "Button",
+                            "props": {
+                              "size": "sm",
+                              "variant": "{{state.availability_scope === 'all' ? 'secondary' : 'ghost'}}",
+                              "children": "All Locations",
+                              "onClick": { "action": "setState", "key": "availability_scope", "value": "all" }
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Input",
+                        "props": {
+                          "type": "search",
+                          "value": "{{state.availability_search}}",
+                          "placeholder": "Search items...",
+                          "className": "w-72 max-w-full",
+                          "onChange": { "action": "setState", "key": "availability_search", "value": "{{event.target.value}}" }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 2 },
+                    "children": [
+                      {
+                        "type": "Stack",
+                        "each": "{{filterAvailabilityRows(data.availability, state.availability_scope, data.order.entity_versions[0].data.branch_id, state.availability_search)}}",
+                        "as": "row",
+                        "key": "{{row.branch_id}}-{{row.asset_category_id}}",
+                        "props": {
+                          "spacing": 1,
+                          "className": "p-4 border rounded-lg"
+                        },
+                        "children": [
+                          {
+                            "type": "Stack",
+                            "props": { "direction": "horizontal", "justify": "between", "align": "center" },
+                            "children": [
+                              {
+                                "type": "Stack",
+                                "props": { "spacing": 1 },
+                                "children": [
+                                  {
+                                    "type": "Text",
+                                    "props": {
+                                      "size": "sm",
+                                      "weight": "semibold",
+                                      "children": "{{row.asset_category_name}}"
+                                    }
+                                  },
+                                  {
+                                    "type": "Text",
+                                    "props": {
+                                      "size": "sm",
+                                      "variant": "muted",
+                                      "children": "{{row.branch_name}}"
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "Stack",
+                                "props": { "direction": "horizontal", "spacing": 2, "align": "center" },
+                                "children": [
+                                  {
+                                    "type": "Badge",
+                                    "props": {
+                                      "variant": "{{row.available_assets > 0 ? 'secondary' : 'destructive'}}",
+                                      "children": "{{row.available_assets > 0 ? 'Available' : 'Unavailable'}}"
+                                    }
+                                  },
+                                  {
+                                    "type": "Button",
+                                    "props": {
+                                      "variant": "ghost",
+                                      "disabled": "{{row.available_assets === 0}}",
+                                      "children": "+ Add Item",
+                                      "onClick": { "action": "openModal", "modalId": "addLine" }
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "type": "Text",
+                            "props": {
+                              "size": "sm",
+                              "variant": "muted",
+                              "children": "{{row.available_assets}} available of {{row.total_assets}} total"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "props": {
+                              "size": "sm",
+                              "variant": "muted",
+                              "children": "{{row.unavailable_assets}} unavailable · due: {{row.maintenance_due_assets}} · overdue: {{row.maintenance_overdue_assets}}"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Text",
+                    "if": "{{countAvailabilityRows(data.availability, state.availability_scope, data.order.entity_versions[0].data.branch_id, state.availability_search) === 0}}",
+                    "props": {
+                      "variant": "muted",
+                      "size": "sm",
+                      "className": "text-center py-4",
+                      "children": "No items found."
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "props": { "title": "Order Lines" },
+        "children": [
+          {
+            "type": "Stack",
+            "props": { "spacing": 3 },
+            "children": [
+              {
+                "type": "Stack",
+                "each": "{{data.order.entity_versions[0].data.lines}}",
+                "as": "line",
+                "key": "{{line.category_id}}-{{line.planned_start}}",
+                "props": {
+                  "spacing": 2,
+                  "className": "p-4 border rounded-lg"
+                },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": { "direction": "horizontal", "justify": "between", "align": "center" },
+                    "children": [
+                      {
+                        "type": "Stack",
+                        "props": { "spacing": 1 },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "props": {
+                              "weight": "semibold",
+                              "children": "{{line.category_name || lookupRecordFieldById(data.asset_categories, line.category_id, 'entity_versions[0].data.name', 'source_record_id') || lookupRecordFieldById(data.availability, line.category_id, 'asset_category_name', 'asset_category_id') || line.category_id || 'Uncategorized'}}"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "props": {
+                              "size": "sm",
+                              "variant": "muted",
+                              "children": "Qty: {{line.quantity}} · {{line.planned_start}} to {{line.planned_end}}"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "props": {
+                              "size": "sm",
+                              "variant": "muted",
+                              "children": "Scope: Branch {{lookupRecordFieldById(data.availability, line.branch_id || data.order.entity_versions[0].data.branch_id, 'branch_name', 'branch_id') || line.branch_id || data.order.entity_versions[0].data.branch_id || 'Any'}} · Category {{lookupRecordFieldById(data.availability, line.category_id, 'asset_category_name', 'asset_category_id') || line.category_id || 'Any'}}"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "props": {
+                              "size": "sm",
+                              "variant": "muted",
+                              "children": "Job Site: {{line.job_site_name || lookupRecordFieldById(data.job_sites, line.job_site_id, 'entity_versions[0].data.name', 'source_record_id') || line.job_site_id || 'N/A'}} · Rate: {{line.rate_type}}"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Stack",
+                        "props": { "spacing": 2, "align": "end" },
+                        "children": [
+                          {
+                            "type": "Badge",
+                            "props": {
+                              "variant": "outline",
+                              "children": "{{line.status || 'pending'}}"
+                            }
+                          },
+                          {
+                            "type": "Badge",
+                            "props": {
+                              "variant": "{{hasRerentRoutingContext(line.fulfillment_source, line.rerent_fulfillment_status, line.shortage_route) ? 'destructive' : 'secondary'}}",
+                              "children": "{{getFulfillmentChannelLabel(line.fulfillment_source, line.rerent_fulfillment_status, line.shortage_route)}}"
+                            }
+                          },
+                          {
+                            "type": "Badge",
+                            "if": "{{hasRerentRoutingContext(line.fulfillment_source, line.rerent_fulfillment_status, line.shortage_route) && line.rerent_fulfillment_status}}",
+                            "props": {
+                              "variant": "outline",
+                              "children": "{{formatRerentFulfillmentStatus(line.rerent_fulfillment_status)}}"
+                            }
+                          },
+                          {
+                            "type": "Badge",
+                            "if": "{{hasRerentRoutingContext(line.fulfillment_source, line.rerent_fulfillment_status, line.shortage_route) && hasRerentUnitStatus(data.rerent_unit_status, line.line_entity_id)}}",
+                            "props": {
+                              "variant": "secondary",
+                              "children": "unit: {{formatRerentUnitStatus(lookupRecordFieldById(data.rerent_unit_status, line.line_entity_id, 'status_key', 'order_line_id'))}}"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "if": "{{hasRerentRoutingContext(line.fulfillment_source, line.rerent_fulfillment_status, line.shortage_route) && line.rerent_vendor_path}}",
+                            "props": {
+                              "size": "sm",
+                              "variant": "muted",
+                              "children": "route: {{formatRerentVendorPath(line.rerent_vendor_path)}}"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "if": "{{hasRerentRoutingContext(line.fulfillment_source, line.rerent_fulfillment_status, line.shortage_route) && line.manual_override_reason}}",
+                            "props": {
+                              "size": "sm",
+                              "variant": "muted",
+                              "children": "override: {{line.manual_override_reason}}"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "if": "{{hasRerentRoutingContext(line.fulfillment_source, line.rerent_fulfillment_status, line.shortage_route)}}",
+                            "props": {
+                              "size": "sm",
+                              "variant": "muted",
+                              "children": "requested: {{line.quantity || 0}} · internal available: {{line.internal_available_quantity || 0}}"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "Stack",
+                "each": "{{data.lines}}",
+                "as": "lineEntity",
+                "key": "{{lineEntity.id}}",
+                "props": {
+                  "spacing": 2,
+                  "className": "p-4 border rounded-lg"
+                },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": { "direction": "horizontal", "justify": "between", "align": "center" },
+                    "children": [
+                      {
+                        "type": "Stack",
+                        "props": { "spacing": 1 },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "props": {
+                              "weight": "semibold",
+                              "children": "{{lineEntity.entity_versions[0].data.category_name || lookupRecordFieldById(data.asset_categories, lineEntity.entity_versions[0].data.category_id, 'entity_versions[0].data.name', 'source_record_id') || lookupRecordFieldById(data.availability, lineEntity.entity_versions[0].data.category_id, 'asset_category_name', 'asset_category_id') || lineEntity.entity_versions[0].data.category_id || 'Uncategorized'}}"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "props": {
+                              "size": "sm",
+                              "variant": "muted",
+                              "children": "Qty: {{lineEntity.entity_versions[0].data.quantity}} · {{lineEntity.entity_versions[0].data.planned_start}} to {{lineEntity.entity_versions[0].data.planned_end}}"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "props": {
+                              "size": "sm",
+                              "variant": "muted",
+                              "children": "Job Site: {{lineEntity.entity_versions[0].data.job_site_name || lookupRecordFieldById(data.job_sites, lineEntity.entity_versions[0].data.job_site_id, 'entity_versions[0].data.name', 'source_record_id') || lineEntity.entity_versions[0].data.job_site_id || 'N/A'}} · Rate: {{lineEntity.entity_versions[0].data.rate_type}}"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "props": {
+                              "size": "sm",
+                              "variant": "muted",
+                              "children": "Fulfillment scope: Branch {{lookupRecordFieldById(data.availability, lineEntity.entity_versions[0].data.branch_id || data.order.entity_versions[0].data.branch_id, 'branch_name', 'branch_id') || lineEntity.entity_versions[0].data.branch_id || data.order.entity_versions[0].data.branch_id || 'N/A'}} · Category {{lookupRecordFieldById(data.availability, lineEntity.entity_versions[0].data.category_id, 'asset_category_name', 'asset_category_id') || lineEntity.entity_versions[0].data.category_id || 'N/A'}}"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Stack",
+                        "props": { "spacing": 2, "align": "end" },
+                        "children": [
+                          {
+                            "type": "Badge",
+                            "props": {
+                              "variant": "outline",
+                              "children": "{{lineEntity.entity_versions[0].data.status || 'pending'}}"
+                            }
+                          },
+                          {
+                            "type": "Badge",
+                            "props": {
+                              "variant": "{{hasRerentRoutingContext(lineEntity.entity_versions[0].data.fulfillment_source, lineEntity.entity_versions[0].data.rerent_fulfillment_status, lineEntity.entity_versions[0].data.shortage_route) ? 'destructive' : 'secondary'}}",
+                              "children": "{{getFulfillmentChannelLabel(lineEntity.entity_versions[0].data.fulfillment_source, lineEntity.entity_versions[0].data.rerent_fulfillment_status, lineEntity.entity_versions[0].data.shortage_route)}}"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "if": "{{lineEntity.entity_versions[0].data.fulfillment_source === 'internal_substitute' && lineEntity.entity_versions[0].data.substitute_recommendation}}",
+                            "props": {
+                              "size": "sm",
+                              "variant": "muted",
+                              "children": "selection: {{lineEntity.entity_versions[0].data.substitute_recommendation.selected_asset_category_name || lineEntity.entity_versions[0].data.category_id}} @ {{lineEntity.entity_versions[0].data.substitute_recommendation.selected_branch_name || lineEntity.entity_versions[0].data.branch_id}} ({{lineEntity.entity_versions[0].data.substitute_recommendation.fit_type || lineEntity.entity_versions[0].data.shortage_route || 'substitute'}})"
+                            }
+                          },
+                          {
+                            "type": "Badge",
+                            "if": "{{hasRerentRoutingContext(lineEntity.entity_versions[0].data.fulfillment_source, lineEntity.entity_versions[0].data.rerent_fulfillment_status, lineEntity.entity_versions[0].data.shortage_route) && lineEntity.entity_versions[0].data.rerent_fulfillment_status}}",
+                            "props": {
+                              "variant": "outline",
+                              "children": "{{formatRerentFulfillmentStatus(lineEntity.entity_versions[0].data.rerent_fulfillment_status)}}"
+                            }
+                          },
+                          {
+                            "type": "Badge",
+                            "if": "{{hasRerentRoutingContext(lineEntity.entity_versions[0].data.fulfillment_source, lineEntity.entity_versions[0].data.rerent_fulfillment_status, lineEntity.entity_versions[0].data.shortage_route) && hasRerentUnitStatus(data.rerent_unit_status, lineEntity.id)}}",
+                            "props": {
+                              "variant": "secondary",
+                              "children": "unit: {{formatRerentUnitStatus(lookupRecordFieldById(data.rerent_unit_status, lineEntity.id, 'status_key', 'order_line_id'))}}"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "if": "{{hasRerentRoutingContext(lineEntity.entity_versions[0].data.fulfillment_source, lineEntity.entity_versions[0].data.rerent_fulfillment_status, lineEntity.entity_versions[0].data.shortage_route) && lineEntity.entity_versions[0].data.rerent_vendor_path}}",
+                            "props": {
+                              "size": "sm",
+                              "variant": "muted",
+                              "children": "route: {{formatRerentVendorPath(lineEntity.entity_versions[0].data.rerent_vendor_path)}}"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "if": "{{hasRerentRoutingContext(lineEntity.entity_versions[0].data.fulfillment_source, lineEntity.entity_versions[0].data.rerent_fulfillment_status, lineEntity.entity_versions[0].data.shortage_route) && lineEntity.entity_versions[0].data.manual_override_reason}}",
+                            "props": {
+                              "size": "sm",
+                              "variant": "muted",
+                              "children": "override: {{lineEntity.entity_versions[0].data.manual_override_reason}}"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "if": "{{hasRerentRoutingContext(lineEntity.entity_versions[0].data.fulfillment_source, lineEntity.entity_versions[0].data.rerent_fulfillment_status, lineEntity.entity_versions[0].data.shortage_route)}}",
+                            "props": {
+                              "size": "sm",
+                              "variant": "muted",
+                              "children": "requested: {{lineEntity.entity_versions[0].data.quantity || 0}} · internal available: {{lineEntity.entity_versions[0].data.internal_available_quantity || 0}}"
+                            }
+                          },
+                          {
+                            "type": "Button",
+                            "if": "{{!hasRerentRoutingContext(lineEntity.entity_versions[0].data.fulfillment_source, lineEntity.entity_versions[0].data.rerent_fulfillment_status, lineEntity.entity_versions[0].data.shortage_route) && hasAvailabilityShortage(data.availability, lineEntity.entity_versions[0].data.category_id, data.order.entity_versions[0].data.branch_id, lineEntity.entity_versions[0].data.quantity)}}",
+                            "props": {
+                              "size": "sm",
+                              "variant": "outline",
+                              "children": "Mark Preferred Vendor Re-rent",
+                              "onClick": {
+                                "action": "sequence",
+                                "actions": [
+                                  { "action": "setState", "key": "rerent_line_entity_id", "value": "{{lineEntity.id}}" },
+                                  { "action": "setState", "key": "rerent_existing_line_data", "value": "{{lineEntity.entity_versions[0].data}}" },
+                                  { "action": "setState", "key": "rerent_category_id", "value": "{{lineEntity.entity_versions[0].data.category_id}}" },
+                                  { "action": "setState", "key": "rerent_requested_quantity", "value": "{{lineEntity.entity_versions[0].data.quantity}}" },
+                                  { "action": "setState", "key": "rerent_available_quantity", "value": "{{getAvailabilityField(data.availability, lineEntity.entity_versions[0].data.category_id, data.order.entity_versions[0].data.branch_id, 'available_assets')}}" },
+                                  { "action": "setState", "key": "rerent_vendor_path", "value": "primary_preferred" },
+                                  { "action": "setState", "key": "rerent_fulfillment_status", "value": "pending_vendor_confirmation" },
+                                  { "action": "setState", "key": "rerent_override_reason", "value": "" },
+                                  { "action": "openModal", "modalId": "preferredVendorRerent" }
+                                ]
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "Text",
+                "if": "{{!data.lines.length && !data.order.entity_versions[0].data.lines.length}}",
+                "props": {
+                  "variant": "muted",
+                  "className": "text-center py-6",
+                  "children": "No order lines yet. Use 'Add Line' to capture equipment requirements."
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "modals": {
+    "addLine": {
+      "title": "Add Order Line",
+      "size": "lg",
+      "content": {
+        "type": "Stack",
+        "props": { "spacing": 4 },
+        "children": [
+          {
+            "type": "Grid",
+            "props": { "columns": 2, "gap": 4 },
+            "children": [
+              {
+                "type": "Input",
+                "props": {
+                  "label": "Asset Category ID",
+                  "placeholder": "e.g. cat-excavator",
+                  "name": "line_category_id",
+                  "value": "{{state.newLine_category_id || ''}}",
+                  "onChange": {
+                    "action": "setState",
+                    "key": "newLine_category_id",
+                    "value": "{{event.target.value}}"
+                  }
+                }
+              },
+              {
+                "type": "Input",
+                "props": {
+                  "label": "Quantity",
+                  "placeholder": "1",
+                  "name": "line_quantity",
+                  "value": "{{state.newLine_quantity || ''}}",
+                  "onChange": {
+                    "action": "setState",
+                    "key": "newLine_quantity",
+                    "value": "{{event.target.value}}"
+                  }
+                }
+              },
+              {
+                "type": "Input",
+                "props": {
+                  "label": "Planned Start",
+                  "placeholder": "YYYY-MM-DD",
+                  "name": "line_planned_start",
+                  "value": "{{state.newLine_planned_start || ''}}",
+                  "onChange": {
+                    "action": "setState",
+                    "key": "newLine_planned_start",
+                    "value": "{{event.target.value}}"
+                  }
+                }
+              },
+              {
+                "type": "Input",
+                "props": {
+                  "label": "Planned End",
+                  "placeholder": "YYYY-MM-DD",
+                  "name": "line_planned_end",
+                  "value": "{{state.newLine_planned_end || ''}}",
+                  "onChange": {
+                    "action": "setState",
+                    "key": "newLine_planned_end",
+                    "value": "{{event.target.value}}"
+                  }
+                }
+              },
+              {
+                "type": "Input",
+                "props": {
+                  "label": "Job Site ID",
+                  "placeholder": "e.g. site-downtown",
+                  "name": "line_job_site_id",
+                  "value": "{{state.newLine_job_site_id || ''}}",
+                  "onChange": {
+                    "action": "setState",
+                    "key": "newLine_job_site_id",
+                    "value": "{{event.target.value}}"
+                  }
+                }
+              },
+              {
+                "type": "Select",
+                "props": {
+                  "label": "Rate Type",
+                  "name": "line_rate_type",
+                  "value": "{{state.newLine_rate_type || ''}}",
+                  "placeholder": "Select rate type...",
+                  "options": [
+                    { "value": "daily", "label": "Daily" },
+                    { "value": "weekly", "label": "Weekly" },
+                    { "value": "monthly", "label": "Monthly" },
+                    { "value": "fixed", "label": "Fixed" }
+                  ],
+                  "onChange": {
+                    "action": "setState",
+                    "key": "newLine_rate_type",
+                    "value": "{{event.target.value}}"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "type": "Stack",
+            "props": { "direction": "horizontal", "justify": "end", "spacing": 2 },
+            "children": [
+              {
+                "type": "Button",
+                "props": {
+                  "variant": "outline",
+                  "children": "Cancel",
+                  "onClick": { "action": "closeModal" }
+                }
+              },
+              {
+                "type": "Button",
+                "props": {
+                  "children": "Add Line",
+                  "onClick": {
+                    "action": "sequence",
+                    "actions": [
+                      {
+                        "action": "apiCall",
+                        "operation": "rpc",
+                        "function": "create_entity_with_version",
+                        "data": {
+                          "p_entity_type": "rental_order_line",
+                          "p_data": {
+                            "order_id": "{{params.id}}",
+                            "status": "pending",
+                            "category_id": "{{state.newLine_category_id}}",
+                            "quantity": "{{state.newLine_quantity}}",
+                            "planned_start": "{{state.newLine_planned_start}}",
+                            "planned_end": "{{state.newLine_planned_end}}",
+                            "job_site_id": "{{state.newLine_job_site_id}}",
+                            "rate_type": "{{state.newLine_rate_type}}"
+                          }
+                        },
+                        "onSuccess": {
+                          "action": "sequence",
+                          "actions": [
+                            { "action": "closeModal" },
+                            { "action": "setState", "key": "newLine_category_id", "value": "" },
+                            { "action": "setState", "key": "newLine_quantity", "value": "" },
+                            { "action": "setState", "key": "newLine_planned_start", "value": "" },
+                            { "action": "setState", "key": "newLine_planned_end", "value": "" },
+                            { "action": "setState", "key": "newLine_job_site_id", "value": "" },
+                            { "action": "setState", "key": "newLine_rate_type", "value": "" },
+                            { "action": "refetch", "source": "lines" },
+                            { "action": "refetch", "source": "order" }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "preferredVendorRerent": {
+      "title": "Preferred Vendor Re-rent Routing",
+      "size": "md",
+      "content": {
+        "type": "Stack",
+        "props": { "spacing": 4 },
+        "children": [
+          {
+            "type": "Card",
+            "props": {
+              "title": "Selected shortage line"
+            }
+          },
+          {
+            "type": "Stack",
+            "props": { "spacing": 1 },
+            "children": [
+              {
+                "type": "Text",
+                "props": { "size": "sm", "variant": "muted", "children": "Line ID" }
+              },
+              {
+                "type": "Text",
+                "props": { "children": "{{state.rerent_line_entity_id || 'N/A'}}" }
+              },
+              {
+                "type": "Text",
+                "props": { "size": "sm", "variant": "muted", "children": "Asset Category" }
+              },
+              {
+                "type": "Text",
+                "props": { "children": "{{state.rerent_category_id || 'N/A'}}" }
+              },
+              {
+                "type": "Text",
+                "props": { "size": "sm", "variant": "muted", "children": "Requested Quantity" }
+              },
+              {
+                "type": "Text",
+                "props": { "children": "{{state.rerent_requested_quantity || 0}}" }
+              },
+              {
+                "type": "Text",
+                "props": { "size": "sm", "variant": "muted", "children": "Internal Available Quantity" }
+              },
+              {
+                "type": "Text",
+                "props": { "children": "{{state.rerent_available_quantity || 0}}" }
+              }
+            ]
+          },
+          {
+            "type": "Alert",
+            "props": {
+              "variant": "warning",
+              "title": "Internal shortage detected",
+              "description": "Requested {{state.rerent_requested_quantity}} for {{state.rerent_category_id}} with only {{state.rerent_available_quantity}} available internally. Route through preferred-vendor path."
+            }
+          },
+          {
+            "type": "Select",
+            "props": {
+              "label": "Preferred Vendor Path",
+              "name": "rerent_vendor_path",
+              "value": "{{state.rerent_vendor_path || 'primary_preferred'}}",
+              "options": [
+                { "value": "primary_preferred", "label": "Primary preferred vendor" },
+                { "value": "secondary_preferred", "label": "Secondary preferred vendor" },
+                { "value": "manual_override", "label": "Manual override path" }
+              ],
+              "onChange": {
+                "action": "setState",
+                "key": "rerent_vendor_path",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Select",
+            "props": {
+              "label": "External Fulfillment Status",
+              "name": "rerent_fulfillment_status",
+              "value": "{{state.rerent_fulfillment_status || 'pending_vendor_confirmation'}}",
+              "options": [
+                { "value": "pending_vendor_confirmation", "label": "Pending vendor confirmation" },
+                { "value": "vendor_confirmed", "label": "Vendor confirmed" },
+                { "value": "in_transit", "label": "In transit from vendor" },
+                { "value": "fulfilled_external", "label": "Fulfilled externally" },
+                { "value": "vendor_unavailable", "label": "Vendor unavailable" }
+              ],
+              "onChange": {
+                "action": "setState",
+                "key": "rerent_fulfillment_status",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Textarea",
+            "props": {
+              "label": "Manual Override Reason",
+              "placeholder": "Capture why this shortage routing decision was manually overridden",
+              "name": "rerent_override_reason",
+              "value": "{{state.rerent_override_reason || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "rerent_override_reason",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Stack",
+            "props": { "direction": "horizontal", "justify": "end", "spacing": 2 },
+            "children": [
+              {
+                "type": "Button",
+                "props": {
+                  "variant": "outline",
+                  "children": "Cancel",
+                  "onClick": { "action": "closeModal" }
+                }
+              },
+              {
+                "type": "Button",
+                "props": {
+                  "children": "Save Re-rent Routing",
+                  "onClick": {
+                    "action": "apiCall",
+                    "operation": "rpc",
+                    "function": "rental_upsert_entity_current_state",
+                    "data": {
+                      "p_entity_type": "rental_order_line",
+                      "p_entity_id": "{{state.rerent_line_entity_id}}",
+                      "p_data": "{{buildRerentLineData(state.rerent_existing_line_data, state.rerent_category_id, state.rerent_requested_quantity, state.rerent_available_quantity, state.rerent_vendor_path, state.rerent_fulfillment_status, state.rerent_override_reason, auth.role || 'missing_auth_role')}}"
+                    },
+                    "onSuccess": {
+                      "action": "sequence",
+                      "actions": [
+                        { "action": "closeModal" },
+                        { "action": "setState", "key": "rerent_line_entity_id", "value": "" },
+                        { "action": "setState", "key": "rerent_existing_line_data", "value": {} },
+                        { "action": "setState", "key": "rerent_category_id", "value": "" },
+                        { "action": "setState", "key": "rerent_requested_quantity", "value": "" },
+                        { "action": "setState", "key": "rerent_available_quantity", "value": "" },
+                        { "action": "setState", "key": "rerent_vendor_path", "value": "primary_preferred" },
+                        { "action": "setState", "key": "rerent_fulfillment_status", "value": "pending_vendor_confirmation" },
+                        { "action": "setState", "key": "rerent_override_reason", "value": "" },
+                        { "action": "refetch", "source": "lines" },
+                        { "action": "refetch", "source": "quote_availability" },
+                        { "action": "refetch", "source": "rerent_unit_status" },
+                        { "action": "refetch", "source": "order" }
+                      ]
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

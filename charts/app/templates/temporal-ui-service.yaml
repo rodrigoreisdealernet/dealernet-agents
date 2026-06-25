@@ -1,0 +1,18 @@
+{{- if .Values.temporalUi.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "app.temporalUi.fullname" . }}
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: temporal-ui
+spec:
+  type: {{ .Values.temporalUi.service.type }}
+  selector:
+    {{- include "app.temporalUi.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.temporalUi.service.port }}
+      targetPort: http
+      protocol: TCP
+{{- end }}

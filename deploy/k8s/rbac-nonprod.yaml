@@ -1,0 +1,118 @@
+# Phase 2 namespace-scoped deploy identity for nonprod (wynne-dev, wynne-test).
+# Apply with: kubectl apply -f deploy/k8s/rbac-nonprod.yaml
+#
+# Design: docs/specs/live-cluster-deploy-smoke-rollback.md (RBAC Design).
+# - One service account per namespace (`gha-deployer`), used by deploy-dev/deploy-test.
+# - Namespace-scoped Role + RoleBinding ONLY — no ClusterRole/ClusterRoleBinding.
+# - Verbs limited to the release path; no cross-namespace mutation.
+# - The factory-deploy-nonprod runner authenticates as these SAs (token/kubeconfig
+#   provisioning is an infra step — see PHASE2-DEPLOYMENT.md).
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gha-deployer
+  namespace: wynne-dev
+  labels:
+    app.kubernetes.io/part-of: wynne-rental-erp
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: gha-deployer
+  namespace: wynne-dev
+  labels:
+    app.kubernetes.io/part-of: wynne-rental-erp
+rules:
+  # Helm release objects + the app's namespaced workload resources.
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  - apiGroups: [""]
+    resources: ["services", "configmaps", "pods"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  # Read-only rollout diagnostics (events + container logs) for failed deploys.
+  - apiGroups: [""]
+    resources: ["pods/log", "events"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  # Release-owned secret references only (no broad secret access).
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  # ExternalSecret resources the chart renders when externalSecrets.enabled=true (ADR-0100).
+  # The SecretStore is admin-bootstrapped out-of-band, so it is NOT granted here.
+  - apiGroups: ["external-secrets.io"]
+    resources: ["externalsecrets"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gha-deployer
+  namespace: wynne-dev
+  labels:
+    app.kubernetes.io/part-of: wynne-rental-erp
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: gha-deployer
+subjects:
+  - kind: ServiceAccount
+    name: gha-deployer
+    namespace: wynne-dev
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gha-deployer
+  namespace: wynne-test
+  labels:
+    app.kubernetes.io/part-of: wynne-rental-erp
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: gha-deployer
+  namespace: wynne-test
+  labels:
+    app.kubernetes.io/part-of: wynne-rental-erp
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  - apiGroups: [""]
+    resources: ["services", "configmaps", "pods"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  - apiGroups: [""]
+    resources: ["pods/log", "events"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  # ExternalSecret resources the chart renders when externalSecrets.enabled=true (ADR-0100).
+  # The SecretStore is admin-bootstrapped out-of-band, so it is NOT granted here.
+  - apiGroups: ["external-secrets.io"]
+    resources: ["externalsecrets"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gha-deployer
+  namespace: wynne-test
+  labels:
+    app.kubernetes.io/part-of: wynne-rental-erp
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: gha-deployer
+subjects:
+  - kind: ServiceAccount
+    name: gha-deployer
+    namespace: wynne-test

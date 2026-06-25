@@ -1,0 +1,19 @@
+{{- if .Values.observability.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "app.temporalWorkerMetrics.fullname" . }}
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: temporal-worker-metrics
+spec:
+  type: ClusterIP
+  # Selects the existing temporal-worker Deployment pods to expose their SDK metrics port.
+  selector:
+    {{- include "app.temporalWorker.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: metrics
+      port: {{ .Values.observability.metrics.workerPort }}
+      targetPort: {{ .Values.observability.metrics.workerPort }}
+      protocol: TCP
+{{- end }}

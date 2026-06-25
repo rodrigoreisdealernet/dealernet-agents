@@ -1,0 +1,515 @@
+name: E2E (dev environment)
+
+# Real-environment end-to-end smoke: drives the DEPLOYED dev app with a browser
+# (Playwright), hourly + after each dev deploy + on demand. On failure it files a
+# deduplicated incident so the factory can pick it up.
+
+on:
+  schedule:
+    - cron: '17 * * * *'   # hourly (off the :00 mark)
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Deploy Dev"]
+    types: [completed]
+
+permissions: {}
+
+concurrency:
+  group: e2e-dev
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Playwright smoke vs dev
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # git push to releases-ledger (Stamp known-good release step)
+    env:
+      # Public URL of the deployed dev frontend. Override via repo variable.
+      E2E_BASE_URL: ${{ vars.E2E_BASE_URL || 'https://wynne-app-a4bde4gwecdnfpfb.a02.azurefd.net/' }}
+      E2E_AUTH_EMAIL: ${{ secrets.E2E_AUTH_EMAIL }}
+      E2E_AUTH_PASSWORD: ${{ secrets.E2E_AUTH_PASSWORD }}
+      E2E_READONLY_EMAIL: ${{ secrets.E2E_READONLY_EMAIL }}
+      E2E_READONLY_PASSWORD: ${{ secrets.E2E_READONLY_PASSWORD }}
+      E2E_MANAGER_EMAIL: ${{ secrets.E2E_MANAGER_EMAIL }}
+      E2E_MANAGER_PASSWORD: ${{ secrets.E2E_MANAGER_PASSWORD }}
+      E2E_OPERATOR_EMAIL: ${{ secrets.E2E_OPERATOR_EMAIL }}
+      E2E_OPERATOR_PASSWORD: ${{ secrets.E2E_OPERATOR_PASSWORD }}
+      # Supabase service-role credentials for deterministic fixture seeding in
+      # gating specs (e.g. branch-counts.spec.ts).  The URL defaults to the
+      # known dev API front-door so existing vars.E2E_BASE_URL deployments work
+      # without setting a separate variable.
+      E2E_SUPABASE_URL: ${{ vars.E2E_SUPABASE_URL || 'https://wynne-api-fvd0fcfubfb2drcy.a02.azurefd.net' }}
+      E2E_SUPABASE_SERVICE_KEY: ${{ secrets.E2E_SUPABASE_SERVICE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install deps
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Playwright browser
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Require fixture-seeding credentials
+        run: |
+          if [ -z "${E2E_SUPABASE_SERVICE_KEY:-}" ]; then
+            echo "E2E_SUPABASE_SERVICE_KEY must be configured as a repo secret. branch-counts.spec.ts seeds fixtures via the Supabase service-role API. Without this secret the gating variance-review journey cannot run." >&2
+            exit 1
+          fi
+
+      - name: Run E2E smoke against ${{ env.E2E_BASE_URL }}
+        id: e2e
+        working-directory: frontend
+        run: npx playwright test smoke.spec.ts auth-access-control.spec.ts roles-data-access.spec.ts ops-findings.spec.ts ops-approval.spec.ts dispatch-yard.spec.ts branch-counts.spec.ts
+
+      - name: Upload smoke results (for trend history)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-results
+          path: frontend/e2e-results.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Summarize
+        if: always()
+        working-directory: frontend
+        run: |
+          {
+            echo "## E2E vs dev — ${E2E_BASE_URL}"
+            if [ -f e2e-results.json ]; then
+              node -e "const r=require('./e2e-results.json');const s=r.stats||{};console.log('- expected: '+(s.expected??'?')+'  unexpected(failed): '+(s.unexpected??'?')+'  flaky: '+(s.flaky??'?')+'  skipped: '+(s.skipped??'?'))" 2>/dev/null || true
+            fi
+            echo "- result: ${{ steps.e2e.outcome }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload trace/report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+            frontend/e2e-results.json
+          retention-days: 7
+
+  e2e-failure-sentinel:
+    name: File / update E2E incident
+    needs: [e2e]
+    if: always() && needs.e2e.result == 'failure'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    env:
+      E2E_BASE_URL: ${{ vars.E2E_BASE_URL || 'https://wynne-app-a4bde4gwecdnfpfb.a02.azurefd.net/' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: .github/tools/shared/package-lock.json
+
+      - name: Install shared tools
+        working-directory: .github/tools/shared
+        continue-on-error: true
+        run: npm ci
+
+      - name: File / update E2E incident
+        id: upsert
+        working-directory: .github/tools/shared
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          BODY="$(printf '🚨 E2E dev failure\n\n**E2E smoke failed against the dev environment** (%s).\n\nEvidence: %s\nArtifact: playwright-report (trace + screenshots) on run above.\n\nLikely causes: dev deploy broken, a route crashing, or Supabase/data outage.' "${E2E_BASE_URL}" "${RUN_URL}")"
+          npx tsx src/incident-upsert-cli.ts \
+            --kind shared-cause \
+            --fingerprint-id e2e-dev-failure \
+            --normalized-title-fallback \
+            --labels priority:high \
+            --title "E2E dev smoke failing against ${E2E_BASE_URL}" \
+            --body "${BODY}"
+
+      - name: File / update E2E incident (gh fallback)
+        if: always() && !cancelled() && (steps.upsert.outcome == 'failure' || steps.upsert.outcome == 'skipped')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          FP="<!-- fingerprint:e2e-dev-failure -->"
+          # Dedup fallback incidents via strongly consistent list API (not search).
+          # Search is eventually consistent and can lag/normalize punctuation, which
+          # risks duplicate incident creation under near-simultaneous failures.
+          # Paginate all open issues and target the oldest fingerprint match so
+          # updates accumulate on one canonical issue.
+          EXISTING="$(gh api --paginate --repo "${GITHUB_REPOSITORY}" \
+            "repos/{owner}/{repo}/issues?state=open&per_page=100" | jq -sr --arg fp "$FP" \
+            '[.[][] | select((.pull_request | not) and ((.body // "") | contains($fp)))] | min_by(.number).number // empty' \
+            2>/dev/null || true)"
+          if [ -n "${EXISTING}" ]; then
+            gh issue comment "${EXISTING}" --repo "${GITHUB_REPOSITORY}" \
+              --body "🔁 **E2E still failing** (fallback sentinel — shared-tools bootstrap unavailable). Evidence: ${RUN_URL}"
+          else
+            gh issue create --repo "${GITHUB_REPOSITORY}" \
+              --title "E2E dev smoke failing against ${E2E_BASE_URL}" \
+              --body "$(printf '🚨 E2E dev failure (fallback sentinel)\n\nShared-tools bootstrap was unavailable; this incident was filed via gh CLI.\n\nEvidence: %s\n\n%s' "${RUN_URL}" "${FP}")" \
+              --label "auto:alert,queue:platform,priority:high"
+          fi
+
+  entity-drilldown:
+    name: Entity drill-down vs dev
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      E2E_BASE_URL: ${{ vars.E2E_BASE_URL || 'https://wynne-app-a4bde4gwecdnfpfb.a02.azurefd.net/' }}
+      E2E_AUTH_EMAIL: ${{ secrets.E2E_AUTH_EMAIL }}
+      E2E_AUTH_PASSWORD: ${{ secrets.E2E_AUTH_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require deployed-dev auth credentials
+        run: |
+          if [ -z "${E2E_AUTH_EMAIL:-}" ] || [ -z "${E2E_AUTH_PASSWORD:-}" ]; then
+            echo "E2E_AUTH_EMAIL and E2E_AUTH_PASSWORD must be configured for deployed-dev drill-down coverage." >&2
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install deps
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Playwright browser
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Run deployed-dev entity detail drill-down
+        working-directory: frontend
+        run: npx playwright test auth-access-control.spec.ts --grep "@entity-drilldown"
+
+      - name: Assert drill-down test executed
+        working-directory: frontend
+        run: |
+          node <<'NODE'
+          const results = require('./e2e-results.json');
+          const expected = results?.stats?.expected ?? 0;
+          if (expected < 1) {
+            console.error('Expected at least one deployed-dev entity drill-down test to execute.');
+            process.exit(1);
+          }
+          NODE
+
+      - name: Upload drill-down trace/report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: entity-drilldown-report
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+            frontend/e2e-results.json
+          retention-days: 7
+
+  experience:
+    name: Good-UX expectations (non-gating)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    # Informational: these are allowed to fail. Failures are the QA Manager's
+    # signal to file UX-improvement tickets — they never block or page.
+    continue-on-error: true
+    env:
+      E2E_BASE_URL: ${{ vars.E2E_BASE_URL || 'https://wynne-app-a4bde4gwecdnfpfb.a02.azurefd.net/' }}
+      E2E_AUTH_EMAIL: ${{ secrets.E2E_AUTH_EMAIL }}
+      E2E_AUTH_PASSWORD: ${{ secrets.E2E_AUTH_PASSWORD }}
+      E2E_SUPABASE_ANON_KEY: ${{ secrets.E2E_SUPABASE_ANON_KEY }}
+      E2E_MANAGER_EMAIL: ${{ secrets.E2E_MANAGER_EMAIL }}
+      E2E_MANAGER_PASSWORD: ${{ secrets.E2E_MANAGER_PASSWORD }}
+      E2E_OPERATOR_EMAIL: ${{ secrets.E2E_OPERATOR_EMAIL }}
+      E2E_OPERATOR_PASSWORD: ${{ secrets.E2E_OPERATOR_PASSWORD }}
+      E2E_READONLY_EMAIL: ${{ secrets.E2E_READONLY_EMAIL }}
+      E2E_READONLY_PASSWORD: ${{ secrets.E2E_READONLY_PASSWORD }}
+      E2E_SUPABASE_URL: ${{ vars.E2E_SUPABASE_URL || 'https://wynne-api-fvd0fcfubfb2drcy.a02.azurefd.net' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install deps
+        working-directory: frontend
+        run: npm ci
+      - name: Install Playwright browser
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+      - name: Resolve portal schedule demo URL
+        env:
+          E2E_SUPABASE_SERVICE_KEY: ${{ secrets.E2E_SUPABASE_SERVICE_KEY }}
+        run: |
+          if [ -z "${E2E_SUPABASE_SERVICE_KEY:-}" ]; then
+            echo "E2E_SUPABASE_SERVICE_KEY not configured; skipping portal schedule URL resolution."
+            exit 0
+          fi
+          SUPABASE_API="${E2E_SUPABASE_URL}"
+          SERVICE_KEY="${E2E_SUPABASE_SERVICE_KEY}"
+          PORTAL_URL=$(curl -sf \
+            --max-time 10 \
+            "${SUPABASE_API}/rest/v1/rpc/portal_get_demo_portal_url" \
+            -H "apikey: ${SERVICE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{}' | tr -d '"' || echo '')
+          if [ -n "$PORTAL_URL" ] && [ "$PORTAL_URL" != "null" ]; then
+            echo "E2E_PORTAL_SCHEDULE_SCOPED_URL=${PORTAL_URL}" >> "$GITHUB_ENV"
+          fi
+      - name: Resolve portal intake demo URL
+        env:
+          E2E_SUPABASE_SERVICE_KEY: ${{ secrets.E2E_SUPABASE_SERVICE_KEY }}
+        run: |
+          if [ -z "${E2E_SUPABASE_SERVICE_KEY:-}" ]; then
+            echo "E2E_SUPABASE_SERVICE_KEY not configured; skipping portal intake URL resolution."
+            exit 0
+          fi
+          SUPABASE_API="${E2E_SUPABASE_URL}"
+          SERVICE_KEY="${E2E_SUPABASE_SERVICE_KEY}"
+          CURL_ERR=$(mktemp)
+          INTAKE_URL=$(curl -sf \
+            --max-time 10 \
+            "${SUPABASE_API}/rest/v1/rpc/portal_get_demo_intake_url" \
+            -H "apikey: ${SERVICE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{}' 2>"$CURL_ERR" | tr -d '"' \
+            || { echo "portal_get_demo_intake_url curl failed: $(cat \"$CURL_ERR\")" >&2; echo ''; })
+          rm -f "$CURL_ERR"
+          # Contract: when the service key is configured the RPC must return a non-empty
+          # URL with the expected shape /portal/intake/<uuid>#token=<rawToken>.
+          # A missing or malformed value means the demo seed or RPC grant has regressed
+          # and portal-intake E2E tests would silently skip — fail loudly instead.
+          if [ -z "$INTAKE_URL" ] || [ "$INTAKE_URL" = "null" ]; then
+            echo "::error::portal_get_demo_intake_url() returned empty/null — demo intake token may not be seeded or the service_role RPC grant is broken" >&2
+            exit 1
+          fi
+          if ! echo "$INTAKE_URL" | grep -qE '^/portal/intake/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}#token=.+$'; then
+            echo "::error::portal_get_demo_intake_url() returned URL with unexpected shape: ${INTAKE_URL} (expected /portal/intake/<uuid>#token=<rawToken>)" >&2
+            exit 1
+          fi
+          echo "portal_get_demo_intake_url() contract satisfied: ${INTAKE_URL}"
+          echo "E2E_PORTAL_INTAKE_SCOPED_URL=${INTAKE_URL}" >> "$GITHUB_ENV"
+      - name: Provision experience auth + demo prerequisites
+        env:
+          E2E_SUPABASE_SERVICE_KEY: ${{ secrets.E2E_SUPABASE_SERVICE_KEY }}
+        run: node scripts/provision-experience-prereqs.mjs
+      - name: Run good-UX expectations (failures = improvement backlog, not errors)
+        working-directory: frontend
+        run: npx playwright test experience.spec.ts || true
+      - name: Summarize experience gaps
+        if: always()
+        working-directory: frontend
+        run: |
+          {
+            echo "## Good-UX expectations vs ${E2E_BASE_URL}"
+            echo "Failures below are NOT deploy blockers — they are the UX-improvement backlog."
+            echo "The QA Manager reviews these + the page definitions and files \`ux\` tickets."
+            if [ -f e2e-results.json ]; then
+              node -e "const r=require('./e2e-results.json');const s=r.stats||{};console.log('- met: '+(s.expected??'?')+'  unmet(UX gaps): '+(s.unexpected??'?'))" 2>/dev/null || true
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload experience report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: experience-report
+          path: |
+            frontend/test-results/
+            frontend/e2e-results.json
+          retention-days: 7
+
+      - name: Upload experience results (for trend history)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: experience-results
+          path: frontend/e2e-results.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+  publish-history:
+    name: Append results to e2e-history + render dashboard
+    needs: [e2e, entity-drilldown, experience]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      E2E_BASE_URL: ${{ vars.E2E_BASE_URL || 'https://wynne-app-a4bde4gwecdnfpfb.a02.azurefd.net/' }}
+    steps:
+      # Check out main only to get the record/render scripts + the index.html template
+      # + the SLO targets file (for the Targets section in the README).
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github/scripts
+            .github/e2e-dashboard
+            .github/qa-targets.json
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Per-suite Playwright JSON, always uploaded by the jobs above. Either may be
+      # absent if a runner died before writing it; the record script handles that.
+      - name: Download smoke results
+        uses: actions/download-artifact@v4
+        with:
+          name: smoke-results
+          path: artifacts/smoke
+        continue-on-error: true
+      - name: Download experience results
+        uses: actions/download-artifact@v4
+        with:
+          name: experience-results
+          path: artifacts/experience
+        continue-on-error: true
+
+      - name: Append records + render, then push to e2e-history
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          BRANCH=e2e-history
+          REPO_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+          # Build this run's new record lines from whatever artifacts arrived.
+          : > new-records.jsonl
+          if [ -f artifacts/smoke/e2e-results.json ]; then
+            node .github/scripts/e2e-history-record.mjs --suite smoke --results artifacts/smoke/e2e-results.json >> new-records.jsonl
+          fi
+          if [ -f artifacts/experience/e2e-results.json ]; then
+            node .github/scripts/e2e-history-record.mjs --suite experience --results artifacts/experience/e2e-results.json >> new-records.jsonl
+          fi
+          if [ ! -s new-records.jsonl ]; then
+            echo "No results to record (both artifacts missing) — nothing to publish."
+            exit 0
+          fi
+
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Push with a fetch/rebase-of-the-file retry loop so concurrent runs can't
+          # clobber each other's appends to runs.jsonl.
+          for attempt in 1 2 3 4 5; do
+            rm -rf hist && mkdir hist && cd hist
+            git init -q
+            git remote add origin "$REPO_URL"
+            if git fetch -q --depth 1 origin "$BRANCH"; then
+              git checkout -q -b "$BRANCH" FETCH_HEAD
+            else
+              git checkout -q --orphan "$BRANCH"
+            fi
+            cat ../new-records.jsonl >> runs.jsonl
+            cp ../.github/e2e-dashboard/index.html index.html
+            node ../.github/scripts/e2e-history-render.mjs .
+            git add -A
+            git commit -q -m "e2e: record run ${GITHUB_RUN_ID} ($(wc -l < ../new-records.jsonl | tr -d ' ') suite result(s))"
+            if git push -q origin "$BRANCH"; then
+              echo "Published to $BRANCH (attempt $attempt)."
+              cd ..
+              exit 0
+            fi
+            echo "Push rejected (attempt $attempt) — likely a concurrent update; retrying."
+            cd ..
+          done
+          echo "Failed to publish after retries." >&2
+          exit 1
+
+      # ── Known-good release ledger (ADR-0062) ──────────────────────────────────
+      # When the gating smoke passes against a build that a Deploy Dev run just
+      # shipped, stamp that exact commit as "known-good" on the orphan
+      # `releases-ledger` branch. Promotion to UAT/prod selects a SHA from this
+      # ledger instead of shipping the head of main. Only stamps on a
+      # Deploy-Dev-triggered run (so the deployed SHA is authoritative =
+      # workflow_run.head_sha) AND only when smoke actually passed.
+      - name: Stamp known-good release
+        if: >-
+          github.event_name == 'workflow_run' &&
+          github.event.workflow_run.conclusion == 'success' &&
+          needs.e2e.result == 'success'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEPLOYED_SHA: ${{ github.event.workflow_run.head_sha }}
+          DEPLOY_RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          set -euo pipefail
+          BRANCH=releases-ledger
+          REPO_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+          node .github/scripts/release-ledger-record.mjs \
+            --sha "$DEPLOYED_SHA" --smoke passed --deploy-run-id "$DEPLOY_RUN_ID" \
+            > new-known-good.jsonl
+          cat new-known-good.jsonl
+
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Same fetch/rebase retry loop as the e2e-history publish, so concurrent
+          # runs can't clobber each other's appends.
+          for attempt in 1 2 3 4 5; do
+            rm -rf ledger && mkdir ledger && cd ledger
+            git init -q
+            git remote add origin "$REPO_URL"
+            if git fetch -q --depth 1 origin "$BRANCH"; then
+              git checkout -q -b "$BRANCH" FETCH_HEAD
+            else
+              git checkout -q --orphan "$BRANCH"
+            fi
+            cat ../new-known-good.jsonl >> known-good.jsonl
+            # latest-known-good.txt = the SHA the promotion picker defaults to.
+            tail -n 1 known-good.jsonl | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(JSON.parse(s).sha+"\n"))' > latest-known-good.txt
+            git add -A
+            git commit -q -m "release: known-good ${DEPLOYED_SHA:0:12} (e2e smoke passed, run ${GITHUB_RUN_ID})"
+            if git push -q origin "$BRANCH"; then
+              echo "Stamped known-good on $BRANCH (attempt $attempt)."
+              cd ..
+              exit 0
+            fi
+            echo "Push rejected (attempt $attempt) — concurrent update; retrying."
+            cd ..
+          done
+          echo "Failed to stamp known-good after retries." >&2
+          exit 1
+
+      - name: Link in job summary
+        if: always()
+        run: |
+          {
+            echo "## E2E trend history"
+            echo "Dashboard: browse the [\`e2e-history\`](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/tree/e2e-history) branch (README renders the charts)."
+            echo "Raw feed: \`runs.jsonl\` on that branch."
+            echo ""
+            echo "## Known-good release ledger"
+            echo "Promotable builds: [\`releases-ledger\`](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/tree/releases-ledger) (\`known-good.jsonl\`; \`latest-known-good.txt\` is the picker default)."
+          } >> "$GITHUB_STEP_SUMMARY"

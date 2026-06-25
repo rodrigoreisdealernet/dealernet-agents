@@ -1,0 +1,126 @@
+{{- if and .Values.observability.enabled .Values.observability.prometheusRule.enabled -}}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "app.fullname" . }}-wynne-alerts
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    {{- with .Values.observability.prometheusRule.additionalLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  groups:
+    - name: wynne.temporal-worker
+      interval: 60s
+      rules:
+        # Worker is unreachable — Prometheus has seen no scrape in the last 5 minutes.
+        - alert: TemporalWorkerDown
+          expr: absent(up{job="{{ include "app.temporalWorkerMetrics.fullname" . }}"} == 1)
+          for: 5m
+          labels:
+            severity: critical
+            component: temporal-worker
+            fingerprint_prefix: "temporal-worker-down"
+          annotations:
+            summary: "Temporal worker is down"
+            description: >-
+              The Prometheus scrape target for the Temporal worker
+              ({{ include "app.temporalWorkerMetrics.fullname" . }}) has been absent for 5 minutes.
+              Workflows will stall and no new activities will execute.
+            runbook_url: "https://github.com/Volaris-AI/wynne-lvl-3/blob/main/OPERATIONS.md"
+
+        # Sustained workflow failure rate — more than 5% of completions are failures.
+        - alert: TemporalWorkflowFailureSpike
+          expr: >-
+            rate(temporal_workflow_failed_total[5m])
+            /
+            (rate(temporal_workflow_completed_total[5m]) + rate(temporal_workflow_failed_total[5m]) + 1e-9)
+            > 0.05
+          for: 10m
+          labels:
+            severity: warning
+            component: temporal-worker
+            fingerprint_prefix: "temporal-workflow-failure-spike"
+          annotations:
+            summary: "Temporal workflow failure rate above 5%"
+            description: >-
+              More than 5% of Temporal workflow completions are failures over the last 5 minutes.
+              Investigate the failing workflows in the Temporal Web UI.
+            runbook_url: "https://github.com/Volaris-AI/wynne-lvl-3/blob/main/OPERATIONS.md"
+
+        # Task-queue backlog — pollers are idle while schedule-to-start latency spikes.
+        - alert: TemporalTaskQueueBacklog
+          expr: >-
+            temporal_schedule_to_start_latency_seconds{quantile="0.95"} > 30
+          for: 5m
+          labels:
+            severity: warning
+            component: temporal-worker
+            fingerprint_prefix: "temporal-task-queue-backlog"
+          annotations:
+            summary: "Temporal task-queue schedule-to-start latency > 30s (p95)"
+            description: >-
+              The 95th percentile schedule-to-start latency exceeds 30 seconds. This indicates
+              a task-queue backlog: work is queued but workers are not picking it up fast enough.
+              Check worker health and consider scaling up replicas.
+            runbook_url: "https://github.com/Volaris-AI/wynne-lvl-3/blob/main/OPERATIONS.md"
+
+    - name: wynne.ops-api
+      interval: 60s
+      rules:
+        # Ops-API health check failures — 5xx rate above 1%.
+        - alert: OpsApiHighErrorRate
+          expr: >-
+            rate(ops_api_http_requests_total{status_code=~"5.."}[5m])
+            /
+            (rate(ops_api_http_requests_total[5m]) + 1e-9)
+            > 0.01
+          for: 5m
+          labels:
+            severity: warning
+            component: ops-api
+            fingerprint_prefix: "ops-api-high-error-rate"
+          annotations:
+            summary: "Ops-API 5xx error rate above 1%"
+            description: >-
+              The ops-api is returning HTTP 5xx responses for more than 1% of requests
+              over the last 5 minutes. This may indicate Temporal connectivity issues or
+              an unhandled exception.
+            runbook_url: "https://github.com/Volaris-AI/wynne-lvl-3/blob/main/OPERATIONS.md"
+
+        # Ops-API is not responding to scrapes.
+        - alert: OpsApiDown
+          expr: absent(up{job="{{ include "app.opsApi.fullname" . }}"} == 1)
+          for: 5m
+          labels:
+            severity: critical
+            component: ops-api
+            fingerprint_prefix: "ops-api-down"
+          annotations:
+            summary: "Ops-API is down"
+            description: >-
+              The Prometheus scrape target for the ops-api
+              ({{ include "app.opsApi.fullname" . }}) has been absent for 5 minutes.
+              Workflow approvals and asset-update signals are unavailable.
+            runbook_url: "https://github.com/Volaris-AI/wynne-lvl-3/blob/main/OPERATIONS.md"
+
+    - name: wynne.ops-approval-sla
+      interval: 300s
+      rules:
+        # Schedule-miss — no successful revrec schedule seen in the last 25 hours (1 day + buffer).
+        - alert: OpsRevRecScheduleMiss
+          expr: >-
+            time() - temporal_schedule_last_processed_time{schedule_id=~"ops:.*:revrec-analyst"} > 90000
+          for: 0m
+          labels:
+            severity: warning
+            component: temporal-worker
+            fingerprint_prefix: "ops-revrec-schedule-miss"
+          annotations:
+            summary: "Ops RevRec schedule has not processed in 25 hours"
+            description: >-
+              The RevRec ops workflow schedule has not processed for more than 25 hours.
+              Expected cadence is daily (0 2 * * *). Investigate Temporal schedules in the
+              Temporal Web UI and check worker health.
+            runbook_url: "https://github.com/Volaris-AI/wynne-lvl-3/blob/main/OPERATIONS.md"
+{{- end }}

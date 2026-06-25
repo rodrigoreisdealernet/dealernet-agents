@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#305f79"/>
+      <stop offset="100%" stop-color="#1a3c52"/>
+    </linearGradient>
+  </defs>
+  <rect width="480" height="320" fill="url(#bg)"/>
+  <rect x="88" y="126" width="304" height="122" rx="16" fill="#102a3b"/>
+  <path d="M134 212l70-70 24 24-70 70z" fill="#f3b11d"/>
+  <path d="M260 148h96v68h-96z" fill="#1f4258"/>
+  <path d="M272 196l24-30 18 20 14-18 16 28z" fill="#9bd4ff"/>
+  <text x="30" y="44" fill="#e8f7ff" font-size="30" font-family="Inter, Arial, sans-serif" font-weight="700">Worksite Attachments</text>
+</svg>

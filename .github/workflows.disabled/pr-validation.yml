@@ -1,0 +1,1483 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: pr-validation-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  # Cancel stale runs on PRs so a new push always advances to the current
+  # head SHA instead of queuing behind an older run that can never finish.
+  # Push-to-main runs are NOT cancelled (expression evaluates to false for
+  # non-PR events), preserving trunk validation coverage.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  shared-tools:
+    name: Shared tools regression suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: .github/tools/shared/package-lock.json
+
+      - name: Install shared runtime deps
+        run: npm ci
+        working-directory: .github/tools/shared
+
+      - name: Run shared Vitest regression suite
+        run: npm test
+        working-directory: .github/tools/shared
+
+  frontend:
+    name: Frontend lint & build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+        working-directory: frontend
+
+      - name: Lint
+        run: npm run lint
+        working-directory: frontend
+
+      - name: Build
+        run: npm run build
+        working-directory: frontend
+
+      # Run the unit suite with the JSON reporter so the result can be charted on the
+      # ci-history branch. A red suite MUST fail CI — we no longer swallow failures into
+      # a "skipped" message (that hid breakage the same way #57/#58 did for Temporal).
+      # We only genuinely skip when there is no `test` script at all (template portability).
+      - name: Unit tests (vitest, JSON report for trend history)
+        working-directory: frontend
+        run: |
+          if [ -z "$(node -p "require('./package.json').scripts.test || ''" 2>/dev/null)" ]; then
+            echo "## ℹ️ Frontend tests skipped — no test script configured" >> "$GITHUB_STEP_SUMMARY"
+          else
+            npx vitest run --reporter=default --reporter=json --outputFile=vitest-results.json
+          fi
+
+      - name: Upload unit results (trend history)
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: unit-results
+          path: frontend/vitest-results.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+  coverage:
+    name: Coverage (non-gating)
+    # Informational telemetry for the ci-history `coverage` trend (unit code coverage +
+    # e2e screens/journeys). NEVER gates: kept out of the gating `frontend` job because
+    # coverage instrumentation slows tests enough to tip borderline timeouts. Recorded
+    # only on push-to-main (matching publish-test-history), so it doesn't burn PR minutes.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install
+        run: npm ci
+        working-directory: frontend
+      - name: Unit coverage (vitest v8 — best-effort, never fails the job)
+        working-directory: frontend
+        run: npx vitest run --coverage --test-timeout=30000 || true
+      - name: Compute coverage (unit + e2e screens/journeys)
+        run: |
+          node .github/scripts/coverage-compute.mjs \
+            --frontend frontend \
+            --unit-coverage frontend/coverage/coverage-summary.json \
+            > coverage-results.json || echo '{}' > coverage-results.json
+          cat coverage-results.json
+      - name: Upload coverage results (trend history)
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: coverage-results
+          path: coverage-results.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+  static-analysis:
+    name: Static analysis (report-only)
+    # REPORT-ONLY for now — fast PR feedback, never blocks a merge. Each check is
+    # continue-on-error and its count is summarised. Promote a check to GATING (own job,
+    # no continue-on-error) only once its count is at 0 and stable — see qa-targets.json.
+    # The authoritative recorded metric comes from the nightly code-quality.yml run.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
+
+      - name: TypeScript — tsc --noEmit (tsc -b)
+        id: tsc
+        continue-on-error: true
+        working-directory: frontend
+        run: |
+          npx tsc -b 2>&1 | tee ../tsc.txt || true
+          echo "count=$(grep -cE 'error TS[0-9]+' ../tsc.txt || echo 0)" >> "$GITHUB_OUTPUT"
+
+      - name: Ruff (Python lint)
+        id: ruff
+        continue-on-error: true
+        run: |
+          pip install ruff==0.8.4 >/dev/null 2>&1 || pipx install ruff==0.8.4 || true
+          ruff check temporal --output-format concise 2>&1 | tee ruff.txt || true
+          echo "count=$(grep -cE '^[^ ].*:[0-9]+:[0-9]+:' ruff.txt || echo 0)" >> "$GITHUB_OUTPUT"
+
+      - name: ShellCheck (preinstalled on runner)
+        id: shellcheck
+        continue-on-error: true
+        run: |
+          mapfile -t files < <(git ls-files '*.sh')
+          if [ "${#files[@]}" -gt 0 ]; then
+            shellcheck -S warning "${files[@]}" 2>&1 | tee shellcheck.txt || true
+          else
+            : > shellcheck.txt
+          fi
+          echo "count=$(grep -cE '^In .* line [0-9]+:' shellcheck.txt || echo 0)" >> "$GITHUB_OUTPUT"
+
+      - name: Hadolint (Dockerfiles)
+        id: hadolint
+        continue-on-error: true
+        run: |
+          docker run --rm -i hadolint/hadolint hadolint - < frontend/Dockerfile > hadolint.txt 2>&1 || true
+          echo "count=$(grep -cE 'DL[0-9]+|SC[0-9]+' hadolint.txt || echo 0)" >> "$GITHUB_OUTPUT"
+
+      - name: Gitleaks (secret scan — binary, no action license needed)
+        id: gitleaks
+        continue-on-error: true
+        run: |
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest \
+            detect --source=/repo --no-banner --report-format json --report-path /repo/gitleaks.json 2>&1 || true
+          echo "count=$(node -e "try{console.log(JSON.parse(require('fs').readFileSync('gitleaks.json','utf8')).length)}catch{console.log(0)}")" >> "$GITHUB_OUTPUT"
+
+      - name: Summarise (report-only — not a gate)
+        if: always()
+        run: |
+          {
+            echo "## Static analysis (report-only — does not block merge)"
+            echo "| Check | Findings |"
+            echo "|---|--:|"
+            echo "| tsc --noEmit | ${{ steps.tsc.outputs.count }} |"
+            echo "| ruff | ${{ steps.ruff.outputs.count }} |"
+            echo "| shellcheck | ${{ steps.shellcheck.outputs.count }} |"
+            echo "| hadolint | ${{ steps.hadolint.outputs.count }} |"
+            echo "| gitleaks (secrets) | ${{ steps.gitleaks.outputs.count }} |"
+            echo ""
+            echo "_Authoritative recorded metric: nightly **Code quality** workflow → \`ci-history\` \`quality\` record._"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  temporal:
+    name: Temporal worker tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # Need history to diff the PR against its base for path scoping below.
+          fetch-depth: 0
+
+      # Temporal worker tests are only required for Temporal-surface changes.
+      # Supabase-only PRs are covered by dedicated reset-path jobs in this workflow;
+      # running the full Temporal suite there is duplicate coverage and the longest
+      # shared-runner pole.
+      - name: Scope reset/smoke validations to DB-surface changes
+        id: scope
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base='${{ github.event.pull_request.base.sha }}'
+            head='${{ github.event.pull_request.head.sha }}'
+            db_surface_pattern='^(supabase/|temporal/tests/|temporal/pyproject\.toml|\.github/workflows/pr-validation\.yml)'
+            temporal_surface_pattern='^(temporal/|\.github/workflows/pr-validation\.yml$)'
+            # Do NOT suppress errors: if the diff cannot be computed the step must
+            # fail loudly rather than silently defaulting to skip_reset=1 and
+            # dropping coverage for a DB-touching PR.
+            # Use three-dot (merge-base) syntax so only commits introduced by THIS
+            # PR are evaluated — not unrelated commits already on main that happen
+            # to touch supabase/, temporal/tests/, temporal/pyproject.toml, or
+            # .github/workflows/pr-validation.yml.
+            changed="$(git diff --name-only "$base...$head")"
+            if [ -z "$changed" ]; then
+              # For no-delta PRs (this branch introduces no file changes against
+              # base), skip the Temporal suite entirely so required checks do not
+              # sit in-progress running unchanged coverage.
+              echo "skip_reset=0" >> "$GITHUB_OUTPUT"
+              echo "skip_temporal_suite=1" >> "$GITHUB_OUTPUT"
+              echo "Temporal suite: SKIPPED (PR introduces no file changes)." >> "$GITHUB_STEP_SUMMARY"
+            elif printf '%s\n' "$changed" | grep -qE "$temporal_surface_pattern"; then
+              echo "skip_temporal_suite=0" >> "$GITHUB_OUTPUT"
+              if printf '%s\n' "$changed" | grep -qE "$db_surface_pattern"; then
+                echo "skip_reset=0" >> "$GITHUB_OUTPUT"
+                echo "Reset/smoke validations: RUN (PR touches supabase/, temporal/tests/, temporal/pyproject.toml, or .github/workflows/pr-validation.yml)." >> "$GITHUB_STEP_SUMMARY"
+              else
+                echo "skip_reset=1" >> "$GITHUB_OUTPUT"
+                echo "Reset/smoke validations: SKIPPED (PR touches temporal code but not supabase/, temporal/tests/, temporal/pyproject.toml, or .github/workflows/pr-validation.yml)." >> "$GITHUB_STEP_SUMMARY"
+              fi
+            elif printf '%s\n' "$changed" | grep -qE "$db_surface_pattern"; then
+              echo "skip_reset=0" >> "$GITHUB_OUTPUT"
+              echo "skip_temporal_suite=1" >> "$GITHUB_OUTPUT"
+              echo "Temporal suite: SKIPPED (PR touches DB surfaces only; dedicated Supabase reset-path jobs provide coverage)." >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "skip_reset=1" >> "$GITHUB_OUTPUT"
+              echo "skip_temporal_suite=1" >> "$GITHUB_OUTPUT"
+              echo "Temporal suite: SKIPPED (PR touches neither temporal/ nor .github/workflows/pr-validation.yml)." >> "$GITHUB_STEP_SUMMARY"
+            fi
+          else
+            # push to main (post-merge trunk validation): always run the full suite.
+            echo "skip_reset=0" >> "$GITHUB_OUTPUT"
+            echo "skip_temporal_suite=0" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          # Authenticate the "resolve latest release" API call. Without this the
+          # action hits the unauthenticated GitHub API limit (60/hr/IP), which
+          # shared CI runners exhaust under high PR volume — failing the install
+          # with "Failed to resolve latest Supabase CLI release: rate limit
+          # exceeded" and reddening main. A token raises the limit to 1000/hr.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install
+        run: pip install -e ".[dev]"
+        working-directory: temporal
+
+      - name: Test Temporal suite
+        # Skip ONLY when there are genuinely no tests (template portability).
+        # When tests exist, a red suite MUST fail CI — the previous
+        # `2>/dev/null || skipped` hack hid a broken `main` (see #57/#58).
+        # --json-report emits temporal/pytest-report.json for the ci-history trend.
+        run: |
+          set -euo pipefail
+          pytest_timeout_minutes=70
+          timeout_budget="${pytest_timeout_minutes}m"
+          heartbeat_interval_seconds=120
+          log_path="temporal/pytest-output.log"
+          diagnostics_path="temporal/pytest-diagnostics.txt"
+          heartbeat_path="temporal/pytest-heartbeat.log"
+
+          if [ "${SKIP_TEMPORAL_SUITE:-0}" = "1" ]; then
+            echo "## ℹ️ Temporal tests skipped by scope gate" >> "$GITHUB_STEP_SUMMARY"
+          elif [ -z "$(find temporal/tests -name 'test_*.py' -print -quit 2>/dev/null)" ]; then
+            echo "## ℹ️ Temporal tests skipped — no test files present" >> "$GITHUB_STEP_SUMMARY"
+          else
+            # Fail fast before the job-level timeout so we can emit diagnostics
+            # and upload artifacts instead of leaving a wedged lane with no signal.
+            start_epoch="$(date +%s)"
+            : > "$heartbeat_path"
+            set +e
+            timeout --signal=SIGINT --kill-after=60s "$timeout_budget" \
+              bash -o pipefail -c '
+                python -X faulthandler -m pytest temporal/tests -v \
+                  --json-report --json-report-file=temporal/pytest-report.json \
+                  2>&1 | tee "$1"
+              ' _ "$log_path" &
+            pytest_pid=$!
+
+            (
+              while kill -0 "$pytest_pid" >/dev/null 2>&1; do
+                now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                elapsed="$(( $(date +%s) - start_epoch ))"
+                echo "[${now}] Temporal suite in progress (elapsed ${elapsed}s / timeout ${pytest_timeout_minutes}m)." | tee -a "$heartbeat_path"
+                sleep "$heartbeat_interval_seconds"
+              done
+            ) &
+            heartbeat_pid=$!
+
+            wait "$pytest_pid"
+            status=$?
+            kill "$heartbeat_pid" >/dev/null 2>&1 || true
+            wait "$heartbeat_pid" 2>/dev/null || true
+            set -e
+            if [ "$status" -eq 0 ]; then
+              :
+            else
+              {
+                echo "Temporal pytest exit status: $status"
+                echo "UTC timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                echo
+                echo "==== docker ps -a ===="
+                docker ps -a || true
+                echo
+                echo "==== docker stats --no-stream ===="
+                docker stats --no-stream || true
+                echo
+                echo "==== ps (python/pytest/supabase/docker) ===="
+                ps -eo pid,ppid,etimes,pcpu,pmem,command | grep -E 'python|pytest|supabase|docker' | grep -v grep || true
+                echo
+                echo "==== tail: temporal/pytest-output.log ===="
+                tail -n 200 "$log_path" || true
+                echo
+                echo "==== tail: temporal/pytest-heartbeat.log ===="
+                tail -n 200 "$heartbeat_path" || true
+              } > "$diagnostics_path"
+
+              # GNU timeout returns exit code 124 when the command times out.
+              if [ "$status" -eq 124 ]; then
+                echo "## ❌ Temporal test suite timed out after ${pytest_timeout_minutes} minutes (fail-fast guard)." >> "$GITHUB_STEP_SUMMARY"
+              else
+                echo "## ❌ Temporal test suite failed (exit status $status)." >> "$GITHUB_STEP_SUMMARY"
+              fi
+              echo "Saved diagnostics: $diagnostics_path" >> "$GITHUB_STEP_SUMMARY"
+              exit "$status"
+            fi
+          fi
+        env:
+          REQUIRE_SUPABASE_RESET_VALIDATION: '1'
+          # When the PR touches neither supabase/ nor temporal/tests/ nor
+          # temporal/pyproject.toml nor .github/workflows/pr-validation.yml, the
+          # conftest collection hook deselects the heavy reset/smoke validations.
+          SKIP_SUPABASE_RESET_VALIDATION: ${{ steps.scope.outputs.skip_reset }}
+          SKIP_TEMPORAL_SUITE: ${{ steps.scope.outputs.skip_temporal_suite }}
+
+      - name: Upload temporal results (trend history)
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: temporal-results
+          path: |
+            temporal/pytest-report.json
+            temporal/pytest-output.log
+            temporal/pytest-heartbeat.log
+            temporal/pytest-diagnostics.txt
+          if-no-files-found: ignore
+          retention-days: 7
+
+  helm-charts:
+    name: Helm chart lint & profile tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Validate mirrored Temporal UI image in ACR
+        env:
+          REGISTRY: ${{ vars.ACR_LOGIN_SERVER }}
+          REGISTRY_USERNAME: ${{ secrets.ACR_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+        run: bash ./.github/scripts/temporal-ui-image.sh validate
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: 'latest'
+
+      - name: Lint and render app chart profiles
+        env:
+          # Tells ci-test.sh to drop a machine-readable summary for the ci-history trend.
+          CI_HISTORY_JSON: ${{ github.workspace }}/helm-results.json
+        run: bash charts/app/ci-test.sh
+
+      - name: Lint and render monitoring chart profiles
+        run: bash charts/monitoring/ci-test.sh
+
+      - name: Lint and render observability chart profiles
+        run: bash charts/observability/ci-test.sh
+
+      - name: Validate OpenBao deploy surface (ADR-0040)
+        run: bash deploy/openbao/ci-test.sh
+
+      - name: Frontend entrypoint runtime-contract tests
+        run: bash frontend/docker/test-entrypoint.sh
+
+      - name: Upload helm results (trend history)
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: helm-results
+          path: helm-results.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+  supabase-seed:
+    name: Supabase demo-baseline seed
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run demo baseline seed validation
+        id: seed
+        run: bash supabase/tests/run_demo_baseline_seed.sh
+
+      - name: Record seed outcome (trend history)
+        if: always()
+        run: |
+          out=passed
+          [ "${{ steps.seed.outcome }}" = "success" ] || out=failed
+          printf '{"outcome":"%s"}\n' "$out" > seed-results.json
+
+      - name: Upload seed results (trend history)
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: seed-results
+          path: seed-results.json
+          if-no-files-found: ignore
+          retention-days: 7
+  supabase-rpc-guards:
+    name: Supabase direct-DB write-RPC guard contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run direct-DB write-RPC guard contract tests
+        run: bash supabase/tests/run_direct_db_write_rpc_guards.sh
+
+  supabase-seed-bootstrap-role-context:
+    name: Supabase seed DO-block write-RPC role-context contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run seed bootstrap role-context contract tests
+        run: bash supabase/tests/run_seed_bootstrap_role_context.sh
+
+  supabase-seed-bootstrap-role-context-reset:
+    name: Supabase seed DO-block write-RPC role-context reset-path validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run seed bootstrap role-context reset-path validation
+        run: bash supabase/tests/run_seed_bootstrap_role_context_reset.sh
+
+  supabase-seed-demo-users:
+    name: Supabase seed-demo-users integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run seed-demo-users integration tests
+        run: bash supabase/tests/run_seed_demo_users.sh
+
+  supabase-storefront-availability:
+    name: Supabase storefront availability + quote RLS contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run storefront availability + quote RLS behavioral tests
+        run: bash supabase/tests/run_storefront_availability_quote.sh
+
+  supabase-crm-customer-profile:
+    name: Supabase CRM customer profile model tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run CRM customer profile model tests
+        run: bash supabase/tests/run_crm_customer_profile.sh
+
+  supabase-crm-customer-profile-reset:
+    name: Supabase CRM customer profile reset-path validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          # Authenticate the "resolve latest release" API call. Without this the
+          # action hits the unauthenticated GitHub API limit (60/hr/IP), which
+          # shared CI runners exhaust under high PR volume — failing the install
+          # with "Failed to resolve latest Supabase CLI release: rate limit
+          # exceeded" and reddening main. A token raises the limit to 1000/hr.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run CRM customer profile reset-path validation
+        run: bash supabase/tests/run_crm_customer_profile_reset.sh
+
+  supabase-portal-catalog-requisition-reset:
+    name: Supabase portal catalog requisition reset-path validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          # Authenticate the "resolve latest release" API call. Without this the
+          # action hits the unauthenticated GitHub API limit (60/hr/IP), which
+          # shared CI runners exhaust under high PR volume — failing the install
+          # with "Failed to resolve latest Supabase CLI release: rate limit
+          # exceeded" and reddening main. A token raises the limit to 1000/hr.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run portal catalog requisition reset-path validation
+        run: bash supabase/tests/run_portal_catalog_requisition_reset.sh
+
+  supabase-crm-intake-scope-tokens-reset:
+    name: Supabase CRM intake scope tokens reset-path validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          # Authenticate the "resolve latest release" API call. Without this the
+          # action hits the unauthenticated GitHub API limit (60/hr/IP), which
+          # shared CI runners exhaust under high PR volume — failing the install
+          # with "Failed to resolve latest Supabase CLI release: rate limit
+          # exceeded" and reddening main. A token raises the limit to 1000/hr.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run CRM intake scope tokens reset-path validation
+        run: bash supabase/tests/run_crm_intake_scope_tokens_reset.sh
+
+  supabase-maintenance-analytics-reset:
+    name: Supabase maintenance service-history analytics reset-path validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          # Authenticate the "resolve latest release" API call. Without this the
+          # action hits the unauthenticated GitHub API limit (60/hr/IP), which
+          # shared CI runners exhaust under high PR volume — failing the install
+          # with "Failed to resolve latest Supabase CLI release: rate limit
+          # exceeded" and reddening main. A token raises the limit to 1000/hr.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run maintenance analytics reset-path validation
+        run: bash supabase/tests/run_maintenance_service_history_analytics_reset.sh
+
+  supabase-quote-fee-engine-reset:
+    name: Supabase quote fee engine + tax presets reset-path validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          # Authenticate the "resolve latest release" API call. Without this the
+          # action hits the unauthenticated GitHub API limit (60/hr/IP), which
+          # shared CI runners exhaust under high PR volume — failing the install
+          # with "Failed to resolve latest Supabase CLI release: rate limit
+          # exceeded" and reddening main. A token raises the limit to 1000/hr.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run quote fee engine + tax presets reset-path validation
+        run: bash supabase/tests/run_quote_fee_engine_reset.sh
+
+  supabase-fleet-availability-calendar-reset:
+    name: Supabase fleet availability calendar reset-path validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          # Authenticate the "resolve latest release" API call. Without this the
+          # action hits the unauthenticated GitHub API limit (60/hr/IP), which
+          # shared CI runners exhaust under high PR volume — failing the install
+          # with "Failed to resolve latest Supabase CLI release: rate limit
+          # exceeded" and reddening main. A token raises the limit to 1000/hr.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run fleet availability calendar reset-path validation
+        run: bash supabase/tests/run_fleet_availability_calendar_reset.sh
+
+  supabase-fleet-idle-rebalancing-reset:
+    name: Supabase fleet idle-rebalancing reset-path validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          # Authenticate the "resolve latest release" API call. Without this the
+          # action hits the unauthenticated GitHub API limit (60/hr/IP), which
+          # shared CI runners exhaust under high PR volume — failing the install
+          # with "Failed to resolve latest Supabase CLI release: rate limit
+          # exceeded" and reddening main. A token raises the limit to 1000/hr.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run fleet idle-rebalancing reset-path validation
+        run: bash supabase/tests/run_fleet_idle_rebalancing_reset.sh
+
+  supabase-inventory-item-type-reset:
+    name: Supabase inventory item-type model reset-path validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          # Authenticate the "resolve latest release" API call. Without this the
+          # action hits the unauthenticated GitHub API limit (60/hr/IP), which
+          # shared CI runners exhaust under high PR volume — failing the install
+          # with "Failed to resolve latest Supabase CLI release: rate limit
+          # exceeded" and reddening main. A token raises the limit to 1000/hr.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run inventory item-type model reset-path validation
+        run: bash supabase/tests/run_inventory_item_type_model_reset.sh
+
+  supabase-procurement-vendor-master-reset:
+    name: Supabase procurement vendor master reset-path validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          # Authenticate the "resolve latest release" API call. Without this the
+          # action hits the unauthenticated GitHub API limit (60/hr/IP), which
+          # shared CI runners exhaust under high PR volume — failing the install
+          # with "Failed to resolve latest Supabase CLI release: rate limit
+          # exceeded" and reddening main. A token raises the limit to 1000/hr.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run procurement vendor master reset-path validation
+        run: bash supabase/tests/run_procurement_vendor_master_controls_reset.sh
+
+  supabase-coupa-observability-reconciliation-reset:
+    name: Supabase Coupa observability + reconciliation reset-path validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          # Authenticate the "resolve latest release" API call. Without this the
+          # action hits the unauthenticated GitHub API limit (60/hr/IP), which
+          # shared CI runners exhaust under high PR volume — failing the install
+          # with "Failed to resolve latest Supabase CLI release: rate limit
+          # exceeded" and reddening main. A token raises the limit to 1000/hr.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run Coupa observability + reconciliation reset-path validation
+        run: bash supabase/tests/run_coupa_observability_reconciliation.sh
+
+  supabase-coupa-integration-config-reset:
+    name: Supabase Coupa integration config reset-path validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          # Authenticate the "resolve latest release" API call. Without this the
+          # action hits the unauthenticated GitHub API limit (60/hr/IP), which
+          # shared CI runners exhaust under high PR volume — failing the install
+          # with "Failed to resolve latest Supabase CLI release: rate limit
+          # exceeded" and reddening main. A token raises the limit to 1000/hr.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run Coupa integration config reset-path validation
+        run: bash supabase/tests/run_coupa_integration_config_reset.sh
+
+  supabase-sage-observability-reconciliation:
+    name: Supabase Sage observability + reconciliation smoke tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run Sage observability + reconciliation smoke tests
+        run: bash supabase/tests/run_sage_observability_reconciliation.sh
+
+  supabase-sage-observability-reconciliation-reset:
+    name: Supabase Sage observability + reconciliation reset-path validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          # Authenticate the "resolve latest release" API call. Without this the
+          # action hits the unauthenticated GitHub API limit (60/hr/IP), which
+          # shared CI runners exhaust under high PR volume — failing the install
+          # with "Failed to resolve latest Supabase CLI release: rate limit
+          # exceeded" and reddening main. A token raises the limit to 1000/hr.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run Sage observability + reconciliation reset-path validation
+        run: bash supabase/tests/run_sage_observability_reconciliation_reset.sh
+
+  supabase-samsara-observability-reconciliation-reset:
+    name: Supabase Samsara observability + reconciliation reset-path validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          # Authenticate the "resolve latest release" API call. Without this the
+          # action hits the unauthenticated GitHub API limit (60/hr/IP), which
+          # shared CI runners exhaust under high PR volume — failing the install
+          # with "Failed to resolve latest Supabase CLI release: rate limit
+          # exceeded" and reddening main. A token raises the limit to 1000/hr.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run Samsara observability + reconciliation reset-path validation
+        run: bash supabase/tests/run_samsara_observability_reconciliation_reset.sh
+
+  supabase-netsuite-entity-mapping-sync-contract-reset:
+    name: Supabase NetSuite entity mapping sync contract reset-path validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          # Authenticate the "resolve latest release" API call. Without this the
+          # action hits the unauthenticated GitHub API limit (60/hr/IP), which
+          # shared CI runners exhaust under high PR volume — failing the install
+          # with "Failed to resolve latest Supabase CLI release: rate limit
+          # exceeded" and reddening main. A token raises the limit to 1000/hr.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run NetSuite entity mapping sync contract reset-path validation
+        run: bash supabase/tests/run_netsuite_entity_mapping_sync_contract_reset.sh
+
+  supabase-netsuite-observability-reconciliation:
+    name: Supabase NetSuite observability + reconciliation smoke tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run NetSuite observability + reconciliation smoke tests
+        run: bash supabase/tests/run_netsuite_observability_reconciliation.sh
+
+  supabase-netsuite-observability-reconciliation-reset:
+    name: Supabase NetSuite observability + reconciliation reset-path validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          # Authenticate the "resolve latest release" API call. Without this the
+          # action hits the unauthenticated GitHub API limit (60/hr/IP), which
+          # shared CI runners exhaust under high PR volume — failing the install
+          # with "Failed to resolve latest Supabase CLI release: rate limit
+          # exceeded" and reddening main. A token raises the limit to 1000/hr.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run NetSuite observability + reconciliation reset-path validation
+        run: bash supabase/tests/run_netsuite_observability_reconciliation_reset.sh
+
+  supabase-inventory-rate-structures-reset:
+    name: Supabase inventory rate structures reset-path validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          # Authenticate the "resolve latest release" API call. Without this the
+          # action hits the unauthenticated GitHub API limit (60/hr/IP), which
+          # shared CI runners exhaust under high PR volume — failing the install
+          # with "Failed to resolve latest Supabase CLI release: rate limit
+          # exceeded" and reddening main. A token raises the limit to 1000/hr.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run inventory rate structures reset-path validation
+        run: bash supabase/tests/run_inventory_rate_structures_reset.sh
+
+  supabase-project-compliance-readiness-reset:
+    name: Supabase project compliance readiness tracking reset-path validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          # Authenticate the "resolve latest release" API call. Without this the
+          # action hits the unauthenticated GitHub API limit (60/hr/IP), which
+          # shared CI runners exhaust under high PR volume — failing the install
+          # with "Failed to resolve latest Supabase CLI release: rate limit
+          # exceeded" and reddening main. A token raises the limit to 1000/hr.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run project compliance readiness tracking reset-path validation
+        run: bash supabase/tests/run_project_compliance_readiness_tracking_reset.sh
+
+  supabase-rapidcount-count-capture-reset:
+    name: Supabase RapidCount count-capture reset-path validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          # Authenticate the "resolve latest release" API call. Without this the
+          # action hits the unauthenticated GitHub API limit (60/hr/IP), which
+          # shared CI runners exhaust under high PR volume — failing the install
+          # with "Failed to resolve latest Supabase CLI release: rate limit
+          # exceeded" and reddening main. A token raises the limit to 1000/hr.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run RapidCount count-capture reset-path validation
+        run: bash supabase/tests/run_rapidcount_count_capture_reset.sh
+
+  supabase-ops-audit-trail-view-rls:
+    name: Supabase ops_audit_trail_view RLS + security-invoker behavioral tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run ops_audit_trail_view RLS behavioral tests
+        run: bash supabase/tests/run_ops_audit_trail_view_rls.sh
+
+  supabase-equipment-type-cost-ownership-reset:
+    name: Supabase equipment-type cost-of-ownership reset-path validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          # Authenticate the "resolve latest release" API call. Without this the
+          # action hits the unauthenticated GitHub API limit (60/hr/IP), which
+          # shared CI runners exhaust under high PR volume — failing the install
+          # with "Failed to resolve latest Supabase CLI release: rate limit
+          # exceeded" and reddening main. A token raises the limit to 1000/hr.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run equipment-type cost-of-ownership reset-path validation
+        run: bash supabase/tests/run_equipment_type_cost_ownership_reset.sh
+
+  supabase-project-hierarchy-mixed-fleet-reset:
+    name: Supabase project hierarchy + mixed-fleet allocation reset-path validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          # Authenticate the "resolve latest release" API call. Without this the
+          # action hits the unauthenticated GitHub API limit (60/hr/IP), which
+          # shared CI runners exhaust under high PR volume — failing the install
+          # with "Failed to resolve latest Supabase CLI release: rate limit
+          # exceeded" and reddening main. A token raises the limit to 1000/hr.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run project hierarchy + mixed-fleet allocation reset-path validation
+        run: bash supabase/tests/run_project_hierarchy_mixed_fleet_allocation_reset.sh
+
+  supabase-quote-conversion-gate-reset:
+    name: Supabase quote-gate conversion ACL + status-gate reset-path validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # Need history to diff the PR against its base for path scoping below.
+          fetch-depth: 0
+
+      - name: Scope reset validation to DB-surface changes
+        id: scope
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base='${{ github.event.pull_request.base.sha }}'
+            head='${{ github.event.pull_request.head.sha }}'
+            changed="$(git diff --name-only "$base...$head")"
+            if [ -z "$changed" ]; then
+              echo "skip_reset=0" >> "$GITHUB_OUTPUT"
+              echo "Reset validation: RUN (diff returned no changed files; defaulting to full coverage)." >> "$GITHUB_STEP_SUMMARY"
+            elif printf '%s\n' "$changed" | grep -qE '^(supabase/|\.github/workflows/pr-validation\.yml)'; then
+              echo "skip_reset=0" >> "$GITHUB_OUTPUT"
+              echo "Reset validation: RUN (PR touches supabase/ or .github/workflows/pr-validation.yml)." >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "skip_reset=1" >> "$GITHUB_OUTPUT"
+              echo "Reset validation: SKIPPED (PR touches neither supabase/ nor .github/workflows/pr-validation.yml)." >> "$GITHUB_STEP_SUMMARY"
+            fi
+          else
+            # push to main (post-merge trunk validation): always run the full suite.
+            echo "skip_reset=0" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install Supabase CLI
+        if: steps.scope.outputs.skip_reset != '1'
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          # Authenticate the "resolve latest release" API call. Without this the
+          # action hits the unauthenticated GitHub API limit (60/hr/IP), which
+          # shared CI runners exhaust under high PR volume — failing the install
+          # with "Failed to resolve latest Supabase CLI release: rate limit
+          # exceeded" and reddening main. A token raises the limit to 1000/hr.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run quote-gate conversion reset-path validation
+        if: steps.scope.outputs.skip_reset != '1'
+        run: bash supabase/tests/run_quote_conversion_require_quote_gate_reset.sh
+
+  supabase-billing-update-request-reset:
+    name: Supabase billing-update request approval-flow reset-path validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run billing-update request approval-flow reset-path validation
+        run: bash supabase/tests/run_billing_update_request_approval_flow_reset.sh
+
+  supabase-portal-schedule-access-reset:
+    name: Supabase portal schedule public-read + forged-token-denial reset-path validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # Need history to diff the PR against its base for path scoping below.
+          fetch-depth: 0
+
+      - name: Scope reset validation to DB-surface changes
+        id: scope
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base='${{ github.event.pull_request.base.sha }}'
+            head='${{ github.event.pull_request.head.sha }}'
+            changed="$(git diff --name-only "$base...$head")"
+            if [ -z "$changed" ]; then
+              echo "skip_reset=0" >> "$GITHUB_OUTPUT"
+              echo "Reset validation: RUN (diff returned no changed files; defaulting to full coverage)." >> "$GITHUB_STEP_SUMMARY"
+            elif printf '%s\n' "$changed" | grep -qE '^(supabase/|\.github/workflows/pr-validation\.yml)'; then
+              echo "skip_reset=0" >> "$GITHUB_OUTPUT"
+              echo "Reset validation: RUN (PR touches supabase/ or .github/workflows/pr-validation.yml)." >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "skip_reset=1" >> "$GITHUB_OUTPUT"
+              echo "Reset validation: SKIPPED (PR touches neither supabase/ nor .github/workflows/pr-validation.yml)." >> "$GITHUB_STEP_SUMMARY"
+            fi
+          else
+            # push to main (post-merge trunk validation): always run the full suite.
+            echo "skip_reset=0" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install Supabase CLI
+        if: steps.scope.outputs.skip_reset != '1'
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          # Authenticate the "resolve latest release" API call. Without this the
+          # action hits the unauthenticated GitHub API limit (60/hr/IP), which
+          # shared CI runners exhaust under high PR volume — failing the install
+          # with "Failed to resolve latest Supabase CLI release: rate limit
+          # exceeded" and reddening main. A token raises the limit to 1000/hr.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run portal schedule access reset-path validation
+        if: steps.scope.outputs.skip_reset != '1'
+        run: bash supabase/tests/run_portal_schedule_access_reset.sh
+
+  supabase-portal-demo-intake-url-reset:
+    name: Supabase portal intake demo URL reset-path validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # Need history to diff the PR against its base for path scoping below.
+          fetch-depth: 0
+
+      - name: Scope reset validation to DB-surface changes
+        id: scope
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base='${{ github.event.pull_request.base.sha }}'
+            head='${{ github.event.pull_request.head.sha }}'
+            changed="$(git diff --name-only "$base...$head")"
+            if [ -z "$changed" ]; then
+              echo "skip_reset=0" >> "$GITHUB_OUTPUT"
+              echo "Reset validation: RUN (diff returned no changed files; defaulting to full coverage)." >> "$GITHUB_STEP_SUMMARY"
+            elif printf '%s\n' "$changed" | grep -qE '^(supabase/|\.github/workflows/pr-validation\.yml|\.github/workflows/e2e-dev\.yml)'; then
+              echo "skip_reset=0" >> "$GITHUB_OUTPUT"
+              echo "Reset validation: RUN (PR touches supabase/, .github/workflows/pr-validation.yml, or .github/workflows/e2e-dev.yml)." >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "skip_reset=1" >> "$GITHUB_OUTPUT"
+              echo "Reset validation: SKIPPED (PR touches none of supabase/, .github/workflows/pr-validation.yml, or .github/workflows/e2e-dev.yml)." >> "$GITHUB_STEP_SUMMARY"
+            fi
+          else
+            # push to main (post-merge trunk validation): always run the full suite.
+            echo "skip_reset=0" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install Supabase CLI
+        if: steps.scope.outputs.skip_reset != '1'
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          # Authenticate the "resolve latest release" API call. Without this the
+          # action hits the unauthenticated GitHub API limit (60/hr/IP), which
+          # shared CI runners exhaust under high PR volume — failing the install
+          # with "Failed to resolve latest Supabase CLI release: rate limit
+          # exceeded" and reddening main. A token raises the limit to 1000/hr.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run portal intake demo URL reset-path validation
+        if: steps.scope.outputs.skip_reset != '1'
+        run: bash supabase/tests/run_portal_demo_intake_url_reset.sh
+
+  supabase-field-operator-asset-write:
+    name: Supabase field_operator asset-write RLS behavioral tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run field_operator asset-write behavioral tests
+        run: bash supabase/tests/run_field_operator_asset_write.sh
+
+  supabase-inbound-rerental-fleet-sourcing:
+    name: Supabase inbound re-rental fleet sourcing behavioral tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run inbound re-rental fleet sourcing behavioral tests
+        run: bash supabase/tests/run_inbound_rerental_fleet_sourcing.sh
+
+  supabase-external-rental-reporting:
+    name: Supabase external-rental reporting RLS behavioral tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run external-rental reporting behavioral tests
+        run: bash supabase/tests/run_external_rental_reporting.sh
+
+  supabase-shop-morning-queue-rls:
+    name: Supabase shop morning queue RLS + migration reset-path behavioral tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run shop morning queue RLS behavioral tests
+        run: bash supabase/tests/run_shop_morning_queue_rls.sh
+
+  supabase-stop-pod-bundles:
+    name: Supabase stop proof-of-delivery bundle RLS behavioral tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run stop POD bundle behavioral tests
+        run: bash supabase/tests/run_stop_pod_bundles.sh
+
+  supabase-stop-pod-bundles-reset:
+    name: Supabase stop proof-of-delivery bundle reset-path validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          # Authenticate the "resolve latest release" API call. Without this the
+          # action hits the unauthenticated GitHub API limit (60/hr/IP), which
+          # shared CI runners exhaust under high PR volume — failing the install
+          # with "Failed to resolve latest Supabase CLI release: rate limit
+          # exceeded" and reddening main. A token raises the limit to 1000/hr.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run stop POD bundle reset-path validation
+        run: bash supabase/tests/run_stop_pod_bundles_reset.sh
+
+  supabase-delivery-complaint-proof-bundle-reset:
+    name: Supabase delivery complaint proof-bundle reset-path validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          # Authenticate the "resolve latest release" API call. Without this the
+          # action hits the unauthenticated GitHub API limit (60/hr/IP), which
+          # shared CI runners exhaust under high PR volume — failing the install
+          # with "Failed to resolve latest Supabase CLI release: rate limit
+          # exceeded" and reddening main. A token raises the limit to 1000/hr.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run delivery complaint proof-bundle reset-path validation
+        run: bash supabase/tests/run_delivery_complaint_proof_bundle_reset.sh
+
+  supabase-route-exception-thread-bundle-reset:
+    name: Supabase route exception thread + review bundle reset-path validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          # Authenticate the "resolve latest release" API call. Without this the
+          # action hits the unauthenticated GitHub API limit (60/hr/IP), which
+          # shared CI runners exhaust under high PR volume — failing the install
+          # with "Failed to resolve latest Supabase CLI release: rate limit
+          # exceeded" and reddening main. A token raises the limit to 1000/hr.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run route exception thread bundle reset-path assertions
+        run: bash supabase/tests/run_route_exception_thread_bundle_reset.sh
+
+  supabase-portal-financials-asset-category-reset:
+    name: Supabase portal financials asset_category reset-path validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # Need history to diff the PR against its base for path scoping below.
+          fetch-depth: 0
+
+      - name: Scope reset validation to DB-surface changes
+        id: scope
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base='${{ github.event.pull_request.base.sha }}'
+            head='${{ github.event.pull_request.head.sha }}'
+            changed="$(git diff --name-only "$base...$head")"
+            if [ -z "$changed" ]; then
+              echo "skip_reset=0" >> "$GITHUB_OUTPUT"
+              echo "Reset validation: RUN (diff returned no changed files; defaulting to full coverage)." >> "$GITHUB_STEP_SUMMARY"
+            elif printf '%s\n' "$changed" | grep -qE '^(supabase/|\.github/workflows/pr-validation\.yml|\.github/workflows/e2e-dev\.yml)'; then
+              echo "skip_reset=0" >> "$GITHUB_OUTPUT"
+              echo "Reset validation: RUN (PR touches supabase/, .github/workflows/pr-validation.yml, or .github/workflows/e2e-dev.yml)." >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "skip_reset=1" >> "$GITHUB_OUTPUT"
+              echo "Reset validation: SKIPPED (PR touches none of supabase/, .github/workflows/pr-validation.yml, or .github/workflows/e2e-dev.yml)." >> "$GITHUB_STEP_SUMMARY"
+            fi
+          else
+            # push to main (post-merge trunk validation): always run the full suite.
+            echo "skip_reset=0" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install Supabase CLI
+        if: steps.scope.outputs.skip_reset != '1'
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          # Authenticate the "resolve latest release" API call. Without this the
+          # action hits the unauthenticated GitHub API limit (60/hr/IP), which
+          # shared CI runners exhaust under high PR volume — failing the install
+          # with "Failed to resolve latest Supabase CLI release: rate limit
+          # exceeded" and reddening main. A token raises the limit to 1000/hr.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run portal financials asset_category reset-path validation
+        if: steps.scope.outputs.skip_reset != '1'
+        run: bash supabase/tests/run_portal_financials_asset_category_reset.sh
+
+  validation-summary:
+    name: Summary
+    runs-on: ubuntu-latest
+    needs: [shared-tools, frontend, temporal, helm-charts, supabase-seed, supabase-rpc-guards, supabase-seed-bootstrap-role-context, supabase-seed-bootstrap-role-context-reset, supabase-seed-demo-users, supabase-storefront-availability, supabase-crm-customer-profile, supabase-crm-customer-profile-reset, supabase-portal-catalog-requisition-reset, supabase-crm-intake-scope-tokens-reset, supabase-maintenance-analytics-reset, supabase-quote-fee-engine-reset, supabase-fleet-availability-calendar-reset, supabase-fleet-idle-rebalancing-reset, supabase-inventory-item-type-reset, supabase-procurement-vendor-master-reset, supabase-coupa-observability-reconciliation-reset, supabase-coupa-integration-config-reset, supabase-sage-observability-reconciliation, supabase-sage-observability-reconciliation-reset, supabase-samsara-observability-reconciliation-reset, supabase-netsuite-entity-mapping-sync-contract-reset, supabase-netsuite-observability-reconciliation, supabase-netsuite-observability-reconciliation-reset, supabase-inventory-rate-structures-reset, supabase-project-compliance-readiness-reset, supabase-rapidcount-count-capture-reset, supabase-ops-audit-trail-view-rls, supabase-equipment-type-cost-ownership-reset, supabase-project-hierarchy-mixed-fleet-reset, supabase-quote-conversion-gate-reset, supabase-billing-update-request-reset, supabase-portal-schedule-access-reset, supabase-portal-demo-intake-url-reset, supabase-field-operator-asset-write, supabase-inbound-rerental-fleet-sourcing, supabase-external-rental-reporting, supabase-shop-morning-queue-rls, supabase-route-exception-thread-bundle-reset, supabase-stop-pod-bundles, supabase-stop-pod-bundles-reset, supabase-delivery-complaint-proof-bundle-reset, supabase-portal-financials-asset-category-reset]
+    if: always()
+    steps:
+      - name: Report
+        run: |
+          echo "## PR Validation" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Check | Status |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Shared tools regression suite | ${{ needs.shared-tools.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Frontend lint, build & unit tests | ${{ needs.frontend.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Temporal tests | ${{ needs.temporal.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Helm chart profile tests | ${{ needs.helm-charts.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase demo-baseline seed | ${{ needs.supabase-seed.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase direct-DB write-RPC guard contracts | ${{ needs.supabase-rpc-guards.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase seed DO-block write-RPC role-context contracts | ${{ needs.supabase-seed-bootstrap-role-context.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase seed DO-block write-RPC role-context reset-path validation | ${{ needs.supabase-seed-bootstrap-role-context-reset.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase seed-demo-users tests | ${{ needs.supabase-seed-demo-users.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase storefront availability + quote RLS contracts | ${{ needs.supabase-storefront-availability.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase CRM customer profile model tests | ${{ needs.supabase-crm-customer-profile.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase CRM customer profile reset-path validation | ${{ needs.supabase-crm-customer-profile-reset.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase portal catalog requisition reset-path | ${{ needs.supabase-portal-catalog-requisition-reset.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase CRM intake scope tokens reset-path | ${{ needs.supabase-crm-intake-scope-tokens-reset.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase maintenance analytics reset-path | ${{ needs.supabase-maintenance-analytics-reset.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase quote fee engine + tax presets reset-path | ${{ needs.supabase-quote-fee-engine-reset.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase fleet availability calendar reset-path | ${{ needs.supabase-fleet-availability-calendar-reset.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase fleet idle-rebalancing reset-path | ${{ needs.supabase-fleet-idle-rebalancing-reset.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase inventory item-type model reset-path | ${{ needs.supabase-inventory-item-type-reset.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase procurement vendor master reset-path | ${{ needs.supabase-procurement-vendor-master-reset.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase Coupa observability + reconciliation reset-path | ${{ needs.supabase-coupa-observability-reconciliation-reset.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase Coupa integration config reset-path | ${{ needs.supabase-coupa-integration-config-reset.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase Sage observability + reconciliation smoke tests | ${{ needs.supabase-sage-observability-reconciliation.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase Sage observability + reconciliation reset-path | ${{ needs.supabase-sage-observability-reconciliation-reset.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase Samsara observability + reconciliation reset-path | ${{ needs.supabase-samsara-observability-reconciliation-reset.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase NetSuite entity mapping sync contract reset-path | ${{ needs.supabase-netsuite-entity-mapping-sync-contract-reset.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase NetSuite observability + reconciliation smoke tests | ${{ needs.supabase-netsuite-observability-reconciliation.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase NetSuite observability + reconciliation reset-path | ${{ needs.supabase-netsuite-observability-reconciliation-reset.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase inventory rate structures reset-path | ${{ needs.supabase-inventory-rate-structures-reset.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase project compliance readiness tracking reset-path | ${{ needs.supabase-project-compliance-readiness-reset.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase RapidCount count-capture reset-path | ${{ needs.supabase-rapidcount-count-capture-reset.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase ops_audit_trail_view RLS behavioral tests | ${{ needs.supabase-ops-audit-trail-view-rls.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase equipment-type cost-of-ownership reset-path | ${{ needs.supabase-equipment-type-cost-ownership-reset.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase project hierarchy + mixed-fleet allocation reset-path | ${{ needs.supabase-project-hierarchy-mixed-fleet-reset.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase quote-gate conversion ACL + status-gate reset-path | ${{ needs.supabase-quote-conversion-gate-reset.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase billing-update request approval-flow reset-path | ${{ needs.supabase-billing-update-request-reset.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase portal schedule public-read + forged-token-denial reset-path | ${{ needs.supabase-portal-schedule-access-reset.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase portal intake demo URL reset-path validation | ${{ needs.supabase-portal-demo-intake-url-reset.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase field_operator asset-write RLS behavioral tests | ${{ needs.supabase-field-operator-asset-write.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase inbound re-rental fleet sourcing behavioral tests | ${{ needs.supabase-inbound-rerental-fleet-sourcing.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase external-rental reporting RLS behavioral tests | ${{ needs.supabase-external-rental-reporting.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase shop morning queue RLS + migration reset-path | ${{ needs.supabase-shop-morning-queue-rls.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase route exception thread + review bundle reset-path | ${{ needs.supabase-route-exception-thread-bundle-reset.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase stop proof-of-delivery bundle RLS behavioral tests | ${{ needs.supabase-stop-pod-bundles.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase stop proof-of-delivery bundle reset-path validation | ${{ needs.supabase-stop-pod-bundles-reset.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase delivery complaint proof-bundle reset-path validation | ${{ needs.supabase-delivery-complaint-proof-bundle-reset.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Supabase portal financials asset_category reset-path validation | ${{ needs.supabase-portal-financials-asset-category-reset.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Build-over-build trends for these suites: [\`ci-history\`](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/tree/ci-history) branch." >> "$GITHUB_STEP_SUMMARY"
+
+  publish-test-history:
+    name: Append CI test results to ci-history + render dashboard
+    needs: [frontend, coverage, temporal, helm-charts, supabase-seed]
+    # Record build-over-build health of the merged trunk only: publish on pushes to
+    # main (i.e. after a merge), not on every PR commit. PR runs still gate and still
+    # upload per-suite artifacts — they just don't pollute the long-term trend, and we
+    # avoid needing write access on (potentially fork) pull_request events.
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      # Check out main only to get the record/render scripts + the SLO targets file.
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: |
+            .github/scripts
+            .github/qa-targets.json
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
+      # Per-suite results, each uploaded by the jobs above with if: always(). Any may be
+      # absent if a runner died before writing it; the record script degrades to an
+      # "error" record rather than failing.
+      - name: Download unit results
+        uses: actions/download-artifact@v7
+        with:
+          name: unit-results
+          path: artifacts/unit
+        continue-on-error: true
+      - name: Download temporal results
+        uses: actions/download-artifact@v7
+        with:
+          name: temporal-results
+          path: artifacts/temporal
+        continue-on-error: true
+      - name: Download helm results
+        uses: actions/download-artifact@v7
+        with:
+          name: helm-results
+          path: artifacts/helm
+        continue-on-error: true
+      - name: Download seed results
+        uses: actions/download-artifact@v7
+        with:
+          name: seed-results
+          path: artifacts/seed
+        continue-on-error: true
+      - name: Download coverage results
+        uses: actions/download-artifact@v7
+        with:
+          name: coverage-results
+          path: artifacts/coverage
+        continue-on-error: true
+
+      - name: Append records + render, then push to ci-history
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          BRANCH=ci-history
+          REPO_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          REC=.github/scripts/test-history-record.mjs
+
+          # Build this run's new record lines from whatever artifacts arrived.
+          : > new-records.jsonl
+          if [ -f artifacts/unit/vitest-results.json ]; then
+            node "$REC" --suite unit --format vitest --results artifacts/unit/vitest-results.json >> new-records.jsonl
+          fi
+          if [ -f artifacts/temporal/pytest-report.json ]; then
+            node "$REC" --suite temporal --format pytest-json --results artifacts/temporal/pytest-report.json >> new-records.jsonl
+          fi
+          if [ -f artifacts/helm/helm-results.json ]; then
+            node "$REC" --suite helm --format generic --results artifacts/helm/helm-results.json >> new-records.jsonl
+          fi
+          if [ -f artifacts/seed/seed-results.json ]; then
+            node "$REC" --suite seed --format generic --results artifacts/seed/seed-results.json >> new-records.jsonl
+          fi
+          if [ -f artifacts/coverage/coverage-results.json ]; then
+            node "$REC" --suite coverage --format coverage --results artifacts/coverage/coverage-results.json >> new-records.jsonl
+          fi
+          if [ ! -s new-records.jsonl ]; then
+            echo "No results to record (all artifacts missing) — nothing to publish."
+            exit 0
+          fi
+
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Push with a fetch/rebase-of-the-file retry loop so concurrent runs can't
+          # clobber each other's appends to runs.jsonl.
+          for attempt in 1 2 3 4 5; do
+            rm -rf hist && mkdir hist && cd hist
+            git init -q
+            git remote add origin "$REPO_URL"
+            if git fetch -q --depth 1 origin "$BRANCH"; then
+              git checkout -q -b "$BRANCH" FETCH_HEAD
+            else
+              git checkout -q --orphan "$BRANCH"
+            fi
+            cat ../new-records.jsonl >> runs.jsonl
+            node ../.github/scripts/test-history-render.mjs .
+            git add -A
+            git commit -q -m "ci: record test run ${GITHUB_RUN_ID} ($(wc -l < ../new-records.jsonl | tr -d ' ') suite result(s))"
+            if git push -q origin "$BRANCH"; then
+              echo "Published to $BRANCH (attempt $attempt)."
+              cd ..
+              exit 0
+            fi
+            echo "Push rejected (attempt $attempt) — likely a concurrent update; retrying."
+            cd ..
+          done
+          echo "Failed to publish after retries." >&2
+          exit 1
+
+      - name: Link in job summary
+        if: always()
+        run: |
+          {
+            echo "## CI test trend history"
+            echo "Dashboard: browse the [\`ci-history\`](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/tree/ci-history) branch (README renders the charts)."
+            echo "Raw feed: \`runs.jsonl\` on that branch."
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,18 @@
+{{- if and .Values.adminAccess.enabled .Values.adminAccess.oauth2Proxy.enabled .Values.adminAccess.studio.enabled .Values.adminAccess.studio.oauth2Proxy.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "app.studioOauth2Proxy.fullname" . }}
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: oauth2-proxy-studio
+spec:
+  type: {{ .Values.adminAccess.oauth2Proxy.service.type }}
+  selector:
+    {{- include "app.studioOauth2Proxy.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.adminAccess.oauth2Proxy.service.port }}
+      targetPort: http
+      protocol: TCP
+{{- end }}

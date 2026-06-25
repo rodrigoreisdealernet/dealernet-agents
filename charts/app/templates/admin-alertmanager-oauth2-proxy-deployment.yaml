@@ -1,0 +1,101 @@
+{{- if and .Values.adminAccess.enabled .Values.adminAccess.oauth2Proxy.enabled .Values.adminAccess.alertmanager.enabled .Values.adminAccess.alertmanager.oauth2Proxy.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "app.alertmanagerOauth2Proxy.fullname" . }}
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: oauth2-proxy-alertmanager
+spec:
+  replicas: {{ .Values.adminAccess.oauth2Proxy.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "app.alertmanagerOauth2Proxy.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "app.alertmanagerOauth2Proxy.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: oauth2-proxy-alertmanager
+    spec:
+      {{- with .Values.adminAccess.oauth2Proxy.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.adminAccess.oauth2Proxy.podSecurityContext | nindent 8 }}
+      containers:
+        - name: oauth2-proxy
+          image: {{ include "app.image" (dict "image" .Values.adminAccess.oauth2Proxy.image "global" .Values.imageRegistry) }}
+          imagePullPolicy: {{ .Values.adminAccess.oauth2Proxy.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.adminAccess.oauth2Proxy.securityContext | nindent 12 }}
+          args:
+            - --provider=oidc
+            - --http-address=0.0.0.0:4180
+            - --upstream=http://{{ include "app.alertmanagerUpstream.fullname" . }}:{{ .Values.adminAccess.alertmanager.upstreamPort }}
+            - --oidc-issuer-url={{ .Values.adminAccess.oauth2Proxy.oidc.issuerUrl }}
+            - --redirect-url={{ .Values.adminAccess.alertmanager.oauth2Proxy.redirectUrl }}
+            - --scope={{ .Values.adminAccess.oauth2Proxy.oidc.scope }}
+            - --oidc-groups-claim={{ .Values.adminAccess.oauth2Proxy.oidc.groupsClaim }}
+            - --allowed-group={{ .Values.adminAccess.oauth2Proxy.oidc.adminGroup }}
+            - --cookie-secure=true
+            - --cookie-samesite=lax
+            - --cookie-refresh=1h
+            - --cookie-expire=8h
+            - --skip-provider-button=true
+            - --set-xauthrequest=true
+            - --set-authorization-header=true
+            - --pass-authorization-header=true
+            - --pass-access-token=true
+            - --reverse-proxy=true
+            - --email-domain=*
+          env:
+            - name: OAUTH2_PROXY_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.adminAccess.alertmanager.oauth2Proxy.secrets.clientId.secretName | quote }}
+                  key: {{ .Values.adminAccess.alertmanager.oauth2Proxy.secrets.clientId.key | quote }}
+            - name: OAUTH2_PROXY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.adminAccess.alertmanager.oauth2Proxy.secrets.clientSecret.secretName | quote }}
+                  key: {{ .Values.adminAccess.alertmanager.oauth2Proxy.secrets.clientSecret.key | quote }}
+            - name: OAUTH2_PROXY_COOKIE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.adminAccess.alertmanager.oauth2Proxy.secrets.cookieSecret.secretName | quote }}
+                  key: {{ .Values.adminAccess.alertmanager.oauth2Proxy.secrets.cookieSecret.key | quote }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.adminAccess.oauth2Proxy.service.port }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          volumeMounts:
+            - name: oauth2-proxy-tmp
+              mountPath: /tmp
+      volumes:
+        - name: oauth2-proxy-tmp
+          emptyDir: {}
+{{- end }}

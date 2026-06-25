@@ -1,0 +1,515 @@
+{
+  "id": "branch-morning-brief",
+  "title": "Branch Morning Brief",
+  "state": {
+    "priorityFilter": "%",
+    "itemTypeFilter": "%",
+    "statusFilter": "pending_approval",
+    "staleOnly": false
+  },
+  "dataSources": {
+    "briefItems": {
+      "type": "supabase",
+      "table": "ops_findings_view",
+      "select": "id, agent_key, finding_type, severity, status, contract_id, line_item_id, evidence, proposed_action, rationale, confidence, is_stale, created_at, expected",
+      "filters": [
+        {
+          "field": "agent_key",
+          "op": "eq",
+          "value": "branch-morning-brief"
+        },
+        {
+          "field": "severity",
+          "op": "ilike",
+          "value": "{{state.priorityFilter || '%'}}"
+        },
+        {
+          "field": "finding_type",
+          "op": "ilike",
+          "value": "{{state.itemTypeFilter || '%'}}"
+        },
+        {
+          "field": "status",
+          "op": "ilike",
+          "value": "{{state.statusFilter || '%'}}"
+        }
+      ],
+      "order": [
+        {
+          "column": "created_at",
+          "ascending": false
+        }
+      ],
+      "refetchInterval": 30000
+    },
+    "latestRun": {
+      "type": "supabase",
+      "table": "ops_workflow_run",
+      "select": "run_id, workflow_key, status, started_at, finished_at",
+      "filters": [
+        {
+          "field": "workflow_key",
+          "op": "eq",
+          "value": "branch-morning-brief"
+        }
+      ],
+      "order": [
+        {
+          "column": "started_at",
+          "ascending": false
+        }
+      ],
+      "limit": 1,
+      "single": true
+    }
+  },
+  "layout": {
+    "type": "Stack",
+    "props": {
+      "spacing": 6
+    },
+    "children": [
+      {
+        "type": "Stack",
+        "props": {
+          "spacing": 1
+        },
+        "children": [
+          {
+            "type": "Heading",
+            "props": {
+              "level": 1,
+              "children": "Branch Morning Brief"
+            }
+          },
+          {
+            "type": "Text",
+            "props": {
+              "variant": "muted",
+              "children": "Ranked disposition-ready queue for the branch operations manager: contract & AP exceptions, dispatch risks, maintenance blockers, unavailable units, and customer follow-up prompts."
+            }
+          }
+        ]
+      },
+      {
+        "type": "Alert",
+        "if": "{{data.latestRun && data.latestRun.status === 'no_op'}}",
+        "props": {
+          "variant": "info",
+          "title": "No new branch signals",
+          "description": "The last brief run found no materially new exceptions or opportunities. Review manually if you believe a new signal has appeared since the last run."
+        }
+      },
+      {
+        "type": "Alert",
+        "if": "{{!data.latestRun}}",
+        "props": {
+          "variant": "warning",
+          "title": "Brief not yet generated",
+          "description": "No morning brief has been generated today. Trigger a new brief from the Branch Operations Dashboard, or wait for the scheduled overnight run."
+        }
+      },
+      {
+        "type": "Grid",
+        "props": {
+          "columns": "repeat(auto-fit, minmax(12rem, 1fr))",
+          "gap": 3
+        },
+        "children": [
+          {
+            "type": "Select",
+            "props": {
+              "label": "Priority",
+              "value": "{{state.priorityFilter}}",
+              "options": [
+                {
+                  "value": "%",
+                  "label": "All"
+                },
+                {
+                  "value": "critical",
+                  "label": "Critical"
+                },
+                {
+                  "value": "high",
+                  "label": "High"
+                },
+                {
+                  "value": "medium",
+                  "label": "Medium"
+                },
+                {
+                  "value": "low",
+                  "label": "Low"
+                }
+              ],
+              "onChange": {
+                "action": "setState",
+                "key": "priorityFilter",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Select",
+            "props": {
+              "label": "Signal Type",
+              "value": "{{state.itemTypeFilter}}",
+              "options": [
+                {
+                  "value": "%",
+                  "label": "All"
+                },
+                {
+                  "value": "contract_exception",
+                  "label": "Contract Exception (t1)"
+                },
+                {
+                  "value": "ap_hold",
+                  "label": "AP Hold (t1)"
+                },
+                {
+                  "value": "utilization_outlier",
+                  "label": "Utilization Outlier (t1)"
+                },
+                {
+                  "value": "dispatch_exception",
+                  "label": "Dispatch Exception (t4)"
+                },
+                {
+                  "value": "maintenance_blocker",
+                  "label": "Maintenance Blocker (t5)"
+                },
+                {
+                  "value": "unavailable_unit",
+                  "label": "Unavailable Unit (t5)"
+                },
+                {
+                  "value": "customer_followup",
+                  "label": "Customer Follow-up (t6)"
+                }
+              ],
+              "onChange": {
+                "action": "setState",
+                "key": "itemTypeFilter",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Select",
+            "props": {
+              "label": "Status",
+              "value": "{{state.statusFilter}}",
+              "options": [
+                {
+                  "value": "%",
+                  "label": "All"
+                },
+                {
+                  "value": "pending_approval",
+                  "label": "Pending Review"
+                },
+                {
+                  "value": "approved",
+                  "label": "Approved"
+                },
+                {
+                  "value": "rejected",
+                  "label": "Rejected"
+                },
+                {
+                  "value": "informational",
+                  "label": "Informational"
+                }
+              ],
+              "onChange": {
+                "action": "setState",
+                "key": "statusFilter",
+                "value": "{{event.target.value}}"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "props": {
+          "padding": 0
+        },
+        "children": [
+          {
+            "type": "Stack",
+            "props": {
+              "spacing": 0
+            },
+            "children": [
+              {
+                "type": "Stack",
+                "if": "{{data.briefItems && data.briefItems.length === 0}}",
+                "props": {
+                  "spacing": 2,
+                  "align": "center",
+                  "padding": 8
+                },
+                "children": [
+                  {
+                    "type": "Text",
+                    "props": {
+                      "weight": "medium",
+                      "children": "No items match the current filters"
+                    }
+                  },
+                  {
+                    "type": "Text",
+                    "props": {
+                      "variant": "muted",
+                      "size": "sm",
+                      "children": "Adjust the filters above or trigger a new morning brief from the Branch Operations Dashboard."
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "Card",
+                "if": "{{data.briefItems && data.briefItems.length > 0}}",
+                "each": "{{data.briefItems}}",
+                "as": "briefItem",
+                "key": "{{briefItem.id}}",
+                "props": {
+                  "padding": 4,
+                  "border": true
+                },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": {
+                      "spacing": 3
+                    },
+                    "children": [
+                      {
+                        "type": "Stack",
+                        "props": {
+                          "direction": "horizontal",
+                          "spacing": 2,
+                          "align": "center"
+                        },
+                        "children": [
+                          {
+                            "type": "Badge",
+                            "props": {
+                              "status": "{{briefItem.severity}}",
+                              "children": "{{briefItem.severity}}"
+                            }
+                          },
+                          {
+                            "type": "Badge",
+                            "props": {
+                              "variant": "outline",
+                              "children": "{{briefItem.finding_type}}"
+                            }
+                          },
+                          {
+                            "type": "Badge",
+                            "props": {
+                              "status": "{{briefItem.status}}",
+                              "children": "{{briefItem.status}}"
+                            }
+                          },
+                          {
+                            "type": "Badge",
+                            "if": "{{briefItem.expected && briefItem.expected.is_stale_data}}",
+                            "props": {
+                              "variant": "warning",
+                              "children": "Stale data"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "weight": "semibold",
+                          "children": "{{briefItem.contract_id || briefItem.line_item_id || '—'}}"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "variant": "muted",
+                          "children": "{{briefItem.proposed_action || briefItem.rationale || '—'}}"
+                        }
+                      },
+                      {
+                        "type": "Stack",
+                        "if": "{{briefItem.expected && briefItem.expected.owner_team}}",
+                        "props": {
+                          "direction": "horizontal",
+                          "spacing": 1,
+                          "align": "center"
+                        },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "props": {
+                              "size": "sm",
+                              "weight": "medium",
+                              "children": "Owner:"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "props": {
+                              "size": "sm",
+                              "children": "{{briefItem.expected.owner_team}}"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Stack",
+                        "if": "{{briefItem.evidence && briefItem.evidence.length > 0}}",
+                        "props": {
+                          "spacing": 1
+                        },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "props": {
+                              "size": "sm",
+                              "weight": "medium",
+                              "children": "Evidence"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "each": "{{briefItem.evidence}}",
+                            "as": "evidenceEntry",
+                            "props": {
+                              "size": "sm",
+                              "variant": "muted",
+                              "children": "{{evidenceEntry}}"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Stack",
+                        "if": "{{briefItem.expected && briefItem.expected.stale_signals && briefItem.expected.stale_signals.length > 0}}",
+                        "props": {
+                          "spacing": 1
+                        },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "props": {
+                              "size": "sm",
+                              "weight": "medium",
+                              "variant": "warning",
+                              "children": "Stale signals — review before acting"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "each": "{{briefItem.expected.stale_signals}}",
+                            "as": "staleSignal",
+                            "props": {
+                              "size": "sm",
+                              "variant": "warning",
+                              "children": "{{staleSignal}}"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Stack",
+                        "if": "{{briefItem.expected && briefItem.expected.blockers && briefItem.expected.blockers.length > 0}}",
+                        "props": {
+                          "spacing": 1
+                        },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "props": {
+                              "size": "sm",
+                              "weight": "medium",
+                              "children": "Blockers"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "each": "{{briefItem.expected.blockers}}",
+                            "as": "blocker",
+                            "props": {
+                              "size": "sm",
+                              "variant": "muted",
+                              "children": "{{blocker}}"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Stack",
+                        "if": "{{briefItem.expected && briefItem.expected.operating_model_tags && briefItem.expected.operating_model_tags.length > 0}}",
+                        "props": {
+                          "direction": "horizontal",
+                          "spacing": 1,
+                          "align": "center"
+                        },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "props": {
+                              "size": "xs",
+                              "variant": "muted",
+                              "children": "Tags:"
+                            }
+                          },
+                          {
+                            "type": "Badge",
+                            "each": "{{briefItem.expected.operating_model_tags}}",
+                            "as": "omTag",
+                            "props": {
+                              "variant": "outline",
+                              "size": "xs",
+                              "children": "{{omTag}}"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Stack",
+                        "props": {
+                          "direction": "horizontal",
+                          "spacing": 2
+                        },
+                        "children": [
+                          {
+                            "type": "Link",
+                            "if": "{{briefItem.contract_id}}",
+                            "props": {
+                              "to": "/ops/findings/{{briefItem.id}}",
+                              "children": "View Detail →"
+                            }
+                          },
+                          {
+                            "type": "Link",
+                            "if": "{{!briefItem.contract_id}}",
+                            "props": {
+                              "to": "/ops/findings/{{briefItem.id}}",
+                              "children": "View Detail →"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

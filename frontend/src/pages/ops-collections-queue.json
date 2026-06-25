@@ -1,0 +1,230 @@
+{
+  "id": "ops-collections-queue",
+  "title": "AR Collections Queue",
+  "state": {
+    "severityFilter": "%",
+    "statusFilter": "%"
+  },
+  "dataSources": {
+    "findings": {
+      "type": "supabase",
+      "table": "ops_findings_view",
+      "select": "id, agent_key, finding_type, severity, status, expected, billed, delta, confidence, proposed_action, rationale, created_at",
+      "filters": [
+        { "field": "agent_key", "op": "eq", "value": "credit-analyst" },
+        { "field": "severity", "op": "ilike", "value": "{{state.severityFilter || '%'}}" },
+        { "field": "status", "op": "ilike", "value": "{{state.statusFilter || '%'}}" }
+      ],
+      "order": [
+        { "column": "delta", "ascending": false },
+        { "column": "created_at", "ascending": false }
+      ],
+      "refetchInterval": 10000
+    }
+  },
+  "layout": {
+    "type": "Stack",
+    "props": { "spacing": 6 },
+    "children": [
+      {
+        "type": "Stack",
+        "props": { "spacing": 1 },
+        "children": [
+          { "type": "Heading", "props": { "level": 1, "children": "AR Collections Queue" } },
+          {
+            "type": "Text",
+            "props": {
+              "variant": "muted",
+              "children": "Rank overdue accounts, review branch/customer context, and approve the next collections escalation step without sending outreach automatically."
+            }
+          }
+        ]
+      },
+      {
+        "type": "Grid",
+        "props": { "columns": "repeat(auto-fit, minmax(12rem, 1fr))", "gap": 3 },
+        "children": [
+          {
+            "type": "Select",
+            "props": {
+              "label": "Severity",
+              "value": "{{state.severityFilter}}",
+              "options": [
+                { "value": "%", "label": "All" },
+                { "value": "high", "label": "High" },
+                { "value": "medium", "label": "Medium" },
+                { "value": "low", "label": "Low" }
+              ],
+              "onChange": {
+                "action": "setState",
+                "key": "severityFilter",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Select",
+            "props": {
+              "label": "Status",
+              "value": "{{state.statusFilter}}",
+              "options": [
+                { "value": "%", "label": "All" },
+                { "value": "pending_approval", "label": "Pending approval" },
+                { "value": "approved", "label": "Approved" },
+                { "value": "rejected", "label": "Rejected" },
+                { "value": "informational", "label": "Informational" }
+              ],
+              "onChange": {
+                "action": "setState",
+                "key": "statusFilter",
+                "value": "{{event.target.value}}"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "type": "Text",
+        "if": "{{isLoading.findings}}",
+        "props": {
+          "variant": "muted",
+          "children": "Loading collections queue..."
+        }
+      },
+      {
+        "type": "Alert",
+        "if": "{{errors.findings}}",
+        "props": {
+          "variant": "destructive",
+          "title": "Unable to load collections queue",
+          "description": "Retry shortly or review the latest workflow run."
+        }
+      },
+      {
+        "type": "Text",
+        "if": "{{data.findings.length === 0}}",
+        "props": {
+          "variant": "muted",
+          "className": "py-8 text-center",
+          "children": "No materially new AR signal exists. The collections queue is up to date."
+        }
+      },
+      {
+        "type": "Stack",
+        "if": "{{data.findings.length > 0}}",
+        "props": { "spacing": 3 },
+        "children": [
+          {
+            "type": "Card",
+            "each": "{{data.findings}}",
+            "as": "finding",
+            "key": "{{finding.id}}",
+            "props": {
+              "className": "{{finding.status === 'pending_approval' ? 'border-amber-500' : ''}}"
+            },
+            "children": [
+              {
+                "type": "Stack",
+                "props": { "spacing": 2 },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": { "direction": "horizontal", "justify": "between", "align": "center" },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": {
+                          "weight": "semibold",
+                          "children": "{{finding.expected.account_label || 'Billing account'}}"
+                        }
+                      },
+                      {
+                        "type": "Badge",
+                        "props": {
+                          "variant": "{{finding.status === 'pending_approval' ? 'destructive' : 'secondary'}}",
+                          "children": "{{formatFindingStatus(finding.status)}}"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Text",
+                    "props": {
+                      "size": "sm",
+                      "variant": "muted",
+                      "children": "{{finding.severity}} · {{formatOpsAgentLabel(finding.agent_key)}}"
+                    }
+                  },
+                  {
+                    "type": "Text",
+                    "props": {
+                      "size": "sm",
+                      "children": "Customer: {{finding.expected.customer_name || 'N/A'}}"
+                    }
+                  },
+                  {
+                    "type": "Text",
+                    "props": {
+                      "size": "sm",
+                      "children": "Branch context: {{finding.expected.branch_context || 'No branch follow-up context captured'}}"
+                    }
+                  },
+                  {
+                    "type": "Text",
+                    "props": {
+                      "size": "sm",
+                      "children": "Overdue AR: {{formatCurrency(finding.expected.amount || finding.delta || 0)}} · Exposure: {{formatCurrency(finding.billed.amount || 0)}}"
+                    }
+                  },
+                  {
+                    "type": "Text",
+                    "props": {
+                      "size": "sm",
+                      "children": "Next step: {{finding.proposed_action}} · Escalation: {{formatEscalationStage(finding.expected.escalation_stage)}}"
+                    }
+                  },
+                  {
+                    "type": "Text",
+                    "if": "{{finding.expected.stale_inputs && finding.expected.stale_inputs.length > 0}}",
+                    "props": {
+                      "size": "sm",
+                      "variant": "muted",
+                      "children": "Uncertainty: {{finding.expected.stale_inputs[0]}}"
+                    }
+                  },
+                  {
+                    "type": "Stack",
+                    "props": { "direction": "horizontal", "justify": "between", "align": "center" },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "sm",
+                          "variant": "muted",
+                          "children": "{{finding.rationale || 'No rationale provided.'}}"
+                        }
+                      },
+                      {
+                        "type": "Link",
+                        "props": {
+                          "to": "/ops/findings/{{finding.id}}",
+                          "search": {
+                            "source": "collections",
+                            "returnSeverity": "{{state.severityFilter}}",
+                            "returnStatus": "{{state.statusFilter}}",
+                            "customerName": "{{finding.expected.customer_name || ''}}"
+                          },
+                          "children": "Open finding"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

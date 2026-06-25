@@ -1,0 +1,17 @@
+apiVersion: v2
+name: monitoring
+description: >
+  Grafana dashboard provisioning for Wynne Systems — deploys
+  datasource and dashboard ConfigMaps consumed by the
+  kube-prometheus-stack Grafana sidecar.  Install
+  kube-prometheus-stack separately (see values-kube-prometheus-stack.yaml)
+  in the same namespace before or alongside this chart.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - grafana
+  - prometheus
+  - monitoring
+  - temporal
+  - dashboards

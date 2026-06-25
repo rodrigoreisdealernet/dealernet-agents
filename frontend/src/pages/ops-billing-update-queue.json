@@ -1,0 +1,274 @@
+{
+  "id": "ops-billing-update-queue",
+  "title": "Billing Update Request Queue",
+  "state": {
+    "requestTypeFilter": null,
+    "statusFilter": null,
+    "selectedRequestId": "",
+    "selectedReviewAction": ""
+  },
+  "dataSources": {
+    "requests": {
+      "type": "supabase",
+      "rpc": "ops_get_billing_update_queue",
+      "params": {
+        "p_status_filter": "{{state.statusFilter}}",
+        "p_request_type_filter": "{{state.requestTypeFilter}}"
+      },
+      "refetchInterval": 15000
+    }
+  },
+  "layout": {
+    "type": "Stack",
+    "props": { "spacing": 6 },
+    "children": [
+      {
+        "type": "Stack",
+        "props": { "spacing": 1 },
+        "children": [
+          { "type": "Heading", "props": { "level": 1, "children": "Billing Update Request Queue" } },
+          {
+            "type": "Text",
+            "props": {
+              "variant": "muted",
+              "children": "Review customer-submitted requests to update billing contact or payment details. All changes require explicit approval before they take effect — no change is applied automatically."
+            }
+          }
+        ]
+      },
+      {
+        "type": "Grid",
+        "props": { "columns": "repeat(auto-fit, minmax(12rem, 1fr))", "gap": 3 },
+        "children": [
+          {
+            "type": "Select",
+            "props": {
+              "label": "Request type",
+              "value": "{{state.requestTypeFilter}}",
+              "options": [
+                { "value": null, "label": "All types" },
+                { "value": "billing_contact", "label": "Billing contact" },
+                { "value": "payment_detail", "label": "Payment details" }
+              ],
+              "onChange": {
+                "action": "setState",
+                "key": "requestTypeFilter",
+                "value": "{{event.value}}"
+              }
+            }
+          },
+          {
+            "type": "Select",
+            "props": {
+              "label": "Status",
+              "value": "{{state.statusFilter}}",
+              "options": [
+                { "value": null, "label": "All active" },
+                { "value": "pending", "label": "Pending" },
+                { "value": "under_review", "label": "Under review" },
+                { "value": "approved", "label": "Approved" }
+              ],
+              "onChange": {
+                "action": "setState",
+                "key": "statusFilter",
+                "value": "{{event.value}}"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "type": "Skeleton",
+        "if": "{{isLoading.requests}}",
+        "props": { "className": "h-32 w-full" }
+      },
+      {
+        "type": "Alert",
+        "if": "{{!isLoading.requests && errors.requests}}",
+        "props": {
+          "variant": "destructive",
+          "title": "Unable to load billing update requests",
+          "children": "{{errors.requests}}"
+        }
+      },
+      {
+        "type": "EmptyState",
+        "if": "{{!isLoading.requests && !errors.requests && data.requests.length === 0}}",
+        "props": {
+          "icon": "Inbox",
+          "title": "No billing update requests match the current filters",
+          "hint": "Try adjusting the request type or status filters, or wait for new customer submissions."
+        }
+      },
+      {
+        "type": "Alert",
+        "if": "{{state.selectedRequestId}}",
+        "props": {
+          "title": "Review handoff selected",
+          "children": "Selected request: {{state.selectedRequestId}}. Next step: {{state.selectedReviewAction === 'approve' ? 'approve decision handoff' : 'open review handoff'}}. Use the row actions below to continue."
+        }
+      },
+      {
+        "type": "Stack",
+        "if": "{{!isLoading.requests && !errors.requests && data.requests.length > 0}}",
+        "props": { "spacing": 3 },
+        "children": [
+          {
+            "type": "Card",
+            "each": "{{data.requests}}",
+            "as": "req",
+            "key": "{{req.request_id}}",
+            "props": {
+              "className": "{{req.status === 'pending' ? 'border-amber-500' : ''}}"
+            },
+            "children": [
+              {
+                "type": "Stack",
+                "props": { "spacing": 3 },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": {
+                      "direction": "horizontal",
+                      "justify": "between",
+                      "align": "center"
+                    },
+                    "children": [
+                      {
+                        "type": "Stack",
+                        "props": { "direction": "horizontal", "align": "center", "spacing": 2 },
+                        "children": [
+                          {
+                            "type": "Badge",
+                            "props": {
+                              "variant": "{{req.request_type === 'billing_contact' ? 'outline' : 'secondary'}}",
+                              "children": "{{req.request_type === 'billing_contact' ? 'Billing contact' : 'Payment details'}}"
+                            }
+                          },
+                          {
+                            "type": "Badge",
+                            "props": {
+                              "variant": "{{req.status === 'approved' ? 'default' : req.status === 'under_review' ? 'secondary' : 'outline'}}",
+                              "children": "{{req.status === 'under_review' ? 'Under review' : req.status === 'approved' ? 'Approved' : 'Pending'}}"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "sm",
+                          "variant": "muted",
+                          "children": "Submitted: {{new Date(req.submitted_at).toLocaleDateString()}}"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 1 },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "sm",
+                          "children": "Billing account: {{req.requested_fields?.billing_account_label || (req.billing_account_id ? `Account ${req.billing_account_id.slice(0, 8).toUpperCase()}` : 'Account unavailable')}}"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "sm",
+                          "children": "Customer: {{req.requested_fields?.customer_label || (req.customer_id ? `Customer ${req.customer_id.slice(0, 8).toUpperCase()}` : 'Customer unavailable')}}"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "xs",
+                          "variant": "muted",
+                          "children": "Account ID: {{req.billing_account_id}} | Customer ID: {{req.customer_id}}"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "sm",
+                          "children": "Requested changes: {{Object.keys(req.requested_fields || {}).filter(k => k !== 'customer_note').join(', ') || '—'}}"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Text",
+                    "if": "{{req.review_note}}",
+                    "props": {
+                      "size": "sm",
+                      "variant": "muted",
+                      "children": "Review note: {{req.review_note}}"
+                    }
+                  },
+                  {
+                    "type": "Stack",
+                    "props": {
+                      "direction": "horizontal",
+                      "justify": "between",
+                      "align": "center"
+                    },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "sm",
+                          "variant": "muted",
+                          "children": "Reference: {{req.request_id}}"
+                        }
+                      },
+                      {
+                        "type": "Stack",
+                        "props": {
+                          "direction": "horizontal",
+                          "spacing": 3
+                        },
+                        "children": [
+                          {
+                            "type": "Link",
+                            "if": "{{req.status === 'pending' || req.status === 'under_review'}}",
+                            "props": {
+                              "to": "/ops/billing-updates",
+                              "search": {
+                                "requestType": "{{state.requestTypeFilter}}",
+                                "status": "{{state.statusFilter}}",
+                                "requestId": "{{req.request_id}}",
+                                "reviewAction": "review"
+                              },
+                              "children": "Review request"
+                            }
+                          },
+                          {
+                            "type": "Link",
+                            "if": "{{req.status === 'pending' || req.status === 'under_review'}}",
+                            "props": {
+                              "to": "/ops/billing-updates",
+                              "search": {
+                                "requestType": "{{state.requestTypeFilter}}",
+                                "status": "{{state.statusFilter}}",
+                                "requestId": "{{req.request_id}}",
+                                "reviewAction": "approve"
+                              },
+                              "children": "Approve handoff"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

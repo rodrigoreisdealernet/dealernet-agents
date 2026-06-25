@@ -1,0 +1,53 @@
+{{- if and .Values.adminAccess.enabled .Values.adminAccess.grafana.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "app.grafanaUpstream.fullname" . }}
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana-admin-upstream
+spec:
+  type: ExternalName
+  externalName: {{ .Values.adminAccess.grafana.upstreamHost | quote }}
+  ports:
+    - name: http
+      port: {{ .Values.adminAccess.grafana.upstreamPort }}
+      protocol: TCP
+---
+{{- if and .Values.adminAccess.grafana.nativeOidc.enabled .Values.adminAccess.grafana.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "app.fullname" . }}-grafana-admin
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana-admin-ingress
+  {{- with .Values.adminAccess.grafana.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.adminAccess.grafana.ingress.className }}
+  ingressClassName: {{ .Values.adminAccess.grafana.ingress.className }}
+  {{- end }}
+  {{- if .Values.adminAccess.grafana.ingress.tls }}
+  tls:
+    {{- toYaml .Values.adminAccess.grafana.ingress.tls | nindent 4 }}
+  {{- end }}
+  rules:
+    {{- range .Values.adminAccess.grafana.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "app.grafanaUpstream.fullname" $ }}
+                port:
+                  name: http
+          {{- end }}
+    {{- end }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,764 @@
+# -- Override the chart name
+nameOverride: ""
+# -- Override the full release name
+fullnameOverride: ""
+
+# -- Global image registry prefix (e.g. "ghcr.io"). Overridden per-component by
+#    image.registry when set.
+imageRegistry: ""
+
+# ---------------------------------------------------------------------------
+# Frontend (Vite/React)
+# ---------------------------------------------------------------------------
+frontend:
+  # -- Number of frontend pod replicas
+  replicaCount: 1
+
+  image:
+    # -- Container registry for the frontend image (overrides imageRegistry)
+    registry: ""
+    # -- Image repository. REQUIRED: replace with your actual image path before deploying
+    #    e.g. "ghcr.io/your-org/frontend"
+    repository: "your-org/frontend"
+    # -- Image tag (used when digest is empty; mutable tags should pair with pullPolicy: Always)
+    tag: "latest"
+    # -- Image digest (sha256:…). When set, the image is referenced as repo@sha256:… and
+    #    the tag is ignored for the pull. Digest references are immutable; use pullPolicy:
+    #    IfNotPresent with digests, and Always with mutable tags such as "latest".
+    digest: ""
+    # -- Image pull policy. Default is Always because the default tag "latest" is mutable.
+    #    Override to IfNotPresent when deploying with an immutable digest.
+    pullPolicy: Always
+
+  # -- List of image pull secrets for the frontend pods
+  imagePullSecrets: []
+  # - name: my-registry-secret
+
+  # -- Pod-level security context for frontend pods
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 101
+    runAsGroup: 101
+    seccompProfile:
+      type: RuntimeDefault
+
+  # -- Container-level security context for the frontend container
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+
+  service:
+    # -- Kubernetes Service type
+    type: ClusterIP
+    # -- Service port (must match the containerPort)
+    port: 3000
+
+  ingress:
+    # -- Enable ingress for the frontend
+    enabled: false
+    # -- Ingress class name (e.g. "nginx")
+    className: ""
+    # -- Ingress annotations
+    annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+    hosts:
+      - host: frontend.local
+        paths:
+          - path: /
+            pathType: Prefix
+    # -- TLS configuration
+    tls: []
+    # - secretName: frontend-tls
+    #   hosts:
+    #     - frontend.local
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  livenessProbe:
+    httpGet:
+      path: /
+      port: 3000
+    initialDelaySeconds: 15
+    periodSeconds: 20
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  readinessProbe:
+    httpGet:
+      path: /
+      port: 3000
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+  # -- Non-secret environment variables for the frontend container
+  env:
+    # -- Supabase URL exposed to the browser
+    supabaseUrl: "http://supabase:8000"
+    # -- API base URL exposed to the browser
+    apiUrl: "http://supabase:8000/functions/v1"
+    # -- Ops API URL used by nginx to proxy /api/* to the in-cluster ops-api service.
+    #    Set to the ClusterIP service DNS name for the ops-api (e.g. http://release-ops-api:8000).
+    #    Defaults to empty; when unset the proxy target falls back to a placeholder (502).
+    opsApiUrl: ""
+
+  # -- Secret references for frontend sensitive values.
+  #    The named Secret must be created in the same namespace before deploying.
+  secrets:
+    supabaseAnonKey:
+      # -- Name of the Kubernetes Secret containing VITE_SUPABASE_ANON_KEY
+      secretName: "frontend-secrets"
+      # -- Key within the Secret
+      key: "VITE_SUPABASE_ANON_KEY"
+
+# ---------------------------------------------------------------------------
+# Temporal Worker (Python)
+# ---------------------------------------------------------------------------
+temporalWorker:
+  # -- Number of temporal-worker pod replicas
+  replicaCount: 1
+
+  image:
+    # -- Container registry for the temporal-worker image (overrides imageRegistry)
+    registry: ""
+    # -- Image repository. REQUIRED: replace with your actual image path before deploying
+    #    e.g. "ghcr.io/your-org/temporal-worker"
+    repository: "your-org/temporal-worker"
+    # -- Image tag (used when digest is empty; mutable tags should pair with pullPolicy: Always)
+    tag: "latest"
+    # -- Image digest (sha256:…). When set, the image is referenced as repo@sha256:… and
+    #    the tag is ignored for the pull. Digest references are immutable; use pullPolicy:
+    #    IfNotPresent with digests, and Always with mutable tags such as "latest".
+    digest: ""
+    # -- Image pull policy. Default is Always because the default tag "latest" is mutable.
+    #    Override to IfNotPresent when deploying with an immutable digest.
+    pullPolicy: Always
+
+  # -- List of image pull secrets for the temporal-worker pods
+  imagePullSecrets: []
+  # - name: my-registry-secret
+
+  # -- Pod-level security context for temporal-worker pods
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    runAsGroup: 10001
+    seccompProfile:
+      type: RuntimeDefault
+
+  # -- Container-level security context for the temporal-worker container
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  livenessProbe:
+    # Verify the main worker process (PID 1) is still running.
+    # If PID 1 dies the container will be restarted regardless, but the
+    # explicit check ensures Kubernetes detects stuck/zombie processes.
+    exec:
+      command:
+        - python
+        - -c
+        - "import os; os.kill(1, 0)"
+    initialDelaySeconds: 30
+    periodSeconds: 30
+    timeoutSeconds: 10
+    failureThreshold: 3
+
+  readinessProbe:
+    exec:
+      command:
+        - python
+        - -c
+        - "import os; os.kill(1, 0)"
+    initialDelaySeconds: 15
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  # -- Temporal server connection settings (matches docker-compose.yml defaults)
+  temporal:
+    # -- Temporal server address (host:port)
+    address: "temporal:7233"
+    # -- Temporal namespace
+    namespace: "default"
+    # -- Task queue name
+    taskQueue: "main"
+
+  # -- Supabase non-secret settings for the worker
+  supabase:
+    # -- Supabase REST/API URL
+    url: "http://supabase:8000"
+
+  # -- Secret references for temporal-worker sensitive values.
+  #    The named Secret must be created in the same namespace before deploying.
+  secrets:
+    supabaseServiceRoleKey:
+      # -- Name of the Kubernetes Secret containing SUPABASE_SERVICE_ROLE_KEY
+      secretName: "temporal-worker-secrets"
+      # -- Key within the Secret
+      key: "SUPABASE_SERVICE_ROLE_KEY"
+
+# ---------------------------------------------------------------------------
+# Operations API (FastAPI bridge)
+# ---------------------------------------------------------------------------
+opsApi:
+  # -- Number of ops-api pod replicas
+  replicaCount: 1
+
+  image:
+    # -- Container registry for the ops-api image (overrides imageRegistry)
+    registry: ""
+    # -- Image repository. Typically the same image as temporal-worker.
+    repository: "your-org/temporal-worker"
+    # -- Image tag (used when digest is empty; mutable tags should pair with pullPolicy: Always)
+    tag: "latest"
+    # -- Image digest (sha256:…). When set, the image is referenced as repo@sha256:… and
+    #    the tag is ignored for the pull. Digest references are immutable; use pullPolicy:
+    #    IfNotPresent with digests, and Always with mutable tags such as "latest".
+    digest: ""
+    # -- Image pull policy. Default is Always because the default tag "latest" is mutable.
+    #    Override to IfNotPresent when deploying with an immutable digest.
+    pullPolicy: Always
+
+  # -- List of image pull secrets for the ops-api pods
+  imagePullSecrets: []
+
+  # -- Pod-level security context for ops-api pods
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    runAsGroup: 10001
+    seccompProfile:
+      type: RuntimeDefault
+
+  # -- Container-level security context for the ops-api container
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+
+  service:
+    # -- Kubernetes Service type for the ops-api
+    type: ClusterIP
+    # -- Service port for the ops-api
+    port: 8000
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  livenessProbe:
+    httpGet:
+      path: /api/ops/health
+      port: 8000
+    initialDelaySeconds: 15
+    periodSeconds: 20
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  readinessProbe:
+    httpGet:
+      path: /api/ops/health
+      port: 8000
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+  temporal:
+    # -- Temporal server address (host:port)
+    address: "temporal:7233"
+    # -- Temporal namespace
+    namespace: "default"
+
+  supabase:
+    # -- Supabase REST/API URL
+    url: "http://supabase:8000"
+
+  # -- Secret references for ops-api sensitive values.
+  secrets:
+    supabaseServiceRoleKey:
+      # -- Name of the Kubernetes Secret containing SUPABASE_SERVICE_ROLE_KEY
+      secretName: "temporal-worker-secrets"
+      # -- Key within the Secret
+      key: "SUPABASE_SERVICE_ROLE_KEY"
+
+# ---------------------------------------------------------------------------
+# Admin access (external auth boundary for non-OIDC admin tools)
+# ---------------------------------------------------------------------------
+adminAccess:
+  # -- Enable admin-only external routes for protected admin tools.
+  enabled: false
+
+  oauth2Proxy:
+    # -- Enable oauth2-proxy in front of Temporal UI.
+    enabled: false
+    replicaCount: 1
+    image:
+      # -- Container registry for oauth2-proxy image (overrides imageRegistry)
+      registry: ""
+      # -- OAuth2 proxy image repository
+      repository: "quay.io/oauth2-proxy/oauth2-proxy"
+      # -- OAuth2 proxy image tag
+      tag: "v7.8.1"
+      # -- OAuth2 proxy image digest (optional immutable pin)
+      digest: ""
+      # -- Image pull policy
+      pullPolicy: IfNotPresent
+    imagePullSecrets: []
+    podSecurityContext:
+      runAsNonRoot: true
+      runAsUser: 65532
+      runAsGroup: 65532
+      seccompProfile:
+        type: RuntimeDefault
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - ALL
+    service:
+      type: ClusterIP
+      port: 4180
+    oidc:
+      # -- Keycloak issuer URL (must match env realm endpoint)
+      issuerUrl: "https://keycloak.example.com/realms/wynne"
+      # -- Public callback URL for oauth2-proxy
+      redirectUrl: "https://temporal-ui.example.com/oauth2/callback"
+      # -- OIDC groups claim
+      groupsClaim: "groups"
+      # -- Required Keycloak group for admin access
+      adminGroup: "admin"
+      # -- OAuth scopes requested
+      scope: "openid profile email groups"
+    secrets:
+      clientId:
+        secretName: "oauth2-proxy-secrets"
+        key: "OAUTH2_PROXY_CLIENT_ID"
+      clientSecret:
+        secretName: "oauth2-proxy-secrets"
+        key: "OAUTH2_PROXY_CLIENT_SECRET"
+      cookieSecret:
+        secretName: "oauth2-proxy-secrets"
+        key: "OAUTH2_PROXY_COOKIE_SECRET"
+
+  temporalUi:
+    # -- Enable external Temporal UI route (via oauth2-proxy).
+    enabled: false
+    # -- Cluster DNS name of Temporal UI service (usually in temporal namespace).
+    upstreamHost: "temporal-ui.temporal.svc.cluster.local"
+    upstreamPort: 8080
+    ingress:
+      enabled: false
+      className: ""
+      annotations: {}
+      hosts:
+        - host: temporal-ui.local
+          paths:
+            - path: /
+              pathType: Prefix
+      tls: []
+
+  grafana:
+    # -- Enable external Grafana route (via native OIDC).
+    enabled: false
+    # -- Cluster DNS name of Grafana service (usually in monitoring namespace).
+    upstreamHost: "grafana.monitoring.svc.cluster.local"
+    upstreamPort: 80
+    nativeOidc:
+      # -- Enable Grafana native OIDC authentication against Keycloak.
+      #    When enabled, the Grafana ingress routes directly to the upstream (no oauth2-proxy hop).
+      #    The GF_AUTH_GENERIC_OAUTH_* ConfigMap is rendered by the observability chart in the
+      #    wynne-observability namespace where Grafana (kube-prometheus-stack) runs.
+      enabled: false
+      # -- Keycloak realm issuer URL (https://keycloak.example.com/realms/wynne)
+      issuerUrl: "https://keycloak.example.com/realms/wynne"
+      # -- Public redirect URL registered in Keycloak for the Grafana OIDC client.
+      #    Must match grafana.ingress.hosts[*].host + /login/generic_oauth
+      redirectUrl: "https://grafana.example.com/login/generic_oauth"
+      # -- Kubernetes Secret containing Grafana OIDC client credentials.
+      secrets:
+        clientId:
+          # -- Name of the Kubernetes Secret containing GF_AUTH_GENERIC_OAUTH_CLIENT_ID
+          secretName: "grafana-oidc-secrets"
+          # -- Key within the Secret
+          key: "GF_AUTH_GENERIC_OAUTH_CLIENT_ID"
+        clientSecret:
+          # -- Name of the Kubernetes Secret containing GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET
+          secretName: "grafana-oidc-secrets"
+          # -- Key within the Secret
+          key: "GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET"
+    ingress:
+      enabled: false
+      className: ""
+      annotations: {}
+      hosts:
+        - host: grafana.local
+          paths:
+            - path: /
+              pathType: Prefix
+      tls: []
+
+  studio:
+    # -- Enable external Supabase Studio route (gated via dedicated oauth2-proxy).
+    enabled: false
+    # -- Cluster DNS name of Supabase Studio service.
+    upstreamHost: "supabase-supabase-studio.wynne-supabase.svc.cluster.local"
+    upstreamPort: 3000
+    oauth2Proxy:
+      # -- Enable oauth2-proxy boundary in front of Supabase Studio ingress.
+      enabled: false
+      # -- Public callback URL for Supabase Studio oauth2-proxy.
+      redirectUrl: "https://studio.example.com/oauth2/callback"
+      secrets:
+        clientId:
+          secretName: "oauth2-proxy-studio-secrets"
+          key: "OAUTH2_PROXY_CLIENT_ID"
+        clientSecret:
+          secretName: "oauth2-proxy-studio-secrets"
+          key: "OAUTH2_PROXY_CLIENT_SECRET"
+        cookieSecret:
+          secretName: "oauth2-proxy-studio-secrets"
+          key: "OAUTH2_PROXY_COOKIE_SECRET"
+    ingress:
+      enabled: false
+      className: ""
+      annotations: {}
+      hosts:
+        - host: studio.local
+          paths:
+            - path: /
+              pathType: Prefix
+      tls: []
+
+  prometheus:
+    # -- Enable external Prometheus route (gated via dedicated oauth2-proxy).
+    enabled: false
+    # -- Cluster DNS name of Prometheus service.
+    upstreamHost: "observability-kube-prometheus-stack-prometheus.wynne-observability.svc.cluster.local"
+    upstreamPort: 9090
+    oauth2Proxy:
+      # -- Enable oauth2-proxy boundary in front of Prometheus ingress.
+      enabled: false
+      # -- Public callback URL for Prometheus oauth2-proxy.
+      redirectUrl: "https://prometheus.example.com/oauth2/callback"
+      secrets:
+        clientId:
+          secretName: "oauth2-proxy-prometheus-secrets"
+          key: "OAUTH2_PROXY_CLIENT_ID"
+        clientSecret:
+          secretName: "oauth2-proxy-prometheus-secrets"
+          key: "OAUTH2_PROXY_CLIENT_SECRET"
+        cookieSecret:
+          secretName: "oauth2-proxy-prometheus-secrets"
+          key: "OAUTH2_PROXY_COOKIE_SECRET"
+    ingress:
+      enabled: false
+      className: ""
+      annotations: {}
+      hosts:
+        - host: prometheus.local
+          paths:
+            - path: /
+              pathType: Prefix
+      tls: []
+
+  alertmanager:
+    # -- Enable external Alertmanager route (gated via dedicated oauth2-proxy).
+    enabled: false
+    # -- Cluster DNS name of Alertmanager service.
+    upstreamHost: "observability-kube-prometheus-stack-alertmanager.wynne-observability.svc.cluster.local"
+    upstreamPort: 9093
+    oauth2Proxy:
+      # -- Enable oauth2-proxy boundary in front of Alertmanager ingress.
+      enabled: false
+      # -- Public callback URL for Alertmanager oauth2-proxy.
+      redirectUrl: "https://alertmanager.example.com/oauth2/callback"
+      secrets:
+        clientId:
+          secretName: "oauth2-proxy-alertmanager-secrets"
+          key: "OAUTH2_PROXY_CLIENT_ID"
+        clientSecret:
+          secretName: "oauth2-proxy-alertmanager-secrets"
+          key: "OAUTH2_PROXY_CLIENT_SECRET"
+        cookieSecret:
+          secretName: "oauth2-proxy-alertmanager-secrets"
+          key: "OAUTH2_PROXY_COOKIE_SECRET"
+    ingress:
+      enabled: false
+      className: ""
+      annotations: {}
+      hosts:
+        - host: alertmanager.local
+          paths:
+            - path: /
+              pathType: Prefix
+      tls: []
+
+# In-cluster Temporal Web UI (internal-only; reach via port-forward)
+# ---------------------------------------------------------------------------
+temporalUi:
+  # -- Deploy the Temporal Web UI pod in-cluster.
+  #    Disabled by default. Enable in environment values files to get port-forward access.
+  #    External OIDC-gated ingress is handled separately by adminAccess.temporalUi.
+  enabled: false
+
+  image:
+    # -- Container registry (overrides imageRegistry)
+    registry: ""
+    # -- Temporal UI image repository
+    repository: "temporalio/ui"
+    # -- Image tag
+    tag: "2.31.2"
+    # -- Image digest (optional immutable pin)
+    digest: ""
+    # -- Image pull policy
+    pullPolicy: IfNotPresent
+
+  # -- List of image pull secrets for the Temporal UI pod
+  imagePullSecrets: []
+
+  # -- Pod-level security context
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
+
+  # -- Container-level security context
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop:
+        - ALL
+
+  service:
+    # -- Service type. ClusterIP for internal-only (port-forward) access.
+    type: ClusterIP
+    # -- Service port
+    port: 8080
+
+  # -- Temporal server address the UI connects to
+  temporalGrpcAddress: "temporal:7233"
+  # -- Temporal namespace the UI shows by default
+  temporalDefaultNamespace: "default"
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+# ---------------------------------------------------------------------------
+# Observability (Prometheus metrics, ServiceMonitor, PrometheusRule, Grafana)
+# ---------------------------------------------------------------------------
+observability:
+  # -- Enable all observability resources (ServiceMonitors, PrometheusRules, Grafana dashboard ConfigMaps).
+  enabled: false
+
+  metrics:
+    # -- Prometheus metrics port exposed by the temporal-worker (Temporal SDK telemetry).
+    workerPort: 9000
+    # -- Prometheus metrics port on the ops-api (/metrics endpoint).
+    opsApiPort: 8000
+
+  serviceMonitor:
+    # -- Deploy Prometheus Operator ServiceMonitor resources.
+    #    Requires kube-prometheus-stack (or compatible Prometheus Operator) in the cluster.
+    enabled: false
+    # -- Labels added to ServiceMonitor resources so Prometheus discovers them.
+    #    Must match the serviceMonitorSelector on your Prometheus instance.
+    #    For the wynne-observability release: release: observability
+    additionalLabels: {}
+    # release: observability
+    # -- Scrape interval
+    interval: "30s"
+    # -- Scrape timeout
+    scrapeTimeout: "10s"
+
+  prometheusRule:
+    # -- Deploy Prometheus Operator PrometheusRule resources (alert rules).
+    #    Requires kube-prometheus-stack (or compatible Prometheus Operator).
+    enabled: false
+    # -- Labels added to PrometheusRule resources so Prometheus picks them up.
+    #    For the wynne-observability release: release: observability
+    additionalLabels: {}
+    # release: observability
+
+  grafana:
+    # -- Provision Grafana dashboards as ConfigMaps (for grafana sidecar loader).
+    dashboards:
+      enabled: false
+      # -- Label key/value pair that the Grafana sidecar uses to discover dashboard ConfigMaps.
+      label: "grafana_dashboard"
+      labelValue: "1"
+      # -- Namespace label for Grafana multi-namespace sidecar; usually matches the Grafana namespace.
+      folder: "wynne"
+
+# ---------------------------------------------------------------------------
+# Prometheus alerting rules and Alertmanager routing
+# ---------------------------------------------------------------------------
+alerting:
+  # -- Enable PrometheusRule and AlertmanagerConfig resources.
+  #    Requires kube-prometheus-stack (or compatible) CRDs installed in the cluster.
+  enabled: false
+
+  prometheusRule:
+    # -- Namespace where Prometheus is deployed. Used to set the
+    #    prometheus.io/namespace selector on the PrometheusRule.
+    namespace: "monitoring"
+
+    # -- Additional labels applied to the PrometheusRule (must match the
+    #    Prometheus operator's ruleSelector). kube-prometheus-stack default
+    #    is release: <helm-release-name>.
+    additionalLabels: {}
+    # release: kube-prometheus-stack
+
+    # -- Temporal worker / task-queue alert thresholds.
+    temporal:
+      # -- Minutes a task queue must have zero pollers before TemporalWorkerDown fires.
+      workerDownForMinutes: 2
+      # -- Seconds of p95 schedule-to-start latency that triggers TemporalTaskQueueBacklogHigh.
+      backlogLatencySeconds: 30
+      # -- Minutes the backlog threshold must be breached before firing.
+      backlogForMinutes: 5
+      # -- Percentage (0–1) of workflow-failed / (failed+completed) that triggers
+      #    TemporalWorkflowFailureRateHigh.
+      failureRateThreshold: "0.05"
+      # -- Minutes the failure rate must exceed the threshold before firing.
+      failureRateForMinutes: 5
+      # -- Minutes a missed schedule window must persist before TemporalScheduleMissed fires.
+      scheduleMissedForMinutes: 5
+
+    # -- Ops API SLO thresholds.
+    opsApi:
+      # -- Fraction of 5xx responses (0–1) that triggers OpsApiErrorRateHigh.
+      errorRateThreshold: "0.01"
+      # -- Minutes the error rate must exceed the threshold before firing.
+      errorRateForMinutes: 5
+      # -- p99 latency seconds that triggers OpsApiLatencyHigh.
+      latencyP99Seconds: 2
+      # -- Minutes the latency must exceed the threshold before firing.
+      latencyForMinutes: 5
+
+  alertmanagerConfig:
+    # -- Namespace where Alertmanager is deployed. Used when creating the
+    #    AlertmanagerConfig in a different namespace than the app.
+    namespace: "monitoring"
+
+    incidentBridge:
+      # -- Webhook URL for the incident bridge. This endpoint receives Alertmanager
+      #    HTTP POST payloads and translates them into deduplicated GitHub incidents.
+      #    See OPERATIONS.md §Alertmanager → incident bridge for deployment guidance.
+      webhookUrl: ""
+      # -- Authentication credential (type: Bearer) sent in the Authorization header.
+      #    Must match the secret configured in the bridge receiver.
+      #    Reference a Kubernetes Secret key rather than inlining the token.
+      bearerTokenSecretName: ""
+      bearerTokenSecretKey: "ALERT_BRIDGE_TOKEN"
+
+    # -- How long Alertmanager waits before sending the first notification for a new group.
+    groupWait: "30s"
+    # -- How long Alertmanager waits before re-sending a notification for an existing group
+    #    that has new alerts.
+    groupInterval: "5m"
+    # -- How long Alertmanager waits before resending a notification for an alert that
+    #    has already been sent (controls update frequency on existing incidents).
+    repeatInterval: "4h"
+
+# ---------------------------------------------------------------------------
+# External Secrets Operator (ESO) integration
+# ---------------------------------------------------------------------------
+# When enabled, the chart renders ExternalSecret resources that pull secrets
+# from OpenBao (via ESO's vault provider) and deliver them as namespace-scoped
+# Kubernetes Secret objects.  The secretKeyRef references in Deployments are unchanged.
+#
+# Prerequisites:
+#   1. External Secrets Operator installed in the cluster.
+#   2. A ClusterSecretStore (or SecretStore) named secretStore.name using the
+#      vault provider, configured to authenticate ESO against the OpenBao instance.
+#   3. OpenBao secrets provisioned at the paths declared in keys.* (and the KV-v2
+#      fields in properties.*) below.
+#
+# When disabled (default), secrets must be created manually with kubectl as
+# described in the Required Secrets section of charts/app/README.md.
+externalSecrets:
+  # -- Enable ESO ExternalSecret rendering.  Set to true once ESO and a
+  #    SecretStore are installed; leave false to create secrets manually.
+  enabled: false
+
+  # -- How often ESO polls the store (OpenBao) for updates.  Go duration string
+  #    (e.g. "1h", "30m", "15s").
+  refreshInterval: "1h"
+
+  secretStore:
+    # -- Name of the ClusterSecretStore or SecretStore resource.  This store must use the
+    #    ESO "vault" provider pointed at the OpenBao instance (OpenBao is API-compatible
+    #    with the Vault provider — see ADR-0100).
+    name: "openbao"
+    # -- Kind of the store: ClusterSecretStore (cluster-scoped) or SecretStore (namespace-scoped).
+    kind: "ClusterSecretStore"
+
+  # -- OpenBao secret PATHS mapped to each Kubernetes secret key.  For a KV-v2 mount, the
+  #    path is relative to the store's configured mount (e.g. store path "secret" + key
+  #    "wynne/runtime").  Set these to match the paths provisioned for this environment.
+  keys:
+    # -- OpenBao path whose field (see properties.supabaseAnonKey) becomes VITE_SUPABASE_ANON_KEY.
+    supabaseAnonKey: "supabase-anon-key"
+    # -- OpenBao path whose field becomes SUPABASE_SERVICE_ROLE_KEY.
+    supabaseServiceRoleKey: "supabase-service-role-key"
+    # -- OpenBao path whose field holds the full .dockerconfigjson for scoped ACR pull access.
+    #    Leave empty to skip ESO delivery of the acr-pull imagePullSecret (e.g. when
+    #    using AKS kubelet managed identity — the target state per ADR-0100).
+    acrPullDockerConfig: ""
+    # -- OpenBao paths for oauth2-proxy credentials (used when adminAccess.enabled).
+    #    Leave empty to skip ESO delivery of oauth2-proxy secrets.
+    oauth2ProxyClientId: ""
+    oauth2ProxyClientSecret: ""
+    oauth2ProxyCookieSecret: ""
+
+  # -- OpenBao KV-v2 grouped-map FIELD names, one per key above.  With KV-v2, a single path
+  #    holds a map of fields; `property` selects the field within that map.  Leave a value
+  #    empty ("") when the store returns a single value per path (flat layout) — ESO then
+  #    reads the whole secret at the path and no `property` is emitted.
+  properties:
+    supabaseAnonKey: ""
+    supabaseServiceRoleKey: ""
+    acrPullDockerConfig: ""
+    oauth2ProxyClientId: ""
+    oauth2ProxyClientSecret: ""
+    oauth2ProxyCookieSecret: ""

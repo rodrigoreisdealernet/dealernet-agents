@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Wynne Software Factory — CI/CD &amp; Autonomous Delivery</title>
+<style>
+  :root {
+    --bg: #0e1118;
+    --bg-soft: #151a24;
+    --panel: #1b2130;
+    --panel-edge: #2a3245;
+    --text: #e8ebf2;
+    --muted: #9aa5bb;
+    --purple: #a78bfa;
+    --purple-dim: rgba(167,139,250,.14);
+    --green: #4ade80;
+    --green-dim: rgba(74,222,128,.12);
+    --blue: #60a5fa;
+    --blue-dim: rgba(96,165,250,.12);
+    --amber: #fbbf24;
+    --amber-dim: rgba(251,191,36,.12);
+    --red: #f87171;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+  }
+  #deck { height: 100%; position: relative; }
+  .slide {
+    position: absolute; inset: 0;
+    display: none;
+    flex-direction: column;
+    padding: 4.5vh 6vw 9vh;
+    overflow-y: auto;
+    background:
+      radial-gradient(1200px 600px at 85% -10%, rgba(167,139,250,.07), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(74,222,128,.05), transparent 60%),
+      var(--bg);
+  }
+  .slide.active { display: flex; animation: fadein .35s ease; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(8px);} to { opacity: 1; transform: none;} }
+
+  .kicker {
+    font-size: clamp(11px, 1.3vh, 14px);
+    letter-spacing: .18em; text-transform: uppercase;
+    color: var(--purple); font-weight: 700; margin-bottom: 1.2vh;
+  }
+  h2 { font-size: clamp(24px, 4.6vh, 44px); line-height: 1.12; letter-spacing: -.015em; margin-bottom: 2.4vh; }
+  h2 .accent { color: var(--purple); }
+  .lede { font-size: clamp(15px, 2.2vh, 20px); color: var(--muted); max-width: 70ch; line-height: 1.55; }
+  .lede strong, p strong { color: var(--text); }
+  code {
+    font-family: var(--mono); font-size: .88em;
+    background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.08);
+    border-radius: 5px; padding: .08em .38em; color: #cdd6ea;
+  }
+  .grow { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
+
+  /* ---- boxes & pills ---- */
+  .panel {
+    background: var(--panel); border: 1px solid var(--panel-edge);
+    border-radius: 14px; padding: 2vh 1.4vw;
+  }
+  .pill {
+    display: inline-block; border-radius: 999px; padding: .25em .85em;
+    font-size: clamp(11px, 1.5vh, 14px); font-weight: 650; letter-spacing: .02em;
+  }
+  .pill.purple { background: var(--purple-dim); color: var(--purple); border: 1px solid rgba(167,139,250,.4); }
+  .pill.green  { background: var(--green-dim);  color: var(--green);  border: 1px solid rgba(74,222,128,.4); }
+  .pill.grey   { background: rgba(255,255,255,.06); color: var(--muted); border: 1px solid rgba(255,255,255,.14); }
+  .pill.amber  { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(251,191,36,.4); }
+
+  /* ---- flow diagrams ---- */
+  .flow { display: flex; align-items: stretch; gap: 0; flex-wrap: wrap; row-gap: 2.2vh; }
+  .node {
+    background: var(--panel); border: 1.5px solid var(--panel-edge);
+    border-radius: 12px; padding: 1.4vh 1.1vw; text-align: center;
+    min-width: 9.5vw; display: flex; flex-direction: column; justify-content: center; gap: .5vh;
+    flex: 1;
+  }
+  .node b { font-size: clamp(13px, 1.9vh, 17px); }
+  .node small { color: var(--muted); font-size: clamp(10px, 1.45vh, 13px); line-height: 1.35; }
+  .node.purple { border-color: rgba(167,139,250,.65); background: linear-gradient(180deg, var(--purple-dim), var(--panel)); }
+  .node.green  { border-color: rgba(74,222,128,.6);  background: linear-gradient(180deg, var(--green-dim), var(--panel)); }
+  .node.blue   { border-color: rgba(96,165,250,.6);  background: linear-gradient(180deg, var(--blue-dim), var(--panel)); }
+  .node.amber  { border-color: rgba(251,191,36,.55); background: linear-gradient(180deg, var(--amber-dim), var(--panel)); }
+  .node.hero   { border-width: 2px; }
+  .arrow {
+    align-self: center; color: var(--muted); font-size: clamp(16px, 2.6vh, 24px);
+    padding: 0 .55vw; flex: 0 0 auto; user-select: none;
+  }
+  .arrow .lbl { display:block; font-size: clamp(9px, 1.3vh, 12px); font-family: var(--mono); text-align:center; }
+  .arrow.dashed { opacity: .55; }
+  .timing {
+    font-family: var(--mono); font-size: clamp(10px, 1.4vh, 12px);
+    color: var(--amber); letter-spacing: .02em;
+  }
+  .branchbox {
+    border: 1.5px dashed rgba(96,165,250,.55); border-radius: 14px;
+    padding: 1.6vh 1vw 1.2vh; flex: 1.6; display: flex; flex-direction: column; gap: 1vh;
+    background: rgba(96,165,250,.04); position: relative;
+  }
+  .branchbox .caption {
+    position: absolute; top: -1.3em; left: 1em;
+    background: var(--bg); padding: 0 .6em;
+    color: var(--blue); font-size: clamp(10px, 1.5vh, 13px); font-weight: 650; letter-spacing: .06em;
+  }
+  .branchrow { display: flex; align-items: center; gap: .8vw; }
+  .branchrow .when { font-family: var(--mono); font-size: clamp(10px, 1.45vh, 12.5px); color: var(--blue); flex: 0 0 38%; text-align: right; }
+  .branchrow .node { padding: 1vh .9vw; }
+
+  /* ---- two-column ---- */
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 2.2vw; align-items: stretch; }
+  .cols-32 { display: grid; grid-template-columns: 1.25fr 1fr; gap: 2.2vw; align-items: stretch; }
+
+  ul.points { list-style: none; display: flex; flex-direction: column; gap: 1.6vh; }
+  ul.points li {
+    padding-left: 1.6em; position: relative;
+    font-size: clamp(14px, 2.05vh, 19px); line-height: 1.5; color: var(--muted);
+  }
+  ul.points li::before {
+    content: "▸"; position: absolute; left: .15em; color: var(--purple); font-weight: 700;
+  }
+  ul.points li strong { color: var(--text); }
+  ul.points.tight { gap: 1vh; }
+  ul.points.tight li { font-size: clamp(13px, 1.8vh, 17px); }
+
+  /* ---- tables ---- */
+  table { border-collapse: collapse; width: 100%; font-size: clamp(12px, 1.8vh, 16px); }
+  th, td { text-align: left; padding: 1.1vh 1vw; border-bottom: 1px solid var(--panel-edge); vertical-align: top; }
+  th { color: var(--purple); font-size: .82em; text-transform: uppercase; letter-spacing: .1em; }
+  td { color: var(--muted); line-height: 1.45; }
+  td b, td strong { color: var(--text); }
+
+  /* ---- clock / schedule ---- */
+  .sched { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.4vh 1.2vw; }
+  .sched .panel { display: flex; flex-direction: column; gap: .8vh; }
+  .sched .when { font-family: var(--mono); color: var(--amber); font-size: clamp(12px, 1.7vh, 15px); }
+  .sched .what { font-size: clamp(13px, 1.9vh, 17px); font-weight: 650; }
+  .sched .why  { color: var(--muted); font-size: clamp(11px, 1.55vh, 14px); line-height: 1.4; }
+
+  /* ---- chrome ---- */
+  #hud {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.4vh 2.2vw; font-size: 13px; color: var(--muted);
+    background: linear-gradient(transparent, rgba(10,12,18,.92) 45%);
+    pointer-events: none; z-index: 10;
+  }
+  #hud .keys span { font-family: var(--mono); border: 1px solid var(--panel-edge); border-radius: 5px; padding: 1px 7px; margin-right: 5px; background: var(--bg-soft); }
+  #progress { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--purple), var(--green)); width: 0; transition: width .25s ease; z-index: 11; }
+  #navdots { position: fixed; right: 1.4vw; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 9px; z-index: 10; }
+  #navdots button { width: 9px; height: 9px; border-radius: 50%; border: none; background: rgba(255,255,255,.18); cursor: pointer; padding: 0; }
+  #navdots button.on { background: var(--purple); transform: scale(1.35); }
+  .clickzone { position: fixed; top: 0; bottom: 0; width: 12vw; z-index: 5; cursor: pointer; }
+  #zoneL { left: 0; } #zoneR { right: 0; }
+
+  .footnote { margin-top: 2vh; color: var(--muted); font-size: clamp(11px, 1.6vh, 14px); }
+  .warn { color: var(--amber); }
+  .ok { color: var(--green); }
+
+  @media (max-width: 900px) {
+    .cols, .cols-32 { grid-template-columns: 1fr; }
+    .slide { padding: 3.5vh 6vw 11vh; overflow-y: auto; }
+    .flow { flex-direction: column; }
+    .arrow { transform: rotate(90deg); padding: .3vh 0; }
+    .branchrow { flex-direction: column; }
+    .branchrow .when { flex: none; text-align: center; }
+    #navdots { display: none; }
+  }
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<div id="deck">
+
+  <!-- 1 · Lifecycle (opener) -->
+  <section class="slide active">
+    <div class="kicker">The Wynne software factory</div>
+    <h2>A day in the life of an issue</h2>
+    <p class="lede" style="margin-bottom:2.6vh">
+      How this repo turns <strong>issues into deployed software with no human in the loop</strong> —
+      <span style="color:var(--purple)">🧠 purple</span> = Copilot-SDK orchestration agents,
+      <span style="color:var(--green)">🤖 green</span> = the GitHub Copilot coding agent,
+      <span style="color:var(--blue)">⚙️ blue</span> = deterministic CI/CD (no LLM).
+    </p>
+    <div class="grow">
+      <div class="flow">
+        <div class="node"><b>Issue filed</b><small>needs-triage</small></div>
+        <div class="arrow">→</div>
+        <div class="node purple"><b>Product Owner</b><small>dedupe, classify,<br>route to a queue</small></div>
+        <div class="arrow">→</div>
+        <div class="node purple"><b>Factory Architect</b><small>spec / ADR if it<br>needs design</small></div>
+        <div class="arrow">→</div>
+        <div class="node purple"><b>PR Loop assigns</b><small>code-gated cap:<br>max 8 Copilot PRs</small></div>
+        <div class="arrow">→</div>
+        <div class="node green"><b>Copilot codes</b><small>opens a draft PR</small></div>
+      </div>
+      <div class="flow" style="margin-top:2.2vh">
+        <div class="node blue"><b>CI woken &amp; run</b><small>trusted-actor re-trigger,<br>then pr-validation</small></div>
+        <div class="arrow">→</div>
+        <div class="node purple"><b>Tech Reviewer</b><small>terminal verdict:<br>approve / request changes</small></div>
+        <div class="arrow">→</div>
+        <div class="node purple"><b>PR Loop merges</b><small>green + approved +<br>mergeable + lanes clear</small></div>
+        <div class="arrow">→</div>
+        <div class="node blue"><b>build → deploy dev</b><small>automatic on merge</small></div>
+        <div class="arrow">→</div>
+        <div class="node blue"><b>E2E verifies</b><small>Playwright vs the<br>live dev URL</small></div>
+      </div>
+      <p class="lede" style="margin-top:3vh">
+        Labels are the state machine (<code>queue:*</code>, <code>needs-*</code>, <code>ready-for-dev</code>) —
+        every agent reads and writes the same label vocabulary, so any agent can pick up where another left off.
+      </p>
+    </div>
+    <p class="footnote">Use <strong>← →</strong> or click the screen edges · full detail: <code>docs/architecture/ci-cd-pipelines.md</code></p>
+  </section>
+
+  <!-- 2 · pipeline-fast flow chart -->
+  <section class="slide">
+    <div class="kicker">A real workflow, end to end</div>
+    <h2>Anatomy of <span class="accent">pipeline-fast</span> — one pass, every 15 minutes</h2>
+    <div class="grow">
+      <!-- harness row -->
+      <div class="flow" style="margin-bottom:1.2vh">
+        <div class="node amber"><b>⏰ cron */15</b><small>or manual dispatch —<br><strong>timer-only by design</strong></small></div>
+        <div class="arrow">→</div>
+        <div class="node amber"><b>Serialise</b><small>one concurrency group ·<br>ticks <strong>queue</strong>, never cancel</small></div>
+        <div class="arrow">→</div>
+        <div class="node amber"><b>Job starts</b><small>60-min self-terminate —<br>a stuck pass can't block the next tick</small></div>
+        <div class="arrow">→</div>
+        <div class="node"><b>Setup</b><small>checkout <em>without</em> credentials ·<br>PAT injected for this step only</small></div>
+      </div>
+      <div class="arrow" style="align-self:flex-start; margin-left:4vw; transform:rotate(90deg)">→</div>
+      <!-- the pass -->
+      <div class="flow">
+        <div class="node purple hero"><b>1 · Product Owner</b><small>enrich + triage new issues/PRs</small><span class="timing">timeout 330s</span></div>
+        <div class="arrow">→<span class="lbl">label<br>exists?</span></div>
+        <div class="branchbox">
+          <span class="caption">conditional — a lane runs only if its label is open</span>
+          <div class="branchrow"><span class="when">needs-database-review</span><div class="node purple"><b>Database Steward</b><small>migrations, RLS, tenant scoping</small></div></div>
+          <div class="branchrow"><span class="when">needs-security-review</span><div class="node purple"><b>Security Reviewer</b><small>auth, secrets, permissions</small></div></div>
+          <div class="branchrow"><span class="when">needs-platform-review</span><div class="node purple"><b>Platform Engineer</b><small>workflows, charts, deploy paths</small></div></div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="node purple hero"><b>2 · Tech Reviewer</b><small>sweeps <code>queue:review</code> —<br>approves merge-ready PRs, deep-reviews<br>the rest to a terminal verdict</small><span class="timing">timeout 1200s</span></div>
+        <div class="arrow">→</div>
+        <div class="node"><b>Step summary</b><small>one table row per stage<br>(✅ ok / ⚠️ failed) → exit</small></div>
+      </div>
+      <div class="cols" style="margin-top:2.4vh">
+        <ul class="points tight">
+          <li><strong>Every stage is wrapped in <code>timeout N</code> + warn-and-continue</strong> — one stuck agent never blocks the pass. 330 s ≈ the SDK's idle-timeout plus buffer; the Tech Reviewer gets 20 min because deep multi-file review legitimately runs long.</li>
+          <li><strong>Lanes run <em>before</em> the Tech Reviewer</strong> so an open <code>needs-*</code> lane is cleared and the PR approved in the <em>same</em> pass.</li>
+        </ul>
+        <ul class="points tight">
+          <li><strong>This pass never merges or assigns.</strong> It produces triage and approvals; the PR Loop (its own workflow, every 30 min) consumes them.</li>
+          <li><strong>Timer-only is load-bearing:</strong> an event trigger once caused self-cancellation (69% of runs died mid-pass). The design is pinned by a contract test in <code>temporal/tests/</code>.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="footnote">Source: <code>.github/workflows/pipeline-fast.yml</code> — each purple node is one <code>npx tsx run-agent.ts --agent &lt;name&gt;</code> invocation (next slide).</p>
+  </section>
+
+  <!-- 3 · How an agent runs -->
+  <section class="slide">
+    <div class="kicker">The core mechanism</div>
+    <h2>How a Copilot SDK agent runs <span class="accent">inside a GitHub Action</span></h2>
+    <div class="grow">
+      <div class="flow" style="margin-bottom:2.6vh">
+        <div class="node grey"><b>Workflow step</b><small><code>npx tsx run-agent.ts<br>--agent tech-reviewer</code></small></div>
+        <div class="arrow">→</div>
+        <div class="node"><b>Load the agent</b><small><code>.github/agents/*.agent.md</code><br>frontmatter + prompt body</small></div>
+        <div class="arrow">→</div>
+        <div class="node purple"><b>SDK session</b><small>Copilot CLI subprocess —<br>shell, git, files, web</small></div>
+        <div class="arrow">→</div>
+        <div class="node blue"><b>Acts via <code>gh</code></b><small>list PRs, review,<br>label, comment, merge</small></div>
+        <div class="arrow">→</div>
+        <div class="node amber"><b>Writes its summary</b><small>to $GITHUB_STEP_SUMMARY<br>(best-effort phase 2)</small></div>
+      </div>
+      <div class="cols">
+        <ul class="points">
+          <li><strong>The agent <em>is</em> a markdown file.</strong> The body becomes the system prompt; <code>{{max_open_copilot_prs}}</code>-style variables are filled from <code>factory.yml</code>. Changing behaviour = a one-file docs PR.</li>
+          <li><strong>Full autonomy, bounded blast radius.</strong> Permission requests are auto-approved — the <em>workflow's</em> <code>permissions:</code> block and the tokens are the real security boundary.</li>
+        </ul>
+        <ul class="points">
+          <li><strong>Two tokens, two jobs:</strong> <code>COPILOT_TOKEN</code> authenticates the model session (the brain); <code>PROJECT_MANAGER_PAT</code> backs every <code>gh</code> command (the hands).</li>
+          <li><strong>Timeouts are owned by the caller</strong>, not the prompt: pipeline-fast wraps stages in <code>timeout 330</code>; the PR Loop gives each session 8 min and aborts it on overrun.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="footnote">Why the SDK and not a plain LLM API call? A chat completion has <strong>no tool access</strong> — an early Azure-REST swap was reverted for exactly that reason.</p>
+  </section>
+
+  <!-- 4 · Cadence -->
+  <section class="slide">
+    <div class="kicker">The heartbeat</div>
+    <h2>What fires when</h2>
+    <div class="grow">
+      <div class="sched">
+        <div class="panel"><span class="when">:00 / :15 / :30 / :45</span><span class="what">pipeline-fast</span><span class="why">Product Owner triage → conditional DB/security/platform lanes → Tech Reviewer</span></div>
+        <div class="panel"><span class="when">:00 / :30</span><span class="what">pr-loop</span><span class="why">CI wake → per-PR PM sessions → merge → assign (up to 5 h per sweep)</span></div>
+        <div class="panel"><span class="when">:30</span><span class="what">pipeline-hourly</span><span class="why">Architect → QA → Ops (public lane) + self-hosted private lane that fails loud if prereqs are missing</span></div>
+        <div class="panel"><span class="when">:45</span><span class="what">cluster guardian</span><span class="why">read-only namespace health; remediation needs manual dispatch + environment approval</span></div>
+        <div class="panel"><span class="when">:17</span><span class="what">e2e-dev</span><span class="why">Playwright smoke against the <em>deployed</em> dev app (also after every deploy)</span></div>
+        <div class="panel"><span class="when">06:00</span><span class="what">daily + audit</span><span class="why">Docs Improver → User Docs Manager · whole-repo architecture audit</span></div>
+        <div class="panel"><span class="when">event ⚡</span><span class="what">agent-tech-reviewer</span><span class="why">on every Build Images completion — fresh CI gets reviewed within minutes (serialised)</span></div>
+        <div class="panel"><span class="when">event ⚡ on failure</span><span class="what">deploy-sentinel</span><span class="why">root-causes any failed deploy/E2E → guaranteed <code>priority:critical</code> incident</span></div>
+      </div>
+      <p class="footnote">Crons are deliberately offset so pipelines never compete for the same window. Every stage is continue-on-error: one stuck agent never blocks the rest.</p>
+    </div>
+  </section>
+
+  <!-- 5 · Test gate -->
+  <section class="slide">
+    <div class="kicker">Quality</div>
+    <h2>The test gate: nothing reaches <span class="accent">main</span> without it</h2>
+    <div class="grow">
+      <div class="cols-32">
+        <div>
+          <div class="flow" style="flex-wrap:wrap; gap:1vh .6vw">
+            <div class="node" style="flex-basis:30%"><b>frontend</b><small>lint · build · vitest</small></div>
+            <div class="node" style="flex-basis:30%"><b>temporal</b><small>pytest + the pipeline<br>contract tests</small></div>
+            <div class="node" style="flex-basis:30%"><b>helm charts</b><small>lint · render · kubeconform<br>· security assertions</small></div>
+            <div class="node" style="flex-basis:30%"><b>supabase seed</b><small>all migrations + seed,<br>twice (idempotency)</small></div>
+            <div class="node" style="flex-basis:30%"><b>RPC guards</b><small>service-role boundary<br>on write RPCs</small></div>
+            <div class="node" style="flex-basis:30%"><b>agent runtime</b><small>vitest on the factory's<br>own orchestration code</small></div>
+          </div>
+          <p class="lede" style="margin-top:2.2vh">All parallel, on every PR <em>and</em> every push to main.
+          Results stream to an orphan <code>ci-history</code> branch — durable, machine-readable trends with no external dashboard.</p>
+        </div>
+        <div class="panel">
+          <span class="pill green">E2E is out-of-band — by design</span>
+          <ul class="points tight" style="margin-top:1.8vh">
+            <li>Playwright tests the <strong>deployed dev app</strong>, not the PR branch — hourly and after every deploy</li>
+            <li>Gating smoke specs file deduped incidents on failure</li>
+            <li>An <strong>"experience" suite is intentionally non-gating</strong>: desired-UX expectations that act as a backlog signal, never a deploy blocker</li>
+            <li>The QA Manager agent reads the E2E history to spot regressions and flaky specs</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 · Humans -->
+  <section class="slide">
+    <div class="kicker">Trust boundaries</div>
+    <h2>What stays <span class="accent">human-gated</span></h2>
+    <div class="grow">
+      <div class="cols">
+        <div class="panel" style="border-color:rgba(74,222,128,.45)">
+          <span class="pill green">The factory does autonomously</span>
+          <ul class="points tight" style="margin-top:1.8vh">
+            <li>Triage, design, assignment, implementation</li>
+            <li>Code review with <strong>terminal verdicts</strong> — reviewers may not punt; every PR reaches approve or request-changes</li>
+            <li><strong>Merging to main</strong> — the human merge gate was removed once reviewer decisions became terminal</li>
+            <li>Dev deploys, E2E, incident filing, docs upkeep</li>
+          </ul>
+        </div>
+        <div class="panel" style="border-color:rgba(251,191,36,.5)">
+          <span class="pill amber">Only humans can</span>
+          <ul class="points tight" style="margin-top:1.8vh">
+            <li><strong>Promote to test</strong> — manual dispatch with an explicit build run id</li>
+            <li><strong>Deploy to prod</strong> — protected-environment reviewer approval</li>
+            <li><strong>Mutate the cluster</strong> — remediation needs manual dispatch <em>and</em> an environment approval; a schedule can never do it</li>
+            <li>Fix account-level auth (billing entity, token types) — agents can detect these, not repair them</li>
+          </ul>
+        </div>
+      </div>
+      <p class="lede" style="margin-top:2.6vh">
+        The pattern: <strong>humans gate state changes in the world</strong> (prod, cluster, money);
+        agents own everything that is reversible by another merge.
+      </p>
+    </div>
+  </section>
+
+  <!-- 7 · Where to look -->
+  <section class="slide">
+    <div class="kicker">Go deeper</div>
+    <h2>Where to look</h2>
+    <div class="grow">
+      <table>
+        <tr><th>If you want…</th><th>Read…</th></tr>
+        <tr><td><b>The full operational map</b> (this deck, with all the detail)</td><td><code>docs/architecture/ci-cd-pipelines.md</code></td></tr>
+        <tr><td><b>Why the factory exists</b> and each agent's charter</td><td><code>docs/architecture/software-factory.md</code> · <code>.github/agents/*.agent.md</code></td></tr>
+        <tr><td><b>The agent runtime code</b> (all unit-tested)</td><td><code>.github/tools/shared/src/</code> — <code>run-agent.ts</code>, <code>run-pr-pipeline.ts</code>, <code>ci-retrigger.ts</code></td></tr>
+        <tr><td><b>Policy knobs</b> (caps, models, runners, namespaces)</td><td><code>.github/factory.yml</code></td></tr>
+        <tr><td><b>Where things run</b> (AKS, Helm, Supabase)</td><td><code>docs/architecture/deployment.md</code></td></tr>
+        <tr><td><b>The decisions behind it</b></td><td>ADR-0007 (orchestrate vs implement) · 0009 (label routing) · 0010 (digest promotion) · 0025 (cadence pipelines) · 0026 (terminal decisions)</td></tr>
+      </table>
+      <p class="lede" style="margin-top:3vh">
+        One sentence to take away: <strong>GitHub Actions provides the coded structure,
+        the Copilot SDK provides bounded judgment inside it, and everything that must hold
+        under load is enforced in code.</strong>
+      </p>
+    </div>
+  </section>
+
+</div>
+
+<div id="navdots"></div>
+<div id="hud">
+  <div class="keys"><span>←</span><span>→</span> navigate &nbsp;·&nbsp; <span>Home</span> start</div>
+  <div id="counter"></div>
+</div>
+<div class="clickzone" id="zoneL" title="Previous"></div>
+<div class="clickzone" id="zoneR" title="Next"></div>
+
+<script>
+(function () {
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var dots = document.getElementById('navdots');
+  var counter = document.getElementById('counter');
+  var progress = document.getElementById('progress');
+  var i = Math.min(slides.length - 1, Math.max(0, (parseInt(location.hash.slice(1), 10) || 1) - 1));
+
+  slides.forEach(function (_, n) {
+    var b = document.createElement('button');
+    b.title = 'Slide ' + (n + 1);
+    b.addEventListener('click', function () { go(n); });
+    dots.appendChild(b);
+  });
+
+  function go(n) {
+    i = Math.min(slides.length - 1, Math.max(0, n));
+    slides.forEach(function (s, k) { s.classList.toggle('active', k === i); });
+    Array.prototype.forEach.call(dots.children, function (d, k) { d.classList.toggle('on', k === i); });
+    counter.textContent = (i + 1) + ' / ' + slides.length;
+    progress.style.width = ((i + 1) / slides.length * 100) + '%';
+    history.replaceState(null, '', '#' + (i + 1));
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(i + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(i - 1); }
+    else if (e.key === 'Home') { go(0); }
+    else if (e.key === 'End') { go(slides.length - 1); }
+  });
+  document.getElementById('zoneL').addEventListener('click', function () { go(i - 1); });
+  document.getElementById('zoneR').addEventListener('click', function () { go(i + 1); });
+
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) {
+    if (tx === null) return;
+    var dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 50) go(dx < 0 ? i + 1 : i - 1);
+    tx = null;
+  }, { passive: true });
+
+  go(i);
+})();
+</script>
+</body>
+</html>

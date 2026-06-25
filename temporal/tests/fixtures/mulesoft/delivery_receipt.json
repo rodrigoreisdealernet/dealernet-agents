@@ -1,0 +1,11 @@
+{
+  "delivery_id": "delivery-1",
+  "subject_exchange_key": "rental_contract_snapshot",
+  "entity_type": "rental_contract",
+  "entity_id": "contract-1",
+  "external_id": "mule-contract-100",
+  "status": "accepted",
+  "cursor": "cursor-4",
+  "message": "accepted by mulesoft",
+  "received_at": "2026-06-11T10:00:00Z"
+}

@@ -1,0 +1,220 @@
+{
+  "id": "ops-credit-review-queue",
+  "title": "Credit Application Review",
+  "state": {
+    "statusFilter": "%",
+    "severityFilter": "%"
+  },
+  "dataSources": {
+    "findings": {
+      "type": "supabase",
+      "table": "ops_findings_view",
+      "select": "id, agent_key, finding_type, severity, status, expected, billed, delta, confidence, proposed_action, rationale, created_at",
+      "filters": [
+        { "field": "agent_key", "op": "eq", "value": "credit-lien-control" },
+        { "field": "finding_type", "op": "eq", "value": "credit_application_review" },
+        { "field": "severity", "op": "ilike", "value": "{{state.severityFilter || '%'}}" },
+        { "field": "status", "op": "ilike", "value": "{{state.statusFilter || '%'}}" }
+      ],
+      "order": [
+        { "column": "delta", "ascending": false },
+        { "column": "created_at", "ascending": false }
+      ],
+      "refetchInterval": 10000
+    }
+  },
+  "layout": {
+    "type": "Stack",
+    "props": { "spacing": 6 },
+    "children": [
+      {
+        "type": "Stack",
+        "props": { "spacing": 1 },
+        "children": [
+          { "type": "Heading", "props": { "level": 1, "children": "Credit Application Review" } },
+          {
+            "type": "Text",
+            "props": {
+              "variant": "muted",
+              "children": "Review incoming credit applications, evaluate creditworthiness evidence, and approve or condition credit limits and payment terms. No limit or terms change is applied without analyst approval."
+            }
+          }
+        ]
+      },
+      {
+        "type": "Grid",
+        "props": { "columns": "repeat(auto-fit, minmax(12rem, 1fr))", "gap": 3 },
+        "children": [
+          {
+            "type": "Select",
+            "props": {
+              "label": "Severity",
+              "value": "{{state.severityFilter}}",
+              "options": [
+                { "value": "%", "label": "All" },
+                { "value": "high", "label": "High" },
+                { "value": "medium", "label": "Medium" },
+                { "value": "low", "label": "Low" }
+              ],
+              "onChange": {
+                "action": "setState",
+                "key": "severityFilter",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Select",
+            "props": {
+              "label": "Status",
+              "value": "{{state.statusFilter}}",
+              "options": [
+                { "value": "%", "label": "All" },
+                { "value": "pending_approval", "label": "Pending approval" },
+                { "value": "approved", "label": "Approved" },
+                { "value": "rejected", "label": "Rejected" },
+                { "value": "informational", "label": "Informational" }
+              ],
+              "onChange": {
+                "action": "setState",
+                "key": "statusFilter",
+                "value": "{{event.target.value}}"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "type": "Text",
+        "if": "{{isLoading.findings}}",
+        "props": { "variant": "muted", "children": "Loading credit application queue..." }
+      },
+      {
+        "type": "Alert",
+        "if": "{{errors.findings}}",
+        "props": {
+          "variant": "destructive",
+          "title": "Unable to load credit application queue",
+          "description": "Retry shortly or review the latest workflow run."
+        }
+      },
+      {
+        "type": "Text",
+        "if": "{{data.findings.length === 0}}",
+        "props": {
+          "variant": "muted",
+          "className": "py-8 text-center",
+          "children": "No credit applications are awaiting review."
+        }
+      },
+      {
+        "type": "Stack",
+        "if": "{{data.findings.length > 0}}",
+        "props": { "spacing": 3 },
+        "children": [
+          {
+            "type": "Card",
+            "each": "{{data.findings}}",
+            "as": "finding",
+            "key": "{{finding.id}}",
+            "props": {
+              "className": "{{finding.status === 'pending_approval' ? 'border-amber-500' : ''}}"
+            },
+            "children": [
+              {
+                "type": "Stack",
+                "props": { "spacing": 2 },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": { "direction": "horizontal", "justify": "between", "align": "center" },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": {
+                          "weight": "semibold",
+                          "children": "{{finding.expected.customer_name || 'Credit applicant'}}"
+                        }
+                      },
+                      {
+                        "type": "Badge",
+                        "props": {
+                          "variant": "{{finding.status === 'pending_approval' ? 'destructive' : 'secondary'}}",
+                          "children": "{{formatFindingStatus(finding.status)}}"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Text",
+                    "props": {
+                      "size": "sm",
+                      "variant": "muted",
+                      "children": "{{finding.severity}} · Credit Application Review"
+                    }
+                  },
+                  {
+                    "type": "Text",
+                    "props": {
+                      "size": "sm",
+                      "children": "Requested limit: {{formatCurrency(finding.expected.requested_credit_limit || 0)}} · Current limit: {{formatCurrency(finding.billed.amount || 0)}}"
+                    }
+                  },
+                  {
+                    "type": "Text",
+                    "props": {
+                      "size": "sm",
+                      "children": "Proposed limit: {{formatCurrency(finding.expected.proposed_credit_limit || 0)}} · Proposed terms: {{finding.expected.proposed_terms || 'N/A'}}"
+                    }
+                  },
+                  {
+                    "type": "Text",
+                    "props": {
+                      "size": "sm",
+                      "children": "Recommended action: {{finding.proposed_action}}"
+                    }
+                  },
+                  {
+                    "type": "Text",
+                    "if": "{{finding.expected.stale_inputs && finding.expected.stale_inputs.length > 0}}",
+                    "props": {
+                      "size": "sm",
+                      "variant": "muted",
+                      "children": "Uncertainty: {{finding.expected.stale_inputs[0]}}"
+                    }
+                  },
+                  {
+                    "type": "Stack",
+                    "props": { "direction": "horizontal", "justify": "between", "align": "center" },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "sm",
+                          "variant": "muted",
+                          "children": "{{finding.rationale || 'No rationale provided.'}}"
+                        }
+                      },
+                      {
+                        "type": "Link",
+                        "props": {
+                          "to": "/ops/findings/{{finding.id}}",
+                          "search": {
+                            "source": "credit-review",
+                            "returnSeverity": "{{state.severityFilter}}",
+                            "returnStatus": "{{state.statusFilter}}"
+                          },
+                          "children": "Open finding"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

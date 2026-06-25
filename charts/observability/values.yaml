@@ -1,0 +1,94 @@
+# Dedicated namespace for in-cluster observability stack
+namespaceOverride: "wynne-observability"
+
+kube-prometheus-stack:
+  prometheus:
+    prometheusSpec:
+      retention: 7d
+      storageSpec:
+        volumeClaimTemplate:
+          spec:
+            accessModes: ["ReadWriteOnce"]
+            resources:
+              requests:
+                storage: 20Gi
+  grafana:
+    service:
+      type: ClusterIP
+    # extraEnvFrom is populated per-environment when grafanaOidc.enabled=true.
+    # Env-specific values override this list to reference the grafana-oidc-config ConfigMap
+    # and grafana-oidc-secrets-<env> Secret that carry GF_AUTH_GENERIC_OAUTH_* credentials.
+    extraEnvFrom: []
+
+targets:
+  temporalServer:
+    namespace: temporal
+    service:
+      name: temporal-server-metrics
+      labels:
+        app.kubernetes.io/part-of: wynne-rental-erp
+        app.kubernetes.io/component: temporal-server-metrics
+    selector:
+      app.kubernetes.io/name: temporal
+      app.kubernetes.io/component: frontend
+    metrics:
+      portName: metrics
+      port: 9090
+      targetPort: 9090
+      interval: 30s
+      scrapeTimeout: 10s
+      path: /metrics
+
+  temporalWorker:
+    namespace: wynne-dev
+    service:
+      name: temporal-worker-metrics
+      labels:
+        app.kubernetes.io/part-of: wynne-rental-erp
+        app.kubernetes.io/component: temporal-worker-metrics
+    selector:
+      app.kubernetes.io/name: app-temporal-worker
+      app.kubernetes.io/instance: rental-app
+    metrics:
+      portName: metrics
+      port: 9000
+      targetPort: 9000
+      interval: 30s
+      scrapeTimeout: 10s
+      path: /metrics
+
+  opsApi:
+    namespace: wynne-dev
+    service:
+      name: ops-api-metrics
+      labels:
+        app.kubernetes.io/part-of: wynne-rental-erp
+        app.kubernetes.io/component: ops-api-metrics
+    selector:
+      app.kubernetes.io/name: app-ops-api
+      app.kubernetes.io/instance: rental-app
+    metrics:
+      portName: metrics
+      port: 8000
+      targetPort: 8000
+      interval: 30s
+      scrapeTimeout: 10s
+      path: /metrics
+
+# ---------------------------------------------------------------------------
+# Grafana native OIDC (Keycloak, ADR-0036)
+# ---------------------------------------------------------------------------
+grafanaOidc:
+  # -- Enable Grafana native OIDC authentication via Keycloak.
+  #    When enabled, a ConfigMap named grafana-oidc-config is rendered into the
+  #    wynne-observability namespace. The Grafana deployment consumes it via extraEnvFrom
+  #    (set in env-specific values) together with the env-specific OIDC client Secret.
+  enabled: false
+  # -- Keycloak realm issuer URL (e.g. https://keycloak.example.com/realms/wynne)
+  issuerUrl: ""
+  # -- Public redirect URL registered in Keycloak for the Grafana OIDC client.
+  #    Must match grafana.ingress.hosts[*].host + /login/generic_oauth for this env.
+  redirectUrl: ""
+  # -- Name of the Kubernetes Secret (in wynne-observability namespace) containing
+  #    GF_AUTH_GENERIC_OAUTH_CLIENT_ID and GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET.
+  secretName: "grafana-oidc-secrets"

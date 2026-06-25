@@ -1,0 +1,12 @@
+-- Pre-drop portal_get_catalog_assets so that the subsequent
+-- 20260610195000_fix_portal_catalog_digest_search_path.sql can run.
+--
+-- Context: 20260610114000_portal_inventory_projection.sql created a 22-column
+-- version of portal_get_catalog_assets. 20260610195000 tries to
+-- CREATE OR REPLACE with 13 columns, which PostgreSQL rejects because the
+-- return type changed. Dropping first lets 20260610195000 proceed.
+-- The full 22-column signature with the extensions search_path fix is
+-- restored by 20260610196000.
+--
+-- Rollback: no object is created here; the drop is purely preparatory.
+drop function if exists public.portal_get_catalog_assets(text, text);

@@ -1,0 +1,312 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "monitoring.fullname" . }}-dashboard-wynne-ops
+  labels:
+    {{- include "monitoring.labels" . | nindent 4 }}
+    {{ .Values.grafana.dashboardLabel }}: {{ .Values.grafana.dashboardLabelValue | quote }}
+    wynne/dashboard-folder: ops
+data:
+  wynne-ops.json: |
+    {
+      "annotations": { "list": [] },
+      "description": "Wynne Operations Factory — workflow throughput/latency, task-queue backlog, activity failures, schedule health, and ops-api API metrics.",
+      "editable": true,
+      "graphTooltip": 1,
+      "id": null,
+      "links": [],
+      "panels": [
+        {
+          "collapsed": false,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+          "id": 1,
+          "title": "Workflow Throughput",
+          "type": "row"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "palette-classic" }, "unit": "reqps" }
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 1 },
+          "id": 2,
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(rate(temporal_workflow_completed_count{task_queue=~\"$task_queue\"}[5m]))",
+              "legendFormat": "Completed/s"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(rate(temporal_workflow_failed_count{task_queue=~\"$task_queue\"}[5m]))",
+              "legendFormat": "Failed/s"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(rate(temporal_workflow_canceled_count{task_queue=~\"$task_queue\"}[5m]))",
+              "legendFormat": "Canceled/s"
+            }
+          ],
+          "title": "Workflow Throughput",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "palette-classic" }, "unit": "s" }
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 1 },
+          "id": 3,
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "histogram_quantile(0.99, sum(rate(temporal_workflow_endtoend_latency_bucket{task_queue=~\"$task_queue\"}[10m])) by (le))",
+              "legendFormat": "p99"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "histogram_quantile(0.95, sum(rate(temporal_workflow_endtoend_latency_bucket{task_queue=~\"$task_queue\"}[10m])) by (le))",
+              "legendFormat": "p95"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "histogram_quantile(0.50, sum(rate(temporal_workflow_endtoend_latency_bucket{task_queue=~\"$task_queue\"}[10m])) by (le))",
+              "legendFormat": "p50"
+            }
+          ],
+          "title": "Workflow End-to-End Latency",
+          "type": "timeseries"
+        },
+        {
+          "collapsed": false,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 9 },
+          "id": 10,
+          "title": "Task-Queue Backlog & Age",
+          "type": "row"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "palette-classic" }, "unit": "short" }
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 10 },
+          "id": 11,
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(temporal_task_queue_depth{task_queue=~\"$task_queue\"}) by (task_queue, task_type)",
+              "legendFormat": "{{ "{{" }}task_queue{{ "}}" }} / {{ "{{" }}task_type{{ "}}" }}"
+            }
+          ],
+          "title": "Task-Queue Backlog Depth",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "palette-classic" }, "unit": "s" }
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 10 },
+          "id": 12,
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "histogram_quantile(0.99, sum(rate(temporal_task_queue_latency_bucket{task_queue=~\"$task_queue\"}[5m])) by (le, task_queue))",
+              "legendFormat": "p99 {{ "{{" }}task_queue{{ "}}" }}"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "histogram_quantile(0.50, sum(rate(temporal_task_queue_latency_bucket{task_queue=~\"$task_queue\"}[5m])) by (le, task_queue))",
+              "legendFormat": "p50 {{ "{{" }}task_queue{{ "}}" }}"
+            }
+          ],
+          "title": "Task-Queue Age (schedule-to-start)",
+          "type": "timeseries"
+        },
+        {
+          "collapsed": false,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 },
+          "id": 20,
+          "title": "Activity Failure Rate",
+          "type": "row"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 0.01 },
+                  { "color": "red", "value": 0.05 }
+                ]
+              },
+              "unit": "percentunit"
+            }
+          },
+          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 19 },
+          "id": 21,
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background" },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(rate(temporal_activity_execution_failed_count{task_queue=~\"$task_queue\"}[5m])) / (sum(rate(temporal_activity_execution_failed_count{task_queue=~\"$task_queue\"}[5m])) + sum(rate(temporal_activity_execution_success_count{task_queue=~\"$task_queue\"}[5m])))",
+              "legendFormat": "Activity Failure Rate"
+            }
+          ],
+          "title": "Activity Failure Rate",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "palette-classic" }, "unit": "reqps" }
+          },
+          "gridPos": { "h": 8, "w": 16, "x": 8, "y": 19 },
+          "id": 22,
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(rate(temporal_activity_execution_failed_count{task_queue=~\"$task_queue\"}[5m])) by (activity_type)",
+              "legendFormat": "{{ "{{" }}activity_type{{ "}}" }} failures"
+            }
+          ],
+          "title": "Activity Failures by Type",
+          "type": "timeseries"
+        },
+        {
+          "collapsed": false,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 27 },
+          "id": 30,
+          "title": "Schedule Health",
+          "type": "row"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "palette-classic" }, "unit": "short" }
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 28 },
+          "id": 31,
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(temporal_schedule_missed_catchup_window{namespace=~\"$temporal_namespace\"}) by (schedule_id)",
+              "legendFormat": "{{ "{{" }}schedule_id{{ "}}" }} missed"
+            }
+          ],
+          "title": "Schedule Missed Catch-Up Windows",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "palette-classic" }, "unit": "short" }
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 28 },
+          "id": 32,
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(temporal_schedule_buffer_overruns_total{namespace=~\"$temporal_namespace\"}) by (schedule_id)",
+              "legendFormat": "{{ "{{" }}schedule_id{{ "}}" }} overruns"
+            }
+          ],
+          "title": "Schedule Buffer Overruns",
+          "type": "timeseries"
+        },
+        {
+          "collapsed": false,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 36 },
+          "id": 40,
+          "title": "Ops API — Latency & Error Rate",
+          "type": "row"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "palette-classic" }, "unit": "s" }
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 37 },
+          "id": 41,
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=~\"$ops_api_job\"}[5m])) by (le, handler))",
+              "legendFormat": "p99 {{ "{{" }}handler{{ "}}" }}"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{job=~\"$ops_api_job\"}[5m])) by (le, handler))",
+              "legendFormat": "p50 {{ "{{" }}handler{{ "}}" }}"
+            }
+          ],
+          "title": "Ops API Request Latency",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "palette-classic" }, "unit": "reqps" }
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 37 },
+          "id": 42,
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(rate(http_requests_total{job=~\"$ops_api_job\", status_code=~\"5..\"}[5m])) by (handler)",
+              "legendFormat": "5xx {{ "{{" }}handler{{ "}}" }}"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(rate(http_requests_total{job=~\"$ops_api_job\", status_code=~\"4..\"}[5m])) by (handler)",
+              "legendFormat": "4xx {{ "{{" }}handler{{ "}}" }}"
+            }
+          ],
+          "title": "Ops API Error Rate",
+          "type": "timeseries"
+        }
+      ],
+      "schemaVersion": 36,
+      "style": "dark",
+      "tags": ["wynne", "ops", "temporal"],
+      "templating": {
+        "list": [
+          {
+            "current": { "selected": false, "text": ".*", "value": ".*" },
+            "hide": 0,
+            "label": "Task Queue",
+            "name": "task_queue",
+            "options": [],
+            "query": ".*",
+            "type": "textbox"
+          },
+          {
+            "current": { "selected": false, "text": ".*", "value": ".*" },
+            "hide": 0,
+            "label": "Temporal Namespace",
+            "name": "temporal_namespace",
+            "options": [],
+            "query": ".*",
+            "type": "textbox"
+          },
+          {
+            "current": { "selected": false, "text": "ops-api", "value": "ops-api" },
+            "hide": 0,
+            "label": "Ops API Job",
+            "name": "ops_api_job",
+            "options": [],
+            "query": "ops-api",
+            "type": "textbox"
+          }
+        ]
+      },
+      "time": { "from": "now-3h", "to": "now" },
+      "timepicker": {},
+      "timezone": "browser",
+      "title": "Wynne Ops",
+      "uid": "wynne-ops",
+      "version": 1
+    }

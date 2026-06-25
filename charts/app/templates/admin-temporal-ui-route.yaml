@@ -1,0 +1,53 @@
+{{- if and .Values.adminAccess.enabled .Values.adminAccess.temporalUi.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "app.temporalUiUpstream.fullname" . }}
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: temporal-ui-admin-upstream
+spec:
+  type: ExternalName
+  externalName: {{ .Values.adminAccess.temporalUi.upstreamHost | quote }}
+  ports:
+    - name: http
+      port: {{ .Values.adminAccess.temporalUi.upstreamPort }}
+      protocol: TCP
+---
+{{ if and .Values.adminAccess.oauth2Proxy.enabled .Values.adminAccess.temporalUi.ingress.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "app.fullname" . }}-temporal-ui-admin
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: temporal-ui-admin-ingress
+  {{- with .Values.adminAccess.temporalUi.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.adminAccess.temporalUi.ingress.className }}
+  ingressClassName: {{ .Values.adminAccess.temporalUi.ingress.className }}
+  {{- end }}
+  {{- if .Values.adminAccess.temporalUi.ingress.tls }}
+  tls:
+    {{- toYaml .Values.adminAccess.temporalUi.ingress.tls | nindent 4 }}
+  {{- end }}
+  rules:
+    {{- range .Values.adminAccess.temporalUi.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "app.oauth2Proxy.fullname" $ }}
+                port:
+                  name: http
+          {{- end }}
+    {{- end }}
+{{- end }}
+{{- end }}

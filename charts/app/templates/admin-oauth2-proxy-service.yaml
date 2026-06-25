@@ -1,0 +1,18 @@
+{{- if and .Values.adminAccess.enabled .Values.adminAccess.oauth2Proxy.enabled .Values.adminAccess.temporalUi.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "app.oauth2Proxy.fullname" . }}
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: oauth2-proxy
+spec:
+  type: {{ .Values.adminAccess.oauth2Proxy.service.type }}
+  selector:
+    {{- include "app.oauth2Proxy.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.adminAccess.oauth2Proxy.service.port }}
+      targetPort: http
+      protocol: TCP
+{{- end }}

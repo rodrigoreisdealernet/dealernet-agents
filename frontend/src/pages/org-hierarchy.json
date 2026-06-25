@@ -1,0 +1,356 @@
+{
+  "id": "org-hierarchy",
+  "title": "Org Hierarchy",
+  "state": {},
+  "dataSources": {
+    "companies": {
+      "type": "supabase",
+      "table": "rental_current_companies",
+      "select": "entity_id, name, data",
+      "order": [{ "column": "name", "ascending": true }]
+    },
+    "branches": {
+      "type": "supabase",
+      "table": "rental_current_branches",
+      "select": "entity_id, name",
+      "order": [{ "column": "name", "ascending": true }]
+    },
+    "hierarchy": {
+      "type": "supabase",
+      "table": "v_org_scope_hierarchy",
+      "select": "ancestor_id, ancestor_entity_type, ancestor_name, descendant_id, descendant_entity_type, descendant_name, depth",
+      "filters": [
+        { "field": "depth", "op": "gt", "value": 0 }
+      ],
+      "order": [
+        { "column": "ancestor_name", "ascending": true },
+        { "column": "depth", "ascending": true },
+        { "column": "descendant_name", "ascending": true }
+      ]
+    },
+    "scopeConfig": {
+      "type": "supabase",
+      "table": "v_org_scope_config",
+      "select": "scope_id, entity_type, name, default_currency_code, locale_code, tax_region_code, timezone",
+      "order": [
+        { "column": "entity_type", "ascending": true },
+        { "column": "name", "ascending": true }
+      ]
+    }
+  },
+  "layout": {
+    "type": "Stack",
+    "props": { "spacing": 6 },
+    "children": [
+      {
+        "type": "Stack",
+        "props": { "spacing": 1 },
+        "children": [
+          {
+            "type": "Heading",
+            "props": { "level": 1, "children": "Org Hierarchy" }
+          },
+          {
+            "type": "Text",
+            "props": {
+              "variant": "muted",
+              "children": "Company → region → branch structure with per-scope configuration."
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "props": { "title": "Companies" },
+        "children": [
+          {
+            "type": "Stack",
+            "if": "{{data.companies && data.companies.length > 0}}",
+            "each": "{{data.companies}}",
+            "as": "company",
+            "key": "{{company.entity_id}}",
+            "props": { "spacing": 1 },
+            "children": [
+              {
+                "type": "Stack",
+                "props": { "direction": "horizontal", "align": "center", "spacing": 2 },
+                "children": [
+                  {
+                    "type": "Text",
+                    "props": { "weight": "semibold", "children": "{{company.name}}" }
+                  },
+                  {
+                    "type": "Badge",
+                    "props": { "variant": "secondary", "children": "company" }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "Text",
+            "if": "{{!data.companies || data.companies.length === 0}}",
+            "props": { "variant": "muted", "children": "No companies found." }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "props": { "title": "Hierarchy Relationships" },
+        "children": [
+          {
+            "type": "Stack",
+            "if": "{{data.hierarchy && data.hierarchy.length > 0}}",
+            "each": "{{data.hierarchy}}",
+            "as": "row",
+            "key": "{{row.ancestor_id}}-{{row.descendant_id}}",
+            "props": { "spacing": 0.5 },
+            "children": [
+              {
+                "type": "Stack",
+                "props": { "direction": "horizontal", "align": "center", "spacing": 2 },
+                "children": [
+                  {
+                    "type": "Badge",
+                    "props": { "variant": "outline", "children": "{{row.ancestor_entity_type}}" }
+                  },
+                  {
+                    "type": "Text",
+                    "props": { "children": "{{row.ancestor_name}}" }
+                  },
+                  {
+                    "type": "Text",
+                    "props": { "variant": "muted", "children": "→" }
+                  },
+                  {
+                    "type": "Badge",
+                    "props": { "variant": "outline", "children": "{{row.descendant_entity_type}}" }
+                  },
+                  {
+                    "type": "Text",
+                    "props": { "children": "{{row.descendant_name}}" }
+                  },
+                  {
+                    "type": "Text",
+                    "props": { "variant": "muted", "children": "(depth {{row.depth}})" }
+                  },
+                  {
+                    "type": "Link",
+                    "if": "{{row.descendant_entity_type === 'branch'}}",
+                    "props": {
+                      "to": "/rental/availability?branch_id={{row.descendant_id}}",
+                      "children": "Check Availability"
+                    }
+                  },
+                  {
+                    "type": "Link",
+                    "if": "{{row.descendant_entity_type === 'region'}}",
+                    "props": {
+                      "to": "/entities/region/{{row.descendant_id}}",
+                      "children": "View Region"
+                    }
+                  },
+                  {
+                    "type": "Link",
+                    "if": "{{row.descendant_entity_type === 'company'}}",
+                    "props": {
+                      "to": "/entities/company/{{row.descendant_id}}",
+                      "children": "View Company"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "Text",
+            "if": "{{!data.hierarchy || data.hierarchy.length === 0}}",
+            "props": { "variant": "muted", "children": "No hierarchy relationships found." }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "if": "{{data.branches && data.branches.length > 0}}",
+        "props": { "title": "Branch Availability" },
+        "children": [
+          {
+            "type": "Stack",
+            "each": "{{data.branches}}",
+            "as": "branch",
+            "key": "{{branch.entity_id}}",
+            "props": { "spacing": 0.5 },
+            "children": [
+              {
+                "type": "Stack",
+                "props": { "direction": "horizontal", "justify": "between", "align": "center" },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": { "direction": "horizontal", "align": "center", "spacing": 2 },
+                    "children": [
+                      {
+                        "type": "Badge",
+                        "props": { "variant": "secondary", "children": "branch" }
+                      },
+                      {
+                        "type": "Text",
+                        "props": { "weight": "semibold", "children": "{{branch.name}}" }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Link",
+                    "props": {
+                      "to": "/rental/availability?branch_id={{branch.entity_id}}",
+                      "children": "Check Availability"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "props": { "title": "Per-Scope Configuration" },
+        "children": [
+          {
+            "type": "Text",
+            "props": {
+              "variant": "muted",
+              "size": "sm",
+              "children": "Configure currency, timezone, tax region, and locale settings for each scope."
+            }
+          },
+          {
+            "type": "Stack",
+            "if": "{{data.scopeConfig && data.scopeConfig.length > 0}}",
+            "each": "{{data.scopeConfig}}",
+            "as": "cfg",
+            "key": "{{cfg.scope_id}}",
+            "props": { "spacing": 1, "className": "border-b pb-2 mb-2" },
+            "children": [
+              {
+                "type": "Stack",
+                "props": { "direction": "horizontal", "justify": "between", "align": "center" },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": { "direction": "horizontal", "align": "center", "spacing": 2 },
+                    "children": [
+                      {
+                        "type": "Badge",
+                        "props": { "variant": "secondary", "children": "{{cfg.entity_type}}" }
+                      },
+                      {
+                        "type": "Text",
+                        "props": { "weight": "semibold", "children": "{{cfg.name}}" }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Link",
+                    "if": "{{cfg.entity_type === 'company'}}",
+                    "props": {
+                      "to": "/entities/company/{{cfg.scope_id}}",
+                      "children": "View Company"
+                    }
+                  },
+                  {
+                    "type": "Link",
+                    "if": "{{cfg.entity_type === 'region'}}",
+                    "props": {
+                      "to": "/entities/region/{{cfg.scope_id}}",
+                      "children": "View Region"
+                    }
+                  },
+                  {
+                    "type": "Link",
+                    "if": "{{cfg.entity_type === 'branch'}}",
+                    "props": {
+                      "to": "/rental/availability?branch_id={{cfg.scope_id}}",
+                      "children": "Check Availability"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "Stack",
+                "props": { "direction": "horizontal", "spacing": 4 },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "if": "{{cfg.default_currency_code}}",
+                    "props": { "spacing": 0 },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": { "variant": "muted", "size": "sm", "children": "Currency" }
+                      },
+                      {
+                        "type": "Text",
+                        "props": { "size": "sm", "children": "{{cfg.default_currency_code}}" }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Stack",
+                    "if": "{{cfg.timezone}}",
+                    "props": { "spacing": 0 },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": { "variant": "muted", "size": "sm", "children": "Timezone" }
+                      },
+                      {
+                        "type": "Text",
+                        "props": { "size": "sm", "children": "{{cfg.timezone}}" }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Stack",
+                    "if": "{{cfg.tax_region_code}}",
+                    "props": { "spacing": 0 },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": { "variant": "muted", "size": "sm", "children": "Tax Region" }
+                      },
+                      {
+                        "type": "Text",
+                        "props": { "size": "sm", "children": "{{cfg.tax_region_code}}" }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Stack",
+                    "if": "{{cfg.locale_code}}",
+                    "props": { "spacing": 0 },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": { "variant": "muted", "size": "sm", "children": "Locale" }
+                      },
+                      {
+                        "type": "Text",
+                        "props": { "size": "sm", "children": "{{cfg.locale_code}}" }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "Text",
+            "if": "{{!data.scopeConfig || data.scopeConfig.length === 0}}",
+            "props": { "variant": "muted", "children": "No scope configuration found." }
+          }
+        ]
+      }
+    ]
+  }
+}

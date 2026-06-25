@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.targets.temporalServer.service.name }}
+  namespace: {{ .Values.targets.temporalServer.namespace }}
+  labels:
+    {{- include "observability.labels" . | nindent 4 }}
+    {{- toYaml .Values.targets.temporalServer.service.labels | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- toYaml .Values.targets.temporalServer.selector | nindent 4 }}
+  ports:
+    - name: {{ .Values.targets.temporalServer.metrics.portName }}
+      port: {{ .Values.targets.temporalServer.metrics.port }}
+      targetPort: {{ .Values.targets.temporalServer.metrics.targetPort }}
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.targets.temporalWorker.service.name }}
+  namespace: {{ .Values.targets.temporalWorker.namespace }}
+  labels:
+    {{- include "observability.labels" . | nindent 4 }}
+    {{- toYaml .Values.targets.temporalWorker.service.labels | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- toYaml .Values.targets.temporalWorker.selector | nindent 4 }}
+  ports:
+    - name: {{ .Values.targets.temporalWorker.metrics.portName }}
+      port: {{ .Values.targets.temporalWorker.metrics.port }}
+      targetPort: {{ .Values.targets.temporalWorker.metrics.targetPort }}
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.targets.opsApi.service.name }}
+  namespace: {{ .Values.targets.opsApi.namespace }}
+  labels:
+    {{- include "observability.labels" . | nindent 4 }}
+    {{- toYaml .Values.targets.opsApi.service.labels | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- toYaml .Values.targets.opsApi.selector | nindent 4 }}
+  ports:
+    - name: {{ .Values.targets.opsApi.metrics.portName }}
+      port: {{ .Values.targets.opsApi.metrics.port }}
+      targetPort: {{ .Values.targets.opsApi.metrics.targetPort }}
+      protocol: TCP

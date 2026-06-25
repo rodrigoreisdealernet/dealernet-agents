@@ -1,0 +1,76 @@
+# Scheduled Raft snapshots for DR (ADR-0040). Snapshots to a PVC; off-cluster encrypted
+# upload (Azure Blob) is the TODO below and needs storage creds from the bootstrap.
+#
+# Bootstrap prereq (cluster-admin): create a least-privilege snapshot token and store it
+# in secret `openbao-snapshot-token` (key: token). Policy:
+#   path "sys/storage/raft/snapshot" { capabilities = ["read"] }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: openbao-snapshots
+  namespace: wynne-vault
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: managed-csi-premium
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: openbao-raft-snapshot
+  namespace: wynne-vault
+spec:
+  schedule: "0 */6 * * *"        # every 6h
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: openbao-snapshot
+            app.kubernetes.io/component: backup
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: snapshot
+              image: openbao/openbao:2.5.4
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -e
+                  TS=$(date -u +%Y%m%dT%H%M%SZ)
+                  bao operator raft snapshot save "/snapshots/openbao-${TS}.snap"
+                  # Retain only the last 28 local snapshots (7 days at 6h cadence).
+                  ls -1t /snapshots/openbao-*.snap | tail -n +29 | xargs -r rm -f
+                  # TODO(ADR-0040): encrypt + upload off-cluster, e.g.
+                  #   az storage blob upload --account-name <acct> --container openbao-snapshots \
+                  #     --name "openbao-${TS}.snap" --file "/snapshots/openbao-${TS}.snap"
+              env:
+                - name: BAO_ADDR
+                  value: "https://openbao.wynne-vault.svc:8200"
+                - name: BAO_CACERT
+                  value: "/openbao/userconfig/openbao-tls/ca.crt"
+                - name: BAO_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: openbao-snapshot-token
+                      key: token
+              volumeMounts:
+                - name: snapshots
+                  mountPath: /snapshots
+                - name: openbao-tls
+                  mountPath: /openbao/userconfig/openbao-tls
+                  readOnly: true
+          volumes:
+            - name: snapshots
+              persistentVolumeClaim:
+                claimName: openbao-snapshots
+            - name: openbao-tls
+              secret:
+                secretName: openbao-tls

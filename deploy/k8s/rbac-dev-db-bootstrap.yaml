@@ -1,0 +1,93 @@
+# Dev DB bootstrap identities/RBAC for in-cluster migration+seed job.
+# Apply with: kubectl apply -f deploy/k8s/rbac-dev-db-bootstrap.yaml
+#
+# Scope:
+# - Namespace: wynne-supabase only
+# - GitHub bootstrap identity (`gha-db-bootstrap`) may only manage bootstrap Job/ConfigMap
+#   lifecycle and read pod logs.
+# - In-cluster bootstrap runner identity (`wynne-db-bootstrap`) may only resolve the DB pod
+#   and exec into it (pods/exec) for SQL apply/assertion.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gha-db-bootstrap
+  namespace: wynne-supabase
+  labels:
+    app.kubernetes.io/part-of: wynne-rental-erp
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: gha-db-bootstrap
+  namespace: wynne-supabase
+  labels:
+    app.kubernetes.io/part-of: wynne-rental-erp
+rules:
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gha-db-bootstrap
+  namespace: wynne-supabase
+  labels:
+    app.kubernetes.io/part-of: wynne-rental-erp
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: gha-db-bootstrap
+subjects:
+  - kind: ServiceAccount
+    name: gha-db-bootstrap
+    namespace: wynne-supabase
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: wynne-db-bootstrap
+  namespace: wynne-supabase
+  labels:
+    app.kubernetes.io/part-of: wynne-rental-erp
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: wynne-db-bootstrap
+  namespace: wynne-supabase
+  labels:
+    app.kubernetes.io/part-of: wynne-rental-erp
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: wynne-db-bootstrap
+  namespace: wynne-supabase
+  labels:
+    app.kubernetes.io/part-of: wynne-rental-erp
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: wynne-db-bootstrap
+subjects:
+  - kind: ServiceAccount
+    name: wynne-db-bootstrap
+    namespace: wynne-supabase

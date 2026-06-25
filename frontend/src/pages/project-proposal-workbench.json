@@ -1,0 +1,777 @@
+{
+  "id": "project-proposal-workbench",
+  "title": "Project Proposal Workbench",
+  "state": {
+    "customerFilter": "%",
+    "categoryFilter": "%",
+    "branchFilter": "%",
+    "submit_customer_id": "",
+    "submit_customer_name": "",
+    "submit_branch_id": "",
+    "submit_branch_name": "",
+    "submit_term_days": "30",
+    "submit_notes": "",
+    "submitStatus": ""
+  },
+  "dataSources": {
+    "account_context": {
+      "type": "supabase",
+      "table": "v_project_proposal_account_context",
+      "select": "entity_id, name, customer_type, tier, industry, balance, credit_limit, avg_days_to_pay, payment_issue_flag, primary_contact_name, primary_contact_email, rental_order_count, last_order_at, data_freshness_at",
+      "filters": [
+        { "field": "name", "op": "ilike", "value": "{{state.customerFilter || '%'}}" }
+      ],
+      "order": [
+        { "column": "name", "ascending": true }
+      ],
+      "limit": 50,
+      "refetchInterval": 60000
+    },
+    "pricing_history": {
+      "type": "supabase",
+      "table": "v_project_proposal_pricing_history",
+      "select": "category_id, category_name, rate_type, min_rate, max_rate, avg_rate, sample_count, last_seen_at, is_stale",
+      "filters": [
+        { "field": "category_name", "op": "ilike", "value": "{{state.categoryFilter || '%'}}" }
+      ],
+      "order": [
+        { "column": "sample_count", "ascending": false },
+        { "column": "category_name", "ascending": true }
+      ],
+      "refetchInterval": 60000
+    },
+    "availability": {
+      "type": "supabase",
+      "table": "rental_asset_availability_current",
+      "select": "branch_id, branch_name, asset_category_id, asset_category_name, total_assets, available_assets, unavailable_assets",
+      "filters": [
+        { "field": "branch_name", "op": "ilike", "value": "{{state.branchFilter || '%'}}" }
+      ],
+      "order": [
+        { "column": "branch_name", "ascending": true },
+        { "column": "asset_category_name", "ascending": true }
+      ],
+      "refetchInterval": 30000
+    },
+    "pending_approvals": {
+      "type": "supabase",
+      "table": "ops_findings_view",
+      "select": "id, finding_type, severity, status, evidence, proposed_action, rationale, confidence, created_at, customer_name",
+      "filters": [
+        { "field": "agent_key", "op": "eq", "value": "project-proposal-workbench" },
+        { "field": "status", "op": "eq", "value": "pending_approval" }
+      ],
+      "order": [
+        { "column": "created_at", "ascending": false }
+      ],
+      "refetchInterval": 15000
+    }
+  },
+  "layout": {
+    "type": "Stack",
+    "props": { "spacing": 6 },
+    "children": [
+      {
+        "type": "Stack",
+        "props": { "spacing": 2 },
+        "children": [
+          { "type": "Heading", "props": { "level": 1, "children": "Project Proposal Workbench" } },
+          {
+            "type": "Text",
+            "props": {
+              "variant": "muted",
+              "children": "Assemble account context, candidate fleet mix, branch availability, and pricing-history evidence for a project-scale rental opportunity. Packages internal rate or exception approvals before any customer-facing material is prepared."
+            }
+          },
+          {
+            "type": "Stack",
+            "props": { "direction": "horizontal", "spacing": 2, "align": "center" },
+            "children": [
+              {
+                "type": "Badge",
+                "props": { "variant": "secondary", "children": "outside-sales-representative:t3" }
+              },
+              {
+                "type": "Badge",
+                "props": { "variant": "secondary", "children": "outside-sales-representative:t5" }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "Alert",
+        "props": {
+          "variant": "info",
+          "title": "Assist only — no auto-send or price commit",
+          "description": "This workbench assembles a first-pass proposal for internal review. No customer-facing pricing, terms, or commitments are generated or sent automatically. All customer-facing materials require explicit rep review and approval before dispatch."
+        }
+      },
+      {
+        "type": "Grid",
+        "props": { "columns": "repeat(auto-fit, minmax(12rem, 1fr))", "gap": 3 },
+        "children": [
+          {
+            "type": "Input",
+            "props": {
+              "label": "Customer",
+              "placeholder": "Filter by customer name",
+              "value": "{{state.customerFilter === '%' ? '' : state.customerFilter}}",
+              "onChange": {
+                "action": "setState",
+                "key": "customerFilter",
+                "value": "{{event.target.value || '%'}}"
+              }
+            }
+          },
+          {
+            "type": "Input",
+            "props": {
+              "label": "Category",
+              "placeholder": "Filter by asset category",
+              "value": "{{state.categoryFilter === '%' ? '' : state.categoryFilter}}",
+              "onChange": {
+                "action": "setState",
+                "key": "categoryFilter",
+                "value": "{{event.target.value || '%'}}"
+              }
+            }
+          },
+          {
+            "type": "Input",
+            "props": {
+              "label": "Branch",
+              "placeholder": "Filter by branch name",
+              "value": "{{state.branchFilter === '%' ? '' : state.branchFilter}}",
+              "onChange": {
+                "action": "setState",
+                "key": "branchFilter",
+                "value": "{{event.target.value || '%'}}"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "type": "Stack",
+        "props": { "spacing": 2 },
+        "children": [
+          {
+            "type": "Heading",
+            "props": { "level": 2, "children": "Account Context" }
+          },
+          {
+            "type": "Text",
+            "props": {
+              "variant": "muted",
+              "size": "sm",
+              "children": "Customer profile, billing history, and rental activity. Drill into the CRM profile for full account context before finalizing term assumptions."
+            }
+          },
+          {
+            "type": "Text",
+            "if": "{{isLoading.account_context}}",
+            "props": { "variant": "muted", "children": "Loading account context…" }
+          },
+          {
+            "type": "Alert",
+            "if": "{{errors.account_context}}",
+            "props": {
+              "variant": "destructive",
+              "title": "Unable to load account context",
+              "description": "Account history and profile data are unavailable. Do not finalize proposal term assumptions until this data is restored."
+            }
+          },
+          {
+            "type": "Text",
+            "if": "{{!isLoading.account_context && !errors.account_context && data.account_context.length === 0}}",
+            "props": {
+              "variant": "muted",
+              "children": "No matching customer profiles found. Adjust the customer filter or create a CRM profile first."
+            }
+          },
+          {
+            "type": "Stack",
+            "if": "{{!isLoading.account_context && data.account_context.length > 0}}",
+            "props": { "spacing": 3 },
+            "foreach": {
+              "items": "{{data.account_context}}",
+              "item": "customer"
+            },
+            "children": [
+              {
+                "type": "Card",
+                "props": {},
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 2 },
+                    "children": [
+                      {
+                        "type": "Stack",
+                        "props": { "direction": "horizontal", "justify": "between", "align": "start", "spacing": 2 },
+                        "children": [
+                          {
+                            "type": "Stack",
+                            "props": { "spacing": 1 },
+                            "children": [
+                              { "type": "Text", "props": { "weight": "medium", "children": "{{customer.name || 'Unnamed customer'}}" } },
+                              { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "{{customer.industry || '—'}} · {{customer.tier || 'standard'}}" } }
+                            ]
+                          },
+                          {
+                            "type": "Stack",
+                            "props": { "direction": "horizontal", "spacing": 1 },
+                            "children": [
+                              { "type": "Badge", "props": { "variant": "outline", "children": "{{customer.customer_type || 'local'}}" } },
+                              {
+                                "type": "Badge",
+                                "if": "{{customer.payment_issue_flag > 0}}",
+                                "props": { "variant": "destructive", "children": "Payment issue" }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Grid",
+                        "props": { "columns": "repeat(auto-fit, minmax(9rem, 1fr))", "gap": 2 },
+                        "children": [
+                          {
+                            "type": "Stack",
+                            "props": { "spacing": 0 },
+                            "children": [
+                              { "type": "Text", "props": { "size": "xs", "variant": "muted", "children": "Credit limit" } },
+                              { "type": "Text", "props": { "size": "sm", "weight": "medium", "children": "{{customer.credit_limit ? '$' + customer.credit_limit : '—'}}" } }
+                            ]
+                          },
+                          {
+                            "type": "Stack",
+                            "props": { "spacing": 0 },
+                            "children": [
+                              { "type": "Text", "props": { "size": "xs", "variant": "muted", "children": "Balance" } },
+                              { "type": "Text", "props": { "size": "sm", "weight": "medium", "children": "{{customer.balance ? '$' + customer.balance : '—'}}" } }
+                            ]
+                          },
+                          {
+                            "type": "Stack",
+                            "props": { "spacing": 0 },
+                            "children": [
+                              { "type": "Text", "props": { "size": "xs", "variant": "muted", "children": "Avg days to pay" } },
+                              { "type": "Text", "props": { "size": "sm", "weight": "medium", "children": "{{customer.avg_days_to_pay || '—'}}" } }
+                            ]
+                          },
+                          {
+                            "type": "Stack",
+                            "props": { "spacing": 0 },
+                            "children": [
+                              { "type": "Text", "props": { "size": "xs", "variant": "muted", "children": "Rental orders" } },
+                              { "type": "Text", "props": { "size": "sm", "weight": "medium", "children": "{{customer.rental_order_count}}" } }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Alert",
+                        "if": "{{!customer.data_freshness_at}}",
+                        "props": {
+                          "variant": "warning",
+                          "title": "Stale account data",
+                          "description": "No enrichment or order activity recorded for this account. Account history data is missing — do not base proposal assumptions on this profile without manual verification."
+                        }
+                      },
+                      {
+                        "type": "Stack",
+                        "props": { "direction": "horizontal", "spacing": 3 },
+                        "children": [
+                          {
+                            "type": "Link",
+                            "props": {
+                              "to": "/crm/customers/{{customer.entity_id}}",
+                              "children": "Open CRM profile →"
+                            }
+                          },
+                          {
+                            "type": "Link",
+                            "props": {
+                              "to": "/rental/quoting?customer_id={{customer.entity_id}}",
+                              "children": "Open Quote Builder →"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "Stack",
+        "props": { "spacing": 2 },
+        "children": [
+          {
+            "type": "Heading",
+            "props": { "level": 2, "children": "Fleet Mix & Pricing History" }
+          },
+          {
+            "type": "Text",
+            "props": {
+              "variant": "muted",
+              "size": "sm",
+              "children": "Historical rate evidence per asset category from closed rental contracts. Stale categories (no rate evidence within 90 days) are flagged and must not be used as final pricing without re-verification."
+            }
+          },
+          {
+            "type": "Text",
+            "if": "{{isLoading.pricing_history}}",
+            "props": { "variant": "muted", "children": "Loading pricing history…" }
+          },
+          {
+            "type": "Alert",
+            "if": "{{errors.pricing_history}}",
+            "props": {
+              "variant": "destructive",
+              "title": "Unable to load pricing history",
+              "description": "Pricing-history evidence is unavailable. Do not include rate assumptions in the proposal until this data source is restored."
+            }
+          },
+          {
+            "type": "Text",
+            "if": "{{!isLoading.pricing_history && !errors.pricing_history && data.pricing_history.length === 0}}",
+            "props": {
+              "variant": "muted",
+              "children": "No pricing history found for the selected category filter. Adjust the category filter or verify that rental order lines exist with rate data."
+            }
+          },
+          {
+            "type": "Stack",
+            "if": "{{!isLoading.pricing_history && data.pricing_history.length > 0}}",
+            "props": { "spacing": 2 },
+            "foreach": {
+              "items": "{{data.pricing_history}}",
+              "item": "rate"
+            },
+            "children": [
+              {
+                "type": "Card",
+                "props": {},
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 1 },
+                    "children": [
+                      {
+                        "type": "Stack",
+                        "props": { "direction": "horizontal", "justify": "between", "align": "center", "spacing": 2 },
+                        "children": [
+                          { "type": "Text", "props": { "weight": "medium", "children": "{{rate.category_name || rate.category_id}}" } },
+                          {
+                            "type": "Stack",
+                            "props": { "direction": "horizontal", "spacing": 1 },
+                            "children": [
+                              { "type": "Badge", "props": { "variant": "outline", "children": "{{rate.rate_type}}" } },
+                              {
+                                "type": "Badge",
+                                "if": "{{rate.is_stale}}",
+                                "props": { "variant": "warning", "children": "Stale pricing" }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "sm",
+                          "variant": "muted",
+                          "children": "Min ${{rate.min_rate}} · Avg ${{rate.avg_rate}} · Max ${{rate.max_rate}} · {{rate.sample_count}} samples"
+                        }
+                      },
+                      {
+                        "type": "Alert",
+                        "if": "{{rate.is_stale}}",
+                        "props": {
+                          "variant": "warning",
+                          "title": "Stale pricing evidence",
+                          "description": "No rate data seen for this category in the past 90 days. Do not use these historical rates as a final price commitment without re-verifying current market rates."
+                        }
+                      },
+                      {
+                        "type": "Link",
+                        "props": {
+                          "to": "/rental/availability?category_id={{rate.category_id}}",
+                          "children": "Check availability →"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "Stack",
+        "props": { "spacing": 2 },
+        "children": [
+          {
+            "type": "Heading",
+            "props": { "level": 2, "children": "Branch Availability" }
+          },
+          {
+            "type": "Text",
+            "props": {
+              "variant": "muted",
+              "size": "sm",
+              "children": "Current available fleet counts by branch and category. This data is live but reflects static snapshot capacity — consult the branch for firm commit quantities before including availability in a customer proposal."
+            }
+          },
+          {
+            "type": "Alert",
+            "if": "{{errors.availability}}",
+            "props": {
+              "variant": "destructive",
+              "title": "Branch availability data unavailable",
+              "description": "Cannot load current fleet availability. Do not state specific equipment counts or promise capacity in the proposal until this data is restored."
+            }
+          },
+          {
+            "type": "Text",
+            "if": "{{isLoading.availability}}",
+            "props": { "variant": "muted", "children": "Loading availability…" }
+          },
+          {
+            "type": "Text",
+            "if": "{{!isLoading.availability && !errors.availability && data.availability.length === 0}}",
+            "props": {
+              "variant": "muted",
+              "children": "No availability data found for the selected branch filter."
+            }
+          },
+          {
+            "type": "Stack",
+            "if": "{{!isLoading.availability && data.availability.length > 0}}",
+            "props": { "spacing": 2 },
+            "foreach": {
+              "items": "{{data.availability}}",
+              "item": "avail"
+            },
+            "children": [
+              {
+                "type": "Card",
+                "props": {},
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": { "direction": "horizontal", "justify": "between", "align": "center", "spacing": 2 },
+                    "children": [
+                      {
+                        "type": "Stack",
+                        "props": { "spacing": 0 },
+                        "children": [
+                          { "type": "Text", "props": { "weight": "medium", "children": "{{avail.asset_category_name}}" } },
+                          { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "{{avail.branch_name}}" } }
+                        ]
+                      },
+                      {
+                        "type": "Stack",
+                        "props": { "direction": "horizontal", "spacing": 2, "align": "center" },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "props": {
+                              "size": "sm",
+                              "children": "{{avail.available_assets}} available · {{avail.unavailable_assets}} unavailable"
+                            }
+                          },
+                          {
+                            "type": "Link",
+                            "props": {
+                              "to": "/rental/availability?branch_id={{avail.branch_id}}&category_id={{avail.asset_category_id}}",
+                              "children": "Full details →"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "Stack",
+        "props": { "spacing": 2 },
+        "children": [
+          {
+            "type": "Heading",
+            "props": { "level": 2, "children": "Submit for Internal Approval" }
+          },
+          {
+            "type": "Text",
+            "props": {
+              "variant": "muted",
+              "size": "sm",
+              "children": "Package the assembled proposal context into an internal rate or exception approval case. The approval case must be reviewed and decided by an authorized approver before any customer-facing pricing or commitments are prepared."
+            }
+          },
+          {
+            "type": "Alert",
+            "if": "{{state.submitStatus === 'success'}}",
+            "props": {
+              "variant": "success",
+              "title": "Approval case submitted",
+              "description": "The proposal has been packaged as an internal approval case. Track its progress in the Pending Rate Approvals section below."
+            }
+          },
+          {
+            "type": "Alert",
+            "if": "{{state.submitStatus === 'error'}}",
+            "props": {
+              "variant": "destructive",
+              "title": "Submission failed",
+              "description": "The approval case could not be submitted. Check your connection and verify that a customer ID has been entered, then try again."
+            }
+          },
+          {
+            "type": "Card",
+            "props": {},
+            "children": [
+              {
+                "type": "Stack",
+                "props": { "spacing": 3 },
+                "children": [
+                  {
+                    "type": "Grid",
+                    "props": { "columns": "repeat(auto-fit, minmax(12rem, 1fr))", "gap": 3 },
+                    "children": [
+                      {
+                        "type": "Input",
+                        "props": {
+                          "label": "Customer ID",
+                          "placeholder": "Enter customer entity ID",
+                          "value": "{{state.submit_customer_id}}",
+                          "onChange": {
+                            "action": "setState",
+                            "key": "submit_customer_id",
+                            "value": "{{event.target.value}}"
+                          }
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "props": {
+                          "label": "Customer Name",
+                          "placeholder": "Enter customer name",
+                          "value": "{{state.submit_customer_name}}",
+                          "onChange": {
+                            "action": "setState",
+                            "key": "submit_customer_name",
+                            "value": "{{event.target.value}}"
+                          }
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "props": {
+                          "label": "Branch ID",
+                          "placeholder": "Enter serving branch ID",
+                          "value": "{{state.submit_branch_id}}",
+                          "onChange": {
+                            "action": "setState",
+                            "key": "submit_branch_id",
+                            "value": "{{event.target.value}}"
+                          }
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "props": {
+                          "label": "Branch Name",
+                          "placeholder": "Enter serving branch name",
+                          "value": "{{state.submit_branch_name}}",
+                          "onChange": {
+                            "action": "setState",
+                            "key": "submit_branch_name",
+                            "value": "{{event.target.value}}"
+                          }
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "props": {
+                          "label": "Proposed term (days)",
+                          "placeholder": "30",
+                          "value": "{{state.submit_term_days}}",
+                          "onChange": {
+                            "action": "setState",
+                            "key": "submit_term_days",
+                            "value": "{{event.target.value}}"
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Input",
+                    "props": {
+                      "label": "Notes",
+                      "placeholder": "Add proposal notes or exception rationale",
+                      "value": "{{state.submit_notes}}",
+                      "multiline": true,
+                      "onChange": {
+                        "action": "setState",
+                        "key": "submit_notes",
+                        "value": "{{event.target.value}}"
+                      }
+                    }
+                  },
+                  {
+                    "type": "Button",
+                    "props": {
+                      "children": "Submit for Approval",
+                      "onClick": {
+                        "action": "apiCall",
+                        "operation": "rpc",
+                        "function": "staff_submit_project_proposal_for_approval",
+                        "data": {
+                          "p_customer_id": "{{state.submit_customer_id}}",
+                          "p_customer_name": "{{state.submit_customer_name}}",
+                          "p_branch_id": "{{state.submit_branch_id}}",
+                          "p_branch_name": "{{state.submit_branch_name}}",
+                          "p_term_days": "{{state.submit_term_days || 30}}",
+                          "p_notes": "{{state.submit_notes}}",
+                          "p_categories": "{{data.pricing_history}}",
+                          "p_proposed_rates": "{{data.availability}}"
+                        },
+                        "onSuccess": {
+                          "action": "sequence",
+                          "actions": [
+                            { "action": "setState", "key": "submitStatus", "value": "success" },
+                            { "action": "setState", "key": "submit_customer_id", "value": "" },
+                            { "action": "setState", "key": "submit_customer_name", "value": "" },
+                            { "action": "setState", "key": "submit_branch_id", "value": "" },
+                            { "action": "setState", "key": "submit_branch_name", "value": "" },
+                            { "action": "setState", "key": "submit_term_days", "value": "30" },
+                            { "action": "setState", "key": "submit_notes", "value": "" },
+                            { "action": "refetch", "source": "pending_approvals" }
+                          ]
+                        },
+                        "onError": {
+                          "action": "setState",
+                          "key": "submitStatus",
+                          "value": "error"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "Stack",
+        "props": { "spacing": 2 },
+        "children": [
+          {
+            "type": "Heading",
+            "props": { "level": 2, "children": "Pending Rate Approvals" }
+          },
+          {
+            "type": "Text",
+            "props": {
+              "variant": "muted",
+              "size": "sm",
+              "children": "Internal rate and exception approval cases submitted from this workbench. Cases must reach 'approved' status before customer-facing pricing or commitments are prepared."
+            }
+          },
+          {
+            "type": "Alert",
+            "if": "{{errors.pending_approvals}}",
+            "props": {
+              "variant": "destructive",
+              "title": "Unable to load approval cases",
+              "description": "Pending rate approval cases are unavailable. Check your connection or retry shortly."
+            }
+          },
+          {
+            "type": "Text",
+            "if": "{{!isLoading.pending_approvals && !errors.pending_approvals && data.pending_approvals.length === 0}}",
+            "props": {
+              "variant": "muted",
+              "children": "No pending rate approval cases for this workbench. Use the Quote Builder to draft lines, then submit for internal rate approval via the workbench when ready."
+            }
+          },
+          {
+            "type": "Stack",
+            "if": "{{data.pending_approvals.length > 0}}",
+            "props": { "spacing": 2 },
+            "foreach": {
+              "items": "{{data.pending_approvals}}",
+              "item": "approval"
+            },
+            "children": [
+              {
+                "type": "Card",
+                "props": {},
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 2 },
+                    "children": [
+                      {
+                        "type": "Stack",
+                        "props": { "direction": "horizontal", "justify": "between", "align": "start", "spacing": 2 },
+                        "children": [
+                          {
+                            "type": "Stack",
+                            "props": { "spacing": 0 },
+                            "children": [
+                              { "type": "Text", "props": { "weight": "medium", "children": "{{approval.customer_name || 'Unknown customer'}}" } },
+                              { "type": "Text", "props": { "variant": "muted", "size": "sm", "children": "Submitted {{approval.created_at}}" } }
+                            ]
+                          },
+                          {
+                            "type": "Badge",
+                            "props": { "variant": "warning", "children": "{{formatFindingStatus(approval.status)}}" }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "props": { "size": "sm", "children": "{{approval.proposed_action || approval.rationale || '—'}}" }
+                      },
+                      {
+                        "type": "Alert",
+                        "props": {
+                          "variant": "info",
+                          "title": "Approval required before customer-facing materials",
+                          "description": "This rate approval case must be reviewed and approved by an authorized approver before any pricing, terms, or commitments are included in a customer proposal."
+                        }
+                      },
+                      {
+                        "type": "Link",
+                        "props": {
+                          "to": "/ops/findings/{{approval.id}}",
+                          "children": "Review & decide approval →"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,53 @@
+{{- if and .Values.adminAccess.enabled .Values.adminAccess.alertmanager.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "app.alertmanagerUpstream.fullname" . }}
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: alertmanager-admin-upstream
+spec:
+  type: ExternalName
+  externalName: {{ .Values.adminAccess.alertmanager.upstreamHost | quote }}
+  ports:
+    - name: http
+      port: {{ .Values.adminAccess.alertmanager.upstreamPort }}
+      protocol: TCP
+---
+{{ if and .Values.adminAccess.oauth2Proxy.enabled .Values.adminAccess.alertmanager.oauth2Proxy.enabled .Values.adminAccess.alertmanager.ingress.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "app.fullname" . }}-alertmanager-admin
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: alertmanager-admin-ingress
+  {{- with .Values.adminAccess.alertmanager.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.adminAccess.alertmanager.ingress.className }}
+  ingressClassName: {{ .Values.adminAccess.alertmanager.ingress.className }}
+  {{- end }}
+  {{- if .Values.adminAccess.alertmanager.ingress.tls }}
+  tls:
+    {{- toYaml .Values.adminAccess.alertmanager.ingress.tls | nindent 4 }}
+  {{- end }}
+  rules:
+    {{- range .Values.adminAccess.alertmanager.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "app.alertmanagerOauth2Proxy.fullname" $ }}
+                port:
+                  name: http
+          {{- end }}
+    {{- end }}
+{{- end }}
+{{- end }}

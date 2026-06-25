@@ -1,0 +1,70 @@
+[project]
+name = "wynne-temporal"
+version = "0.0.1"
+description = "Temporal worker for the Wynne equipment-rental platform"
+requires-python = ">=3.11"
+dependencies = [
+  "temporalio==1.5.0",
+  "pydantic==2.7.3",
+  "pydantic-settings==2.4.0",
+  "fastapi==0.115.13",
+  "uvicorn==0.30.6",
+  "prometheus-client==0.21.1",
+  # Security: minimum versions to address known CVEs (pip-audit 2026-06-18)
+  "certifi>=2024.7.4",
+  "configobj>=5.0.9",
+  "cryptography>=48.0.1",
+  "idna>=3.15",
+  "jinja2>=3.1.6",
+  "pyasn1>=0.6.3",
+  "pygments>=2.20.0",
+  "pyjwt>=2.13.0",
+  "pyopenssl>=26.0.0",
+  "requests>=2.33.0",
+  "setuptools>=78.1.1",
+  "twisted>=26.4.0",
+  "urllib3>=2.6.3"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest==8.4.1",
+  "pytest-asyncio==1.4.0",
+  "pytest-timeout==2.3.1",
+  "pytest-json-report==1.5.0",
+  "httpx==0.28.1",
+  "ruff==0.8.4",
+  "mypy==1.13.0",
+  # Security: pin build/install tooling to patched versions
+  "pip>=26.1.2",
+  "wheel>=0.46.2"
+]
+
+[tool.pytest.ini_options]
+timeout = 600
+timeout_method = "thread"
+
+[build-system]
+requires = ["setuptools>=78.1.1"]
+build-backend = "setuptools.build_meta"
+
+# Ruff: fast Python lint. Starts report-only (CI runs it non-gating) until the backlog
+# is at zero, then promote to gating. Keep the rule set conservative to stay low-noise.
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+extend-exclude = ["build", "dist"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+ignore = ["E501"]  # line length handled separately; don't fail on long lines initially
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends"]
+
+# Mypy: type-check Python. Introduced nightly/report-only first — too noisy to gate cold.
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+warn_unused_ignores = true
+exclude = "(^|/)(build|dist|tests)/"

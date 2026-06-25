@@ -1,0 +1,312 @@
+name: Agent — Cluster Guardian
+
+# Dedicated workflow for wynne-* runtime health monitoring and approved remediation.
+#
+# Trigger cadence:
+#   - Scheduled: hourly at :45 for read-only detection only.
+#   - Manual (workflow_dispatch): required for any remediation run; the
+#     remediation job additionally requires a protected-environment approval
+#     gate (cluster-remediation) so cluster-facing mutations can never happen
+#     from a scheduled or unapproved run.
+#
+# Job layout:
+#   preflight            — validates kubernetes-app profile, namespace allowlist,
+#                          and dedicated runner availability before cluster jobs run.
+#   detect               — cluster-guardian agent (read-only); runs only when
+#                          preflight passes and uses the factory-cluster-guardian runner.
+#   remediate            — cluster-remediator agent (mutating); runs only on an
+#                          explicit workflow_dispatch with run_remediation=true AND
+#                          a human approval via the cluster-remediation environment.
+#   detect_degraded      — fires when preflight fails; surfaces missing requirements
+#                          explicitly so the workflow never silently skips coverage.
+
+on:
+  schedule:
+    - cron: '45 * * * *'   # hourly at :45, offset from pipeline-hourly (:30)
+  workflow_dispatch:
+    inputs:
+      run_remediation:
+        description: 'Trigger approved remediation (cluster-remediation environment approval required)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+concurrency:
+  group: agent-cluster-guardian
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+  actions: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  preflight:
+    name: Cluster Guardian — Preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      cluster_ready: ${{ steps.preflight.outputs.cluster_ready }}
+      missing_requirements: ${{ steps.preflight.outputs.missing_requirements }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate cluster guardian prerequisites
+        id: preflight
+        env:
+          HAS_COPILOT_TOKEN: ${{ secrets.COPILOT_TOKEN != '' }}
+          HAS_PROJECT_MANAGER_PAT: ${{ secrets.PROJECT_MANAGER_PAT != '' }}
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGER_PAT }}
+        run: |
+          set -euo pipefail
+          missing=()
+
+          # ── Secret availability ─────────────────────────────────────────────
+          if [ "${HAS_COPILOT_TOKEN}" != "true" ]; then
+            missing+=("COPILOT_TOKEN secret")
+          fi
+          if [ "${HAS_PROJECT_MANAGER_PAT}" != "true" ]; then
+            missing+=("PROJECT_MANAGER_PAT secret")
+          fi
+
+          # ── Profile enablement: kubernetes-app must be in deployment_profiles ─
+          has_k8s_profile="$(awk '
+            /^[[:space:]]*deployment_profiles:/ { in_profiles=1; next }
+            in_profiles && /^[[:space:]]*-[[:space:]]*kubernetes-app[[:space:]]*$/ { found=1 }
+            in_profiles && /^[^[:space:]-]/ { in_profiles=0 }
+            END { print (found ? "true" : "false") }
+          ' .github/factory.yml)"
+          if [ "$has_k8s_profile" != "true" ]; then
+            missing+=("factory.yml stack.deployment_profiles must include kubernetes-app")
+          fi
+
+          # ── Namespace allowlist: non-empty and all wynne-* ──────────────────
+          allowed_namespaces="$(awk '
+            /^cluster_guardian:/ { in_cg=1; next }
+            in_cg && /^[[:space:]]*allowed_namespaces:/ { in_ns=1; next }
+            in_ns && /^[[:space:]]*-/ { item=$0; sub(/^[[:space:]]*-[[:space:]]*/, "", item); print item; next }
+            in_ns && /^[^[:space:]-]/ { in_ns=0; in_cg=0 }
+          ' .github/factory.yml)"
+          if [ -z "$allowed_namespaces" ]; then
+            missing+=("factory.yml cluster_guardian.allowed_namespaces must be non-empty")
+          else
+            while IFS= read -r ns; do
+              [[ -n "$ns" ]] || continue
+              if [[ "$ns" != wynne-* ]]; then
+                missing+=("cluster_guardian.allowed_namespaces contains out-of-scope namespace: $ns")
+              fi
+            done <<< "$allowed_namespaces"
+          fi
+
+          # ── Runner labels: factory-cluster-guardian required labels ────────
+          cluster_guardian_labels="$(awk '
+            /^[[:space:]]*cluster_guardian:/ {
+              line = $0; sub(/^[^:]*:[[:space:]]*/, "", line)
+              if (length(line) > 0) { print line; exit }
+              capture = 1; next
+            }
+            capture && /^[[:space:]]*-/ {
+              item = $0; sub(/^[[:space:]]*-[[:space:]]*/, "", item)
+              labels = labels " " item; next
+            }
+            capture { print labels; exit }
+            END { if (capture) print labels }
+          ' .github/factory.yml | xargs)"
+          for required_label in "self-hosted" "linux" "x64" "factory-cluster-guardian"; do
+            if [[ "$cluster_guardian_labels" != *"$required_label"* ]]; then
+              missing+=("factory.yml runners.self_hosted.cluster_guardian missing $required_label")
+            fi
+          done
+
+          # ── Runner availability: at least one factory-cluster-guardian online ─
+          if [ "${HAS_PROJECT_MANAGER_PAT}" = "true" ]; then
+            runner_response="$(mktemp)"
+            if gh api \
+              -H "Accept: application/vnd.github+json" \
+              "/repos/${GITHUB_REPOSITORY}/actions/runners?per_page=100" > "$runner_response"; then
+              guardian_runner_counts="$(
+                python3 -c 'import json,sys; payload=json.load(open(sys.argv[1],"r")); runners=payload.get("runners",[]); registered=sum(1 for r in runners if "factory-cluster-guardian" in {lb.get("name") for lb in r.get("labels",[])}); online=sum(1 for r in runners if "factory-cluster-guardian" in {lb.get("name") for lb in r.get("labels",[])} and r.get("status")=="online"); print(f"{registered}:{online}")' "$runner_response" || echo "__runner_parse_error__"
+              )"
+              if [ "$guardian_runner_counts" = "__runner_parse_error__" ]; then
+                missing+=("factory-cluster-guardian runner availability payload parse failed")
+              else
+                IFS=":" read -r registered_guardian_runners online_guardian_runners <<< "$guardian_runner_counts"
+                if [ "${registered_guardian_runners:-0}" -lt 1 ]; then
+                  missing+=("factory-cluster-guardian runner label is not registered")
+                elif [ "${online_guardian_runners:-0}" -lt 1 ]; then
+                  missing+=("factory-cluster-guardian runner is registered but offline")
+                fi
+              fi
+            else
+              missing+=("factory-cluster-guardian runner availability check failed")
+            fi
+            rm -f "$runner_response"
+          fi
+
+          # ── Emit outputs ────────────────────────────────────────────────────
+          if [ "${#missing[@]}" -gt 0 ]; then
+            {
+              echo "cluster_ready=false"
+              echo "missing_requirements=${missing[*]}"
+            } >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo "cluster_ready=true"
+              echo "missing_requirements="
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Summarise preflight
+        if: always()
+        env:
+          CLUSTER_READY: ${{ steps.preflight.outputs.cluster_ready }}
+          MISSING_REQUIREMENTS: ${{ steps.preflight.outputs.missing_requirements }}
+        run: |
+          {
+            echo "## Cluster Guardian — preflight ($(date -u '+%Y-%m-%d %H:%M UTC'))"
+            echo ""
+            if [ "$CLUSTER_READY" = "true" ]; then
+              echo "✅ All prerequisites met — cluster jobs will run."
+            else
+              echo "❌ Prerequisites missing: ${MISSING_REQUIREMENTS:-unknown}"
+              echo ""
+              echo "Detection and remediation jobs are **skipped** until prerequisites are satisfied."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  detect:
+    name: Cluster Guardian — Detection (read-only)
+    needs: preflight
+    if: needs.preflight.outputs.cluster_ready == 'true'
+    runs-on: [self-hosted, linux, x64, factory-cluster-guardian]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: .github/tools/shared/package-lock.json
+
+      - name: Install shared runtime
+        run: npm ci
+        working-directory: .github/tools/shared
+
+      - name: Stage — Cluster Guardian (detection)
+        id: cluster_guardian_detect
+        continue-on-error: true
+        timeout-minutes: 18
+        working-directory: .github/tools/shared
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGER_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+          FACTORY_CONFIG_PATH: ${{ github.workspace }}/.github/factory.yml
+          AGENTS_PATH: ${{ github.workspace }}/.github/agents
+        run: npx tsx src/run-agent.ts --agent cluster-guardian
+
+      - name: Summarise — Cluster Guardian detection
+        if: always()
+        env:
+          OUTCOME: ${{ steps.cluster_guardian_detect.outcome }}
+        run: |
+          STATUS="✅ ok"
+          [ "$OUTCOME" != "success" ] && STATUS="⚠️ $OUTCOME"
+          {
+            echo "## Cluster Guardian — detection ($(date -u '+%Y-%m-%d %H:%M UTC'))"
+            echo ""
+            echo "| Stage | Status |"
+            echo "|-------|--------|"
+            echo "| cluster-guardian (detect) | $STATUS |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  remediate:
+    name: Cluster Guardian — Remediation (approved)
+    needs: [preflight, detect]
+    # Three independent gates must all pass before any cluster mutation runs:
+    #   1. preflight passed (kubernetes-app profile, namespace allowlist, runner available)
+    #   2. workflow_dispatch trigger (never runs from a schedule)
+    #   3. run_remediation input explicitly set to 'true' by the human operator
+    # A fourth gate — the cluster-remediation environment approval — is enforced
+    # by the `environment:` key below and requires a human to click Approve in the UI.
+    if: >-
+      needs.preflight.outputs.cluster_ready == 'true' &&
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.run_remediation == 'true'
+    runs-on: [self-hosted, linux, x64, factory-cluster-guardian]
+    environment: cluster-remediation
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: .github/tools/shared/package-lock.json
+
+      - name: Install shared runtime
+        run: npm ci
+        working-directory: .github/tools/shared
+
+      - name: Stage — Cluster Remediator (approved remediation)
+        id: cluster_remediator
+        continue-on-error: true
+        timeout-minutes: 18
+        working-directory: .github/tools/shared
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGER_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+          FACTORY_CONFIG_PATH: ${{ github.workspace }}/.github/factory.yml
+          AGENTS_PATH: ${{ github.workspace }}/.github/agents
+        run: npx tsx src/run-agent.ts --agent cluster-remediator
+
+      - name: Summarise — Cluster Remediator
+        if: always()
+        env:
+          OUTCOME: ${{ steps.cluster_remediator.outcome }}
+        run: |
+          STATUS="✅ ok"
+          [ "$OUTCOME" != "success" ] && STATUS="⚠️ $OUTCOME"
+          {
+            echo "## Cluster Guardian — remediation ($(date -u '+%Y-%m-%d %H:%M UTC'))"
+            echo ""
+            echo "| Stage | Status |"
+            echo "|-------|--------|"
+            echo "| cluster-remediator (approved) | $STATUS |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  detect_degraded:
+    name: Cluster Guardian — Degraded (prerequisites missing)
+    needs: preflight
+    if: needs.preflight.outputs.cluster_ready != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Report degraded status
+        env:
+          MISSING_REQUIREMENTS: ${{ needs.preflight.outputs.missing_requirements }}
+        run: |
+          {
+            echo "## ⚠️ Cluster Guardian — degraded (prerequisites missing)"
+            echo ""
+            echo "Cluster monitoring prerequisites were not satisfied; detection skipped."
+            echo ""
+            echo "- Missing: ${MISSING_REQUIREMENTS:-unknown}"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::warning::Cluster Guardian degraded: prerequisites missing (${MISSING_REQUIREMENTS:-unknown})."

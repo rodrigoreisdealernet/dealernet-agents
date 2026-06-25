@@ -1,0 +1,37 @@
+{{- if and .Values.alerting.enabled .Values.alerting.alertmanagerConfig.incidentBridge.webhookUrl }}
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: {{ include "app.fullname" . }}-alerting
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: alerting
+spec:
+  route:
+    receiver: incident-bridge
+    groupBy:
+      - alertname
+      - env
+      - component
+      - task_queue
+    groupWait: {{ .Values.alerting.alertmanagerConfig.groupWait | quote }}
+    groupInterval: {{ .Values.alerting.alertmanagerConfig.groupInterval | quote }}
+    repeatInterval: {{ .Values.alerting.alertmanagerConfig.repeatInterval | quote }}
+    matchers:
+      - name: app
+        value: {{ include "app.name" . | quote }}
+        matchType: "="
+  receivers:
+    - name: incident-bridge
+      webhookConfigs:
+        - url: {{ .Values.alerting.alertmanagerConfig.incidentBridge.webhookUrl | quote }}
+          sendResolved: true
+          {{- if .Values.alerting.alertmanagerConfig.incidentBridge.bearerTokenSecretName }}
+          httpConfig:
+            authorization:
+              credentials:
+                name: {{ .Values.alerting.alertmanagerConfig.incidentBridge.bearerTokenSecretName | quote }}
+                key: {{ .Values.alerting.alertmanagerConfig.incidentBridge.bearerTokenSecretKey | quote }}
+          {{- end }}
+{{- end }}

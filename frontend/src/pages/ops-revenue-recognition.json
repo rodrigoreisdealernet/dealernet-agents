@@ -1,0 +1,314 @@
+{
+  "id": "ops-revenue-recognition",
+  "title": "Revenue Recognition",
+  "state": {
+    "severityFilter": "%",
+    "statusFilter": "%",
+    "branchFilter": "%",
+    "customerFilter": "%"
+  },
+  "dataSources": {
+    "kpis": {
+      "type": "supabase",
+      "table": "ops_finding_kpis",
+      "select": "tenant_id, pending_count, recoverable_delta, approved_this_cycle, findings_last_24h",
+      "order": [
+        { "column": "pending_count", "ascending": false }
+      ],
+      "limit": 1,
+      "refetchInterval": 15000
+    },
+    "findings": {
+      "type": "supabase",
+      "table": "ops_findings_view",
+      "select": "id, agent_key, finding_type, severity, status, contract_label, line_item_label, customer_name, delta, confidence, created_at",
+      "filters": [
+        { "field": "agent_key", "op": "eq", "value": "revrec-analyst" },
+        { "field": "severity", "op": "ilike", "value": "{{state.severityFilter || '%'}}" },
+        { "field": "status", "op": "ilike", "value": "{{state.statusFilter || '%'}}" },
+        { "field": "contract_label", "op": "ilike", "value": "{{state.branchFilter || '%'}}" },
+        { "field": "customer_name", "op": "ilike", "value": "{{state.customerFilter || '%'}}" }
+      ],
+      "order": [
+        { "column": "delta", "ascending": false },
+        { "column": "created_at", "ascending": false }
+      ],
+      "refetchInterval": 10000
+    }
+  },
+  "layout": {
+    "type": "Stack",
+    "props": { "spacing": 6 },
+    "children": [
+      {
+        "type": "Stack",
+        "props": { "spacing": 1 },
+        "children": [
+          { "type": "Heading", "props": { "level": 1, "children": "Revenue Recognition" } },
+          {
+            "type": "Text",
+            "props": {
+              "variant": "muted",
+              "children": "Review billing opportunities, missing charges, and exceptions that need a business decision."
+            }
+          }
+        ]
+      },
+      {
+        "type": "Grid",
+        "if": "{{!errors.kpis && data.kpis && data.kpis.length > 0}}",
+        "props": { "columns": "repeat(auto-fit, minmax(14rem, 1fr))", "gap": 4 },
+        "children": [
+          {
+            "type": "StatCard",
+            "props": {
+              "label": "Pending findings",
+              "value": "{{data.kpis[0].pending_count || 0}}",
+              "icon": "ClipboardList",
+              "tone": "warning"
+            }
+          },
+          {
+            "type": "StatCard",
+            "props": {
+              "label": "Recoverable revenue",
+              "value": "{{formatCurrency(data.kpis[0].recoverable_delta || 0)}}",
+              "icon": "CircleDollarSign",
+              "tone": "success"
+            }
+          },
+          {
+            "type": "StatCard",
+            "props": {
+              "label": "Approved this cycle",
+              "value": "{{data.kpis[0].approved_this_cycle || 0}}",
+              "icon": "CheckCircle2",
+              "tone": "success"
+            }
+          },
+          {
+            "type": "StatCard",
+            "props": {
+              "label": "Findings (24h)",
+              "value": "{{data.kpis[0].findings_last_24h || 0}}",
+              "icon": "ChartColumnIncreasing",
+              "tone": "default"
+            }
+          }
+        ]
+      },
+      {
+        "type": "Grid",
+        "props": { "columns": "repeat(auto-fit, minmax(12rem, 1fr))", "gap": 3 },
+        "children": [
+          {
+            "type": "Select",
+            "props": {
+              "label": "Severity",
+              "value": "{{state.severityFilter}}",
+              "options": [
+                { "value": "%", "label": "All severities" },
+                { "value": "critical", "label": "critical" },
+                { "value": "high", "label": "high" },
+                { "value": "medium", "label": "medium" },
+                { "value": "low", "label": "low" }
+              ],
+              "onChange": {
+                "action": "setState",
+                "key": "severityFilter",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Select",
+            "props": {
+              "label": "Status",
+              "value": "{{state.statusFilter}}",
+              "options": [
+                { "value": "%", "label": "All statuses" },
+                { "value": "pending_approval", "label": "Pending approval" },
+                { "value": "approved", "label": "Approved" },
+                { "value": "rejected", "label": "Rejected" },
+                { "value": "informational", "label": "Informational" }
+              ],
+              "onChange": {
+                "action": "setState",
+                "key": "statusFilter",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Input",
+            "props": {
+              "label": "Branch / Contract",
+              "placeholder": "Filter by contract…",
+              "value": "{{state.branchFilter === '%' ? '' : state.branchFilter}}",
+              "onChange": {
+                "action": "setState",
+                "key": "branchFilter",
+                "value": "{{event.target.value || '%'}}"
+              }
+            }
+          },
+          {
+            "type": "Input",
+            "props": {
+              "label": "Customer",
+              "placeholder": "Filter by customer…",
+              "value": "{{state.customerFilter === '%' ? '' : state.customerFilter}}",
+              "onChange": {
+                "action": "setState",
+                "key": "customerFilter",
+                "value": "{{event.target.value || '%'}}"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "type": "Text",
+        "if": "{{isLoading.findings}}",
+        "props": {
+          "variant": "muted",
+          "children": "Loading revenue opportunities..."
+        }
+      },
+      {
+        "type": "Alert",
+        "if": "{{errors.findings}}",
+        "props": {
+          "variant": "destructive",
+          "title": "Unable to load revenue opportunities",
+          "description": "Check filters or retry shortly."
+        }
+      },
+      {
+        "type": "EmptyState",
+        "if": "{{!isLoading.findings && !errors.findings && data.findings.length === 0}}",
+        "props": {
+          "icon": "SearchCheck",
+          "title": "No findings match these filters",
+          "hint": "Try adjusting the severity or status filters, or clear the search fields."
+        }
+      },
+      {
+        "type": "Stack",
+        "if": "{{data.findings.length > 0}}",
+        "props": { "spacing": 3 },
+        "children": [
+          {
+            "type": "Card",
+            "each": "{{data.findings}}",
+            "as": "finding",
+            "key": "{{finding.id}}",
+            "props": {
+              "className": "{{finding.status === 'pending_approval' ? 'border-l-4 border-l-amber-400' : ''}}"
+            },
+            "children": [
+              {
+                "type": "Stack",
+                "props": { "direction": "horizontal", "justify": "between", "align": "start", "spacing": 4 },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 1 },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": {
+                          "weight": "semibold",
+                          "children": "{{formatFindingType(finding.finding_type)}}"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "sm",
+                          "variant": "muted",
+                          "children": "{{finding.severity}} · {{finding.contract_label || 'N/A'}} · {{finding.line_item_label || 'N/A'}}"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "sm",
+                          "children": "Contract: {{finding.contract_label || 'N/A'}}"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "sm",
+                          "children": "Customer: {{finding.customer_name || 'N/A'}}"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "sm",
+                          "children": "Delta: {{formatCurrency(finding.delta || 0)}}"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 2, "align": "end" },
+                    "children": [
+                      {
+                        "type": "Badge",
+                        "props": {
+                          "status": "{{finding.status}}",
+                          "children": "{{finding.status}}"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "sm",
+                          "variant": "muted",
+                          "children": "{{formatPercent(finding.confidence || 0)}} confident"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "sm",
+                          "variant": "muted",
+                          "children": "{{formatDateTime(finding.created_at)}}"
+                        }
+                      },
+                      {
+                        "type": "Link",
+                        "props": {
+                          "to": "/ops/findings/{{finding.id}}",
+                          "search": {
+                            "source": "revenue-recognition",
+                            "severity": "{{state.severityFilter || '%'}}",
+                            "status": "{{state.statusFilter || '%'}}",
+                            "branch": "{{state.branchFilter || '%'}}",
+                            "customer": "{{state.customerFilter || '%'}}",
+                            "contract": "{{finding.contract_label || ''}}",
+                            "customerName": "{{finding.customer_name || ''}}",
+                            "delta": "{{finding.delta || 0}}",
+                            "returnSeverity": "{{state.severityFilter || '%'}}",
+                            "returnStatus": "{{state.statusFilter || '%'}}",
+                            "returnBranch": "{{state.branchFilter || '%'}}",
+                            "returnCustomer": "{{state.customerFilter || '%'}}"
+                          },
+                          "children": "Open finding →"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

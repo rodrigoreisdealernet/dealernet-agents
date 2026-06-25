@@ -1,0 +1,191 @@
+{
+  "id": "ops-audit-trail",
+  "title": "Audit Trail",
+  "state": {},
+  "dataSources": {
+    "audit": {
+      "type": "supabase",
+      "table": "ops_audit_trail_view",
+      "select": "row_id, entity_id, entity_type, entity_name, fact_key, fact_label, observed_at, data_payload, metadata, source_id, point_order",
+      "filters": [
+        { "field": "entity_id", "op": "eq", "value": "{{params.entityId}}" }
+      ],
+      "order": [
+        { "column": "observed_at", "ascending": true },
+        { "column": "point_order", "ascending": true }
+      ],
+      "refetchInterval": 10000
+    },
+    "finding_context": {
+      "type": "supabase",
+      "table": "ops_findings_view",
+      "select": "id, finding_type, contract_id, contract_label, customer_name",
+      "filters": [
+        { "field": "contract_id", "op": "eq", "value": "{{params.entityId}}" }
+      ],
+      "order": [
+        { "column": "created_at", "ascending": false }
+      ],
+      "limit": 1,
+      "refetchInterval": 10000
+    }
+  },
+  "layout": {
+    "type": "Stack",
+    "props": { "spacing": 6 },
+    "children": [
+      {
+        "type": "Stack",
+        "props": { "spacing": 1 },
+        "children": [
+          { "type": "Heading", "props": { "level": 1, "children": "Audit Trail" } },
+          {
+            "type": "Text",
+            "props": {
+              "variant": "muted",
+              "children": "View the full review history for this revenue or fleet event."
+            }
+          }
+        ]
+      },
+      {
+        "type": "Text",
+        "if": "{{isLoading.audit}}",
+        "props": {
+          "variant": "muted",
+          "children": "Loading audit trail..."
+        }
+      },
+      {
+        "type": "Alert",
+        "if": "{{errors.audit}}",
+        "props": {
+          "variant": "destructive",
+          "title": "Unable to load audit trail",
+          "description": "Retry shortly."
+        }
+      },
+      {
+        "type": "Text",
+        "if": "{{data.audit.length === 0}}",
+        "props": {
+          "variant": "muted",
+          "className": "py-8 text-center",
+          "children": "No audit events found for this entity."
+        }
+      },
+      {
+        "type": "Card",
+        "if": "{{data.audit.length > 0}}",
+        "props": { "title": "Finding context" },
+        "children": [
+          {
+            "type": "Stack",
+            "props": { "spacing": 1 },
+            "children": [
+              {
+                "type": "Text",
+                "props": {
+                  "size": "sm",
+                  "children": "Finding: {{data.finding_context && data.finding_context.length > 0 ? formatFindingType(data.finding_context[0].finding_type) : ((data.audit[0] && data.audit[0].metadata && (data.audit[0].metadata.finding_type || data.audit[0].metadata.finding_id)) || (data.audit[0] && data.audit[0].data_payload && (data.audit[0].data_payload.finding_type || data.audit[0].data_payload.finding_id)) || 'N/A')}}"
+                }
+              },
+              {
+                "type": "Text",
+                "props": {
+                  "size": "sm",
+                  "children": "Contract: {{data.finding_context && data.finding_context.length > 0 ? data.finding_context[0].contract_label : ((data.audit[0] && data.audit[0].metadata && (data.audit[0].metadata.contract_label || data.audit[0].metadata.contract_id)) || (data.audit[0] && data.audit[0].data_payload && (data.audit[0].data_payload.contract_label || data.audit[0].data_payload.contract_id)) || (data.audit[0] && data.audit[0].entity_name) || (data.audit[0] && data.audit[0].entity_id) || params.entityId)}}"
+                }
+              },
+              {
+                "type": "Text",
+                "props": {
+                  "size": "sm",
+                  "children": "Customer: {{data.finding_context && data.finding_context.length > 0 && data.finding_context[0].customer_name ? data.finding_context[0].customer_name : ((data.audit[0] && data.audit[0].metadata && (data.audit[0].metadata.customer_name || data.audit[0].metadata.customer_label)) || (data.audit[0] && data.audit[0].data_payload && (data.audit[0].data_payload.customer_name || data.audit[0].data_payload.customer_label)) || 'N/A')}}"
+                }
+              },
+              {
+                "type": "Link",
+                "if": "{{data.finding_context && data.finding_context.length > 0 && data.finding_context[0].id}}",
+                "props": {
+                  "to": "/ops/findings/{{data.finding_context[0].id}}",
+                  "children": "Open finding detail"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "Stack",
+        "if": "{{data.audit.length > 0}}",
+        "props": { "spacing": 3 },
+        "children": [
+          {
+            "type": "Card",
+            "each": "{{data.audit}}",
+            "as": "event",
+            "key": "{{event.entity_id}}-{{event.point_order}}",
+            "props": {
+              "className": "{{event.row_id === params.activeEvent ? 'border-primary ring-2 ring-primary ring-offset-1' : ''}}"
+            },
+            "children": [
+              {
+                "type": "Stack",
+                "props": { "spacing": 1 },
+                "children": [
+                  {
+                    "type": "Text",
+                    "props": {
+                      "weight": "semibold",
+                      "children": "{{formatOpsAuditLabel(event.fact_label || event.fact_key || 'Workflow event')}}"
+                    }
+                  },
+                  {
+                    "type": "Text",
+                    "props": {
+                      "size": "sm",
+                      "variant": "muted",
+                      "children": "{{event.entity_name || event.entity_type || params.entityId || 'Unknown entity'}} · {{formatDate(event.observed_at) || 'Date unavailable'}}"
+                    }
+                  },
+                  {
+                    "type": "Text",
+                    "props": {
+                      "size": "sm",
+                      "children": "Actor: {{formatOpsAgentLabel(event.metadata.approver_name || event.metadata.actor_name || event.data_payload.approved_by || event.data_payload.approver_name || 'system')}}"
+                    }
+                  },
+                  {
+                    "type": "Text",
+                    "props": {
+                      "size": "sm",
+                      "children": "Summary: {{formatOpsAuditSummary(event.data_payload, event.fact_label || event.fact_key)}}"
+                    }
+                  },
+                  {
+                    "type": "Text",
+                    "props": {
+                      "size": "sm",
+                      "variant": "muted",
+                      "children": "Payload: {{summarizeAuditPayload(event.data_payload)}}"
+                    }
+                  },
+                  {
+                    "type": "Text",
+                    "if": "{{event.row_id === params.activeEvent}}",
+                    "props": {
+                      "size": "xs",
+                      "className": "text-primary font-medium",
+                      "children": "Active event"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

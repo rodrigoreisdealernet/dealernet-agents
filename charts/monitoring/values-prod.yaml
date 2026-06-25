@@ -1,0 +1,6 @@
+# charts/monitoring/values-prod.yaml
+# Production environment overrides (namespace: monitoring)
+
+grafana:
+  namespace: monitoring
+  prometheusUrl: "http://prometheus-operated:9090"

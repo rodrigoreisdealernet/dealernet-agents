@@ -1,0 +1,304 @@
+{
+  "id": "customer-profile-list",
+  "title": "Customer Profiles",
+  "state": {
+    "create_name": "",
+    "create_customer_type": "local",
+    "create_tier": "standard",
+    "create_industry": "",
+    "create_error": ""
+  },
+  "modals": {
+    "createCustomer": {
+      "title": "Create Customer",
+      "size": "md",
+      "content": {
+        "type": "Stack",
+        "props": { "spacing": 4 },
+        "children": [
+          {
+            "type": "Text",
+            "if": "{{state.create_error}}",
+            "props": { "variant": "destructive", "size": "sm", "children": "{{state.create_error}}" }
+          },
+          {
+            "type": "Input",
+            "props": {
+              "label": "Customer Name",
+              "placeholder": "e.g. Acme Industrial LLC",
+              "name": "create_name",
+              "value": "{{state.create_name || ''}}",
+              "onChange": { "action": "setState", "key": "create_name", "value": "{{event.target.value}}" }
+            }
+          },
+          {
+            "type": "Select",
+            "props": {
+              "label": "Customer Type",
+              "name": "create_customer_type",
+              "value": "{{state.create_customer_type || 'local'}}",
+              "placeholder": "Select type...",
+              "options": [
+                { "value": "local", "label": "Local" },
+                { "value": "national", "label": "National" }
+              ],
+              "onChange": { "action": "setState", "key": "create_customer_type", "value": "{{event.target.value}}" }
+            }
+          },
+          {
+            "type": "Select",
+            "props": {
+              "label": "Tier",
+              "name": "create_tier",
+              "value": "{{state.create_tier || 'standard'}}",
+              "placeholder": "Select tier...",
+              "options": [
+                { "value": "standard", "label": "Standard" },
+                { "value": "silver", "label": "Silver" },
+                { "value": "gold", "label": "Gold" }
+              ],
+              "onChange": { "action": "setState", "key": "create_tier", "value": "{{event.target.value}}" }
+            }
+          },
+          {
+            "type": "Input",
+            "props": {
+              "label": "Industry",
+              "placeholder": "e.g. heavy_civil, industrial_maintenance",
+              "name": "create_industry",
+              "value": "{{state.create_industry || ''}}",
+              "onChange": { "action": "setState", "key": "create_industry", "value": "{{event.target.value}}" }
+            }
+          },
+          {
+            "type": "Stack",
+            "props": { "direction": "horizontal", "justify": "end", "spacing": 2 },
+            "children": [
+              {
+                "type": "Button",
+                "props": {
+                  "variant": "outline",
+                  "children": "Cancel",
+                  "onClick": { "action": "closeModal" }
+                }
+              },
+              {
+                "type": "Button",
+                "props": {
+                  "children": "Create Customer",
+                  "onClick": {
+                    "action": "sequence",
+                    "actions": [
+                      { "action": "setState", "key": "create_error", "value": "" },
+                      {
+                        "action": "conditional",
+                        "condition": "{{!state.create_name}}",
+                        "then": { "action": "setState", "key": "create_error", "value": "Customer name is required." },
+                        "else": {
+                          "action": "apiCall",
+                          "operation": "rpc",
+                          "function": "crm_upsert_customer_profile",
+                          "data": {
+                            "p_source_record_id": "{{uuid()}}",
+                            "p_data": {
+                              "name": "{{state.create_name}}",
+                              "customer_type": "{{state.create_customer_type || 'local'}}",
+                              "tier": "{{state.create_tier || 'standard'}}",
+                              "industry": "{{state.create_industry || null}}"
+                            }
+                          },
+                          "onSuccess": {
+                            "action": "sequence",
+                            "actions": [
+                              { "action": "closeModal" },
+                              { "action": "setState", "key": "create_name", "value": "" },
+                              { "action": "setState", "key": "create_customer_type", "value": "local" },
+                              { "action": "setState", "key": "create_tier", "value": "standard" },
+                              { "action": "setState", "key": "create_industry", "value": "" },
+                              { "action": "refetch", "source": "customers" }
+                            ]
+                          },
+                          "onError": {
+                            "action": "setState",
+                            "key": "create_error",
+                            "value": "Failed to create customer. Please try again."
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "dataSources": {
+    "customers": {
+      "type": "supabase",
+      "table": "crm_customer_profile_current",
+      "select": "entity_id, source_record_id, name, customer_type, tier, industry, balance, credit_limit, payment_issue_flag, created_at",
+      "order": [{ "column": "name", "ascending": true }]
+    }
+  },
+  "layout": {
+    "type": "Stack",
+    "props": { "spacing": 6 },
+    "children": [
+      {
+        "type": "Stack",
+        "props": { "direction": "horizontal", "justify": "between", "align": "center" },
+        "children": [
+          {
+            "type": "Stack",
+            "props": { "spacing": 1 },
+            "children": [
+              {
+                "type": "Heading",
+                "props": { "level": 1, "children": "Customer Profiles" }
+              },
+              {
+                "type": "Text",
+                "props": { "variant": "muted", "children": "View and manage CRM customer profiles, contacts, credit, and notes" }
+              }
+            ]
+          },
+          {
+            "type": "Button",
+            "if": "{{auth.canWrite}}",
+            "props": {
+              "children": "Create Customer",
+              "onClick": { "action": "openModal", "modalId": "createCustomer" }
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "children": [
+          {
+            "type": "Stack",
+            "props": { "spacing": 4 },
+            "children": [
+              {
+                "type": "Heading",
+                "props": { "level": 3, "children": "Customers" }
+              },
+              {
+                "type": "Stack",
+                "props": { "spacing": 2 },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "each": "{{data.customers}}",
+                    "as": "customer",
+                    "key": "{{customer.entity_id}}",
+                    "props": {
+                      "direction": "horizontal",
+                      "justify": "between",
+                      "align": "center",
+                      "className": "p-4 border rounded-lg hover:bg-muted/50 cursor-pointer"
+                    },
+                    "children": [
+                      {
+                        "type": "Stack",
+                        "props": { "spacing": 1 },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "props": {
+                              "weight": "medium",
+                              "children": "{{customer.name || customer.source_record_id}}"
+                            }
+                          },
+                          {
+                            "type": "Stack",
+                            "props": { "direction": "horizontal", "spacing": 2, "align": "center" },
+                            "children": [
+                              {
+                                "type": "Badge",
+                                "props": {
+                                  "variant": "outline",
+                                  "children": "{{customer.tier || 'standard'}}"
+                                }
+                              },
+                              {
+                                "type": "Badge",
+                                "props": {
+                                  "variant": "secondary",
+                                  "children": "{{customer.customer_type || 'local'}}"
+                                }
+                              },
+                              {
+                                "type": "Badge",
+                                "if": "{{customer.payment_issue_flag - 0 === 1}}",
+                                "props": {
+                                  "variant": "destructive",
+                                  "children": "Payment Issue"
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "type": "Text",
+                            "props": {
+                              "variant": "muted",
+                              "size": "sm",
+                              "children": "Industry: {{customer.industry || 'N/A'}} · Balance: ${{customer.balance || 0}}"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Stack",
+                        "props": { "direction": "horizontal", "spacing": 2, "align": "center" },
+                        "children": [
+                          {
+                            "type": "Button",
+                            "if": "{{customer.payment_issue_flag - 0 === 1}}",
+                            "props": {
+                              "variant": "destructive",
+                              "size": "sm",
+                              "children": "Open Issue",
+                              "onClick": {
+                                "action": "navigate",
+                                "to": "/crm/customers/{{customer.entity_id}}"
+                              }
+                            }
+                          },
+                          {
+                            "type": "Button",
+                            "props": {
+                              "variant": "outline",
+                              "size": "sm",
+                              "children": "View Profile",
+                              "onClick": {
+                                "action": "navigate",
+                                "to": "/crm/customers/{{customer.entity_id}}"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "Text",
+                "if": "{{!data.customers || data.customers.length === 0}}",
+                "props": {
+                  "variant": "muted",
+                  "className": "text-center py-8",
+                  "children": "No customer profiles yet. Create customers via the entity model or transaction flows."
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

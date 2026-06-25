@@ -1,0 +1,69 @@
+{{- if .Values.temporalUi.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "app.temporalUi.fullname" . }}
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: temporal-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "app.temporalUi.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "app.temporalUi.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: temporal-ui
+    spec:
+      {{- with .Values.temporalUi.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.temporalUi.podSecurityContext | nindent 8 }}
+      containers:
+        - name: temporal-ui
+          image: {{ include "app.image" (dict "image" .Values.temporalUi.image "global" .Values.imageRegistry) }}
+          imagePullPolicy: {{ .Values.temporalUi.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.temporalUi.securityContext | nindent 12 }}
+          volumeMounts:
+            - name: temporal-ui-config
+              mountPath: /home/ui-server/config
+          env:
+            - name: TEMPORAL_ADDRESS
+              value: {{ .Values.temporalUi.temporalGrpcAddress | quote }}
+            - name: TEMPORAL_UI_PORT
+              value: {{ .Values.temporalUi.service.port | quote }}
+            - name: TEMPORAL_DEFAULT_NAMESPACE
+              value: {{ .Values.temporalUi.temporalDefaultNamespace | quote }}
+            - name: TEMPORAL_CORS_ORIGINS
+              value: "http://localhost:8080"
+          ports:
+            - name: http
+              containerPort: {{ .Values.temporalUi.service.port }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.temporalUi.resources | nindent 12 }}
+      volumes:
+        - name: temporal-ui-config
+          emptyDir: {}
+{{- end }}

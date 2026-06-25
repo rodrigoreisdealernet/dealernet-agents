@@ -1,0 +1,139 @@
+# Production-grade OpenBao Helm values (ADR-0040). Chart: openbao/openbao (>= 0.28.x).
+#
+#   helm repo add openbao https://openbao.github.io/openbao-helm
+#   helm upgrade --install openbao openbao/openbao -n wynne-vault -f deploy/openbao/values-ha.yaml
+#
+# ⚠️  Apply only via the cluster-admin platform-bootstrap path — NOT the namespace-scoped
+#     gha-deployer. Production auto-unseal is committed here as a scoped Azure Key Vault key
+#     via Azure Workload Identity; zone topologySpreadConstraints remain a TODO pending a
+#     multi-zone node pool.
+
+global:
+  # Enable TLS (server + Raft peer). Certs come from cert-manager (deploy/openbao/certificate.yaml).
+  tlsDisable: false
+
+# We deliver secrets via External Secrets Operator, not the Agent Injector — disable it.
+injector:
+  enabled: false
+
+server:
+  workloadIdentity:
+    # Cluster-admin bootstrap must provide the dedicated UAMI client ID before apply/render.
+    clientId: ""
+
+  image:
+    repository: "openbao/openbao"
+    tag: "2.5.4"
+
+  # Single-writer Raft node id = pod name; standalone off; HA Raft on.
+  standalone:
+    enabled: false
+
+  ha:
+    enabled: true
+    replicas: 3
+    raft:
+      enabled: true
+      setNodeId: true
+      config: |
+        ui = true
+
+        listener "tcp" {
+          address         = "[::]:8200"
+          cluster_address = "[::]:8201"
+          tls_cert_file   = "/openbao/userconfig/openbao-tls/tls.crt"
+          tls_key_file    = "/openbao/userconfig/openbao-tls/tls.key"
+          tls_client_ca_file = "/openbao/userconfig/openbao-tls/ca.crt"
+        }
+
+        storage "raft" {
+          path = "/openbao/data"
+          retry_join {
+            leader_api_addr = "https://openbao-0.openbao-internal:8200"
+            leader_ca_cert_file = "/openbao/userconfig/openbao-tls/ca.crt"
+          }
+          retry_join {
+            leader_api_addr = "https://openbao-1.openbao-internal:8200"
+            leader_ca_cert_file = "/openbao/userconfig/openbao-tls/ca.crt"
+          }
+          retry_join {
+            leader_api_addr = "https://openbao-2.openbao-internal:8200"
+            leader_ca_cert_file = "/openbao/userconfig/openbao-tls/ca.crt"
+          }
+          # Raft autopilot keeps the voter set healthy and reaps dead peers.
+          autopilot {
+            cleanup_dead_servers           = true
+            dead_server_last_contact_threshold = "10s"
+            min_quorum                     = 3
+          }
+        }
+
+        service_registration "kubernetes" {}
+
+        telemetry {
+          prometheus_retention_time = "30s"
+          disable_hostname          = true
+        }
+
+        # Keep metrics on the authenticated management path; add a private scraper/token later
+        # rather than exposing unauthenticated telemetry on the shared listener.
+        seal "azurekeyvault" {
+          vault_name                   = "wynne-openbao-prod"
+          key_name                     = "openbao-prod-unseal"
+          environment                  = "AzurePublicCloud"
+          use_workload_identity        = "true"
+          workload_identity_token_file = "/var/run/secrets/azure/tokens/azure-identity-token"
+          workload_identity_audience   = "api://AzureADTokenExchange"
+        }
+
+  # Persistent Raft data + audit log on Azure Premium SSD.
+  dataStorage:
+    enabled: true
+    size: 10Gi
+    storageClass: managed-csi-premium
+  auditStorage:
+    enabled: true
+    size: 10Gi
+    storageClass: managed-csi-premium
+
+  # Mount the cert-manager-issued server cert (secret openbao-tls).
+  volumes:
+    - name: openbao-tls
+      secret:
+        secretName: openbao-tls
+  volumeMounts:
+    - name: openbao-tls
+      mountPath: /openbao/userconfig/openbao-tls
+      readOnly: true
+
+  # Talk to peers/self over TLS.
+  extraEnvironmentVars:
+    BAO_CACERT: /openbao/userconfig/openbao-tls/ca.crt
+
+  # Azure Workload Identity binds the scoped AKV seal key without static credentials in-repo.
+  extraLabels:
+    azure.workload.identity/use: "true"
+  serviceAccount:
+    annotations: |
+      azure.workload.identity/client-id: {{ required "Set server.workloadIdentity.clientId before rendering values-ha.yaml." .Values.server.workloadIdentity.clientId | quote }}
+
+  # Spread the 3 voters across distinct nodes (zone spread is a TODO pending a multi-zone pool).
+  affinity: |
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ template "openbao.name" . }}
+              component: server
+          topologyKey: kubernetes.io/hostname
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+
+  # Quorum-safe rolling updates.
+  updateStrategyType: RollingUpdate

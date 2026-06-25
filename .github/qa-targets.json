@@ -1,0 +1,30 @@
+{
+  "_comment": "Test-health SLOs for the factory. The history renderers read this (zero-dep JSON) and flag ✅/⚠️ breaches in the ci-history and e2e-history READMEs; the QA Manager reads breaches as its prioritised worklist and tracks the factory converging toward these. Edit to raise/lower the bar — never lower a floor to hide a regression. Floors are grounded in current actuals (2026-06): unit lines ~88%, branches ~74%; e2e screens ~85%, journeys 7/7.",
+  "pass_rate": {
+    "smoke":      { "window": "7d", "min": 0.98, "gating": true },
+    "experience": { "window": "7d", "min": 0.0,  "gating": false },
+    "unit":       { "window": "latest", "min": 1.0, "gating": true },
+    "temporal":   { "window": "latest", "min": 1.0, "gating": true },
+    "helm":       { "window": "latest", "min": 1.0, "gating": true },
+    "seed":       { "window": "latest", "min": 1.0, "gating": true }
+  },
+  "coverage": {
+    "unit_lines_min": 0.80,
+    "unit_branches_min": 0.65,
+    "e2e_screens_min": 0.85,
+    "e2e_journeys_min": 1.0
+  },
+  "stability": {
+    "max_unstable_tests": 3,
+    "max_skip_pct": 0.25
+  },
+  "quality": {
+    "_comment": "Static-analysis ceilings (counts). These are the eventual-state floors and may be breached today (e.g. tsc has a ~193-error latent backlog because vite build never type-checked) — a breach is the signal that drives cleanup tickets via the QA Manager scorecard. Promote the matching CI check from report-only to GATING only once its count is at 0 and stable.",
+    "ts_errors_max": 0,
+    "ruff_errors_max": 0,
+    "shellcheck_errors_max": 0,
+    "sast_critical_max": 0,
+    "deps_high_max": 0,
+    "secrets_max": 0
+  }
+}

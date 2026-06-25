@@ -1,0 +1,19 @@
+# Local-only build variant: tolerates corporate TLS interception (self-signed CA in chain)
+# by marking PyPI hosts trusted for pip. Do NOT use in production.
+FROM python:3.11-slim
+
+WORKDIR /app
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PIP_TRUSTED_HOST="pypi.org files.pythonhosted.org pypi.python.org"
+
+COPY pyproject.toml ./
+COPY src ./src
+RUN pip install --no-cache-dir \
+      --trusted-host pypi.org \
+      --trusted-host files.pythonhosted.org \
+      --trusted-host pypi.python.org \
+      .
+
+CMD ["python", "-m", "src.worker"]

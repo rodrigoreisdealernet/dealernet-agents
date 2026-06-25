@@ -1,0 +1,166 @@
+name: Pipeline — Fast
+
+# Staged cadence pipeline per ADR-0025.
+# Runs a SINGLE pass per scheduled invocation (no long-running loop) — one
+# triage → review → merge sweep, then exits. Scheduled frequently; GitHub may
+# throttle short crons under load, which is an accepted trade ("a little slower
+# but much smoother") in exchange for short, predictable runs.
+# Regression contract is enforced by temporal/tests/test_pipeline_fast_workflow_contract.py.
+#
+# TIMER-ONLY DESIGN (2026-06-08): The `workflow_run` trigger that previously fired
+# on PR Validation / Build Images completion has been intentionally removed. It was
+# added in PR #657 to improve responsiveness, but caused self-cancellation thrash:
+# 69% of runs were cancelled before completing, starving the PR review queue.
+# The full sweep (triage → PR loop → specialist lanes) now runs on every scheduled
+# pass. If responsiveness degrades, shorten the cron interval (e.g. `*/10`) — do
+# NOT reintroduce event-driven triggering. See issue #704 for the full rationale.
+#
+# Stage order (one pass):
+#   1. enrich-triage   — Product Owner   (labels/triages new issues and PRs)
+#   2-4. conditional  — DB Steward / Security Reviewer / Platform Engineer
+#                        (only when a matching labelled PR/issue exists)
+#   5. tech-review     — Tech Reviewer   (approves merge-ready queue:review PRs,
+#                        deep-reviews the rest to a terminal verdict)
+#
+# Every stage uses a per-stage `timeout` + continue-on-failure. Outcomes go to
+# $GITHUB_STEP_SUMMARY.
+#
+# THE PER-PR LOOP LIVES IN pr-loop.yml (2026-06-10). It was a tail stage here,
+# which capped it at ~15 PR sessions per pass inside the shared 60-minute job —
+# the queue grew to 121 open PRs while each pass only touched the oldest dozen.
+# The dedicated PR Loop workflow has its own concurrency group and a multi-hour
+# budget so EVERY open PR gets its own project-manager SDK session each sweep,
+# without starving this 15-minute agent cadence.
+#
+# This pipeline is the SOLE cadence driver for these agents. The former per-agent
+# workflows (agent-*.yml) were retired and deleted; agents run only as stages here
+# (and in the hourly/daily pipelines + pr-loop.yml).
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'   # every ~15 min (single pass); GitHub may run it less often under load
+  workflow_dispatch:
+
+concurrency:
+  # Single serialising group — timer-only trigger means no cross-branch storms.
+  # cancel-in-progress: false so scheduled runs queue behind an in-flight pass
+  # rather than cancelling it.
+  group: pipeline-fast
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+  actions: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    # Hard 1-hour self-terminate: guarantees a stuck run cannot block the next
+    # scheduled timer tick. Covers worst case (Product Owner + all three
+    # specialist lanes + the Tech Reviewer's 20-min budget) with headroom.
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: .github/tools/shared/package-lock.json
+
+      - name: Install shared runtime
+        run: npm ci
+        working-directory: .github/tools/shared
+
+      - name: Fast pipeline pass (single sweep)
+        working-directory: .github/tools/shared
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.PROJECT_MANAGER_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+          FACTORY_CONFIG_PATH: ${{ github.workspace }}/.github/factory.yml
+          AGENTS_PATH: ${{ github.workspace }}/.github/agents
+        run: |
+          set -uo pipefail
+
+          # Inject write-capable PAT as git credential only for this step.
+          # Checkout uses persist-credentials: false (no job-wide token); the PAT is
+          # scoped here (--local, current repo only) so only the re-trigger push path
+          # has write/trigger access.
+          git config --local url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
+
+          # Single pass — one triage → specialist-lanes → review sweep per scheduled
+          # run (merging happens in pr-loop.yml on these reviews).
+          # Per-stage timeout (s). SDK default idle-timeout is ~300 s; small buffer
+          # so a hung stage exits cleanly rather than blocking the pass.
+          STAGE_TIMEOUT=330
+
+          {
+            echo "## Fast pipeline pass — $(date -u '+%Y-%m-%d %H:%M UTC')"
+            echo ""
+            echo "| Stage | Status |"
+            echo "|-------|--------|"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # run_stage <display-name> <agent-name> [timeout-seconds] — run one agent
+          # with a hard timeout; on failure warn and continue (one stuck stage must
+          # not block the rest). Pass an explicit timeout for stages that legitimately
+          # run long (e.g. the Tech Reviewer's deep multi-file review).
+          run_stage() {
+            local display_name="$1"
+            local agent_name="$2"
+            local stage_timeout="${3:-$STAGE_TIMEOUT}"
+            local outcome="✅ ok"
+            echo "::group::Stage: $display_name"
+            if ! timeout "$stage_timeout" npx tsx src/run-agent.ts --agent "$agent_name"; then
+              outcome="⚠️ failed/timeout"
+              echo "::warning::Stage '$display_name' (agent: $agent_name) failed or timed out — continuing pipeline"
+            fi
+            echo "::endgroup::"
+            echo "| $display_name | $outcome |" >> "$GITHUB_STEP_SUMMARY"
+          }
+
+          # labeled_work_exists <pr-label> [<issue-label>] — true if any open PR/issue
+          # carries the label (keeps specialist stages off unless there's work for them).
+          labeled_work_exists() {
+            local pr_label="${1:-}"
+            local issue_label="${2:-}"
+            if [ -n "$pr_label" ] && [ "$(gh pr list --label "$pr_label" --state open --json number --jq 'length' 2>/dev/null || echo 0)" -gt 0 ]; then return 0; fi
+            if [ -n "$issue_label" ] && [ "$(gh issue list --label "$issue_label" --state open --json number --jq 'length' 2>/dev/null || echo 0)" -gt 0 ]; then return 0; fi
+            return 1
+          }
+
+          # ── Stage 1: Enrich / triage ──────────────────────────────────────────
+          run_stage "enrich-triage (Product Owner)" "product-owner"
+
+          # ── Stages 2-4: Specialist review lanes (conditional) ─────────────────
+          # Run BEFORE the Tech Reviewer so an open needs-* lane is cleared this
+          # pass and the PR can be approved in the SAME pass.
+          if labeled_work_exists "needs-database-review" "queue:database"; then
+            run_stage "db-steward (Database Steward)" "database-steward"
+          fi
+          if labeled_work_exists "needs-security-review" "queue:security"; then
+            run_stage "security-review (Security Reviewer)" "security-reviewer"
+          fi
+          if labeled_work_exists "needs-platform-review" "queue:platform"; then
+            run_stage "platform (Platform Engineer)" "platform-engineer"
+          fi
+
+          # ── Stage 5: Tech Reviewer — the engineering approver ─────────────────
+          # Sweeps open `queue:review` PRs: cheaply APPROVES every merge-ready one
+          # (its STEP 0) and deep-reviews the rest to a terminal verdict. The PM
+          # (pr-loop.yml) merges on this APPROVED verdict. Without this stage every
+          # PR routed to `queue:review` dead-letters — no other agent ever produces
+          # the approval the PM merges on. Longer timeout than STAGE_TIMEOUT because
+          # deep multi-file review legitimately runs long.
+          run_stage "tech-review (Tech Reviewer)" "tech-reviewer" 1200

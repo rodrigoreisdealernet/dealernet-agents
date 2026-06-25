@@ -1,0 +1,1536 @@
+{
+  "id": "entity-list",
+  "title": "{{params.entityLabelPlural}}",
+  "state": {
+    "searchText": "",
+    "selectedId": null
+  },
+  "dataSources": {
+    "entities": {
+      "type": "supabase",
+      "table": "entities",
+      "select": "id, entity_type, source_record_id, created_at, entity_versions!inner(id, data, is_current, version_number)",
+      "filters": [
+        {
+          "field": "entity_type",
+          "op": "eq",
+          "value": "{{params.entityType}}"
+        },
+        {
+          "field": "entity_versions.is_current",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "order": [
+        {
+          "column": "created_at",
+          "ascending": false
+        }
+      ]
+    },
+    "invoiceCustomers": {
+      "type": "supabase",
+      "table": "entities",
+      "enabled": "{{params.entityType === 'invoice'}}",
+      "select": "id, entity_versions!inner(data, is_current)",
+      "filters": [
+        {
+          "field": "entity_type",
+          "op": "eq",
+          "value": "customer"
+        },
+        {
+          "field": "entity_versions.is_current",
+          "op": "eq",
+          "value": true
+        }
+      ]
+    },
+    "invoiceBillingAccounts": {
+      "type": "supabase",
+      "table": "entities",
+      "enabled": "{{params.entityType === 'invoice'}}",
+      "select": "id, entity_versions!inner(data, is_current)",
+      "filters": [
+        {
+          "field": "entity_type",
+          "op": "eq",
+          "value": "billing_account"
+        },
+        {
+          "field": "entity_versions.is_current",
+          "op": "eq",
+          "value": true
+        }
+      ]
+    },
+    "invoiceContracts": {
+      "type": "supabase",
+      "table": "entities",
+      "enabled": "{{params.entityType === 'invoice'}}",
+      "select": "id, entity_versions!inner(data, is_current)",
+      "filters": [
+        {
+          "field": "entity_type",
+          "op": "eq",
+          "value": "rental_contract"
+        },
+        {
+          "field": "entity_versions.is_current",
+          "op": "eq",
+          "value": true
+        }
+      ]
+    },
+    "invoiceJobSites": {
+      "type": "supabase",
+      "table": "entities",
+      "enabled": "{{params.entityType === 'invoice'}}",
+      "select": "id, entity_versions!inner(data, is_current)",
+      "filters": [
+        {
+          "field": "entity_type",
+          "op": "eq",
+          "value": "job_site"
+        },
+        {
+          "field": "entity_versions.is_current",
+          "op": "eq",
+          "value": true
+        }
+      ]
+    },
+    "assetBranches": {
+      "type": "supabase",
+      "table": "entities",
+      "enabled": "{{params.entityType === 'asset'}}",
+      "select": "id, entity_versions!inner(data, is_current)",
+      "filters": [
+        {
+          "field": "entity_type",
+          "op": "eq",
+          "value": "branch"
+        },
+        {
+          "field": "entity_versions.is_current",
+          "op": "eq",
+          "value": true
+        }
+      ]
+    },
+    "assetCategories": {
+      "type": "supabase",
+      "table": "entities",
+      "enabled": "{{params.entityType === 'asset'}}",
+      "select": "id, entity_versions!inner(data, is_current)",
+      "filters": [
+        {
+          "field": "entity_type",
+          "op": "eq",
+          "value": "asset_category"
+        },
+        {
+          "field": "entity_versions.is_current",
+          "op": "eq",
+          "value": true
+        }
+      ]
+    },
+    "transferBranches": {
+      "type": "supabase",
+      "table": "entities",
+      "enabled": "{{params.entityType === 'transfer'}}",
+      "select": "id, entity_versions!inner(data, is_current)",
+      "filters": [
+        {
+          "field": "entity_type",
+          "op": "eq",
+          "value": "branch"
+        },
+        {
+          "field": "entity_versions.is_current",
+          "op": "eq",
+          "value": true
+        }
+      ]
+    }
+  },
+  "layout": {
+    "type": "Stack",
+    "props": {
+      "spacing": 6
+    },
+    "children": [
+      {
+        "type": "Stack",
+        "props": {
+          "direction": "horizontal",
+          "justify": "between",
+          "align": "center"
+        },
+        "children": [
+          {
+            "type": "Stack",
+            "props": {
+              "spacing": 1
+            },
+            "children": [
+              {
+                "type": "Heading",
+                "props": {
+                  "level": 1,
+                  "children": "{{params.entityLabelPlural}}"
+                }
+              },
+              {
+                "type": "Text",
+                "props": {
+                  "variant": "muted",
+                  "children": "Manage your {{params.entityLabelPluralLower}}"
+                }
+              },
+              {
+                "type": "Text",
+                "if": "{{params.entityType === 'invoice' && params.contractId}}",
+                "props": {
+                  "variant": "muted",
+                  "size": "sm",
+                  "children": "Filtered to contract {{params.contractId}}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "Button",
+            "if": "{{auth.canWrite}}",
+            "props": {
+              "children": "New {{params.entityLabelSingular}}",
+              "onClick": {
+                "action": "openModal",
+                "modalId": "createEntity"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "type": "Card",
+        "children": [
+          {
+            "type": "Stack",
+            "props": {
+              "spacing": 4
+            },
+            "children": [
+              {
+                "type": "Input",
+                "props": {
+                  "placeholder": "Search entities...",
+                  "value": "{{state.searchText}}",
+                  "onChange": {
+                    "action": "setState",
+                    "key": "searchText",
+                    "value": "{{event.target.value}}"
+                  }
+                }
+              },
+              {
+                "type": "Stack",
+                "props": {
+                  "spacing": 2
+                },
+                "children": [
+                  {
+                    "type": "Grid",
+                    "props": {
+                      "columns": "minmax(0,2fr) minmax(0,1.2fr) auto",
+                      "gap": 2,
+                      "className": "px-4 py-2 rounded-md bg-muted/50 border text-sm font-medium"
+                    },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "sm",
+                          "children": "{{params.entityLabelSingular}}"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "sm",
+                          "children": "Details"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "size": "sm",
+                          "children": "Action"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Text",
+                    "if": "{{isLoading.entities}}",
+                    "props": {
+                      "variant": "muted",
+                      "className": "text-center py-8",
+                      "children": "Loading {{params.entityLabelPluralLower}}..."
+                    }
+                  },
+                  {
+                    "type": "Alert",
+                    "if": "{{errors.entities}}",
+                    "props": {
+                      "variant": "destructive",
+                      "title": "Unable to load {{params.entityLabelPluralLower}}",
+                      "description": "{{errors.entities.message || 'Please refresh and try again.'}}"
+                    }
+                  },
+                  {
+                    "type": "Stack",
+                    "if": "{{params.entityType !== 'invoice' || !params.contractId ? true : entity.entity_versions && entity.entity_versions.length > 0 && entity.entity_versions[0].data.contract_id === params.contractId}}",
+                    "each": "{{data.entities}}",
+                    "as": "entity",
+                    "key": "{{entity.id}}",
+                    "props": {
+                      "direction": "horizontal",
+                      "justify": "between",
+                      "align": "center",
+                      "className": "p-4 border rounded-lg hover:bg-muted/50 cursor-pointer"
+                    },
+                    "children": [
+                      {
+                        "type": "Stack",
+                        "props": {
+                          "spacing": 1
+                        },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "props": {
+                              "weight": "medium",
+                              "children": "{{params.entityType === 'invoice' ? entity.entity_versions[0].data.invoice_number || entity.entity_versions[0].data.document_number || entity.entity_versions[0].data.name || 'Invoice' : params.entityType === 'asset' ? entity.entity_versions[0].data.identifier || entity.entity_versions[0].data.name || 'Unnamed' : entity.entity_versions[0].data.name || entity.source_record_id || 'Unnamed'}}"
+                            }
+                          },
+                          {
+                            "type": "Badge",
+                            "if": "{{entity.entity_versions[0].data.status || entity.entity_versions[0].data.operational_status}}",
+                            "props": {
+                              "status": "{{entity.entity_versions[0].data.status || entity.entity_versions[0].data.operational_status}}",
+                              "children": "{{entity.entity_versions[0].data.status || entity.entity_versions[0].data.operational_status}}"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "if": "{{params.entityType !== 'invoice' && params.entityType !== 'asset'}}",
+                            "props": {
+                              "variant": "muted",
+                              "size": "sm",
+                              "className": "text-foreground",
+                              "children": "Record: {{entity.source_record_id || 'Not assigned'}}"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "if": "{{params.entityType === 'invoice'}}",
+                            "props": {
+                              "variant": "muted",
+                              "size": "sm",
+                              "className": "text-foreground",
+                              "children": "Document: {{entity.entity_versions[0].data.invoice_number || entity.entity_versions[0].data.document_number || 'Not assigned'}}"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "if": "{{params.entityType === 'invoice'}}",
+                            "props": {
+                              "variant": "muted",
+                              "size": "sm",
+                              "className": "text-foreground",
+                              "children": "Customer: {{lookupEntityFieldById(data.invoiceCustomers, entity.entity_versions[0].data.customer_id, 'name')}} \u00b7 Billing Account: {{lookupEntityFieldById(data.invoiceBillingAccounts, entity.entity_versions[0].data.billing_account_id, 'name', 'account_number')}} \u00b7 Contract: {{lookupEntityFieldById(data.invoiceContracts, entity.entity_versions[0].data.contract_id, 'contract_number', 'name')}} \u00b7 Job Site: {{lookupEntityFieldById(data.invoiceJobSites, entity.entity_versions[0].data.job_site_id, 'name')}} \u00b7 Exception: {{entity.entity_versions[0].data.billing_exception_reason || 'none'}}"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "if": "{{params.entityType === 'transfer'}}",
+                            "props": {
+                              "variant": "muted",
+                              "size": "sm",
+                              "children": "Origin: {{lookupEntityFieldById(data.transferBranches, entity.entity_versions[0].data.origin_branch_id || entity.entity_versions[0].data.from_branch_id, 'name') || entity.entity_versions[0].data.origin_branch_id || entity.entity_versions[0].data.from_branch_id || 'N/A'}} \u00b7 Destination: {{lookupEntityFieldById(data.transferBranches, entity.entity_versions[0].data.destination_branch_id || entity.entity_versions[0].data.to_branch_id, 'name') || entity.entity_versions[0].data.destination_branch_id || entity.entity_versions[0].data.to_branch_id || 'N/A'}} \u00b7 Scope: {{entity.entity_versions[0].data.asset_scope || entity.entity_versions[0].data.asset_id || 'N/A'}} \u00b7 Internal Cost: {{entity.entity_versions[0].data.internal_cost || 'N/A'}}"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "if": "{{params.entityType === 'transfer'}}",
+                            "props": {
+                              "variant": "muted",
+                              "size": "sm",
+                              "children": "Requested Ship: {{entity.entity_versions[0].data.requested_ship_date || 'N/A'}} \u00b7 Expected Receive: {{entity.entity_versions[0].data.expected_receive_date || 'N/A'}} \u00b7 Sourcing Decision: {{entity.entity_versions[0].data.sourcing_decision_id || 'manual'}} \u00b7 Exception: {{entity.entity_versions[0].data.transfer_exception_reason || 'none'}}"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "if": "{{params.entityType === 'customer'}}",
+                            "props": {
+                              "variant": "muted",
+                              "size": "sm",
+                              "children": "Customer Type: {{entity.entity_versions[0].data.customer_type || 'N/A'}}"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "if": "{{params.entityType === 'billing_account'}}",
+                            "props": {
+                              "variant": "muted",
+                              "size": "sm",
+                              "children": "Terms: {{entity.entity_versions[0].data.payment_terms || 'N/A'}} \u00b7 Credit Limit: {{entity.entity_versions[0].data.credit_limit || 'N/A'}}"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "if": "{{params.entityType === 'contact'}}",
+                            "props": {
+                              "variant": "muted",
+                              "size": "sm",
+                              "children": "Role: {{entity.entity_versions[0].data.role || 'N/A'}} \u00b7 Customer: {{entity.entity_versions[0].data.customer_id || 'N/A'}} \u00b7 Job Site: {{entity.entity_versions[0].data.job_site_id || 'N/A'}}"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "if": "{{params.entityType === 'job_site'}}",
+                            "props": {
+                              "variant": "muted",
+                              "size": "sm",
+                              "children": "Address: {{entity.entity_versions[0].data.address || 'N/A'}} \u00b7 Customer: {{entity.entity_versions[0].data.customer_id || 'N/A'}}"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "if": "{{params.entityType === 'asset_category'}}",
+                            "props": {
+                              "variant": "muted",
+                              "size": "sm",
+                              "children": "Rate: {{entity.entity_versions[0].data.default_rate_type || 'N/A'}} {{entity.entity_versions[0].data.default_rate_amount || 'N/A'}} \u00b7 Utilization Group: {{entity.entity_versions[0].data.utilization_group || 'N/A'}}"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "if": "{{params.entityType === 'asset'}}",
+                            "props": {
+                              "variant": "muted",
+                              "size": "sm",
+                              "children": "Identifier: {{entity.entity_versions[0].data.identifier || 'N/A'}} \u00b7 Category: {{lookupEntityFieldById(data.assetCategories, entity.entity_versions[0].data.asset_category_id || entity.entity_versions[0].data.category_id, 'name') || 'N/A'}} \u00b7 Branch: {{lookupEntityFieldById(data.assetBranches, entity.entity_versions[0].data.branch_id, 'name') || 'N/A'}} \u00b7 Availability: {{entity.entity_versions[0].data.status || 'N/A'}}"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Stack",
+                        "props": {
+                          "direction": "horizontal",
+                          "spacing": 2
+                        },
+                        "children": [
+                          {
+                            "type": "Badge",
+                            "props": {
+                              "variant": "secondary",
+                              "children": "v{{entity.entity_versions[0].version_number}}"
+                            }
+                          },
+                          {
+                            "type": "Button",
+                            "props": {
+                              "size": "sm",
+                              "variant": "outline",
+                              "children": "View",
+                              "onClick": {
+                                "action": "navigate",
+                                "to": "/entities/{{params.entityType}}/{{entity.id}}"
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Alert",
+                        "if": "{{params.entityType === 'invoice' ? (entity.entity_versions[0].data.billing_exception_reason ? true : false) : false}}",
+                        "props": {
+                          "variant": "warning",
+                          "title": "Billing exception",
+                          "description": "{{entity.entity_versions[0].data.billing_exception_reason || 'Review invoice billing exceptions before progression.'}}"
+                        }
+                      },
+                      {
+                        "type": "Alert",
+                        "if": "{{params.entityType === 'transfer' ? (entity.entity_versions[0].data.transfer_exception_reason ? true : false) : false}}",
+                        "props": {
+                          "variant": "warning",
+                          "title": "Transfer exception",
+                          "description": "{{entity.entity_versions[0].data.transfer_exception_reason || 'Review branch coordination exceptions before shipment.'}}"
+                        }
+                      },
+                      {
+                        "type": "Alert",
+                        "if": "{{entity.entity_versions[0].data.operational_status === 'on_transfer' ? true : entity.entity_versions[0].data.status === 'on_transfer'}}",
+                        "props": {
+                          "variant": "warning",
+                          "title": "Checkout blocked: on transfer",
+                          "description": "This asset is currently in transfer and unavailable for assignment."
+                        }
+                      },
+                      {
+                        "type": "Alert",
+                        "if": "{{entity.entity_versions[0].data.operational_status === 'in_maintenance' ? true : entity.entity_versions[0].data.status === 'in_maintenance'}}",
+                        "props": {
+                          "variant": "warning",
+                          "title": "Checkout blocked: in maintenance",
+                          "description": "This asset is in maintenance and cannot be dispatched."
+                        }
+                      },
+                      {
+                        "type": "Alert",
+                        "if": "{{entity.entity_versions[0].data.operational_status === 'on_inspection_hold' ? true : entity.entity_versions[0].data.status === 'on_inspection_hold'}}",
+                        "props": {
+                          "variant": "warning",
+                          "title": "Checkout blocked: inspection hold",
+                          "description": "This asset failed inspection and must clear hold before rental."
+                        }
+                      },
+                      {
+                        "type": "Alert",
+                        "if": "{{entity.entity_versions[0].data.operational_status === 'retired' ? true : entity.entity_versions[0].data.status === 'retired'}}",
+                        "props": {
+                          "variant": "destructive",
+                          "title": "Checkout blocked: retired",
+                          "description": "This asset is retired from rental operations."
+                        }
+                      },
+                      {
+                        "type": "Alert",
+                        "if": "{{entity.entity_versions[0].data.operational_status === 'lost' ? true : entity.entity_versions[0].data.status === 'lost'}}",
+                        "props": {
+                          "variant": "destructive",
+                          "title": "Checkout blocked: lost",
+                          "description": "This asset is marked lost and unavailable for assignment."
+                        }
+                      },
+                      {
+                        "type": "Alert",
+                        "if": "{{entity.entity_versions[0].data.operational_status === 'conflicting_assignment' ? true : entity.entity_versions[0].data.status === 'conflicting_assignment'}}",
+                        "props": {
+                          "variant": "warning",
+                          "title": "Checkout blocked: conflicting assignment",
+                          "description": "This asset already has a conflicting rental assignment."
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "Stack",
+                "if": "{{!isLoading.entities && !errors.entities}}",
+                "children": [
+                  {
+                    "type": "EmptyState",
+                    "if": "{{!data.entities || data.entities.length === 0}}",
+                    "props": {
+                      "icon": "Package",
+                      "title": "No {{params.entityLabelPluralLower}} yet",
+                      "hint": "Create your first {{params.entityLabelSingularLower}} to get started."
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "modals": {
+    "createEntity": {
+      "title": "Create New {{params.entityLabelSingular}}",
+      "size": "md",
+      "content": {
+        "type": "Stack",
+        "props": {
+          "spacing": 4
+        },
+        "children": [
+          {
+            "type": "Input",
+            "props": {
+              "label": "Name",
+              "placeholder": "Enter entity name",
+              "name": "name",
+              "value": "{{state.newEntityName || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "newEntityName",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Stack",
+            "if": "{{params.entityType !== 'customer' && params.entityType !== 'billing_account' && params.entityType !== 'contact' && params.entityType !== 'job_site' && params.entityType !== 'asset_category' && params.entityType !== 'asset' && params.entityType !== 'stock_item'}}",
+            "props": {
+              "spacing": 4
+            },
+            "children": [
+              {
+                "type": "Textarea",
+                "props": {
+                  "label": "Description",
+                  "placeholder": "Enter description (optional)",
+                  "name": "description",
+                  "value": "{{state.newEntityDescription || ''}}",
+                  "onChange": {
+                    "action": "setState",
+                    "key": "newEntityDescription",
+                    "value": "{{event.target.value}}"
+                  }
+                }
+              },
+              {
+                "type": "Input",
+                "props": {
+                  "label": "Status",
+                  "placeholder": "draft, quoted, approved, active, paid, ...",
+                  "name": "status",
+                  "value": "{{state.newEntityStatus || ''}}",
+                  "onChange": {
+                    "action": "setState",
+                    "key": "newEntityStatus",
+                    "value": "{{event.target.value}}"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "type": "Input",
+            "if": "{{params.entityType === 'customer'}}",
+            "props": {
+              "label": "Customer Type",
+              "placeholder": "enterprise, municipal, residential, ...",
+              "value": "{{state.newCustomerType || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "newCustomerType",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Input",
+            "if": "{{params.entityType === 'billing_account'}}",
+            "props": {
+              "label": "Payment Terms",
+              "placeholder": "net_30, net_45, due_on_receipt, ...",
+              "value": "{{state.newPaymentTerms || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "newPaymentTerms",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Input",
+            "if": "{{params.entityType === 'billing_account'}}",
+            "props": {
+              "label": "Credit Limit",
+              "placeholder": "50000",
+              "value": "{{state.newCreditLimit || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "newCreditLimit",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Input",
+            "if": "{{params.entityType === 'contact'}}",
+            "props": {
+              "label": "Role",
+              "placeholder": "operations_manager, accounts_payable, ...",
+              "value": "{{state.newContactRole || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "newContactRole",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Input",
+            "if": "{{params.entityType === 'contact'}}",
+            "props": {
+              "label": "Linked Customer ID",
+              "placeholder": "customer entity id",
+              "value": "{{state.newContactCustomerId || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "newContactCustomerId",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Input",
+            "if": "{{params.entityType === 'contact'}}",
+            "props": {
+              "label": "Linked Job Site ID",
+              "placeholder": "job site entity id",
+              "value": "{{state.newContactJobSiteId || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "newContactJobSiteId",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Input",
+            "if": "{{params.entityType === 'job_site'}}",
+            "props": {
+              "label": "Address",
+              "placeholder": "123 Industrial Way, Springfield",
+              "value": "{{state.newJobSiteAddress || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "newJobSiteAddress",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Input",
+            "if": "{{params.entityType === 'job_site'}}",
+            "props": {
+              "label": "Linked Customer ID",
+              "placeholder": "customer entity id",
+              "value": "{{state.newJobSiteCustomerId || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "newJobSiteCustomerId",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Input",
+            "if": "{{params.entityType === 'asset_category'}}",
+            "props": {
+              "label": "Default Rate Type",
+              "placeholder": "daily, weekly, monthly, ...",
+              "value": "{{state.newAssetCategoryDefaultRateType || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "newAssetCategoryDefaultRateType",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Input",
+            "if": "{{params.entityType === 'asset_category'}}",
+            "props": {
+              "label": "Default Rate Amount",
+              "placeholder": "250",
+              "value": "{{state.newAssetCategoryDefaultRateAmount || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "newAssetCategoryDefaultRateAmount",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Input",
+            "if": "{{params.entityType === 'asset_category'}}",
+            "props": {
+              "label": "Utilization Group",
+              "placeholder": "earthmoving, aerial, power, ...",
+              "value": "{{state.newAssetCategoryUtilizationGroup || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "newAssetCategoryUtilizationGroup",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Input",
+            "if": "{{params.entityType === 'asset'}}",
+            "props": {
+              "label": "Identifier",
+              "placeholder": "EQ-1001",
+              "value": "{{state.newAssetIdentifier || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "newAssetIdentifier",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Input",
+            "if": "{{params.entityType === 'asset'}}",
+            "props": {
+              "label": "Linked Asset Category ID",
+              "placeholder": "asset category entity id",
+              "value": "{{state.newAssetCategoryId || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "newAssetCategoryId",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Input",
+            "if": "{{params.entityType === 'asset'}}",
+            "props": {
+              "label": "Linked Branch ID",
+              "placeholder": "branch entity id",
+              "value": "{{state.newAssetBranchId || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "newAssetBranchId",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Input",
+            "if": "{{params.entityType === 'asset'}}",
+            "props": {
+              "label": "Availability Status",
+              "placeholder": "available, reserved, on_transfer, ...",
+              "value": "{{state.newAssetAvailabilityStatus || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "newAssetAvailabilityStatus",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Input",
+            "if": "{{params.entityType === 'transfer'}}",
+            "props": {
+              "label": "Sourcing Decision ID",
+              "placeholder": "finding or sourcing decision id",
+              "value": "{{state.newTransferSourcingDecisionId || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "newTransferSourcingDecisionId",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Input",
+            "if": "{{params.entityType === 'transfer'}}",
+            "props": {
+              "label": "Origin Branch ID",
+              "placeholder": "origin branch entity id",
+              "value": "{{state.newTransferOriginBranchId || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "newTransferOriginBranchId",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Input",
+            "if": "{{params.entityType === 'transfer'}}",
+            "props": {
+              "label": "Destination Branch ID",
+              "placeholder": "destination branch entity id",
+              "value": "{{state.newTransferDestinationBranchId || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "newTransferDestinationBranchId",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Input",
+            "if": "{{params.entityType === 'transfer'}}",
+            "props": {
+              "label": "Requested Ship Date",
+              "placeholder": "YYYY-MM-DD",
+              "value": "{{state.newTransferRequestedShipDate || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "newTransferRequestedShipDate",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Input",
+            "if": "{{params.entityType === 'transfer'}}",
+            "props": {
+              "label": "Expected Receive Date",
+              "placeholder": "YYYY-MM-DD",
+              "value": "{{state.newTransferExpectedReceiveDate || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "newTransferExpectedReceiveDate",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Input",
+            "if": "{{params.entityType === 'transfer'}}",
+            "props": {
+              "label": "Asset Scope",
+              "placeholder": "1 excavator / category / asset group",
+              "value": "{{state.newTransferAssetScope || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "newTransferAssetScope",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Input",
+            "if": "{{params.entityType === 'transfer'}}",
+            "props": {
+              "label": "Internal Cost",
+              "placeholder": "425.00",
+              "value": "{{state.newTransferInternalCost || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "newTransferInternalCost",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Input",
+            "if": "{{params.entityType === 'transfer'}}",
+            "props": {
+              "label": "Transfer Exception",
+              "placeholder": "optional branch-coordination exception",
+              "value": "{{state.newTransferExceptionReason || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "newTransferExceptionReason",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Select",
+            "if": "{{params.entityType === 'stock_item'}}",
+            "props": {
+              "label": "Inventory Kind",
+              "name": "stockItemInventoryKind",
+              "value": "{{state.newStockItemInventoryKind || 'bulk'}}",
+              "options": [
+                {
+                  "value": "bulk",
+                  "label": "Bulk \u2014 quantity-managed supply"
+                },
+                {
+                  "value": "sale",
+                  "label": "Sale \u2014 items sold to customers"
+                },
+                {
+                  "value": "part",
+                  "label": "Part \u2014 spare parts / consumables"
+                }
+              ],
+              "onChange": {
+                "action": "setState",
+                "key": "newStockItemInventoryKind",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Input",
+            "if": "{{params.entityType === 'stock_item'}}",
+            "props": {
+              "label": "Description",
+              "placeholder": "Optional description of this stock item",
+              "name": "stockItemDescription",
+              "value": "{{state.newStockItemDescription || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "newStockItemDescription",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Input",
+            "if": "{{params.entityType === 'stock_item'}}",
+            "props": {
+              "label": "Branch ID",
+              "placeholder": "branch entity id",
+              "name": "stockItemBranchId",
+              "value": "{{state.newStockItemBranchId || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "newStockItemBranchId",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Input",
+            "if": "{{params.entityType === 'stock_item'}}",
+            "props": {
+              "label": "Asset Category ID",
+              "placeholder": "asset category entity id",
+              "name": "stockItemCategoryId",
+              "value": "{{state.newStockItemCategoryId || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "newStockItemCategoryId",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Input",
+            "if": "{{params.entityType === 'stock_item'}}",
+            "props": {
+              "label": "Opening Quantity",
+              "placeholder": "0",
+              "name": "stockItemOpeningQuantity",
+              "type": "number",
+              "value": "{{state.newStockItemOpeningQuantity || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "newStockItemOpeningQuantity",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Stack",
+            "props": {
+              "direction": "horizontal",
+              "justify": "end",
+              "spacing": 2
+            },
+            "children": [
+              {
+                "type": "Button",
+                "props": {
+                  "variant": "outline",
+                  "children": "Cancel",
+                  "onClick": {
+                    "action": "closeModal"
+                  }
+                }
+              },
+              {
+                "type": "Button",
+                "props": {
+                  "children": "Create",
+                  "onClick": {
+                    "action": "sequence",
+                    "actions": [
+                      {
+                        "action": "conditional",
+                        "condition": "{{params.entityType === 'customer'}}",
+                        "then": {
+                          "action": "apiCall",
+                          "operation": "rpc",
+                          "function": "create_entity_with_version",
+                          "data": {
+                            "p_entity_type": "{{params.entityType}}",
+                            "p_data": {
+                              "name": "{{state.newEntityName}}",
+                              "customer_type": "{{state.newCustomerType}}"
+                            }
+                          },
+                          "onSuccess": {
+                            "action": "sequence",
+                            "actions": [
+                              {
+                                "action": "closeModal"
+                              },
+                              {
+                                "action": "setState",
+                                "key": "newEntityName",
+                                "value": ""
+                              },
+                              {
+                                "action": "setState",
+                                "key": "newCustomerType",
+                                "value": ""
+                              },
+                              {
+                                "action": "refetch",
+                                "source": "entities"
+                              }
+                            ]
+                          }
+                        },
+                        "else": {
+                          "action": "conditional",
+                          "condition": "{{params.entityType === 'billing_account'}}",
+                          "then": {
+                            "action": "apiCall",
+                            "operation": "rpc",
+                            "function": "create_entity_with_version",
+                            "data": {
+                              "p_entity_type": "{{params.entityType}}",
+                              "p_data": {
+                                "name": "{{state.newEntityName}}",
+                                "payment_terms": "{{state.newPaymentTerms}}",
+                                "credit_limit": "{{state.newCreditLimit}}"
+                              }
+                            },
+                            "onSuccess": {
+                              "action": "sequence",
+                              "actions": [
+                                {
+                                  "action": "closeModal"
+                                },
+                                {
+                                  "action": "setState",
+                                  "key": "newEntityName",
+                                  "value": ""
+                                },
+                                {
+                                  "action": "setState",
+                                  "key": "newPaymentTerms",
+                                  "value": ""
+                                },
+                                {
+                                  "action": "setState",
+                                  "key": "newCreditLimit",
+                                  "value": ""
+                                },
+                                {
+                                  "action": "refetch",
+                                  "source": "entities"
+                                }
+                              ]
+                            }
+                          },
+                          "else": {
+                            "action": "conditional",
+                            "condition": "{{params.entityType === 'contact'}}",
+                            "then": {
+                              "action": "apiCall",
+                              "operation": "rpc",
+                              "function": "create_entity_with_version",
+                              "data": {
+                                "p_entity_type": "{{params.entityType}}",
+                                "p_data": {
+                                  "name": "{{state.newEntityName}}",
+                                  "role": "{{state.newContactRole}}",
+                                  "customer_id": "{{state.newContactCustomerId}}",
+                                  "job_site_id": "{{state.newContactJobSiteId}}"
+                                }
+                              },
+                              "onSuccess": {
+                                "action": "sequence",
+                                "actions": [
+                                  {
+                                    "action": "closeModal"
+                                  },
+                                  {
+                                    "action": "setState",
+                                    "key": "newEntityName",
+                                    "value": ""
+                                  },
+                                  {
+                                    "action": "setState",
+                                    "key": "newContactRole",
+                                    "value": ""
+                                  },
+                                  {
+                                    "action": "setState",
+                                    "key": "newContactCustomerId",
+                                    "value": ""
+                                  },
+                                  {
+                                    "action": "setState",
+                                    "key": "newContactJobSiteId",
+                                    "value": ""
+                                  },
+                                  {
+                                    "action": "refetch",
+                                    "source": "entities"
+                                  }
+                                ]
+                              }
+                            },
+                            "else": {
+                              "action": "conditional",
+                              "condition": "{{params.entityType === 'job_site'}}",
+                              "then": {
+                                "action": "apiCall",
+                                "operation": "rpc",
+                                "function": "create_entity_with_version",
+                                "data": {
+                                  "p_entity_type": "{{params.entityType}}",
+                                  "p_data": {
+                                    "name": "{{state.newEntityName}}",
+                                    "address": "{{state.newJobSiteAddress}}",
+                                    "customer_id": "{{state.newJobSiteCustomerId}}"
+                                  }
+                                },
+                                "onSuccess": {
+                                  "action": "sequence",
+                                  "actions": [
+                                    {
+                                      "action": "closeModal"
+                                    },
+                                    {
+                                      "action": "setState",
+                                      "key": "newEntityName",
+                                      "value": ""
+                                    },
+                                    {
+                                      "action": "setState",
+                                      "key": "newJobSiteAddress",
+                                      "value": ""
+                                    },
+                                    {
+                                      "action": "setState",
+                                      "key": "newJobSiteCustomerId",
+                                      "value": ""
+                                    },
+                                    {
+                                      "action": "refetch",
+                                      "source": "entities"
+                                    }
+                                  ]
+                                }
+                              },
+                              "else": {
+                                "action": "conditional",
+                                "condition": "{{params.entityType === 'asset_category'}}",
+                                "then": {
+                                  "action": "apiCall",
+                                  "operation": "rpc",
+                                  "function": "create_entity_with_version",
+                                  "data": {
+                                    "p_entity_type": "{{params.entityType}}",
+                                    "p_data": {
+                                      "name": "{{state.newEntityName}}",
+                                      "default_rate_type": "{{state.newAssetCategoryDefaultRateType}}",
+                                      "default_rate_amount": "{{state.newAssetCategoryDefaultRateAmount}}",
+                                      "utilization_group": "{{state.newAssetCategoryUtilizationGroup}}"
+                                    }
+                                  },
+                                  "onSuccess": {
+                                    "action": "sequence",
+                                    "actions": [
+                                      {
+                                        "action": "closeModal"
+                                      },
+                                      {
+                                        "action": "setState",
+                                        "key": "newEntityName",
+                                        "value": ""
+                                      },
+                                      {
+                                        "action": "setState",
+                                        "key": "newAssetCategoryDefaultRateType",
+                                        "value": ""
+                                      },
+                                      {
+                                        "action": "setState",
+                                        "key": "newAssetCategoryDefaultRateAmount",
+                                        "value": ""
+                                      },
+                                      {
+                                        "action": "setState",
+                                        "key": "newAssetCategoryUtilizationGroup",
+                                        "value": ""
+                                      },
+                                      {
+                                        "action": "refetch",
+                                        "source": "entities"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "else": {
+                                  "action": "conditional",
+                                  "condition": "{{params.entityType === 'asset'}}",
+                                  "then": {
+                                    "action": "apiCall",
+                                    "operation": "rpc",
+                                    "function": "create_entity_with_version",
+                                    "data": {
+                                      "p_entity_type": "{{params.entityType}}",
+                                      "p_data": {
+                                        "name": "{{state.newEntityName}}",
+                                        "identifier": "{{state.newAssetIdentifier}}",
+                                        "asset_category_id": "{{state.newAssetCategoryId}}",
+                                        "branch_id": "{{state.newAssetBranchId}}",
+                                        "status": "{{state.newAssetAvailabilityStatus}}"
+                                      }
+                                    },
+                                    "onSuccess": {
+                                      "action": "sequence",
+                                      "actions": [
+                                        {
+                                          "action": "closeModal"
+                                        },
+                                        {
+                                          "action": "setState",
+                                          "key": "newEntityName",
+                                          "value": ""
+                                        },
+                                        {
+                                          "action": "setState",
+                                          "key": "newAssetIdentifier",
+                                          "value": ""
+                                        },
+                                        {
+                                          "action": "setState",
+                                          "key": "newAssetCategoryId",
+                                          "value": ""
+                                        },
+                                        {
+                                          "action": "setState",
+                                          "key": "newAssetBranchId",
+                                          "value": ""
+                                        },
+                                        {
+                                          "action": "setState",
+                                          "key": "newAssetAvailabilityStatus",
+                                          "value": ""
+                                        },
+                                        {
+                                          "action": "refetch",
+                                          "source": "entities"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "else": {
+                                    "action": "conditional",
+                                    "condition": "{{params.entityType === 'transfer'}}",
+                                    "then": {
+                                      "action": "apiCall",
+                                      "operation": "rpc",
+                                      "function": "create_entity_with_version",
+                                      "data": {
+                                        "p_entity_type": "{{params.entityType}}",
+                                        "p_data": {
+                                          "name": "{{state.newEntityName}}",
+                                          "description": "{{state.newEntityDescription}}",
+                                          "status": "{{state.newEntityStatus || 'requested'}}",
+                                          "sourcing_decision_id": "{{state.newTransferSourcingDecisionId}}",
+                                          "origin_branch_id": "{{state.newTransferOriginBranchId}}",
+                                          "destination_branch_id": "{{state.newTransferDestinationBranchId}}",
+                                          "requested_ship_date": "{{state.newTransferRequestedShipDate}}",
+                                          "expected_receive_date": "{{state.newTransferExpectedReceiveDate}}",
+                                          "asset_scope": "{{state.newTransferAssetScope}}",
+                                          "internal_cost": "{{state.newTransferInternalCost}}",
+                                          "transfer_exception_reason": "{{state.newTransferExceptionReason}}"
+                                        }
+                                      },
+                                      "onSuccess": {
+                                        "action": "sequence",
+                                        "actions": [
+                                          {
+                                            "action": "closeModal"
+                                          },
+                                          {
+                                            "action": "setState",
+                                            "key": "newEntityName",
+                                            "value": ""
+                                          },
+                                          {
+                                            "action": "setState",
+                                            "key": "newEntityDescription",
+                                            "value": ""
+                                          },
+                                          {
+                                            "action": "setState",
+                                            "key": "newEntityStatus",
+                                            "value": ""
+                                          },
+                                          {
+                                            "action": "setState",
+                                            "key": "newTransferSourcingDecisionId",
+                                            "value": ""
+                                          },
+                                          {
+                                            "action": "setState",
+                                            "key": "newTransferOriginBranchId",
+                                            "value": ""
+                                          },
+                                          {
+                                            "action": "setState",
+                                            "key": "newTransferDestinationBranchId",
+                                            "value": ""
+                                          },
+                                          {
+                                            "action": "setState",
+                                            "key": "newTransferRequestedShipDate",
+                                            "value": ""
+                                          },
+                                          {
+                                            "action": "setState",
+                                            "key": "newTransferExpectedReceiveDate",
+                                            "value": ""
+                                          },
+                                          {
+                                            "action": "setState",
+                                            "key": "newTransferAssetScope",
+                                            "value": ""
+                                          },
+                                          {
+                                            "action": "setState",
+                                            "key": "newTransferInternalCost",
+                                            "value": ""
+                                          },
+                                          {
+                                            "action": "setState",
+                                            "key": "newTransferExceptionReason",
+                                            "value": ""
+                                          },
+                                          {
+                                            "action": "refetch",
+                                            "source": "entities"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "else": {
+                                      "action": "conditional",
+                                      "condition": "{{params.entityType === 'stock_item'}}",
+                                      "then": {
+                                      "action": "apiCall",
+                                      "operation": "rpc",
+                                      "function": "create_stock_item",
+                                      "data": {
+                                        "p_name": "{{state.newEntityName}}",
+                                        "p_inventory_kind": "{{state.newStockItemInventoryKind || 'bulk'}}",
+                                        "p_branch_id": "{{state.newStockItemBranchId || null}}",
+                                        "p_asset_category_id": "{{state.newStockItemCategoryId || null}}",
+                                        "p_description": "{{state.newStockItemDescription || null}}",
+                                        "p_opening_quantity": "{{state.newStockItemOpeningQuantity || null}}"
+                                      },
+                                      "onSuccess": {
+                                        "action": "sequence",
+                                        "actions": [
+                                          {
+                                            "action": "closeModal"
+                                          },
+                                          {
+                                            "action": "setState",
+                                            "key": "newEntityName",
+                                            "value": ""
+                                          },
+                                          {
+                                            "action": "setState",
+                                            "key": "newStockItemInventoryKind",
+                                            "value": ""
+                                          },
+                                          {
+                                            "action": "setState",
+                                            "key": "newStockItemDescription",
+                                            "value": ""
+                                          },
+                                          {
+                                            "action": "setState",
+                                            "key": "newStockItemBranchId",
+                                            "value": ""
+                                          },
+                                          {
+                                            "action": "setState",
+                                            "key": "newStockItemCategoryId",
+                                            "value": ""
+                                          },
+                                          {
+                                            "action": "setState",
+                                            "key": "newStockItemOpeningQuantity",
+                                            "value": ""
+                                          },
+                                          {
+                                            "action": "refetch",
+                                            "source": "entities"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "else": {
+                                      "action": "apiCall",
+                                      "operation": "rpc",
+                                      "function": "create_entity_with_version",
+                                      "data": {
+                                        "p_entity_type": "{{params.entityType}}",
+                                        "p_data": {
+                                          "name": "{{state.newEntityName}}",
+                                          "description": "{{state.newEntityDescription}}",
+                                          "status": "{{state.newEntityStatus}}"
+                                        }
+                                      },
+                                      "onSuccess": {
+                                        "action": "sequence",
+                                        "actions": [
+                                          {
+                                            "action": "closeModal"
+                                          },
+                                          {
+                                            "action": "setState",
+                                            "key": "newEntityName",
+                                            "value": ""
+                                          },
+                                          {
+                                            "action": "setState",
+                                            "key": "newEntityDescription",
+                                            "value": ""
+                                          },
+                                          {
+                                            "action": "setState",
+                                            "key": "newEntityStatus",
+                                            "value": ""
+                                          },
+                                          {
+                                            "action": "refetch",
+                                            "source": "entities"
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

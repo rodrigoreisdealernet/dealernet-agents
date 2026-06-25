@@ -1,0 +1,31 @@
+# Production observability profile (namespace: wynne-observability)
+kube-prometheus-stack:
+  prometheus:
+    prometheusSpec:
+      retention: 30d
+      storageSpec:
+        volumeClaimTemplate:
+          spec:
+            resources:
+              requests:
+                storage: 50Gi
+  grafana:
+    extraEnvFrom:
+      - configMapRef:
+          name: grafana-oidc-config
+      - secretRef:
+          name: "grafana-oidc-secrets-wynne-prod"
+
+targets:
+  temporalServer:
+    namespace: temporal
+  temporalWorker:
+    namespace: wynne-prod
+  opsApi:
+    namespace: wynne-prod
+
+grafanaOidc:
+  enabled: true
+  issuerUrl: "https://keycloak.wynne.example.com/realms/wynne"
+  redirectUrl: "https://grafana.wynne.example.com/login/generic_oauth"
+  secretName: "grafana-oidc-secrets-wynne-prod"

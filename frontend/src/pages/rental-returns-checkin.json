@@ -1,0 +1,463 @@
+{
+  "id": "rental-returns-checkin",
+  "title": "Returns / Check-In",
+  "state": {
+    "checkIn_line_id": "",
+    "checkIn_contract_id": "",
+    "checkIn_asset_id": "",
+    "checkIn_return_date": "",
+    "checkIn_condition_outcome": "pass",
+    "checkIn_notes": ""
+  },
+  "dataSources": {
+    "checked_out_lines": {
+      "type": "supabase",
+      "table": "v_rental_contract_line_current",
+      "select": "entity_id, version_id, version_number, status, contract_id, asset_id, category_id, rental_type, rate_type, rate_amount, actual_start, actual_end, data",
+      "filters": [
+        { "field": "status", "op": "eq", "value": "checked_out" }
+      ],
+      "order": [
+        { "column": "actual_start", "ascending": true }
+      ]
+    },
+    "contracts": {
+      "type": "supabase",
+      "table": "v_rental_contract_current",
+      "select": "entity_id, data"
+    },
+    "customers": {
+      "type": "supabase",
+      "table": "crm_customer_profile_current",
+      "select": "entity_id, name"
+    },
+    "job_sites": {
+      "type": "supabase",
+      "table": "entities",
+      "select": "id, source_record_id, entity_versions!inner(data, is_current)",
+      "filters": [
+        { "field": "entity_type", "op": "eq", "value": "job_site" },
+        { "field": "entity_versions.is_current", "op": "eq", "value": true }
+      ]
+    },
+    "asset_categories": {
+      "type": "supabase",
+      "table": "rental_asset_availability_current",
+      "select": "asset_category_id, asset_category_name"
+    },
+    "assets": {
+      "type": "supabase",
+      "table": "v_current_assets",
+      "select": "asset_id, name"
+    },
+    "inspection_holds": {
+      "type": "supabase",
+      "table": "v_rental_contract_line_current",
+      "select": "entity_id, asset_id, contract_id, actual_end, data",
+      "filters": [
+        { "field": "status", "op": "eq", "value": "returned" },
+        { "field": "resulting_asset_status", "op": "eq", "value": "on_inspection_hold" }
+      ],
+      "order": [
+        { "column": "actual_end", "ascending": false }
+      ]
+    }
+  },
+  "layout": {
+    "type": "Stack",
+    "props": { "spacing": 6 },
+    "children": [
+      {
+        "type": "Stack",
+        "props": { "spacing": 1 },
+        "children": [
+          { "type": "Heading", "props": { "level": 1, "children": "Returns / Check-In" } },
+          {
+            "type": "Text",
+            "props": {
+              "variant": "muted",
+              "children": "Review checked-out contract lines, capture return condition, and trigger return inspection."
+            }
+          }
+        ]
+      },
+      {
+        "type": "Grid",
+        "props": { "columns": 3, "gap": 6 },
+        "children": [
+          {
+            "type": "Card",
+            "props": { "className": "col-span-2" },
+            "children": [
+              {
+                "type": "Stack",
+                "props": { "spacing": 4 },
+                "children": [
+                  { "type": "Heading", "props": { "level": 3, "children": "Checked-Out Contract Lines" } },
+                  {
+                    "type": "Text",
+                    "props": {
+                      "variant": "muted",
+                      "size": "sm",
+                      "children": "Lines are sorted by checkout date to help prioritize due and overdue returns. Start check-in directly from each queued line."
+                    }
+                  },
+                  {
+                    "type": "Stack",
+                    "props": { "spacing": 2 },
+                    "children": [
+                      {
+                        "type": "Stack",
+                        "if": "{{data.checked_out_lines && data.checked_out_lines.length > 0}}",
+                        "each": "{{data.checked_out_lines}}",
+                        "as": "line",
+                        "key": "{{line.entity_id}}",
+                        "props": { "spacing": 2, "className": "border rounded-lg p-4" },
+                        "children": [
+                          {
+                            "type": "Stack",
+                            "props": { "direction": "horizontal", "justify": "between", "align": "center" },
+                            "children": [
+                              {
+                                "type": "Text",
+                                "props": {
+                                  "weight": "semibold",
+                                  "children": "Asset: {{line.data.asset_name || lookupRecordFieldById(data.assets, line.asset_id, 'name', 'asset_id') || line.asset_id || 'Unassigned asset'}}"
+                                }
+                              },
+                              {
+                                "type": "Text",
+                                "props": {
+                                  "size": "sm",
+                                  "variant": "muted",
+                                  "children": "Customer: {{line.data.customer_name || lookupRecordFieldById(data.customers, lookupRecordFieldById(data.contracts, line.contract_id, 'data.customer_id', 'entity_id'), 'name', 'entity_id') || lookupRecordFieldById(data.contracts, line.contract_id, 'data.customer_id', 'entity_id') || 'Unknown customer'}} • Job Site: {{line.data.job_site_name || lookupRecordFieldById(data.job_sites, lookupRecordFieldById(data.contracts, line.contract_id, 'data.job_site_id', 'entity_id'), 'entity_versions[0].data.name', 'id') || lookupRecordFieldById(data.job_sites, lookupRecordFieldById(data.contracts, line.contract_id, 'data.job_site_id', 'entity_id'), 'source_record_id', 'id') || lookupRecordFieldById(data.contracts, line.contract_id, 'data.job_site_id', 'entity_id') || 'Unknown job site'}}"
+                                }
+                              },
+                              {
+                                "type": "Text",
+                                "props": {
+                                  "size": "sm",
+                                  "variant": "muted",
+                                  "children": "Category: {{line.data.category_name || lookupRecordFieldById(data.asset_categories, line.category_id || line.data.category_id, 'asset_category_name', 'asset_category_id') || line.category_id || line.data.category_id || 'Uncategorized'}}"
+                                }
+                              },
+                              {
+                                "type": "Badge",
+                                "props": { "variant": "secondary", "children": "{{line.status}}" }
+                              }
+                            ]
+                          },
+                          {
+                            "type": "Text",
+                            "props": { "size": "sm", "variant": "muted", "children": "Contract {{line.contract_id}} • Asset {{line.asset_id}}" }
+                          },
+                          {
+                            "type": "Text",
+                            "props": { "size": "sm", "variant": "muted", "children": "Line ID: {{line.entity_id}}" }
+                          },
+                          {
+                            "type": "Link",
+                            "props": {
+                              "to": "/rental/inspection-comparison?contract_line_id={{line.entity_id}}&asset_id={{line.asset_id}}",
+                              "children": "Review inspection evidence bundle →"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "if": "{{line.data.planned_end}}",
+                            "props": {
+                              "size": "sm",
+                              "variant": "muted",
+                              "children": "Planned return: {{line.data.planned_end}}"
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "if": "{{line.actual_start}}",
+                            "props": {
+                              "size": "sm",
+                              "variant": "muted",
+                              "children": "Checked out at: {{line.actual_start}}"
+                            }
+                          },
+                          {
+                            "type": "Button",
+                            "if": "{{auth.canOperate}}",
+                            "props": {
+                              "size": "sm",
+                              "children": "Check In This Line",
+                              "onClick": {
+                                "action": "sequence",
+                                "actions": [
+                                  { "action": "setState", "key": "checkIn_line_id", "value": "{{line.entity_id}}" },
+                                  { "action": "setState", "key": "checkIn_contract_id", "value": "{{line.contract_id}}" },
+                                  { "action": "setState", "key": "checkIn_asset_id", "value": "{{line.asset_id}}" },
+                                  { "action": "setState", "key": "checkIn_return_date", "value": "" },
+                                  { "action": "setState", "key": "checkIn_condition_outcome", "value": "pass" },
+                                  { "action": "setState", "key": "checkIn_notes", "value": "" },
+                                  { "action": "openModal", "modalId": "checkInLine" }
+                                ]
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "if": "{{!data.checked_out_lines || data.checked_out_lines.length === 0}}",
+                        "props": {
+                          "variant": "muted",
+                          "className": "text-center py-8",
+                          "children": "No checked-out lines pending return."
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "Card",
+            "children": [
+              {
+                "type": "Stack",
+                "props": { "spacing": 3 },
+                "children": [
+                  { "type": "Heading", "props": { "level": 3, "children": "Inspection Hold Status" } },
+                  {
+                    "type": "Text",
+                    "props": {
+                      "variant": "muted",
+                      "size": "sm",
+                      "children": "Lines returned with a failed inspection outcome — asset placed on inspection hold."
+                    }
+                  },
+                  {
+                    "type": "Link",
+                    "props": {
+                      "to": "/entities/inspection",
+                      "children": "Inspections"
+                    }
+                  },
+                  {
+                    "type": "Stack",
+                    "if": "{{data.inspection_holds && data.inspection_holds.length > 0}}",
+                    "each": "{{data.inspection_holds}}",
+                    "as": "line",
+                    "key": "{{line.entity_id}}",
+                    "props": { "spacing": 1, "className": "border rounded-lg p-3" },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": { "size": "sm", "weight": "semibold", "children": "{{lookupRecordFieldById(data.assets, line.asset_id, 'name', 'asset_id') || line.asset_id}}" }
+                      },
+                      {
+                        "type": "Text",
+                        "props": { "size": "sm", "variant": "muted", "children": "{{line.asset_id}}" }
+                      },
+                      {
+                        "type": "Link",
+                        "props": {
+                          "to": "/rental/inspection-comparison?contract_line_id={{line.entity_id}}&asset_id={{line.asset_id}}",
+                          "children": "Review inspection evidence bundle →"
+                        }
+                      },
+                      {
+                        "type": "Badge",
+                        "props": { "variant": "destructive", "children": "on_inspection_hold" }
+                      },
+                      {
+                        "type": "Text",
+                        "if": "{{line.actual_end}}",
+                        "props": { "size": "sm", "variant": "muted", "children": "Returned: {{line.actual_end}}" }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Text",
+                    "if": "{{!data.inspection_holds || data.inspection_holds.length === 0}}",
+                    "props": {
+                      "variant": "muted",
+                      "size": "sm",
+                      "className": "text-center py-4",
+                      "children": "No assets are currently on inspection hold."
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "modals": {
+    "checkInLine": {
+      "title": "Check In Contract Line",
+      "description": "Capture return details and create a return inspection record.",
+      "size": "lg",
+      "content": {
+        "type": "Stack",
+        "props": { "spacing": 4 },
+        "children": [
+          {
+            "type": "Stack",
+            "props": { "spacing": 1 },
+            "children": [
+              {
+                "type": "Text",
+                "props": {
+                  "weight": "semibold",
+                  "children": "Contract {{state.checkIn_contract_id}} • Asset {{state.checkIn_asset_id}}"
+                }
+              },
+              {
+                "type": "Text",
+                "props": { "size": "sm", "variant": "muted", "children": "Line ID: {{state.checkIn_line_id}}" }
+              },
+              {
+                "type": "Text",
+                "if": "{{lookupRecordFieldById(data.checked_out_lines, state.checkIn_line_id, 'data.planned_end', 'entity_id')}}",
+                "props": {
+                  "size": "sm",
+                  "variant": "muted",
+                  "children": "Planned return: {{lookupRecordFieldById(data.checked_out_lines, state.checkIn_line_id, 'data.planned_end', 'entity_id')}}"
+                }
+              },
+              {
+                "type": "Text",
+                "if": "{{lookupRecordFieldById(data.checked_out_lines, state.checkIn_line_id, 'actual_start', 'entity_id')}}",
+                "props": {
+                  "size": "sm",
+                  "variant": "muted",
+                  "children": "Checked out at: {{lookupRecordFieldById(data.checked_out_lines, state.checkIn_line_id, 'actual_start', 'entity_id')}}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "Input",
+            "props": {
+              "label": "Return Date",
+              "placeholder": "YYYY-MM-DD",
+              "name": "return_date",
+              "value": "{{state.checkIn_return_date || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "checkIn_return_date",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Select",
+            "props": {
+              "label": "Condition Outcome",
+              "name": "condition_outcome",
+              "value": "{{state.checkIn_condition_outcome || 'pass'}}",
+              "options": [
+                { "value": "pass", "label": "Pass" },
+                { "value": "fail", "label": "Fail" }
+              ],
+              "onChange": {
+                "action": "setState",
+                "key": "checkIn_condition_outcome",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Textarea",
+            "props": {
+              "label": "Return Notes",
+              "placeholder": "Optional check-in notes",
+              "name": "return_notes",
+              "value": "{{state.checkIn_notes || ''}}",
+              "onChange": {
+                "action": "setState",
+                "key": "checkIn_notes",
+                "value": "{{event.target.value}}"
+              }
+            }
+          },
+          {
+            "type": "Alert",
+            "if": "{{state.checkIn_condition_outcome === 'fail'}}",
+            "props": {
+              "variant": "warning",
+              "title": "Inspection hold expected",
+              "description": "Fail outcomes trigger return inspection and place the asset on inspection hold."
+            }
+          },
+          {
+            "type": "Stack",
+            "props": { "direction": "horizontal", "justify": "end", "spacing": 2 },
+            "children": [
+              {
+                "type": "Button",
+                "props": {
+                  "variant": "outline",
+                  "children": "Cancel",
+                  "onClick": { "action": "closeModal" }
+                }
+              },
+              {
+                "type": "Button",
+                "props": {
+                  "children": "Confirm Check-In",
+                  "onClick": {
+                    "action": "sequence",
+                    "actions": [
+                      {
+                        "action": "apiCall",
+                        "operation": "rpc",
+                        "function": "rental_upsert_entity_current_state",
+                        "data": {
+                          "p_entity_type": "rental_contract_line",
+                          "p_entity_id": "{{state.checkIn_line_id}}",
+                          "p_data": "{{mergeRecordFieldById(data.checked_out_lines, state.checkIn_line_id, 'entity_id', 'status', 'returned', 'contract_id', state.checkIn_contract_id || lookupRecordFieldById(data.checked_out_lines, state.checkIn_line_id, 'contract_id', 'entity_id'), 'asset_id', state.checkIn_asset_id || lookupRecordFieldById(data.checked_out_lines, state.checkIn_line_id, 'asset_id', 'entity_id'), 'actual_end', state.checkIn_return_date, 'condition_outcome', state.checkIn_condition_outcome, 'resulting_asset_status', state.checkIn_condition_outcome === 'fail' ? 'on_inspection_hold' : 'available')}}"
+                        }
+                      },
+                      {
+                        "action": "apiCall",
+                        "operation": "rpc",
+                        "function": "create_entity_with_version",
+                        "data": {
+                          "p_entity_type": "inspection",
+                          "p_data": {
+                            "asset_id": "{{state.checkIn_asset_id || lookupRecordFieldById(data.checked_out_lines, state.checkIn_line_id, 'asset_id', 'entity_id')}}",
+                            "contract_line_id": "{{state.checkIn_line_id}}",
+                            "inspection_type": "return",
+                            "outcome": "{{state.checkIn_condition_outcome}}",
+                            "resulting_asset_status": "{{state.checkIn_condition_outcome === 'fail' ? 'on_inspection_hold' : 'available'}}",
+                            "inspected_at": "{{state.checkIn_return_date}}",
+                            "notes": "{{state.checkIn_notes}}"
+                          }
+                        },
+                        "onSuccess": {
+                          "action": "sequence",
+                          "actions": [
+                            { "action": "closeModal" },
+                            { "action": "setState", "key": "checkIn_line_id", "value": "" },
+                            { "action": "setState", "key": "checkIn_contract_id", "value": "" },
+                            { "action": "setState", "key": "checkIn_asset_id", "value": "" },
+                            { "action": "setState", "key": "checkIn_return_date", "value": "" },
+                            { "action": "setState", "key": "checkIn_condition_outcome", "value": "pass" },
+                            { "action": "setState", "key": "checkIn_notes", "value": "" },
+                            { "action": "refetch", "source": "checked_out_lines" },
+                            { "action": "refetch", "source": "inspection_holds" }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,126 @@
+# DEV-GRADE OpenBao for the Wynne dev secret pipeline (ADR-0100).
+#
+# ⚠️  NOT production secret custody. This is `bao server -dev`: in-memory storage,
+#     auto-unsealed, single replica, HTTP (no TLS). A pod restart loses all data and
+#     requires re-running the bootstrap below. Production-grade HA/persistent OpenBao
+#     (Raft storage, auto-unseal, TLS, backups) is a separate follow-up (ADR-0040).
+#
+# Bootstrap (cluster-admin, out-of-band — the namespace-scoped gha-deployer cannot do this):
+#
+#   1. Apply this manifest:
+#        kubectl apply -f deploy/k8s/wynne-vault/openbao-dev.yaml
+#   2. Create the dev root token (value generated, never committed):
+#        kubectl -n wynne-vault create secret generic openbao-dev-root \
+#          --from-literal=root-token="$(openssl rand -hex 20)"
+#        kubectl -n wynne-vault rollout restart deploy/openbao
+#   3. Configure KV-v2 + Kubernetes auth (exec into the pod):
+#        POD=$(kubectl -n wynne-vault get pod -l app.kubernetes.io/name=openbao -o name)
+#        kubectl -n wynne-vault exec -i "$POD" -- sh -c '
+#          export BAO_ADDR=http://127.0.0.1:8200 BAO_TOKEN=$BAO_DEV_ROOT_TOKEN_ID
+#          bao auth enable kubernetes
+#          bao write auth/kubernetes/config \
+#            kubernetes_host="https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT" \
+#            kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
+#            token_reviewer_jwt=@/var/run/secrets/kubernetes.io/serviceaccount/token
+#          printf "path \"secret/data/wynne/dev/*\" { capabilities = [\"read\"] }\npath \"secret/metadata/wynne/dev/*\" { capabilities = [\"read\"] }\n" | bao policy write wynne-ro -
+#          bao write auth/kubernetes/role/wynne-eso \
+#            bound_service_account_names=eso-vault-auth \
+#            bound_service_account_namespaces=wynne-dev \
+#            policies=wynne-ro ttl=1h'
+#   4. Provision the secret values — see docs/runbooks/secret-operations.md (Migration / Cutover).
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: wynne-vault
+  labels:
+    app.kubernetes.io/part-of: wynne
+    wynne.io/grade: dev-non-prod
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: openbao
+  namespace: wynne-vault
+---
+# OpenBao validates incoming Kubernetes-auth JWTs via the TokenReview API,
+# which requires the system:auth-delegator role.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: openbao-tokenreview
+  labels:
+    app.kubernetes.io/part-of: wynne
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+  - kind: ServiceAccount
+    name: openbao
+    namespace: wynne-vault
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openbao
+  namespace: wynne-vault
+  labels:
+    app.kubernetes.io/name: openbao
+    app.kubernetes.io/part-of: wynne
+    wynne.io/grade: dev-non-prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: openbao
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: openbao
+        app.kubernetes.io/part-of: wynne
+    spec:
+      serviceAccountName: openbao
+      containers:
+        - name: openbao
+          image: openbao/openbao:2.5.4
+          args: ["server", "-dev", "-dev-listen-address=0.0.0.0:8200"]
+          env:
+            - name: BAO_DEV_ROOT_TOKEN_ID
+              valueFrom:
+                secretKeyRef:
+                  name: openbao-dev-root
+                  key: root-token
+            - name: BAO_ADDR
+              value: "http://127.0.0.1:8200"
+          ports:
+            - name: http
+              containerPort: 8200
+          readinessProbe:
+            httpGet:
+              path: /v1/sys/health?standbyok=true
+              port: 8200
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openbao
+  namespace: wynne-vault
+  labels:
+    app.kubernetes.io/name: openbao
+spec:
+  selector:
+    app.kubernetes.io/name: openbao
+  ports:
+    - name: http
+      port: 8200
+      targetPort: 8200

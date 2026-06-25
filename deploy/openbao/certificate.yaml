@@ -1,0 +1,65 @@
+# cert-manager TLS for OpenBao server + Raft peer comms (ADR-0040).
+# Requires cert-manager installed cluster-wide (not present today — platform-bootstrap step).
+# Self-signed CA bootstrap → CA issuer → leaf cert mounted by the StatefulSet as secret openbao-tls.
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: openbao-selfsigned
+  namespace: wynne-vault
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: openbao-ca
+  namespace: wynne-vault
+spec:
+  isCA: true
+  commonName: openbao-ca
+  secretName: openbao-ca
+  duration: 87600h    # 10y CA
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: openbao-selfsigned
+    kind: Issuer
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: openbao-ca-issuer
+  namespace: wynne-vault
+spec:
+  ca:
+    secretName: openbao-ca
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: openbao-tls
+  namespace: wynne-vault
+spec:
+  secretName: openbao-tls        # mounted at /openbao/userconfig/openbao-tls (values-ha.yaml)
+  duration: 2160h                # 90d leaf
+  renewBefore: 360h              # rotate 15d before expiry
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  issuerRef:
+    name: openbao-ca-issuer
+    kind: Issuer
+  # SANs cover the per-pod Raft peer DNS, the client Service, and loopback.
+  dnsNames:
+    - openbao
+    - openbao.wynne-vault
+    - openbao.wynne-vault.svc
+    - openbao.wynne-vault.svc.cluster.local
+    - "*.openbao-internal"
+    - "*.openbao-internal.wynne-vault.svc.cluster.local"
+    - localhost
+  ipAddresses:
+    - 127.0.0.1

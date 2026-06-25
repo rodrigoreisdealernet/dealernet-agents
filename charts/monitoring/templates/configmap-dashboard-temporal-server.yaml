@@ -1,0 +1,194 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "monitoring.fullname" . }}-dashboard-temporal-server
+  labels:
+    {{- include "monitoring.labels" . | nindent 4 }}
+    {{ .Values.grafana.dashboardLabel }}: {{ .Values.grafana.dashboardLabelValue | quote }}
+    wynne/dashboard-folder: temporal
+data:
+  temporal-server.json: |
+    {
+      "annotations": { "list": [] },
+      "description": "Official Temporal server health — service requests, persistence, timer tasks, and namespace-level workflow throughput.",
+      "editable": true,
+      "graphTooltip": 1,
+      "id": null,
+      "links": [],
+      "panels": [
+        {
+          "collapsed": false,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+          "id": 1,
+          "title": "Service Requests",
+          "type": "row"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "palette-classic" }, "unit": "reqps" }
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 1 },
+          "id": 2,
+          "options": { "legend": { "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(rate(temporal_request_total{namespace=~\"$temporal_namespace\"}[5m])) by (operation)",
+              "legendFormat": "{{ "{{" }}operation{{ "}}" }}"
+            }
+          ],
+          "title": "Request Rate by Operation",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "palette-classic" }, "unit": "reqps" }
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 1 },
+          "id": 3,
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(rate(temporal_request_failure_total{namespace=~\"$temporal_namespace\"}[5m])) by (operation)",
+              "legendFormat": "{{ "{{" }}operation{{ "}}" }}"
+            }
+          ],
+          "title": "Request Failure Rate by Operation",
+          "type": "timeseries"
+        },
+        {
+          "collapsed": false,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 9 },
+          "id": 10,
+          "title": "Workflow Execution",
+          "type": "row"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "palette-classic" }, "unit": "short" }
+          },
+          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 10 },
+          "id": 11,
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(temporal_open_workflow_executions{namespace=~\"$temporal_namespace\"}) by (namespace)",
+              "legendFormat": "{{ "{{" }}namespace{{ "}}" }} open"
+            }
+          ],
+          "title": "Open Workflow Executions",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "palette-classic" }, "unit": "reqps" }
+          },
+          "gridPos": { "h": 8, "w": 8, "x": 8, "y": 10 },
+          "id": 12,
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(rate(temporal_workflow_completed_count{namespace=~\"$temporal_namespace\"}[5m])) by (namespace)",
+              "legendFormat": "{{ "{{" }}namespace{{ "}}" }} completed"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(rate(temporal_workflow_failed_count{namespace=~\"$temporal_namespace\"}[5m])) by (namespace)",
+              "legendFormat": "{{ "{{" }}namespace{{ "}}" }} failed"
+            }
+          ],
+          "title": "Workflow Completion Rate",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "palette-classic" }, "unit": "s" }
+          },
+          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 10 },
+          "id": 13,
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "histogram_quantile(0.99, sum(rate(temporal_workflow_endtoend_latency_bucket{namespace=~\"$temporal_namespace\"}[5m])) by (le, namespace))",
+              "legendFormat": "p99 {{ "{{" }}namespace{{ "}}" }}"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "histogram_quantile(0.50, sum(rate(temporal_workflow_endtoend_latency_bucket{namespace=~\"$temporal_namespace\"}[5m])) by (le, namespace))",
+              "legendFormat": "p50 {{ "{{" }}namespace{{ "}}" }}"
+            }
+          ],
+          "title": "Workflow End-to-End Latency",
+          "type": "timeseries"
+        },
+        {
+          "collapsed": false,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 },
+          "id": 20,
+          "title": "Persistence",
+          "type": "row"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "palette-classic" }, "unit": "reqps" }
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 19 },
+          "id": 21,
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(rate(temporal_persistence_requests_total[5m])) by (operation)",
+              "legendFormat": "{{ "{{" }}operation{{ "}}" }}"
+            }
+          ],
+          "title": "Persistence Request Rate",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "palette-classic" }, "unit": "s" }
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 19 },
+          "id": 22,
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "histogram_quantile(0.99, sum(rate(temporal_persistence_latency_bucket[5m])) by (le, operation))",
+              "legendFormat": "p99 {{ "{{" }}operation{{ "}}" }}"
+            }
+          ],
+          "title": "Persistence Latency p99",
+          "type": "timeseries"
+        }
+      ],
+      "schemaVersion": 36,
+      "style": "dark",
+      "tags": ["temporal", "server"],
+      "templating": {
+        "list": [
+          {
+            "current": { "selected": false, "text": ".*", "value": ".*" },
+            "hide": 0,
+            "includeAll": false,
+            "label": "Temporal Namespace",
+            "name": "temporal_namespace",
+            "options": [],
+            "query": ".*",
+            "type": "textbox"
+          }
+        ]
+      },
+      "time": { "from": "now-3h", "to": "now" },
+      "timepicker": {},
+      "timezone": "browser",
+      "title": "Temporal Server",
+      "uid": "temporal-server",
+      "version": 1
+    }

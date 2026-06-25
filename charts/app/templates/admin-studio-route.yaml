@@ -1,0 +1,53 @@
+{{- if and .Values.adminAccess.enabled .Values.adminAccess.studio.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "app.studioUpstream.fullname" . }}
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: studio-admin-upstream
+spec:
+  type: ExternalName
+  externalName: {{ .Values.adminAccess.studio.upstreamHost | quote }}
+  ports:
+    - name: http
+      port: {{ .Values.adminAccess.studio.upstreamPort }}
+      protocol: TCP
+---
+{{ if and .Values.adminAccess.oauth2Proxy.enabled .Values.adminAccess.studio.oauth2Proxy.enabled .Values.adminAccess.studio.ingress.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "app.fullname" . }}-studio-admin
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: studio-admin-ingress
+  {{- with .Values.adminAccess.studio.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.adminAccess.studio.ingress.className }}
+  ingressClassName: {{ .Values.adminAccess.studio.ingress.className }}
+  {{- end }}
+  {{- if .Values.adminAccess.studio.ingress.tls }}
+  tls:
+    {{- toYaml .Values.adminAccess.studio.ingress.tls | nindent 4 }}
+  {{- end }}
+  rules:
+    {{- range .Values.adminAccess.studio.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "app.studioOauth2Proxy.fullname" $ }}
+                port:
+                  name: http
+          {{- end }}
+    {{- end }}
+{{- end }}
+{{- end }}
