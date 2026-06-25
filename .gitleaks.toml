@@ -10,6 +10,8 @@ paths = [
   '''^supabase/config\.toml$''',
   '''^supabase/tests/.*''',
   '''^supabase/migrations/.*''',
+  # Fixtures de teste do worker Temporal (tokens/ids falsos disparam generic-api-key)
+  '''^temporal/tests/.*''',
   # Scripts de seed de demo (usuários/dados de exemplo, ambiente dev descartável)
   '''^scripts/.*''',
   # Docs de deploy/ambiente podem citar chaves demo públicas
