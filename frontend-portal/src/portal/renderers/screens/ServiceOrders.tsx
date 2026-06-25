@@ -12,7 +12,8 @@ import {
   type ServiceOrderInput,
   type ServiceOrderStatus,
 } from '@/portal/lib/agentsApi'
-import { KpiCard, Badge, ScreenShell, type Tone } from './ui'
+import { KpiCard, Badge, ScreenShell, RowActions, RowActionButton, type Tone } from './ui'
+import { Pencil, XCircle } from 'lucide-react'
 import { formatBRL, formatDateTime } from './format'
 
 type FormState = ServiceOrderInput & { entity_id?: string }
@@ -187,33 +188,32 @@ export default function ServiceOrders() {
                   <Badge tone={statusTone(r.status)}>{r.status}</Badge>
                 </td>
                 <td className="px-3 py-2 text-right">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setForm({
-                        entity_id: r.entity_id,
-                        order_number: r.order_number ?? '',
-                        customer: r.customer ?? '',
-                        vehicle: r.vehicle ?? '',
-                        description: r.description ?? '',
-                        status: (r.status as ServiceOrderStatus) ?? 'aberta',
-                        opened_at: r.opened_at ? r.opened_at.slice(0, 16) : '',
-                        closed_at: r.closed_at ? r.closed_at.slice(0, 16) : '',
-                        revenue: r.revenue,
-                        technician: r.technician ?? '',
-                      })
-                    }
-                    className="mr-2 text-xs font-medium text-primary hover:underline"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => remove(r)}
-                    className="text-xs font-medium text-destructive hover:underline"
-                  >
-                    Cancelar
-                  </button>
+                  <RowActions>
+                    <RowActionButton
+                      icon={<Pencil size={14} />}
+                      label="Editar"
+                      onClick={() =>
+                        setForm({
+                          entity_id: r.entity_id,
+                          order_number: r.order_number ?? '',
+                          customer: r.customer ?? '',
+                          vehicle: r.vehicle ?? '',
+                          description: r.description ?? '',
+                          status: (r.status as ServiceOrderStatus) ?? 'aberta',
+                          opened_at: r.opened_at ? r.opened_at.slice(0, 16) : '',
+                          closed_at: r.closed_at ? r.closed_at.slice(0, 16) : '',
+                          revenue: r.revenue,
+                          technician: r.technician ?? '',
+                        })
+                      }
+                    />
+                    <RowActionButton
+                      tone="danger"
+                      icon={<XCircle size={14} />}
+                      label="Cancelar"
+                      onClick={() => remove(r)}
+                    />
+                  </RowActions>
                 </td>
               </tr>
             ))}

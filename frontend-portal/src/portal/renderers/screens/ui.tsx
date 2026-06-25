@@ -55,6 +55,44 @@ export function statusTone(s: string | null | undefined): Tone {
   return 'neutral'
 }
 
+// Botão de ação de linha (tabelas dos CRUDs). Substitui os antigos links
+// sublinhados por botões reais: borda + ícone + rótulo, acessíveis por teclado
+// (type="button" + focus ring). `tone="danger"` para ações destrutivas
+// (Remover/Inativar/Cancelar); `tone="default"` para Editar.
+export function RowActionButton({
+  onClick,
+  icon,
+  label,
+  tone = 'default',
+}: {
+  onClick: () => void
+  icon: ReactNode
+  label: string
+  tone?: 'default' | 'danger'
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors',
+        'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-background',
+        tone === 'danger'
+          ? 'border-border text-destructive hover:bg-destructive/10'
+          : 'border-border text-foreground hover:bg-muted',
+      )}
+    >
+      {icon}
+      {label}
+    </button>
+  )
+}
+
+// Agrupa os botões de ação de uma linha (alinhados à direita, com gap).
+export function RowActions({ children }: { children: ReactNode }) {
+  return <div className="flex items-center justify-end gap-2">{children}</div>
+}
+
 export function ScreenShell({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
   return (
     <div className="flex h-full flex-col gap-5 overflow-auto p-5">

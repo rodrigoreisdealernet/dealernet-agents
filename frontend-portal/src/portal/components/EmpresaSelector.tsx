@@ -1,6 +1,7 @@
 // Seletor de empresa no header (move do rodapé do portal antigo).
-// Lista vem de GET /api/v1/portal/empresas, agrupada por `grupo` (GM, DEALERNET),
-// como o submenu hierárquico do print do portal legado.
+// Lista vem das empresas vivas de v_dia_company_current (issue #37), adaptadas ao
+// shape Empresa no boot() do portalStore: `grupo` = brand_name (marca) da empresa;
+// empresas sem marca caem no bloco "Sem marca". Agrupamento hierárquico por `grupo`.
 
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { Building2, Check, ChevronDown } from 'lucide-react'

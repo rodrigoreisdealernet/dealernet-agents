@@ -13,7 +13,8 @@ import {
   type PartSaleInput,
   type PartRow,
 } from '@/portal/lib/agentsApi'
-import { KpiCard, Badge, ScreenShell, type Tone } from './ui'
+import { KpiCard, Badge, ScreenShell, RowActions, RowActionButton, type Tone } from './ui'
+import { XCircle } from 'lucide-react'
 import { formatBRL } from './format'
 
 type FormState = {
@@ -213,13 +214,14 @@ export default function PartSales() {
                   <Badge tone={statusTone(r.status)}>{r.status}</Badge>
                 </td>
                 <td className="px-3 py-2 text-right">
-                  <button
-                    type="button"
-                    onClick={() => cancel(r)}
-                    className="text-xs font-medium text-destructive hover:underline"
-                  >
-                    Cancelar
-                  </button>
+                  <RowActions>
+                    <RowActionButton
+                      tone="danger"
+                      icon={<XCircle size={14} />}
+                      label="Cancelar"
+                      onClick={() => cancel(r)}
+                    />
+                  </RowActions>
                 </td>
               </tr>
             ))}
