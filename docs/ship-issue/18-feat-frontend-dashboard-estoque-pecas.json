@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/18",
   "pr": null,
   "prUrl": null,
-  "updatedAt": "2026-06-25T19:10:51.160Z",
+  "updatedAt": "2026-06-25T19:13:36.897Z",
   "steps": [
     {
       "id": "spec",
@@ -34,8 +34,8 @@
     {
       "id": "code",
       "label": "03 · Code",
-      "status": "running",
-      "summary": "Coding the Peças dashboard screen + nav + agentsApi helpers",
+      "status": "done",
+      "summary": "PartsBI screen + nav (Fast BI) + agentsApi helpers (getPartsSummary/getDiaOwnerKpis). Commit cf93940",
       "artifacts": [],
       "notes": [],
       "gate": null
@@ -43,8 +43,8 @@
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "pending",
-      "summary": "",
+      "status": "running",
+      "summary": "Writing structural node --test for the dashboard",
       "artifacts": [],
       "notes": [],
       "gate": null
