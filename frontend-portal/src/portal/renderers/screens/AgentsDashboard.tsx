@@ -5,7 +5,7 @@ import { useTranslations } from 'use-intl'
 import { usePortalStore } from '@/portal/store/portalStore'
 import { getAgentStatus, getFindingKpis, type AgentStatus, type FindingKpis } from '@/portal/lib/agentsApi'
 import { KpiCard, Badge, ScreenShell } from './ui'
-import { formatBRL, formatBRLKpi, formatDateTime } from './format'
+import { formatBRLKpi, formatDateTime } from './format'
 export const I18N_PT_LEGEND_REFERENCE = 'Valores em R$'
 
 export default function AgentsDashboard() {
@@ -79,7 +79,7 @@ export default function AgentsDashboard() {
             </div>
             <div className="mt-2 text-sm text-foreground">
               {t('identified')}:{' '}
-              <span className="font-semibold tabular-nums">{formatBRL(a.identified_delta)}</span>
+              <span className="font-semibold tabular-nums">{formatBRLKpi(a.identified_delta)}</span>
             </div>
             <div className="mt-1 text-xs text-muted-foreground">
               {t('lastRun')}: {formatDateTime(a.last_run_finished_at)} · {a.last_run_status ?? '—'}

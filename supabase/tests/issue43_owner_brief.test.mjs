@@ -1,5 +1,5 @@
-// Teste de CONTRATO SQL — Morning Brief do Dono (issue #43), rodando contra o
-// Postgres VIVO do Supabase.
+// Teste de CONTRATO SQL — Morning Brief do Dono (issue #43; conceito mudado para
+// MÊS ATUAL na #46), rodando contra o Postgres VIVO do Supabase.
 //
 // Ambiente OFFLINE: SEM Supabase CLI e SEM runner instalavel. Usamos apenas os
 // modulos nativos do Node (node:test + node:assert) e chamamos o psql do
@@ -10,27 +10,28 @@
 //
 // COMO RODAR:
 //   node --test --test-concurrency=1 supabase/tests/issue43_owner_brief.test.mjs
-// Pre-requisito: container Postgres do Supabase no ar E a migration aplicada:
+// Pre-requisito: container Postgres do Supabase no ar E as migrations aplicadas:
 //   docker exec -i supabase_db_dealernet-agents psql -U postgres -d postgres -c "select 1"
-//   migration: supabase/migrations/20260626140000_dia_owner_brief_by_brand.sql
+//   migrations: 20260626140000_dia_owner_brief_by_brand.sql
+//               20260627120000_dia_owner_brief_month_to_date.sql (conceito MÊS ATUAL)
 //
 // O QUE ESTES CONTRATOS PROVAM (cada teste mapeia a um criterio de aceite da spec
-// docs/specs/43-portal-morning-brief-do-dono.md):
+// docs/specs/43-portal-morning-brief-do-dono.md, com o conceito MÊS ATUAL da #46):
 //   * As views existem/sao selecionaveis e o helper at_risk_days() = 83.
-//   * Agregacao do DIA ANTERIOR ("ontem" on-the-fly): venda em now()-1 entra,
-//     venda em outro dia NAO entra.
+//   * Agregacao do MÊS CORRENTE (month-to-date, on-the-fly): venda dentro do mes
+//     entra; venda no mes ANTERIOR NAO entra.
 //   * Agrupamento por marca + bucket "Sem marca" (brand em branco/ausente).
 //   * Proxy FP em risco <7d: days_in_stock >= 83 conta como at-risk; < 83 conta
 //     so no total fp_units/fp_value, nao no at-risk (boundary do proxy).
-//   * Setores sem dado (Pecas/AT) -> NULL (UI renderiza "—").
+//   * Setores Pecas/AT POPULAM com venda de peca / OS do mes (fix da #46:
+//     entity_type 'part_sale' + sale_date; OS por opened_at + revenue).
 //   * v_dia_owner_brief_by_store: linhas por (marca, loja) consistentes com os
-//     totais por marca.
+//     totais por marca; Pecas/AT seguem NULL por loja (sem atribuicao por loja).
 //
-// SEED: usamos create_vehicle (RPC endurecida, mesmo caminho da UI) com JWT de
-// admin para os cenarios com marca; para o bucket "Sem marca" (create_vehicle
-// rejeita brand em branco com 22023) descemos para create_entity_with_version,
-// a primitiva SCD2 que o create_vehicle envelopa. A data de venda "ontem" e'
-// injetada via campo data->>'sold_at' (derivacao identica a v_dia_sales_summary).
+// SEED: usamos create_vehicle/create_part/create_part_sale/create_service_order
+// (RPCs endurecidas, mesmo caminho da UI) com JWT de admin. A data de venda do
+// veiculo "no mes" e' injetada via data->>'sold_at' (derivacao identica a
+// v_dia_sales_summary).
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -39,7 +40,7 @@ import { execFileSync } from 'node:child_process'
 const CONTAINER = 'supabase_db_dealernet-agents'
 
 // JWT canonico: role de requisicao 'authenticated'; app_metadata.role = app_role
-// lido por get_my_role() (admin habilita o writer guard do create_vehicle).
+// lido por get_my_role() (admin habilita o writer guard das RPCs).
 const ADMIN_CLAIMS = JSON.stringify({
   role: 'authenticated',
   sub: '00000000-0000-0000-0000-0000000000aa',
@@ -110,8 +111,11 @@ function rows(out) {
   return (key) => lines.find((l) => l.startsWith(`${key}|`))?.split('|')
 }
 
-// SQL para semear um veiculo via create_vehicle (com marca) dentro da txn corrente.
-const yesterday = `(now()::date - 1)::text`
+// Datas-ancora do conceito MÊS ATUAL (robustas a qualquer dia do mes):
+//   thisMonth = 1o dia do mes corrente (sempre DENTRO da janela MTD).
+//   prevMonth = ultimo dia do mes anterior (sempre FORA da janela MTD).
+const thisMonth = `(date_trunc('month', now())::date)::text`
+const prevMonth = `((date_trunc('month', now()) - interval '1 day')::date)::text`
 
 // ---------------------------------------------------------------------------
 // AC backend: as views existem, sao selecionaveis, e o helper expoe o knob 83.
@@ -131,7 +135,7 @@ test('AC views: v_dia_owner_brief_by_brand e _by_store sao selecionaveis; helper
 // ---------------------------------------------------------------------------
 // AC backend (contrato de colunas): as views expoem o shape exato que a tela
 // (agentsApi OwnerBriefBrandRow/StoreRow) vincula. Falharia se uma coluna fosse
-// removida/renomeada na migration.
+// removida/renomeada na migration. O conceito MÊS ATUAL preserva o shape.
 // ---------------------------------------------------------------------------
 test('AC contrato: v_dia_owner_brief_by_brand expoe as colunas dos 5 setores + FP + resultado', () => {
   const expected = [
@@ -165,37 +169,38 @@ test('AC contrato: v_dia_owner_brief_by_store adiciona store_name ao shape por m
 })
 
 // ---------------------------------------------------------------------------
-// AC "dados do dia anterior" (ontem on-the-fly): um veiculo NOVO vendido em
-// now()-1 para uma marca conhecida aparece com novos_units=1 e resultado
-// refletindo a venda. Prova a logica "ontem".
+// AC "dados do mes" (month-to-date on-the-fly): um veiculo NOVO vendido dentro
+// do mes corrente para uma marca conhecida aparece com novos_units=1 e o
+// resultado reflete ao menos essa venda. Prova a logica "mes atual".
 // ---------------------------------------------------------------------------
-test('AC ontem: venda NOVA de ontem reflete novos_units e resultado na marca', () => {
+test('AC mes: venda NOVA do mes reflete novos_units e entra no resultado da marca', () => {
   const sql = `${AS_ADMIN}
 select create_vehicle(
-  ('{"condition":"novo","brand":"ZZ_BRIEF_ONTEM","model":"M1","store":"Loja A","cost":"100000","sale_price":"150000","status":"vendido","sold_at":"' || ${yesterday} || '"}')::jsonb) \\g /dev/null
-select 'r', novos_units, novos_value, resultado
-  from v_dia_owner_brief_by_brand where brand_name = 'ZZ_BRIEF_ONTEM';
+  ('{"condition":"novo","brand":"ZZ_BRIEF_MES","model":"M1","store":"Loja A","cost":"100000","sale_price":"150000","status":"vendido","sold_at":"' || ${thisMonth} || '"}')::jsonb) \\g /dev/null
+select 'r', novos_units, novos_value, (resultado >= 150000)
+  from v_dia_owner_brief_by_brand where brand_name = 'ZZ_BRIEF_MES';
 rollback;
 `
   const { ok, out, err } = psql(sql)
   assert.ok(ok, `psql falhou: ${err}`)
   const get = rows(out)
+  // resultado e' >= 150000 porque pode somar Pecas/AT group-wide do mes (seed).
   assert.deepEqual(
     get('r'),
-    ['r', '1', '150000.00', '150000.00'],
-    'a marca deveria ter novos_units=1, novos_value=150000 e resultado=150000 (venda de ontem)',
+    ['r', '1', '150000.00', 't'],
+    'a marca deveria ter novos_units=1, novos_value=150000 e resultado>=150000 (venda do mes)',
   )
 })
 
 // ---------------------------------------------------------------------------
-// AC ontem (exclusao): uma venda em OUTRO dia (now()-5) NAO conta para a brief —
-// a marca nao aparece. Prova que o filtro de "ontem" e estrito.
+// AC mes (exclusao): uma venda no MES ANTERIOR (ultimo dia do mes passado) NAO
+// conta para a brief — a marca nao aparece. Prova que a janela MTD e estrita.
 // ---------------------------------------------------------------------------
-test('AC ontem: venda em outro dia (now()-5) NAO conta na brief', () => {
+test('AC mes: venda no mes anterior NAO conta na brief', () => {
   const sql = `${AS_ADMIN}
 select create_vehicle(
-  ('{"condition":"novo","brand":"ZZ_BRIEF_OUTRODIA","model":"M1","store":"Loja A","cost":"100000","sale_price":"150000","status":"vendido","sold_at":"' || (now()::date - 5)::text || '"}')::jsonb) \\g /dev/null
-select 'c', count(*) from v_dia_owner_brief_by_brand where brand_name = 'ZZ_BRIEF_OUTRODIA';
+  ('{"condition":"novo","brand":"ZZ_BRIEF_MESPASSADO","model":"M1","store":"Loja A","cost":"100000","sale_price":"150000","status":"vendido","sold_at":"' || ${prevMonth} || '"}')::jsonb) \\g /dev/null
+select 'c', count(*) from v_dia_owner_brief_by_brand where brand_name = 'ZZ_BRIEF_MESPASSADO';
 rollback;
 `
   const { ok, out, err } = psql(sql)
@@ -204,20 +209,20 @@ rollback;
   assert.deepEqual(
     get('c'),
     ['c', '0'],
-    'uma venda em dia diferente de ontem NAO deveria gerar linha de marca na brief',
+    'uma venda no mes anterior NAO deveria gerar linha de marca na brief do mes corrente',
   )
 })
 
 // ---------------------------------------------------------------------------
-// AC "Sem marca": um veiculo sem brand (branco/ausente) cai no bucket
-// "Sem marca" — e nenhuma linha tem brand_name NULL. create_vehicle rejeita
-// brand em branco (22023), entao descemos para create_entity_with_version.
+// AC "Sem marca": um veiculo sem brand (branco/ausente) vendido no mes cai no
+// bucket "Sem marca" — e nenhuma linha tem brand_name NULL. create_vehicle
+// rejeita brand em branco (22023), entao descemos para create_entity_with_version.
 // ---------------------------------------------------------------------------
 test('AC sem-marca: veiculo sem brand cai no bucket "Sem marca" (nunca brand_name NULL)', () => {
   const sql = `${AS_ADMIN}
 select create_entity_with_version(
   'vehicle'::text,
-  ('{"condition":"novo","model":"SemMarca","status":"vendido","sale_price":"99000","cost":"50000","sold_at":"' || ${yesterday} || '"}')::jsonb,
+  ('{"condition":"novo","model":"SemMarca","status":"vendido","sale_price":"99000","cost":"50000","sold_at":"' || ${thisMonth} || '"}')::jsonb,
   null::text) \\g /dev/null
 select 'sm', novos_units from v_dia_owner_brief_by_brand where brand_name = 'Sem marca';
 select 'nulls', count(*) from v_dia_owner_brief_by_brand where brand_name is null;
@@ -226,7 +231,7 @@ rollback;
   const { ok, out, err } = psql(sql)
   assert.ok(ok, `psql falhou: ${err}`)
   const get = rows(out)
-  // O bucket "Sem marca" existe e contabiliza a venda sem marca de ontem.
+  // O bucket "Sem marca" existe e contabiliza a venda sem marca do mes.
   const sm = get('sm')
   assert.ok(sm && Number(sm[1]) >= 1, `bucket "Sem marca" deveria contar a venda sem marca; obtido=${sm}`)
   // E nenhuma linha vaza brand_name NULL (a UI sempre tem um rotulo de marca).
@@ -238,6 +243,7 @@ rollback;
 // (purchase_date = now()-90) conta como at-risk (fp_units_at_risk>=1,
 // fp_value_at_risk>0); um com days_in_stock < 83 (now()-10) conta apenas no
 // total (fp_units/fp_value) mas NAO no at-risk. Prova o boundary do proxy.
+// (Floor Plan e' "as of now", nao depende de periodo — inalterado na #46.)
 // ---------------------------------------------------------------------------
 test('AC fp-risco: days_in_stock>=83 conta como at-risk; <83 conta so no total', () => {
   const sql = `${AS_ADMIN}
@@ -287,19 +293,25 @@ rollback;
 })
 
 // ---------------------------------------------------------------------------
-// AC "setores sem dado -> NULL" (UI renderiza "—"): com o seed atual nao ha
-// 'parts_sale'/'service_order' do dia anterior, entao pecas_value/pecas_margin e
-// at_value/at_margin saem NULL em toda linha de by_brand. Tambem em by_store
-// (sem atribuicao por loja).
+// AC Pecas/AT POPULAM no mes (fix #46): com uma venda de peca (part_sale,
+// sale_date no mes) e uma OS (service_order, opened_at no mes, com revenue), os
+// setores pecas_value e at_value saem NON-NULL e > 0 em by_brand. Isso prova a
+// correcao dos 3 defeitos do setor Pecas (entity_type 'part_sale', campo
+// sale_date, valor derivado) e a leitura de AT por opened_at/revenue.
 // ---------------------------------------------------------------------------
-test('AC setores vazios: pecas/at sao NULL em by_brand (renderizam "—")', () => {
-  // by_brand: garantimos ao menos uma linha (seed de uma venda de ontem) e
-  // asseguramos que os setores sem seed continuam NULL nessa linha.
+test('AC setores: Pecas e AT populam em by_brand com venda de peca / OS do mes', () => {
   const sql = `${AS_ADMIN}
 select create_vehicle(
-  ('{"condition":"novo","brand":"ZZ_BRIEF_NULLSEC","model":"M","store":"L1","cost":"10000","sale_price":"20000","status":"vendido","sold_at":"' || ${yesterday} || '"}')::jsonb) \\g /dev/null
-select 'sec', (pecas_value is null), (pecas_margin is null), (at_value is null), (at_margin is null)
-  from v_dia_owner_brief_by_brand where brand_name = 'ZZ_BRIEF_NULLSEC';
+  ('{"condition":"novo","brand":"ZZ_BRIEF_SEC","model":"M","store":"L1","cost":"10000","sale_price":"20000","status":"vendido","sold_at":"' || ${thisMonth} || '"}')::jsonb) \\g /dev/null
+select create_part(
+  '{"part_number":"ZZ-BRIEF-P1","description":"Peca brief","quantity_in_stock":"10","unit_cost":"10","unit_price":"100","status":"ativo","source_record_id":"zz-brief-part-1"}'::jsonb) \\g /dev/null
+select create_part_sale(jsonb_build_object(
+  'part_id', (select id from entities where entity_type = 'part' and source_record_id = 'zz-brief-part-1')::text,
+  'quantity', 1, 'unit_price', 100, 'discount', 0, 'sale_date', ${thisMonth})) \\g /dev/null
+select create_service_order(
+  ('{"customer":"Cliente ZZ","description":"OS brief","status":"concluida","revenue":"500","opened_at":"' || ${thisMonth} || '"}')::jsonb) \\g /dev/null
+select 'sec', (pecas_value is not null), (pecas_value > 0), (at_value is not null), (at_value > 0)
+  from v_dia_owner_brief_by_brand where brand_name = 'ZZ_BRIEF_SEC';
 rollback;
 `
   const { ok, out, err } = psql(sql)
@@ -307,14 +319,18 @@ rollback;
   assert.deepEqual(
     rows(out)('sec'),
     ['sec', 't', 't', 't', 't'],
-    'pecas_value/pecas_margin/at_value/at_margin deveriam ser NULL sem seed de pecas/oficina',
+    'pecas_value e at_value deveriam ser NON-NULL e > 0 com venda de peca / OS do mes',
   )
 })
 
-test('AC setores vazios: pecas/at sao NULL em by_store (sem atribuicao por loja)', () => {
+// ---------------------------------------------------------------------------
+// AC setores em by_store: Pecas/AT seguem NULL por loja (sem atribuicao por
+// loja no seed → "—" na UI), mesmo com o conceito MÊS ATUAL.
+// ---------------------------------------------------------------------------
+test('AC setores: pecas/at sao NULL em by_store (sem atribuicao por loja)', () => {
   const sql = `${AS_ADMIN}
 select create_vehicle(
-  ('{"condition":"novo","brand":"ZZ_BRIEF_STORENULL","model":"M","store":"L1","cost":"10000","sale_price":"20000","status":"vendido","sold_at":"' || ${yesterday} || '"}')::jsonb) \\g /dev/null
+  ('{"condition":"novo","brand":"ZZ_BRIEF_STORENULL","model":"M","store":"L1","cost":"10000","sale_price":"20000","status":"vendido","sold_at":"' || ${thisMonth} || '"}')::jsonb) \\g /dev/null
 select 'sec', (pecas_value is null), (pecas_margin is null), (at_value is null), (at_margin is null)
   from v_dia_owner_brief_by_store where brand_name = 'ZZ_BRIEF_STORENULL';
 rollback;
@@ -334,7 +350,7 @@ rollback;
 // novos_value E o destaque FP em risco <7d: fp_units_at_risk / fp_value_at_risk).
 // Prova a consistencia do drill marca -> lojas, incluindo o highlight do AC2.
 //
-// O cenario semeia, na mesma txn, dois NOVOS vendidos ontem (L1, L2) e DOIS
+// O cenario semeia, na mesma txn, dois NOVOS vendidos no mes (L1, L2) e DOIS
 // usados EM ESTOQUE at-risk (days_in_stock>=83: purchase_date=now()-90) — um em
 // L1 e outro em L2 — para que SUM(fp_units_at_risk)/SUM(fp_value_at_risk) por
 // loja seja > 0 e a equivalencia com o total por marca nao seja trivial (0==0).
@@ -342,9 +358,9 @@ rollback;
 test('AC drill: by_store soma aos totais de by_brand (novos + FP at-risk)', () => {
   const sql = `${AS_ADMIN}
 select create_vehicle(
-  ('{"condition":"novo","brand":"ZZ_BRIEF_DRILL","model":"A","store":"L1","cost":"50000","sale_price":"80000","status":"vendido","sold_at":"' || ${yesterday} || '"}')::jsonb) \\g /dev/null
+  ('{"condition":"novo","brand":"ZZ_BRIEF_DRILL","model":"A","store":"L1","cost":"50000","sale_price":"80000","status":"vendido","sold_at":"' || ${thisMonth} || '"}')::jsonb) \\g /dev/null
 select create_vehicle(
-  ('{"condition":"novo","brand":"ZZ_BRIEF_DRILL","model":"B","store":"L2","cost":"50000","sale_price":"70000","status":"vendido","sold_at":"' || ${yesterday} || '"}')::jsonb) \\g /dev/null
+  ('{"condition":"novo","brand":"ZZ_BRIEF_DRILL","model":"B","store":"L2","cost":"50000","sale_price":"70000","status":"vendido","sold_at":"' || ${thisMonth} || '"}')::jsonb) \\g /dev/null
 -- Dois usados EM ESTOQUE at-risk (days_in_stock>=83), um por loja, com
 -- floor_plan_cost distintos, para somas at-risk > 0 nas duas lojas.
 select create_vehicle(

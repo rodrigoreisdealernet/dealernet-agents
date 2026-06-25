@@ -597,10 +597,10 @@
       "dismiss": "Dismiss",
       "brandStore": "Brand / Store",
       "confirmFailed": "Failed to confirm",
-      "yesterday": "Yesterday",
+      "currentMonth": "Current month",
       "byBrandTap": "By brand · tap to see stores",
-      "noPreviousDayData": "No previous-day data.",
-      "desktopTitle": "Result by brand and store · yesterday"
+      "noMonthData": "No month data.",
+      "desktopTitle": "Result by brand and store · current month"
     }
   }
 }

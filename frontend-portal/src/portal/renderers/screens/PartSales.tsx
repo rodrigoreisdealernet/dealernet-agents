@@ -16,7 +16,7 @@ import {
 } from '@/portal/lib/agentsApi'
 import { KpiCard, Badge, ScreenShell, RowActions, RowActionButton, type Tone } from './ui'
 import { XCircle } from 'lucide-react'
-import { formatBRL, formatBRLKpi } from './format'
+import { formatBRLKpi } from './format'
 export const I18N_PT_LEGEND_REFERENCE = 'Valores em R$'
 
 type FormState = {
@@ -211,9 +211,9 @@ export default function PartSales() {
                   <div className="text-xs text-muted-foreground">{r.description ?? '—'}</div>
                 </td>
                 <td className="px-3 py-2 text-right tabular-nums">{r.quantity ?? '—'}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{formatBRL(r.unit_price)}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{formatBRL(r.discount)}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{formatBRL(r.total)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{formatBRLKpi(r.unit_price)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{formatBRLKpi(r.discount)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{formatBRLKpi(r.total)}</td>
                 <td className="px-3 py-2">{r.sale_date ?? '—'}</td>
                 <td className="px-3 py-2">{r.customer ?? '—'}</td>
                 <td className="px-3 py-2">{r.salesperson ?? '—'}</td>

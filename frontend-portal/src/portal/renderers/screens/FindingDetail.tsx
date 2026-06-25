@@ -7,7 +7,7 @@ import { usePortalStore } from '@/portal/store/portalStore'
 import { decideFinding, getFinding, type FindingDetail as FindingDetailVM } from '@/portal/lib/agentsApi'
 import type { ScreenProps } from './types'
 import { Badge, severityTone, statusTone } from './ui'
-import { formatBRL, formatBRLKpi, formatPct } from './format'
+import { formatBRLKpi, formatPct } from './format'
 export const I18N_PT_LEGEND_REFERENCE = 'Valores em R$'
 
 export default function FindingDetail({ params }: ScreenProps) {
@@ -122,11 +122,11 @@ export default function FindingDetail({ params }: ScreenProps) {
       <div className="grid grid-cols-2 gap-4">
         <div className="rounded-lg border border-border bg-card p-4">
           <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('expected')}</div>
-          <div className="text-xl font-semibold tabular-nums text-foreground">{formatBRL(data.expected_amount)}</div>
+          <div className="text-xl font-semibold tabular-nums text-foreground">{formatBRLKpi(data.expected_amount)}</div>
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
           <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('billed')}</div>
-          <div className="text-xl font-semibold tabular-nums text-foreground">{formatBRL(data.billed_amount)}</div>
+          <div className="text-xl font-semibold tabular-nums text-foreground">{formatBRLKpi(data.billed_amount)}</div>
         </div>
       </div>
 

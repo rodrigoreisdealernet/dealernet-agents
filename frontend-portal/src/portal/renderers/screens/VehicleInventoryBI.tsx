@@ -12,7 +12,7 @@ import {
   type VehicleRow,
 } from '@/portal/lib/agentsApi'
 import { ChartCard } from './ChartCard'
-import { formatBRL, formatBRLKpi } from './format'
+import { formatBRLKpi } from './format'
 import { KpiCard, ScreenShell } from './ui'
 export const I18N_PT_LEGEND_REFERENCE = 'Valores em R$'
 export const I18N_PT_VEHICLE_INVENTORY_BI_REFERENCE = ['Carregando…', 'Nenhum veículo em estoque.']
@@ -172,7 +172,7 @@ export default function VehicleInventoryBI() {
                     {vehicle.days_in_stock ?? '—'}
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums">
-                    {formatBRL(vehicle.floor_plan_cost ?? 0)}
+                    {formatBRLKpi(vehicle.floor_plan_cost ?? 0)}
                   </td>
                   <td className="px-3 py-2">{vehicle.store ?? '—'}</td>
                 </tr>

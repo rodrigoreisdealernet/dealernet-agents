@@ -193,7 +193,7 @@ test('AC3: KPI cards de receita VN/VU/total e margem formatados via formatBRLKpi
     )
   }
   // Issue #54: cada valor monetario/margem de KPI card passa por formatBRLKpi(...)
-  // (sem R$/decimais). Tabelas/tooltips mantem formatBRL.
+  // (sem R$/decimais). Tabelas/tooltips agora tambem usam formatBRLKpi.
   for (const expr of [
     'formatBRLKpi(kpis.vnRevenue)',
     'formatBRLKpi(kpis.vuRevenue)',

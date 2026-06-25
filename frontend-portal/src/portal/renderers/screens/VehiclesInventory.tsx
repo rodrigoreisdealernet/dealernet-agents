@@ -14,7 +14,7 @@ import {
 } from '@/portal/lib/agentsApi'
 import { KpiCard, Badge, ScreenShell, RowActions, RowActionButton, type Tone } from './ui'
 import { Pencil, Trash2 } from 'lucide-react'
-import { formatBRL, formatBRLKpi } from './format'
+import { formatBRLKpi } from './format'
 export const I18N_PT_LEGEND_REFERENCE = 'Valores em R$'
 
 type FormState = VehicleInput & { entity_id?: string }
@@ -175,9 +175,9 @@ export default function VehiclesInventory() {
                 <td className="px-3 py-2">
                   <Badge tone={r.condition === 'novo' ? 'info' : 'neutral'}>{r.condition}</Badge>
                 </td>
-                <td className="px-3 py-2 text-right tabular-nums">{formatBRL(r.sale_price)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{formatBRLKpi(r.sale_price)}</td>
                 <td className="px-3 py-2 text-right tabular-nums">{r.days_in_stock ?? '—'}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{formatBRL(r.floor_plan_cost)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{formatBRLKpi(r.floor_plan_cost)}</td>
                 <td className="px-3 py-2">
                   <Badge tone={statusTone(r.status)}>{r.status}</Badge>
                 </td>

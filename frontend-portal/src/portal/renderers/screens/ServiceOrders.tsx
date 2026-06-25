@@ -15,7 +15,7 @@ import {
 } from '@/portal/lib/agentsApi'
 import { KpiCard, Badge, ScreenShell, RowActions, RowActionButton, type Tone } from './ui'
 import { Pencil, XCircle } from 'lucide-react'
-import { formatBRL, formatBRLKpi, formatDateTime } from './format'
+import { formatBRLKpi, formatDateTime } from './format'
 export const I18N_PT_LEGEND_REFERENCE = 'Valores em R$'
 
 type FormState = ServiceOrderInput & { entity_id?: string }
@@ -200,7 +200,7 @@ export default function ServiceOrders() {
                   <div className="text-xs text-muted-foreground">{r.vehicle ?? '—'}</div>
                 </td>
                 <td className="px-3 py-2">{formatDateTime(r.opened_at)}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{formatBRL(r.revenue)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{formatBRLKpi(r.revenue)}</td>
                 <td className="px-3 py-2 text-right tabular-nums">{r.turnaround_hours ?? '—'}</td>
                 <td className="px-3 py-2">
                   <Badge tone={statusTone(r.status)}>{statusLabel(r.status)}</Badge>
