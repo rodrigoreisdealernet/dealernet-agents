@@ -12,7 +12,8 @@ import {
   type AppRole,
   type CreateUserInput,
 } from '@/portal/lib/agentsApi'
-import { Badge, ScreenShell, type Tone } from './ui'
+import { Badge, ScreenShell, RowActions, RowActionButton, type Tone } from './ui'
+import { Pencil, Power, PowerOff } from 'lucide-react'
 
 const ROLES: AppRole[] = ['admin', 'branch_manager', 'field_operator', 'read_only']
 
@@ -214,27 +215,26 @@ export default function UsersAdmin() {
                 </td>
                 {isAdmin && (
                   <td className="px-3 py-2 text-right">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setEditForm({
-                          id: r.id,
-                          display_name: r.display_name ?? '',
-                          role: r.role,
-                          is_active: r.is_active,
-                        })
-                      }
-                      className="mr-2 text-xs font-medium text-primary hover:underline"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => toggleActive(r)}
-                      className="text-xs font-medium text-destructive hover:underline"
-                    >
-                      {r.is_active ? 'Inativar' : 'Reativar'}
-                    </button>
+                    <RowActions>
+                      <RowActionButton
+                        icon={<Pencil size={14} />}
+                        label="Editar"
+                        onClick={() =>
+                          setEditForm({
+                            id: r.id,
+                            display_name: r.display_name ?? '',
+                            role: r.role,
+                            is_active: r.is_active,
+                          })
+                        }
+                      />
+                      <RowActionButton
+                        tone={r.is_active ? 'danger' : 'default'}
+                        icon={r.is_active ? <PowerOff size={14} /> : <Power size={14} />}
+                        label={r.is_active ? 'Inativar' : 'Reativar'}
+                        onClick={() => toggleActive(r)}
+                      />
+                    </RowActions>
                   </td>
                 )}
               </tr>

@@ -13,7 +13,8 @@ import {
   type PartInput,
   type PartStockStatus,
 } from '@/portal/lib/agentsApi'
-import { KpiCard, Badge, ScreenShell, type Tone } from './ui'
+import { KpiCard, Badge, ScreenShell, RowActions, RowActionButton, type Tone } from './ui'
+import { Pencil, Trash2 } from 'lucide-react'
 import { formatBRL } from './format'
 
 type FormState = PartInput & { entity_id?: string }
@@ -201,34 +202,33 @@ export default function PartsInventory() {
                   <Badge tone={statusTone(r.status)}>{r.status}</Badge>
                 </td>
                 <td className="px-3 py-2 text-right">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setForm({
-                        entity_id: r.entity_id,
-                        part_number: r.part_number ?? '',
-                        description: r.description ?? '',
-                        manufacturer: r.manufacturer ?? '',
-                        unit_cost: r.unit_cost,
-                        unit_price: r.unit_price,
-                        quantity_in_stock: r.quantity_in_stock,
-                        min_stock: r.min_stock,
-                        reorder_point: r.reorder_point,
-                        location: r.location ?? '',
-                        status: (r.status as 'ativo' | 'inativo') ?? 'ativo',
-                      })
-                    }
-                    className="mr-2 text-xs font-medium text-primary hover:underline"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => remove(r)}
-                    className="text-xs font-medium text-destructive hover:underline"
-                  >
-                    Inativar
-                  </button>
+                  <RowActions>
+                    <RowActionButton
+                      icon={<Pencil size={14} />}
+                      label="Editar"
+                      onClick={() =>
+                        setForm({
+                          entity_id: r.entity_id,
+                          part_number: r.part_number ?? '',
+                          description: r.description ?? '',
+                          manufacturer: r.manufacturer ?? '',
+                          unit_cost: r.unit_cost,
+                          unit_price: r.unit_price,
+                          quantity_in_stock: r.quantity_in_stock,
+                          min_stock: r.min_stock,
+                          reorder_point: r.reorder_point,
+                          location: r.location ?? '',
+                          status: (r.status as 'ativo' | 'inativo') ?? 'ativo',
+                        })
+                      }
+                    />
+                    <RowActionButton
+                      tone="danger"
+                      icon={<Trash2 size={14} />}
+                      label="Inativar"
+                      onClick={() => remove(r)}
+                    />
+                  </RowActions>
                 </td>
               </tr>
             ))}
