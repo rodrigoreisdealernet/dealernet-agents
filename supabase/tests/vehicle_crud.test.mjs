@@ -234,3 +234,81 @@ rollback;
   assert.ok(ok, `psql falhou: ${err}`)
   assert.equal(out, 'SQLSTATE=22023', `esperado 22023 para status invalido; obtido: ${out}`)
 })
+
+// ---------------------------------------------------------------------------
+// AC: update_vehicle cria nova versao SCD2 — version_number incrementa, a versao
+// anterior permanece intacta em entity_versions e a view corrente reflete o novo
+// valor. update_vehicle faz merge sobre a versao corrente e anexa nova versao.
+// ---------------------------------------------------------------------------
+test('AC update SCD2: update_vehicle incrementa version_number, preserva historico e view reflete novo valor', () => {
+  const sql = `${asWriter('admin')}
+create temp table _v on commit drop as
+  select entity_id from create_vehicle(
+    '{"condition":"usado","brand":"GM","model":"Onix","cost":"60000","sale_price":"50000","purchase_date":"2026-04-01"}'::jsonb);
+select 'v_before', v.version_number, v.status, v.sale_price
+from v_dia_vehicle_current v join _v using (entity_id);
+select update_vehicle((select entity_id from _v),
+  '{"status":"vendido","sale_price":"72000"}'::jsonb) is not null as updated;
+select 'v_after', v.version_number, v.status, v.sale_price
+from v_dia_vehicle_current v join _v using (entity_id);
+select 'versions', count(*) from entity_versions ev join _v using (entity_id);
+select 'v1_intact', (ev.data->>'status'), (ev.data->>'sale_price')
+from entity_versions ev join _v using (entity_id) where ev.version_number = 1;
+rollback;
+`
+  const { ok, out, err } = psql(sql)
+  assert.ok(ok, `psql falhou: ${err}`)
+  const lines = out.split('\n').map((l) => l.trim()).filter(Boolean)
+  const get = (key) => lines.find((l) => l.startsWith(`${key}|`))?.split('|')
+
+  // (a) version_number da versao corrente incrementou (1 -> 2).
+  assert.deepEqual(
+    get('v_before'),
+    ['v_before', '1', 'em_estoque', '50000'],
+    'estado inicial: versao 1, em_estoque, sale_price 50000',
+  )
+  assert.deepEqual(
+    get('v_after'),
+    ['v_after', '2', 'vendido', '72000'],
+    'apos update: versao corrente = 2 com NOVOS valores (vendido, sale_price 72000)',
+  )
+  // (b) a versao anterior continua em entity_versions (historico preservado).
+  assert.deepEqual(
+    get('versions'),
+    ['versions', '2'],
+    'historico SCD2 deveria ter 2 versoes (criacao + update), nenhuma apagada',
+  )
+  assert.deepEqual(
+    get('v1_intact'),
+    ['v1_intact', 'em_estoque', '50000'],
+    'a versao anterior (v1) deve permanecer intacta no historico (valores originais)',
+  )
+})
+
+// ---------------------------------------------------------------------------
+// AC: brand obrigatorio — create_vehicle sem brand (null/ausente) e' rejeitado
+// (22023). A migration exige brand nao-vazio.
+// ---------------------------------------------------------------------------
+test('AC validacao: create_vehicle sem brand FALHA (22023)', () => {
+  const sql = `${asWriter('admin')}
+${captureSqlstate(`perform create_vehicle('{"condition":"novo","model":"Y"}'::jsonb);`)}
+rollback;
+`
+  const { ok, out, err } = psql(sql)
+  assert.ok(ok, `psql falhou: ${err}`)
+  assert.equal(out, 'SQLSTATE=22023', `esperado 22023 para brand ausente; obtido: ${out}`)
+})
+
+// ---------------------------------------------------------------------------
+// AC: model obrigatorio — create_vehicle sem model (null/ausente) e' rejeitado
+// (22023). A migration exige model nao-vazio.
+// ---------------------------------------------------------------------------
+test('AC validacao: create_vehicle sem model FALHA (22023)', () => {
+  const sql = `${asWriter('admin')}
+${captureSqlstate(`perform create_vehicle('{"condition":"novo","brand":"X"}'::jsonb);`)}
+rollback;
+`
+  const { ok, out, err } = psql(sql)
+  assert.ok(ok, `psql falhou: ${err}`)
+  assert.equal(out, 'SQLSTATE=22023', `esperado 22023 para model ausente; obtido: ${out}`)
+})
