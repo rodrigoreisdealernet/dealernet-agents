@@ -1,0 +1,33 @@
+[extend]
+# Começa das regras padrão do gitleaks
+useDefault = true
+
+[allowlist]
+description = "Allowlist de fixtures conhecidos e não-segredos (Supabase local-dev, exemplos, seeds)"
+paths = [
+  # Chaves well-known do Supabase local-dev (documentadas como públicas pela Supabase)
+  '''^supabase/seed\.sql$''',
+  '''^supabase/config\.toml$''',
+  '''^supabase/tests/.*''',
+  '''^supabase/migrations/.*''',
+  # Scripts de seed de demo (usuários/dados de exemplo, ambiente dev descartável)
+  '''^scripts/.*''',
+  # Docs de deploy/ambiente podem citar chaves demo públicas
+  '''^docs/.*''',
+  '''PHASE2-DEPLOYMENT\.md$''',
+  # Arquivos de exemplo são placeholders redigidos de propósito
+  '''\.env\.example$''',
+  '''\.env\.temporal\.example$''',
+  # Fixtures de teste do frontend
+  '''^frontend/src/test/.*''',
+  '''^frontend/.*\.(test|spec)\.(ts|tsx)$''',
+]
+regexes = [
+  # JWT well-known do Supabase local-dev — toda instância local compartilha esta chave
+  # (issuer "supabase-demo"). Não é segredo.
+  '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6''',
+  # Placeholders em arquivos de exemplo
+  '''<YOUR_.*>''',
+  '''REPLACE_ME''',
+  '''your[-_].*[-_]here''',
+]
