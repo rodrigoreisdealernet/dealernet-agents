@@ -58,7 +58,7 @@ function extractDoBlock(text, marker) {
 
 const SEED = readFileSync(resolve(REPO_ROOT, 'supabase/seed.sql'), 'utf8')
 const MIGRATION = readFileSync(
-  resolve(REPO_ROOT, 'supabase/migrations/20260626140000_vehicle_aging_agent.sql'),
+  resolve(REPO_ROOT, 'supabase/migrations/20260626140001_vehicle_aging_agent.sql'),
   'utf8',
 )
 const VEHICLE_SEED_BLOCK = extractDoBlock(SEED, 'demo-dia-vehicle-013')

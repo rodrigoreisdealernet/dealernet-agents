@@ -2501,7 +2501,7 @@ commit;
 -- ops_load_agent_config and by the worker schedule reconcile) and the base
 -- `ops_agent_config` table (parity). enabled=true but schedule.enabled=false so
 -- the recurring run stays off by default. The output schema registry row is
--- owned by migration 20260626140000_vehicle_aging_agent.sql (applied first).
+-- owned by migration 20260626140001_vehicle_aging_agent.sql (applied first).
 -- Idempotent via ON CONFLICT upserts; tenants come from the main ops seed above.
 -- ===========================================================================
 DO $$

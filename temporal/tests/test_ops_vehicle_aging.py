@@ -185,7 +185,7 @@ def test_finding_v1_schema_matches_db_registry_contract() -> None:
     assert schema["additionalProperties"] is False
     assert sorted(schema["required"]) == ["rationale", "recommended_action", "vehicle_id"]
 
-    migration = (_REPO_ROOT / "supabase/migrations/20260626140000_vehicle_aging_agent.sql").read_text()
+    migration = (_REPO_ROOT / "supabase/migrations/20260626140001_vehicle_aging_agent.sql").read_text()
     match = re.search(r"'(\{.*?\})'::jsonb", migration, re.S)
     assert match, "expected an embedded jsonb schema literal in the migration"
     registry = json.loads(match.group(1))
