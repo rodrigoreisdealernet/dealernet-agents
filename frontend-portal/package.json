@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "test": "node --test scripts/verify-dia-branding.mjs scripts/verify-vehicle-wiring.mjs",
+    "test": "node --test scripts/verify-dia-branding.mjs scripts/verify-vehicle-wiring.mjs scripts/verify-chartcard.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint ."
@@ -28,6 +28,7 @@
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.78.0",
     "react-rnd": "^10.4.13",
+    "recharts": "^2.13.0",
     "tailwind-merge": "^2.6.0",
     "zod": "^4.4.3",
     "zustand": "^5.0.2"
