@@ -84,6 +84,13 @@ const MOCK_MENU: MenuItem[] = [
     text: 'AI Operations',
     icon: 'fa-bolt',
     children: [
+      // Morning Brief do Dono (issue #43) — a tela que o DIA abre na mensagem matinal.
+      {
+        id: 'morning-brief-owner',
+        text: 'Morning Brief',
+        icon: 'fa-sun',
+        spec: { title: 'Morning Brief', kind: 'component', componentKey: 'morning-brief' },
+      },
       {
         id: 'ai-agents-dashboard',
         text: 'Painel de Agentes',
