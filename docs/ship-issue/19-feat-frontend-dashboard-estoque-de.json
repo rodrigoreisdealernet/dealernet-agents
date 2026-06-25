@@ -1,0 +1,114 @@
+{
+  "issue": "19",
+  "title": "feat(frontend): dashboard Estoque de Veículos & Floor Plan (Fast BI)",
+  "slug": "feat-frontend-dashboard-estoque-de",
+  "branch": "feature/19-feat-frontend-dashboard-estoque-de",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/19",
+  "pr": "34",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/34",
+  "updatedAt": "2026-06-25T20:19:58.582Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "6 acceptance criteria drafted, grounded in real views/widgets",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/19-feat-frontend-dashboard-estoque-de.md"
+        }
+      ],
+      "notes": [
+        "Spec agent reading issue #19 and grounding in frontend-portal",
+        "reading inventory/vehicle migration SQL files and PartsBI pattern",
+        "drafting spec with real SQL columns and screen registration pattern",
+        "spec drafted with acceptance criteria grounded in real SQL views and screen pattern"
+      ],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec approved by human (--approved)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": "VehicleInventoryBI.tsx (+187) + registry + Fast BI menu; reuses getOwnerKpis/getInventorySummary/getVehicles. Commit d72e56d",
+      "artifacts": [],
+      "notes": [
+        "Coder implementing VehicleInventoryBI screen + data layer + menu wiring",
+        "reading PartsBI.tsx + agentsApi",
+        "adding getInventorySummary",
+        "writing VehicleInventoryBI.tsx",
+        "wiring registry + menu",
+        "static typecheck"
+      ],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "done",
+      "summary": "9 wiring tests (node --test), full suite 77 pass. Commit 743f932",
+      "artifacts": [],
+      "notes": [
+        "Tester writing node --test verify-vehicle-inventory-bi.mjs",
+        "reading approved spec and source-test pattern",
+        "writing verify-vehicle-inventory-bi.mjs",
+        "running focused node --test",
+        "focused vehicle inventory tests green; running full frontend node --test suite",
+        "all 77 frontend source-text tests green"
+      ],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "done",
+      "summary": "1 iteration: tightened 2 sort regexes (DESC backrefs) + pinned OwnerKpis fields; bite-checked green 9/9, suite 77/77",
+      "artifacts": [],
+      "notes": [
+        "Reviewer auditing tests for coverage gaps / vanity / weak assertions",
+        "Auditing test suite for coverage gaps, vanity tests, weak assertions",
+        "Iteration 1: 3 fixes sent to tester (sort-direction regexes + OwnerKpis fields)",
+        "tightening vehicle inventory BI sort and OwnerKpis assertions",
+        "tightened DESC sort assertions and OwnerKpis field pinning; all 77 tests green"
+      ],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "done",
+      "summary": "APPROVED — 6 ACs verified, no security/regression blockers (posted as PR comment; self-approve blocked by GitHub)",
+      "artifacts": [
+        {
+          "label": "PR review",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/34#issuecomment-4803794157"
+        }
+      ],
+      "notes": [
+        "Reviewer code-reviewing full diff for correctness/security/regression",
+        "Reviewing PR #34 diff for correctness vs spec 6 ACs: KPIs, age-band chart, oldest-vehicles list, menu entry, data validation, and graceful degradation.",
+        "✅ APPROVED: All 6 ACs verified. KPIs, age-band chart, oldest-vehicles list, menu entry all correct. No security/regression risks. Review posted on PR #34."
+      ],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "waiting",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": "merge"
+    }
+  ]
+}
