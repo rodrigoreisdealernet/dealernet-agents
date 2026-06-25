@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/16",
   "pr": "28",
   "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/28",
-  "updatedAt": "2026-06-25T19:17:43.421Z",
+  "updatedAt": "2026-06-25T19:18:59.026Z",
   "steps": [
     {
       "id": "spec",
@@ -68,8 +68,8 @@
     {
       "id": "code-review",
       "label": "06 · Code review",
-      "status": "pending",
-      "summary": "",
+      "status": "running",
+      "summary": "Code review do diff no PR #28",
       "artifacts": [],
       "notes": [],
       "gate": null
