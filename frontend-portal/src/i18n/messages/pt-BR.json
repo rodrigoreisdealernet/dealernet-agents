@@ -302,7 +302,16 @@
       "running": "Executando…",
       "runSuccess": "Disparo solicitado",
       "runError": "Falha ao executar",
-      "loadingAgents": "Carregando agentes…"
+      "loadingAgents": "Carregando agentes…",
+      "successRate": "Taxa de sucesso",
+      "failures": "falhas",
+      "healthHealthy": "Saudável",
+      "healthAttention": "Atenção",
+      "healthFailing": "Falhando",
+      "healthIdle": "Ocioso",
+      "healthDisabled": "Desativado",
+      "noAgents": "Nenhum agente configurado.",
+      "loadError": "Não foi possível carregar os agentes."
     },
     "auditTrail": {
       "title": "Trilha de Auditoria",
