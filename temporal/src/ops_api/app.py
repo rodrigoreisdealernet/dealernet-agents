@@ -55,6 +55,10 @@ from ..workflows.ops import (
 )
 from ..workflows.ops.credit import CreditRiskWorkflow, CreditRiskWorkflowInput
 from ..workflows.ops.disposition_queue import DispositionQueueWorkflow, DispositionQueueWorkflowInput
+from ..workflows.ops.service_estimate_rescue import (
+    ServiceEstimateRescueWorkflow,
+    ServiceEstimateRescueWorkflowInput,
+)
 from ..workflows.ops.vehicle_aging import VehicleAgingWorkflow, VehicleAgingWorkflowInput
 from ..agents.i18n import DEFAULT_LOCALE, resolve_locale
 from ..workflows.ops.branch_morning_brief import (
@@ -110,6 +114,34 @@ _AGENT_SCHEDULE_ID_BUILDERS: dict[str, Callable[[str], str]] = {
         agent_key: (lambda tenant_id, key=agent_key: f"integration:{tenant_id}:{key}")
         for agent_key in _INTEGRATION_AGENT_KEYS
     },
+}
+# Issue #115 — agents whose manual "run now" starts the workflow directly
+# (gated on a non-None locale, preserving the schedule-trigger fallback when no
+# payload/locale is provided). Maps agent_key -> (workflow_run, input_factory)
+# where input_factory has a uniform (tenant_id, locale) signature so callers can
+# invoke it the same way regardless of whether the workflow input accepts a
+# locale. ``service-estimate-rescue`` ignores locale (its input is tenant-only).
+_MANUAL_RUN_WORKFLOWS: dict[str, tuple[Any, Callable[[str, str], Any]]] = {
+    "revrec-analyst": (
+        RevenueRecognitionWorkflow.run,
+        lambda tenant_id, locale: RevenueRecognitionWorkflowInput(tenant_id=tenant_id, locale=locale),
+    ),
+    "vehicle-aging-analyst": (
+        VehicleAgingWorkflow.run,
+        lambda tenant_id, locale: VehicleAgingWorkflowInput(tenant_id=tenant_id, locale=locale),
+    ),
+    "credit-analyst": (
+        CreditRiskWorkflow.run,
+        lambda tenant_id, locale: CreditRiskWorkflowInput(tenant_id=tenant_id, locale=locale),
+    ),
+    "disposition-queue": (
+        DispositionQueueWorkflow.run,
+        lambda tenant_id, locale: DispositionQueueWorkflowInput(tenant_id=tenant_id, locale=locale),
+    ),
+    "service-estimate-rescue": (
+        ServiceEstimateRescueWorkflow.run,
+        lambda tenant_id, locale: ServiceEstimateRescueWorkflowInput(tenant_id=tenant_id),
+    ),
 }
 # Keep this assembled to avoid harness-side credential redaction rewriting literal
 # Authorization header values during automated patch application.
@@ -795,6 +827,13 @@ class SupabaseServiceClient:
         side effect is applied via a new SCD2 entity_version so the vehicle's
         price/history is preserved. Failures are recorded and swallowed so the
         decision response is never broken.
+
+        Assist-only finding types (e.g. ``service-estimate-rescue``'s
+        ``estimate_rescue`` findings) have no executable side effect here: there
+        is no money movement or SMS/outbound contact. Approve/reject/dismiss only
+        persists the disposition and audit trail; such findings return
+        ``{"skipped": True}`` below because they do not match
+        ``_VEHICLE_AGING_FINDING_TYPE``.
         """
         if finding.finding_type != _VEHICLE_AGING_FINDING_TYPE:
             return {"executed": False, "skipped": True}
@@ -947,26 +986,10 @@ class TemporalSignalClient:
         resolved_locale = resolve_locale(locale)
         if locale is not None:
             workflow_id = f"{schedule_id}:manual:{int(time.time() * 1000)}"
-            start = {
-                "revrec-analyst": (
-                    RevenueRecognitionWorkflow.run,
-                    RevenueRecognitionWorkflowInput(tenant_id=tenant_id, locale=resolved_locale),
-                ),
-                "vehicle-aging-analyst": (
-                    VehicleAgingWorkflow.run,
-                    VehicleAgingWorkflowInput(tenant_id=tenant_id, locale=resolved_locale),
-                ),
-                "credit-analyst": (
-                    CreditRiskWorkflow.run,
-                    CreditRiskWorkflowInput(tenant_id=tenant_id, locale=resolved_locale),
-                ),
-                "disposition-queue": (
-                    DispositionQueueWorkflow.run,
-                    DispositionQueueWorkflowInput(tenant_id=tenant_id, locale=resolved_locale),
-                ),
-            }.get(agent_key)
-            if start is not None:
-                workflow_run, workflow_input = start
+            registered = _MANUAL_RUN_WORKFLOWS.get(agent_key)
+            if registered is not None:
+                workflow_run, input_factory = registered
+                workflow_input = input_factory(tenant_id, resolved_locale)
                 await (await self._client_instance()).start_workflow(
                     workflow_run,
                     workflow_input,
