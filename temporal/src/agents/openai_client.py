@@ -9,7 +9,7 @@ from json import JSONDecodeError
 from typing import Any, Generic, Protocol, TypeVar
 from urllib import error, request
 
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from ..config import AzureOpenAIEndpointConfig, settings
 
@@ -66,11 +66,38 @@ class ExecutedToolCall(BaseModel):
     tool_call_id: str | None = None
 
 
+class LlmCallUsage(BaseModel):
+    """Provider-agnostic record of one real LLM HTTP call (one ``complete()``).
+
+    Captured purely in-transport (no DB I/O here, see NFR-001); a persistence
+    sink is injected via ``on_llm_call``. ``metering_status='missing'`` means the
+    provider returned no ``usage`` object — tokens are left ``None`` (never inferred).
+    """
+
+    model_config = ConfigDict(extra="forbid", protected_namespaces=())
+
+    round_index: int
+    schema_attempt: int
+    model: str | None = None
+    response_id: str | None = None
+    finish_reason: str | None = None
+    prompt_tokens: int | None = None
+    completion_tokens: int | None = None
+    total_tokens: int | None = None
+    cached_input_tokens: int | None = None
+    reasoning_tokens: int | None = None
+    metering_status: str = "ok"
+    chargeable: bool = True
+    chargeability_reason: str | None = None
+    raw_usage: dict[str, Any] | None = None
+
+
 class AgentRunResult(BaseModel, Generic[ResponseModelT]):
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
 
     response: ResponseModelT
     executed_tool_calls: list[ExecutedToolCall]
+    llm_calls: list[LlmCallUsage] = Field(default_factory=list)
 
 
 class ChatCompletionTransport(Protocol):
@@ -170,6 +197,7 @@ async def chat_with_tools(
     transport: ChatCompletionTransport | None = None,
     temperature: float | None = None,
     max_output_tokens: int | None = None,
+    on_llm_call: Callable[[LlmCallUsage], Awaitable[None]] | None = None,
 ) -> AgentRunResult[ResponseModelT]:
     """Run a bounded tool loop and return a validated structured response."""
 
@@ -182,8 +210,10 @@ async def chat_with_tools(
     response_schema = _build_strict_json_schema(response_format)
     llm_transport = transport or AzureOpenAIChatTransport()
     executed_tool_calls: list[ExecutedToolCall] = []
+    llm_calls: list[LlmCallUsage] = []
     tool_round = 0
     schema_attempt = 0
+    call_index = 0
 
     while True:
         completion = await llm_transport.complete(
@@ -195,6 +225,29 @@ async def chat_with_tools(
         )
         assistant_message = _extract_assistant_message(completion)
         tool_calls = assistant_message.get("tool_calls") or []
+
+        # Record usage for this real provider call BEFORE any raise below, so a
+        # run that overruns max_tool_rounds / max_schema_attempts still leaves the
+        # usage of every call already made (FR-004 / AC-003). Retry/repair calls
+        # (schema_attempt > 0) are not charged but still count provider cost (A-001).
+        if schema_attempt > 0:
+            chargeable, chargeability_reason = False, "schema_repair"
+        elif tool_calls:
+            chargeable, chargeability_reason = True, "tool_round"
+        else:
+            chargeable, chargeability_reason = True, None
+        usage_call = _extract_usage(
+            completion,
+            round_index=call_index,
+            schema_attempt=schema_attempt,
+            chargeable=chargeable,
+            chargeability_reason=chargeability_reason,
+        )
+        llm_calls.append(usage_call)
+        if on_llm_call is not None:
+            await on_llm_call(usage_call)
+        call_index += 1
+
         if tool_calls:
             if tool_round >= max_tool_rounds:
                 raise MaxToolRoundsExceededError(
@@ -237,7 +290,11 @@ async def chat_with_tools(
         conversation.append(assistant_history_message)
         try:
             validated = _validate_response(response_format, _extract_text_content(assistant_message), response_schema)
-            return AgentRunResult(response=validated, executed_tool_calls=executed_tool_calls)
+            return AgentRunResult(
+                response=validated,
+                executed_tool_calls=executed_tool_calls,
+                llm_calls=llm_calls,
+            )
         except (JSONDecodeError, ValidationError, ValueError) as exc:
             schema_attempt += 1
             if schema_attempt >= max_schema_attempts:
@@ -267,6 +324,69 @@ def _mark_objects_closed(schema: dict[str, Any]) -> None:
         stack.extend(definition for definition in node.get("$defs", {}).values() if isinstance(definition, dict))
         for key in ("anyOf", "oneOf", "allOf"):
             stack.extend(item for item in node.get(key, []) if isinstance(item, dict))
+
+
+def _extract_usage(
+    completion: Mapping[str, Any],
+    *,
+    round_index: int,
+    schema_attempt: int,
+    chargeable: bool,
+    chargeability_reason: str | None,
+) -> LlmCallUsage:
+    """Read token usage/model/id from a completion without inferring missing data.
+
+    Azure returns the full chat-completions JSON, so we read ``usage`` directly.
+    A 200 response without ``usage`` yields ``metering_status='missing'`` with all
+    token facts left ``None`` (FR-003 / AC-002) — never inferred.
+    """
+    model = completion.get("model")
+    response_id = completion.get("id")
+    finish_reason: str | None = None
+    choices = completion.get("choices")
+    if isinstance(choices, list) and choices and isinstance(choices[0], Mapping):
+        raw_finish = choices[0].get("finish_reason")
+        finish_reason = raw_finish if isinstance(raw_finish, str) else None
+
+    usage = completion.get("usage")
+    if not isinstance(usage, Mapping):
+        return LlmCallUsage(
+            round_index=round_index,
+            schema_attempt=schema_attempt,
+            model=model if isinstance(model, str) else None,
+            response_id=response_id if isinstance(response_id, str) else None,
+            finish_reason=finish_reason,
+            metering_status="missing",
+            chargeable=chargeable,
+            chargeability_reason=chargeability_reason,
+            raw_usage=None,
+        )
+
+    cached_input_tokens: int | None = None
+    prompt_details = usage.get("prompt_tokens_details")
+    if isinstance(prompt_details, Mapping):
+        cached_input_tokens = prompt_details.get("cached_tokens")
+    reasoning_tokens: int | None = None
+    completion_details = usage.get("completion_tokens_details")
+    if isinstance(completion_details, Mapping):
+        reasoning_tokens = completion_details.get("reasoning_tokens")
+
+    return LlmCallUsage(
+        round_index=round_index,
+        schema_attempt=schema_attempt,
+        model=model if isinstance(model, str) else None,
+        response_id=response_id if isinstance(response_id, str) else None,
+        finish_reason=finish_reason,
+        prompt_tokens=usage.get("prompt_tokens"),
+        completion_tokens=usage.get("completion_tokens"),
+        total_tokens=usage.get("total_tokens"),
+        cached_input_tokens=cached_input_tokens,
+        reasoning_tokens=reasoning_tokens,
+        metering_status="ok",
+        chargeable=chargeable,
+        chargeability_reason=chargeability_reason,
+        raw_usage=dict(usage),
+    )
 
 
 def _extract_assistant_message(completion: Mapping[str, Any]) -> Mapping[str, Any]:
@@ -428,6 +548,7 @@ def _summarize_payload(payload: JsonValue) -> str:
 __all__ = [
     "AgentRunResult",
     "ExecutedToolCall",
+    "LlmCallUsage",
     "MaxToolRoundsExceededError",
     "StructuredOutputRetriesExceededError",
     "chat_with_tools",

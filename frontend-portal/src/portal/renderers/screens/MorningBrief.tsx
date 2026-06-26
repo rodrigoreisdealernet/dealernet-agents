@@ -23,6 +23,7 @@ import {
   type OwnerBriefBrandRow,
   type OwnerBriefStoreRow,
 } from '@/portal/lib/agentsApi'
+import { useFindingLabels } from '@/portal/lib/findingLabels'
 import { useBreakpoint } from '@/hooks/use-breakpoint'
 import { cn } from '@/lib/utils'
 import { formatBRLKpi } from './format'
@@ -266,6 +267,7 @@ function ActionsSection({
   className?: string
   t: (key: string) => string
 }) {
+  const { agentLabel, findingTypeLabel } = useFindingLabels()
   const visible = findings.filter((f) => states[f.id] !== 'dismissed')
   return (
     <div className={className}>
@@ -289,7 +291,7 @@ function ActionsSection({
             >
               <div className="mb-1.5 flex items-center gap-2">
                 <span className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                  {f.agent_key} · {f.finding_type}
+                  {agentLabel(f.agent_key)} · {findingTypeLabel(f.finding_type)}
                 </span>
               </div>
               <div className="mb-1 text-sm font-bold text-foreground">{label}</div>
@@ -497,9 +499,17 @@ export default function MorningBrief() {
     }
   }, [])
 
-  const onDismiss = useCallback((f: FindingRow) => {
-    // Dispensar = ocultar localmente (não rejeita no backend sem motivo obrigatório).
+  const onDismiss = useCallback(async (f: FindingRow) => {
+    // Dispensar persiste no backend (sem motivo obrigatório) antes de ocultar,
+    // para que o item não reapareça após recarregar.
     setFindingStates((s) => ({ ...s, [f.id]: 'dismissed' }))
+    try {
+      await decideFinding({ findingId: f.id, decision: 'dismiss' })
+    } catch (e) {
+      // Reverte o estado otimista se a dispensa falhar.
+      setFindingStates((s) => ({ ...s, [f.id]: 'pending' }))
+      setError(`${t('dismissFailed')}: ${String(e)}`)
+    }
   }, [])
 
   const dateLabel = briefDateLabel(locale)

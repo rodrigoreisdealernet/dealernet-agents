@@ -4,9 +4,9 @@
   "slug": "76-i18n-traduzir-100-do-sistema",
   "branch": "feature/76-i18n-traduzir-100-do-sistema",
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/76",
-  "pr": null,
-  "prUrl": null,
-  "updatedAt": "2026-06-26T02:20:21.676Z",
+  "pr": "88",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/88",
+  "updatedAt": "2026-06-26T02:44:03.106Z",
   "steps": [
     {
       "id": "spec",
@@ -38,8 +38,8 @@
     {
       "id": "code",
       "label": "03 · Code",
-      "status": "running",
-      "summary": "",
+      "status": "done",
+      "summary": "Frontend sends locale; ops-api+portal_assistant+ops agents locale-aware (new i18n.py); UI strings migrated; 603 i18n keys match",
       "artifacts": [],
       "notes": [
         "reading approved spec",
@@ -57,38 +57,58 @@
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "pending",
-      "summary": "",
+      "status": "running",
+      "summary": "temporal pytest 106 passed; frontend node --test 131 passed; i18n parity 603=603",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "Starting tester pass; reading spec and preflight state",
+        "Authoring focused Temporal locale tests and frontend source-text verifier",
+        "Running targeted Temporal pytest for i18n, portal assistant, and ops-api",
+        "Running frontend node --test source-text suite",
+        "Validated targeted pytest and frontend npm test; staging test changes",
+        "Opening draft PR with green targeted tests",
+        "Addressing test-review iteration 1 locale coverage requests",
+        "Running targeted pytest after reviewer-requested locale assertions",
+        "Running frontend node --test after stronger payload and component i18n guards",
+        "Pushed review iteration 1 fixes; targeted pytest 113 passed and frontend npm test 131 passed"
+      ],
       "gate": null
     },
     {
       "id": "test-review",
       "label": "05 · Test review",
-      "status": "pending",
-      "summary": "",
+      "status": "done",
+      "summary": "2 iterations; all 5 findings resolved; 113 pytest + 131 frontend green",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "Test audit complete. 5 concrete gaps identified: (1) missing invalid locale resolution test in agent endpoint, (2) vanity test with only negative assertion, (3) schedule-triggered locale communication not tested, (4) weak regex assertions for locale in JSON payloads, (5) incomplete frontend hardcoded-string audit. CHANGES REQUESTED posted to PR #88."
+      ],
       "gate": null
     },
     {
       "id": "code-review",
       "label": "06 · Code review",
-      "status": "pending",
-      "summary": "",
-      "artifacts": [],
-      "notes": [],
+      "status": "done",
+      "summary": "APPROVE — all ACs met, backward compatible, locale validated",
+      "artifacts": [
+        {
+          "label": "PR review",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/88"
+        }
+      ],
+      "notes": [
+        "Reviewer: All acceptance criteria met. Locale propagated end-to-end with pt-BR fallback. 88 ops_api tests + 25 i18n/portal_assistant tests pass. No regressions, backward compatible. Security: locale validated and used only in dictionary lookups. Ready for merge."
+      ],
       "gate": null
     },
     {
       "id": "merge",
       "label": "Merge (human gate)",
-      "status": "pending",
+      "status": "waiting",
       "summary": "",
       "artifacts": [],
       "notes": [],
-      "gate": null
+      "gate": "merge"
     }
   ]
 }

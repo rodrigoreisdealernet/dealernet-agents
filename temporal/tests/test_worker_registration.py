@@ -86,6 +86,7 @@ def _resolve_activity_module_alias(alias: str) -> str | None:
         "ops_fleet": "temporal.src.activities.ops_fleet",
         "ops_billing_update": "temporal.src.activities.ops_billing_update",
         "ops_integration_exception": "temporal.src.activities.ops_integration_exception",
+        "ops_llm_usage": "temporal.src.activities.ops_llm_usage",
         "ops_pm": "temporal.src.activities.ops_pm",
         "ops_revrec": "temporal.src.activities.ops_revrec",
         "ops_vehicle_aging": "temporal.src.activities.ops_vehicle_aging",

@@ -1,0 +1,88 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta http-equiv="refresh" content="5">
+<title>ship-issue #70 — feat(temporal/supabase): metering de custo de tokens LLM por execução de agente (fundação + piloto credit)</title>
+<style>
+  :root{font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  body{margin:0;background:#0b0e14;color:#e5e7eb;padding:24px}
+  .wrap{max-width:860px;margin:0 auto}
+  h1{font-size:18px;margin:0 0 4px}
+  .sub{color:#9ca3af;font-size:13px;margin-bottom:16px}
+  .sub a{color:#60a5fa;text-decoration:none}
+  .bar{height:8px;background:#1f2937;border-radius:99px;overflow:hidden;margin:12px 0 20px}
+  .bar>i{display:block;height:100%;background:#16a34a;width:43%}
+  .banner{background:#7c2d12;color:#fed7aa;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:14px}
+  table{width:100%;border-collapse:collapse}
+  td{padding:12px 8px;border-top:1px solid #1f2937;vertical-align:top}
+  .ic{font-size:18px;width:28px;text-align:center}
+  .lbl{font-weight:600;width:200px}
+  .st{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
+  .sum{font-size:14px;color:#d1d5db}
+  .arts{margin-top:6px;font-size:13px}
+  .arts a{color:#60a5fa;text-decoration:none}
+  .notes{margin:8px 0 0;padding-left:18px;color:#9ca3af;font-size:12px}
+  tr.running{background:#0f1b33}
+  .foot{color:#6b7280;font-size:12px;margin-top:20px}
+</style></head><body><div class="wrap">
+<h1>ship-issue #70 — feat(temporal/supabase): metering de custo de tokens LLM por execução de agente (fundação + piloto credit)</h1>
+<div class="sub"><a href="https://github.com/rodrigoreisdealernet/dealernet-agents/issues/70">issue</a> · branch <code>feature/70-feat-temporal-supabase-metering-de</code> · <a href="https://github.com/rodrigoreisdealernet/dealernet-agents/pull/74">PR #74</a> · 43% complete</div>
+<div class="bar"><i></i></div>
+
+<table><tbody><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">01 · Spec<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">8 acceptance criteria drafted</div>
+          <div class="arts"><a href="docs/specs/70-feat-temporal-supabase-metering-de.md">Spec</a></div>
+          
+        </td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">02 · Approve (human gate)<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">Spec approved by human (--approved)</div>
+          
+          
+        </td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">03 · Code<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">8 files: migration + openai_client + ops_llm_usage + credit wiring + worker</div>
+          
+          <ul class="notes"><li>coder start: reading grounding done; writing migration (bumped to 20260627130000 &gt; latest 20260627120000)</li><li>migration validated (clean+idempotent in BEGIN/ROLLBACK); openai_client.py done (LlmCallUsage + on_llm_call + llm_calls, NFR-001 pure); 8 openai tests green</li><li>T-001..T-006 done: migration clean+idempotent (2 RLS policies); openai_client/ops_llm_usage/credit wiring/worker registered; ruff clean; 33 green (openai/credit/registration); AC-001..006 proven inline. 2 pre-existing direct-call ops_credit tests now need activity-context+fake-client (tester T-005/T-007).</li></ul>
+        </td>
+      </tr><tr class="running">
+        <td class="ic" style="color:#2563eb">◐</td>
+        <td class="lbl">04 · Tests<div class="st" style="color:#2563eb">running</div></td>
+        <td class="meta">
+          <div class="sum">58 pytest + 3 node contract tests green</div>
+          
+          <ul class="notes"><li>Analyzed diff + spec; reproduced credit test breakage (heartbeat needs activity ctx); starting pytest test layer</li><li>pytest GREEN: openai_client 12, ops_llm_usage 10(new), ops_credit_activity 11 (breakage fixed via ActivityEnvironment). 58 incl regressions. Lint clean. Writing node SQL contract test.</li><li>node SQL contract test GREEN: 3/3 (AC-007 RLS deny+isolation, AC-008 rollup aggregation). All BEGIN..ROLLBACK, no DB mutation.</li><li>Test layer committed (7cd58e1) + draft PR #74 opened. pytest 58 passed, node 3 passed. AC-001..AC-008 covered.</li><li>Addressed 3 review should-fix: DB-level AC-006 upsert contract (node), AC-003 schema-exhaustion (pytest), best-effort invariant sink+activity (pytest). pytest 37 in new files (62 incl regressions), node 4. Green.</li></ul>
+        </td>
+      </tr><tr class="running">
+        <td class="ic" style="color:#2563eb">◐</td>
+        <td class="lbl">05 · Test review<div class="st" style="color:#2563eb">running</div></td>
+        <td class="meta">
+          
+          
+          <ul class="notes"><li>Suite green (33 py + 3 SQL). 0 blocker, 3 should-fix (AC-006 DB idempotency only smoke-tested vs fake; AC-003 schema-exhaustion branch untested; best-effort swallow path untested), 3 nits. Re-run recommended.</li></ul>
+        </td>
+      </tr><tr class="pending">
+        <td class="ic" style="color:#9ca3af">○</td>
+        <td class="lbl">06 · Code review<div class="st" style="color:#9ca3af">pending</div></td>
+        <td class="meta">
+          
+          
+          
+        </td>
+      </tr><tr class="pending">
+        <td class="ic" style="color:#9ca3af">○</td>
+        <td class="lbl">Merge (human gate)<div class="st" style="color:#9ca3af">pending</div></td>
+        <td class="meta">
+          
+          
+          
+        </td>
+      </tr></tbody></table>
+<div class="foot">auto-refreshes every 5s · last update 2026-06-26T01:27:25.205Z</div>
+</div></body></html>

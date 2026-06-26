@@ -123,7 +123,7 @@ class CreditRiskWorkflow:
             analyze_tasks = [
                 workflow.execute_activity(
                     ops_credit.ops_credit_assess,
-                    args=[account_payload, {**config, "locale": inp.locale}],
+                    args=[account_payload, {**config, "locale": inp.locale}, run_id],
                     start_to_close_timeout=workflow.timedelta(minutes=2),
                     heartbeat_timeout=_AI_HEARTBEAT_TIMEOUT,
                     retry_policy=_AI_RETRY,

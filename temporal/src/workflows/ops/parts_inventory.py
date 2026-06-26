@@ -9,54 +9,43 @@ from temporalio import workflow
 with workflow.unsafe.imports_passed_through():
     from temporalio.common import RetryPolicy
 
-    from ...activities import ops_vehicle_aging
+    from ...activities import ops_parts_inventory
 
 _DEFAULT_MAX_FINDINGS_PER_RUN = 50
 
-# RetryPolicy constants tuned per activity class (ADR-0003), mirroring revrec/fleet.
 _NON_RETRYABLE = ["ValueError", "ApplicationError"]
 _STANDARD_RETRY = RetryPolicy(maximum_attempts=3, non_retryable_error_types=_NON_RETRYABLE)
 _MONEY_RETRY = RetryPolicy(maximum_attempts=2, non_retryable_error_types=_NON_RETRYABLE)
 _AI_RETRY = RetryPolicy(maximum_attempts=2, non_retryable_error_types=_NON_RETRYABLE)
-# Must exceed the activity's 15 s heartbeat interval.
 _AI_HEARTBEAT_TIMEOUT = workflow.timedelta(seconds=45)
 
-_WORKFLOW_KEY = "vehicle-aging-analyst"
+_WORKFLOW_KEY = "parts-inventory-advisor"
 
 
 @dataclass
-class VehicleAgingWorkflowInput:
+class PartsInventoryWorkflowInput:
     tenant_id: str
     run_window_start: str | None = None
     run_window_end: str | None = None
-    locale: str = "pt-BR"
 
 
 @workflow.defn
-class VehicleAgingWorkflow:
-    """Fire-and-forget vehicle stock-aging analyst.
-
-    scope (deterministic) -> assess (LLM, parallel) -> dedupe -> record findings
-    as ``pending_approval``.  Human approval happens out of band via the ops
-    findings decision API; the workflow never blocks on approval.
-    """
-
+class PartsInventoryWorkflow:
     @workflow.run
-    async def run(self, inp: VehicleAgingWorkflowInput) -> dict[str, Any]:
+    async def run(self, inp: PartsInventoryWorkflowInput) -> dict[str, Any]:
         summary: dict[str, Any] = {
             "status": "succeeded",
-            "total_vehicles_scoped": 0,
+            "total_parts_scoped": 0,
             "processed_findings": 0,
             "recorded_findings": 0,
             "deduped_findings": 0,
             "remaining_findings_count": 0,
-            "superseded_findings": 0,
             "auto_apply": False,
         }
         run_id = ""
         try:
             run = await workflow.execute_activity(
-                ops_vehicle_aging.ops_create_workflow_run,
+                ops_parts_inventory.ops_create_workflow_run,
                 args=[
                     _WORKFLOW_KEY,
                     inp.tenant_id,
@@ -68,89 +57,82 @@ class VehicleAgingWorkflow:
             run_id = str(run["run_id"])
 
             config = await workflow.execute_activity(
-                ops_vehicle_aging.ops_load_agent_config,
+                ops_parts_inventory.ops_load_agent_config,
                 args=[inp.tenant_id, _WORKFLOW_KEY],
                 start_to_close_timeout=workflow.timedelta(seconds=30),
                 retry_policy=_STANDARD_RETRY,
             )
-            # v1 invariant: never auto-apply; all dispositions require human approval.
             summary["auto_apply"] = False
             thresholds = config.get("thresholds") or {}
+            bounds = config.get("bounds") or {}
+            scope_context = {"thresholds": thresholds, "max_parts": bounds.get("max_parts")}
 
-            scoped_vehicles = await workflow.execute_activity(
-                ops_vehicle_aging.ops_scope_vehicle_aging,
-                args=[inp.tenant_id, {"thresholds": thresholds}],
+            replenish_parts = await workflow.execute_activity(
+                ops_parts_inventory.ops_scope_parts_replenish,
+                args=[inp.tenant_id, scope_context],
                 start_to_close_timeout=workflow.timedelta(seconds=30),
                 retry_policy=_STANDARD_RETRY,
             )
-            summary["total_vehicles_scoped"] = len(scoped_vehicles)
-            if not scoped_vehicles:
+            dead_stock_parts = await workflow.execute_activity(
+                ops_parts_inventory.ops_scope_parts_dead_stock,
+                args=[inp.tenant_id, scope_context],
+                start_to_close_timeout=workflow.timedelta(seconds=30),
+                retry_policy=_STANDARD_RETRY,
+            )
+            scoped_parts = [*replenish_parts, *dead_stock_parts]
+            summary["total_parts_scoped"] = len(scoped_parts)
+            if not scoped_parts:
                 return {"run_id": run_id, **summary}
 
             assess_tasks = [
                 workflow.execute_activity(
-                    ops_vehicle_aging.ops_vehicle_aging_assess,
-                    args=[vehicle_payload, {**config, "locale": inp.locale}],
+                    ops_parts_inventory.ops_parts_inventory_assess,
+                    args=[part_payload, config],
                     start_to_close_timeout=workflow.timedelta(minutes=2),
                     heartbeat_timeout=_AI_HEARTBEAT_TIMEOUT,
                     retry_policy=_AI_RETRY,
                 )
-                for vehicle_payload in scoped_vehicles
+                for part_payload in scoped_parts
             ]
             assessed = await asyncio.gather(*assess_tasks) if assess_tasks else []
 
             surfaced: list[dict[str, Any]] = []
             for idx, assessment in enumerate(assessed):
-                vehicle = scoped_vehicles[idx]
+                part = scoped_parts[idx]
                 surfaced.append(
                     {
-                        "vehicle_id": str(vehicle.get("vehicle_id") or ""),
+                        "part_id": str(part.get("part_id") or ""),
                         "tenant_id": inp.tenant_id,
                         "agent_key": _WORKFLOW_KEY,
-                        "workflow_id": f"ops-vehicle-aging:{run_id}",
-                        "finding_type": "stock_aging_90d",
-                        "severity": str(vehicle.get("severity") or "medium"),
-                        "days_in_stock": int(vehicle.get("days_in_stock") or 0),
-                        "aging_bucket": str(vehicle.get("aging_bucket") or "approaching"),
-                        "brand": vehicle.get("brand"),
-                        "model": vehicle.get("model"),
-                        "model_year": vehicle.get("model_year"),
-                        "store": vehicle.get("store"),
-                        "condition": vehicle.get("condition"),
-                        "cost": vehicle.get("cost"),
-                        "sale_price": vehicle.get("sale_price"),
-                        "floor_plan_cost": vehicle.get("floor_plan_cost"),
-                        "estimated_exposure": vehicle.get("estimated_exposure"),
+                        "workflow_id": f"ops-parts-inventory:{run_id}",
+                        "finding_type": str(part.get("finding_type") or "replenish_now"),
+                        "severity": str(part.get("severity") or "medium"),
+                        "quantity_suggested": int(part.get("quantity_suggested") or 0),
+                        "value_at_risk": float(part.get("value_at_risk") or 0.0),
+                        "part_number": part.get("part_number"),
+                        "manufacturer": part.get("manufacturer"),
+                        "stock_status": part.get("stock_status"),
+                        "quantity_in_stock": part.get("quantity_in_stock"),
+                        "reorder_point": part.get("reorder_point"),
+                        "stock_value": part.get("stock_value"),
+                        "velocity": part.get("velocity"),
                         "recommended_action": str(assessment.get("recommended_action") or "monitor"),
                         "evidence": list(assessment.get("evidence") or []),
                         "confidence": float(assessment.get("confidence") or 0.0),
                         "rationale": str(assessment.get("rationale") or ""),
-                        "fingerprint": str(vehicle.get("fingerprint") or ""),
+                        "fingerprint": str(part.get("fingerprint") or ""),
+                        "priority": float(part.get("priority") or 0.0),
                     }
                 )
             surfaced.sort(
                 key=lambda item: (
-                    -int(item.get("days_in_stock") or 0),
+                    -float(item.get("priority") or 0.0),
                     str(item.get("fingerprint") or ""),
                 )
             )
 
-            # Reconcile scope: any open finding for this tenant whose fingerprint is
-            # not produced by THIS run (e.g. a vehicle removed/replaced, or stale
-            # post-reseed fingerprints) is superseded so it stops showing as a
-            # pending action and never inflates the Morning Queue.
-            in_scope_fingerprints = sorted(
-                {str(item.get("fingerprint") or "") for item in surfaced if item.get("fingerprint")}
-            )
-            summary["superseded_findings"] = await workflow.execute_activity(
-                ops_vehicle_aging.ops_vehicle_aging_expire_out_of_scope_findings,
-                args=[inp.tenant_id, in_scope_fingerprints],
-                start_to_close_timeout=workflow.timedelta(seconds=30),
-                retry_policy=_STANDARD_RETRY,
-            )
-
             existing_fingerprints = await workflow.execute_activity(
-                ops_vehicle_aging.ops_list_open_finding_fingerprints,
+                ops_parts_inventory.ops_list_open_finding_fingerprints,
                 args=[inp.tenant_id],
                 start_to_close_timeout=workflow.timedelta(seconds=30),
                 retry_policy=_STANDARD_RETRY,
@@ -178,7 +160,7 @@ class VehicleAgingWorkflow:
 
             for finding in bounded_findings:
                 await workflow.execute_activity(
-                    ops_vehicle_aging.ops_record_finding,
+                    ops_parts_inventory.ops_record_finding,
                     args=[finding, run_id],
                     start_to_close_timeout=workflow.timedelta(seconds=30),
                     retry_policy=_STANDARD_RETRY,
@@ -192,7 +174,7 @@ class VehicleAgingWorkflow:
         finally:
             if run_id:
                 await workflow.execute_activity(
-                    ops_vehicle_aging.ops_finalize_workflow_run,
+                    ops_parts_inventory.ops_finalize_workflow_run,
                     args=[run_id, summary],
                     start_to_close_timeout=workflow.timedelta(seconds=30),
                     retry_policy=_STANDARD_RETRY,

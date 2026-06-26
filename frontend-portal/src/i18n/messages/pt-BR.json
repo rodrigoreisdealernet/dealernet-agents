@@ -3,6 +3,21 @@
     "pt-BR": "Português (Brasil)",
     "en-US": "English (US)"
   },
+  "labels": {
+    "agents": {
+      "vehicle-aging-analyst": "Analista de estoque parado"
+    },
+    "findingTypes": {
+      "stock_aging_90d": "Veículo parado há 90+ dias"
+    },
+    "actions": {
+      "markdown": "Baixar preço",
+      "transfer": "Transferir",
+      "prioritize_sale": "Priorizar venda",
+      "wholesale_auction": "Leilão atacado",
+      "monitor": "Monitorar"
+    }
+  },
   "common": {
     "valuesInBRL": "Valores em R$",
     "error": "Erro",
@@ -309,7 +324,22 @@
       "approvedCycle": "Aprovados no ciclo",
       "activeDeals": "Negócios ativos",
       "capacityUse": "Utilização da capacidade",
-      "overdueActions": "Ações atrasadas"
+      "overdueActions": "Ações atrasadas",
+      "revenueTrendTitle": "Receita (90 dias)",
+      "revenue": "Receita",
+      "units": "Unidades",
+      "resultByBrandTitle": "Resultado por marca",
+      "result": "Resultado",
+      "aiFoundTitle": "O que a IA encontrou",
+      "aiFoundSubtitle": "Maiores achados por Δ R$ — clique para abrir o detalhe.",
+      "noFindings": "Nenhum achado no momento.",
+      "atRiskTitle": "Em risco",
+      "floorPlanAtRisk": "Floor plan em risco",
+      "criticalParts": "Peças críticas",
+      "byAgentTitle": "Por agente",
+      "pending": "pendentes",
+      "identified": "Identificado",
+      "runHealth": "saúde dos runs"
     },
     "findingsQueue": {
       "title": "Fila Matinal — Findings",
@@ -676,6 +706,7 @@
       "dismiss": "Dispensar",
       "brandStore": "Marca / Loja",
       "confirmFailed": "Falha ao confirmar",
+      "dismissFailed": "Falha ao dispensar",
       "currentMonth": "Mês atual",
       "byBrandTap": "Por marca · toque para ver lojas",
       "noMonthData": "Sem dados do mês.",

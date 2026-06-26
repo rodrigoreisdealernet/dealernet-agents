@@ -111,12 +111,12 @@ test('AC2: portal_assistant usa diretiva dinamica e nao a instrucao fixa antiga'
   assert.match(i18n, /Responda em portugu[eê]s do Brasil \(pt-BR\)/, 'helper deve fornecer diretiva pt-BR')
 })
 
-test('AC4: pt-BR e en-US mantem exatamente as mesmas 603 chaves', () => {
+test('AC4: pt-BR e en-US mantem exatamente o mesmo key-set', () => {
   const ptKeys = flattenLeaves(readJson('src/i18n/messages/pt-BR.json')).sort()
   const enKeys = flattenLeaves(readJson('src/i18n/messages/en-US.json')).sort()
 
-  assert.equal(ptKeys.length, 603, 'pt-BR deve manter o catalogo completo de 603 chaves')
-  assert.equal(enKeys.length, 603, 'en-US deve manter o catalogo completo de 603 chaves')
+  assert.ok(ptKeys.length >= 603, `pt-BR deve manter o catalogo completo (>=603 chaves), tem ${ptKeys.length}`)
+  assert.equal(enKeys.length, ptKeys.length, 'pt-BR e en-US devem ter a mesma quantidade de chaves')
   assert.deepEqual(enKeys, ptKeys, 'catalogos pt-BR/en-US devem ter key-set identico')
 })
 

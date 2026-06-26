@@ -3,6 +3,21 @@
     "pt-BR": "Portuguese (Brazil)",
     "en-US": "English (US)"
   },
+  "labels": {
+    "agents": {
+      "vehicle-aging-analyst": "Stock aging analyst"
+    },
+    "findingTypes": {
+      "stock_aging_90d": "Vehicle idle 90+ days"
+    },
+    "actions": {
+      "markdown": "Mark down price",
+      "transfer": "Transfer",
+      "prioritize_sale": "Prioritize sale",
+      "wholesale_auction": "Wholesale auction",
+      "monitor": "Monitor"
+    }
+  },
   "common": {
     "valuesInBRL": "Values in BRL",
     "error": "Error",
@@ -309,7 +324,22 @@
       "approvedCycle": "Approved this cycle",
       "activeDeals": "Active deals",
       "capacityUse": "Capacity use",
-      "overdueActions": "Overdue actions"
+      "overdueActions": "Overdue actions",
+      "revenueTrendTitle": "Revenue (90 days)",
+      "revenue": "Revenue",
+      "units": "Units",
+      "resultByBrandTitle": "Result by brand",
+      "result": "Result",
+      "aiFoundTitle": "What AI found",
+      "aiFoundSubtitle": "Top findings by BRL Δ — click to open the detail.",
+      "noFindings": "No findings right now.",
+      "atRiskTitle": "At risk",
+      "floorPlanAtRisk": "Floor plan at risk",
+      "criticalParts": "Critical parts",
+      "byAgentTitle": "By agent",
+      "pending": "pending",
+      "identified": "Identified",
+      "runHealth": "run health"
     },
     "findingsQueue": {
       "title": "Morning Queue — Findings",
@@ -676,6 +706,7 @@
       "dismiss": "Dismiss",
       "brandStore": "Brand / Store",
       "confirmFailed": "Failed to confirm",
+      "dismissFailed": "Failed to dismiss",
       "currentMonth": "Current month",
       "byBrandTap": "By brand · tap to see stores",
       "noMonthData": "No month data.",

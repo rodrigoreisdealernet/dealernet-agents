@@ -53,6 +53,7 @@ async def run_credit_analyst(
     locale: str | None = None,
     max_tool_rounds: int = 5,
     transport: ChatCompletionTransport | None = None,
+    on_llm_call: Callable[[Any], Awaitable[None]] | None = None,
 ) -> dict[str, Any]:
     messages = [
         {"role": "system", "content": with_language_directive(system_prompt, locale)},
@@ -65,6 +66,7 @@ async def run_credit_analyst(
         response_format=CreditProposalV1,
         max_tool_rounds=max_tool_rounds,
         transport=transport,
+        on_llm_call=on_llm_call,
     )
     return result.response.model_dump(mode="json")
 

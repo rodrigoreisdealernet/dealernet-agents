@@ -34,6 +34,8 @@ from .activities import (
     ops_disposition,
     ops_fleet,
     ops_integration_exception,
+    ops_llm_usage,
+    ops_parts_inventory,
     ops_pm,
     ops_revrec,
     ops_safety_compliance_monitor,
@@ -74,6 +76,7 @@ from .workflows.ops.integration_exception_queue import (
     IntegrationExceptionQueueWorkflowInput,
 )
 from .workflows.ops.pm_evaluator import PMEvaluatorWorkflow
+from .workflows.ops.parts_inventory import PartsInventoryWorkflow, PartsInventoryWorkflowInput
 from .workflows.ops.revrec import RevenueRecognitionWorkflow, RevenueRecognitionWorkflowInput
 from .workflows.ops.safety_compliance_monitor import SafetyComplianceMonitorWorkflow
 from .workflows.ops.shop_morning_queue import ShopMorningQueueWorkflow, ShopMorningQueueWorkflowInput
@@ -101,6 +104,21 @@ _PM_DEFAULT_CRON = "0 */6 * * *"
 
 _VEHICLE_AGING_AGENT_KEY = "vehicle-aging-analyst"
 _VEHICLE_AGING_DEFAULT_CRON = "0 6 * * 1-5"
+
+_PARTS_INVENTORY_AGENT_KEY = "parts-inventory-advisor"
+_PARTS_INVENTORY_DEFAULT_CRON = "0 6 * * 1"
+
+_PARTS_INVENTORY_ACTIVITIES = (
+    ops_parts_inventory.ops_load_agent_config,
+    ops_parts_inventory.ops_scope_parts_replenish,
+    ops_parts_inventory.ops_scope_parts_dead_stock,
+    ops_parts_inventory.ops_parts_inventory_assess,
+    ops_parts_inventory.ops_list_open_finding_fingerprints,
+    ops_parts_inventory.ops_create_workflow_run,
+    ops_parts_inventory.ops_finalize_workflow_run,
+    ops_parts_inventory.ops_record_finding,
+    ops_parts_inventory.ops_record_finding_disposition,
+)
 
 # Prometheus metrics are exposed by the Temporal SDK Runtime on this port.
 # Keep in sync with temporalWorker.metrics.port in chart values.
@@ -421,6 +439,77 @@ async def reconcile_vehicle_aging_schedules(
     rows = list(config_rows) if config_rows is not None else await asyncio.to_thread(_fetch_vehicle_aging_schedule_rows)
     for row in rows:
         await _reconcile_tenant_vehicle_aging_schedule(client, row)
+
+
+# ---------------------------------------------------------------------------
+# Parts inventory advisor schedule reconciliation
+# ---------------------------------------------------------------------------
+
+def _fetch_parts_inventory_schedule_rows() -> list[dict[str, Any]]:
+    return _fetch_agent_config_rows(_PARTS_INVENTORY_AGENT_KEY)
+
+
+def _build_parts_inventory_schedule(tenant_id: str, cron: str) -> Schedule:
+    return Schedule(
+        action=ScheduleActionStartWorkflow(
+            PartsInventoryWorkflow.run,
+            PartsInventoryWorkflowInput(tenant_id=tenant_id),
+            id=f"ops-parts-inventory-{tenant_id}",
+            task_queue=settings.temporal_task_queue,
+        ),
+        spec=ScheduleSpec(cron_expressions=[cron]),
+    )
+
+
+async def _reconcile_tenant_parts_inventory_schedule(client: Client, config_row: Mapping[str, Any]) -> None:
+    tenant_id = str(config_row.get("tenant_id") or "").strip()
+    if not tenant_id:
+        return
+
+    enabled, cron = _extract_schedule_fields(config_row, default_cron=_PARTS_INVENTORY_DEFAULT_CRON)
+    schedule_id = _schedule_id_for_tenant(tenant_id, _PARTS_INVENTORY_AGENT_KEY)
+    schedule_handle = client.get_schedule_handle(schedule_id)
+
+    if not enabled:
+        try:
+            await schedule_handle.delete()
+            logger.info(
+                "Deleted disabled parts-inventory schedule",
+                extra={"tenant_id": tenant_id, "schedule_id": schedule_id},
+            )
+        except BaseException as exc:
+            if not _is_not_found_error(exc):
+                raise
+        return
+
+    desired_schedule = _build_parts_inventory_schedule(tenant_id, cron)
+    try:
+        await schedule_handle.describe()
+    except BaseException as exc:
+        if not _is_not_found_error(exc):
+            raise
+        await client.create_schedule(schedule_id, desired_schedule)
+        logger.info(
+            "Created parts-inventory schedule from config",
+            extra={"tenant_id": tenant_id, "schedule_id": schedule_id, "cron": cron},
+        )
+        return
+
+    await schedule_handle.update(
+        lambda _: ScheduleUpdate(schedule=desired_schedule),
+    )
+    logger.info(
+        "Updated parts-inventory schedule from config",
+        extra={"tenant_id": tenant_id, "schedule_id": schedule_id, "cron": cron},
+    )
+
+
+async def reconcile_parts_inventory_schedules(
+    client: Client, config_rows: Sequence[Mapping[str, Any]] | None = None
+) -> None:
+    rows = list(config_rows) if config_rows is not None else await asyncio.to_thread(_fetch_parts_inventory_schedule_rows)
+    for row in rows:
+        await _reconcile_tenant_parts_inventory_schedule(client, row)
 
 
 # ---------------------------------------------------------------------------
@@ -1362,6 +1451,11 @@ async def main() -> None:
         logger.exception("vehicle-aging schedule reconcile failed at startup; continuing to start worker")
 
     try:
+        await reconcile_parts_inventory_schedules(client)
+    except Exception:  # noqa: BLE001 - never let parts-inventory schedule reconcile crash the worker
+        logger.exception("parts-inventory schedule reconcile failed at startup; continuing to start worker")
+
+    try:
         await reconcile_samsara_schedules(client)
     except Exception:  # noqa: BLE001 - never let samsara schedule reconcile crash the worker
         logger.exception("Samsara schedule reconcile failed at startup; continuing to start worker")
@@ -1432,6 +1526,7 @@ async def main() -> None:
             DescartesSyncWorkflow,
             RevenueRecognitionWorkflow,
             VehicleAgingWorkflow,
+            PartsInventoryWorkflow,
             ContractAnalysisWorkflow,
             ContractOcrRevalidationWorkflow,
             FleetUtilizationWorkflow,
@@ -1520,10 +1615,12 @@ async def main() -> None:
             ops_vehicle_aging.ops_scope_vehicle_aging,
             ops_vehicle_aging.ops_vehicle_aging_assess,
             ops_vehicle_aging.ops_list_open_finding_fingerprints,
+            ops_vehicle_aging.ops_vehicle_aging_expire_out_of_scope_findings,
             ops_vehicle_aging.ops_create_workflow_run,
             ops_vehicle_aging.ops_finalize_workflow_run,
             ops_vehicle_aging.ops_record_finding,
             ops_vehicle_aging.ops_record_finding_disposition,
+            *_PARTS_INVENTORY_ACTIVITIES,
             ops_contract_ocr.ops_contract_ocr_revalidate_pages,
             ops_contract_ocr.ops_contract_analyze_contract,
             ops_fleet.ops_load_agent_config,
@@ -1540,6 +1637,7 @@ async def main() -> None:
             ops_credit.ops_load_agent_config,
             ops_credit.ops_scope_credit_accounts,
             ops_credit.ops_credit_assess,
+            ops_llm_usage.persist_llm_usage_event,
             ops_credit.ops_list_open_finding_fingerprints,
             ops_credit.ops_list_existing_findings,
             ops_credit.ops_create_workflow_run,

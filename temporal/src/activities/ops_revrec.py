@@ -621,6 +621,40 @@ def ops_list_open_finding_fingerprints(tenant_id: str) -> list[str]:
     return sorted({str(row.get("fingerprint")) for row in rows if row.get("fingerprint")})
 
 
+def ops_expire_out_of_scope_findings(
+    tenant_id: str,
+    agent_key: str,
+    in_scope_fingerprints: Sequence[str],
+) -> int:
+    """Mark open findings for ``agent_key`` whose fingerprint is no longer in scope as ``superseded``.
+
+    On a reseed, anchor entity UUIDs change, so a finding's fingerprint changes
+    and old findings never dedupe against the new run -- they linger as
+    ``pending_approval`` and inflate the Morning Queue. This reconciles scope by
+    superseding (not deleting -- preserves the audit trail) any open finding
+    whose fingerprint is not in this run's in-scope set. Returns the count.
+    """
+    client = _get_ops_persistence_client()
+    in_scope = {str(fp) for fp in in_scope_fingerprints if fp}
+    open_rows = client.select(
+        "finding",
+        columns="id,fingerprint",
+        filters={"tenant_id": tenant_id, "agent_key": agent_key, "status": "pending_approval"},
+    )
+    superseded = 0
+    for row in open_rows:
+        fingerprint = str(row.get("fingerprint") or "")
+        if fingerprint in in_scope:
+            continue
+        updated = client.update(
+            "finding",
+            {"status": "superseded", "decided_at": datetime.now(UTC).isoformat()},
+            filters={"id": row.get("id")},
+        )
+        superseded += len(updated)
+    return superseded
+
+
 @activity.defn
 def ops_create_workflow_run(workflow_key: str, tenant_id: str, metadata: dict[str, Any]) -> dict[str, Any]:
     run_id = f"{workflow_key}:{uuid.uuid4()}"
@@ -780,6 +814,7 @@ __all__ = [
     "get_ops_persistence_client",
     "ops_create_workflow_run",
     "ops_draft_invoice_adjustment",
+    "ops_expire_out_of_scope_findings",
     "ops_finalize_workflow_run",
     "ops_list_open_finding_fingerprints",
     "ops_load_agent_config",

@@ -65,6 +65,13 @@ class _FakeSupabaseClient:
         )
         self.appended_versions: list[dict[str, Any]] = []
         self.integration_config: dict[str, dict[str, Any]] = {}
+        # Issue #73 — execute-after-approval recorders. ``execute_finding_action``
+        # is a stub (the real handler is unit-tested in
+        # ``test_finding_action_execution.py``); here we only need to observe that
+        # the approve path reaches it with the persisted finding, and that the
+        # dismiss path audits without executing.
+        self.execute_calls: list[dict[str, Any]] = []
+        self.audit_events: list[dict[str, Any]] = []
 
     async def authenticate_user(self, *, user_jwt: str) -> Principal:
         self.auth_tokens.append(user_jwt)
@@ -115,6 +122,38 @@ class _FakeSupabaseClient:
             data=data,
         )
         return row
+
+    async def execute_finding_action(
+        self, *, finding: FindingRecord, approver: dict[str, Any]
+    ) -> dict[str, Any]:
+        # Recorded (not added to ``call_order``) so existing approve-ordering
+        # assertions (``["persist", "signal"]``) stay valid while we still verify
+        # the approve path hands the *persisted* finding to the executor.
+        self.execute_calls.append({"finding": finding, "approver": approver})
+        return {"executed": False, "skipped": True}
+
+    async def append_audit_event(
+        self,
+        *,
+        entity_id: str,
+        tenant_id: str,
+        event_type: str,
+        finding_id: str,
+        action_type: str,
+        approver: dict[str, Any] | None,
+        payload: dict[str, Any],
+    ) -> None:
+        self.audit_events.append(
+            {
+                "entity_id": entity_id,
+                "tenant_id": tenant_id,
+                "event_type": event_type,
+                "finding_id": finding_id,
+                "action_type": action_type,
+                "approver": approver,
+                "payload": payload,
+            }
+        )
 
     async def upsert_integration_config(
         self,
@@ -361,6 +400,7 @@ def _make_finding(
     agent_key: str = "revrec-reviewer",
     finding_type: str = "unbilled_on_rent",
     fingerprint: str = "finding-fingerprint-1",
+    proposed_action: str | None = None,
 ) -> FindingRecord:
     return FindingRecord(
         id="11111111-1111-1111-1111-111111111111",
@@ -373,6 +413,7 @@ def _make_finding(
         fingerprint=fingerprint,
         finding_type=finding_type,
         status=status,
+        proposed_action=proposed_action,
     )
 
 
@@ -388,6 +429,7 @@ def _make_client(
     finding_agent_key: str = "revrec-reviewer",
     finding_type: str = "unbilled_on_rent",
     finding_fingerprint: str = "finding-fingerprint-1",
+    finding_proposed_action: str | None = None,
     signal_raises: Exception | None = None,
     run_agent_now_raises: Exception | None = None,
     connector_registry: dict[str, ConnectorProvider] | None = None,
@@ -404,6 +446,7 @@ def _make_client(
             agent_key=finding_agent_key,
             finding_type=finding_type,
             fingerprint=finding_fingerprint,
+            proposed_action=finding_proposed_action,
         ),
         call_order=call_order,
         tenant_id=resolved_tenant_id,
@@ -976,6 +1019,162 @@ def test_decision_endpoint_accepts_contract_payload_and_approves() -> None:
     assert supabase.persisted[0]["approver"]["approver_name"] == "Casey"
     assert temporal.signal_calls[0][0] is RevenueRecognitionWorkflow.approve_finding
     assert call_order == ["persist", "signal"]
+
+
+def test_decision_approve_invokes_execute_finding_action_with_persisted_finding() -> None:
+    """Issue #73 AC1-AC4 wiring: approving a vehicle-aging finding must route the
+    *persisted* (approved) finding into execute_finding_action so the recommended
+    action is actually executed. Closes the gap that execute was only unit-tested
+    in isolation."""
+    client, supabase, temporal, call_order = _make_client(
+        finding_agent_key="vehicle-aging-analyst",
+        finding_type="stock_aging_90d",
+        finding_fingerprint="stock_aging:22222222-2222-2222-2222-222222222222:stock_aging_90d",
+        finding_proposed_action="markdown",
+    )
+
+    response = client.post(
+        "/api/ops/findings/decision",
+        headers=_auth_header(),
+        json={
+            "finding_id": supabase.finding.id,
+            "workflow_id": supabase.finding.workflow_id,
+            "run_id": supabase.finding.run_id,
+            "decision": "approve",
+            "approver_id": "user-1",
+            "approver_name": "Casey",
+            "note": "Approve markdown",
+        },
+    )
+
+    assert response.status_code == 202
+    assert response.json() == {"status": "accepted", "idempotent": False}
+
+    # The executor was invoked exactly once, with the persisted finding (status
+    # flipped to approved) and the recommended action intact.
+    assert len(supabase.execute_calls) == 1
+    executed = supabase.execute_calls[0]
+    handed_finding = executed["finding"]
+    assert handed_finding.id == supabase.finding.id
+    assert handed_finding.status == "approved"
+    assert handed_finding.finding_type == "stock_aging_90d"
+    assert handed_finding.proposed_action == "markdown"
+    assert handed_finding.contract_id == "22222222-2222-2222-2222-222222222222"
+    # Approver context is threaded through to the executor.
+    assert executed["approver"]["approver_id"] == "user-1"
+    assert executed["approver"]["approver_name"] == "Casey"
+    # Execute runs after the disposition is persisted and is not in call_order
+    # (it is recorded separately); the workflow signal is still attempted.
+    assert call_order == ["persist", "signal"]
+    assert supabase.audit_events == []  # approve path does not write the dismiss audit
+
+
+def test_decision_reject_does_not_invoke_execute_finding_action() -> None:
+    """Reject must never execute the recommended action."""
+    client, supabase, temporal, call_order = _make_client(
+        finding_agent_key="vehicle-aging-analyst",
+        finding_type="stock_aging_90d",
+        finding_proposed_action="markdown",
+    )
+
+    response = client.post(
+        "/api/ops/findings/decision",
+        headers=_auth_header(),
+        json={
+            "finding_id": supabase.finding.id,
+            "workflow_id": supabase.finding.workflow_id,
+            "run_id": supabase.finding.run_id,
+            "decision": "reject",
+            "approver_id": "user-1",
+            "approver_name": "Casey",
+            "reason": "Not aged enough",
+        },
+    )
+
+    assert response.status_code == 202
+    assert supabase.persisted[0]["status"] == "rejected"
+    assert supabase.execute_calls == []
+    assert supabase.audit_events == []
+
+
+def test_decision_dismiss_persists_as_rejected_audits_and_does_not_signal_or_execute() -> None:
+    """Issue #73 AC5: dismissing a finding persists it out of the pending queue
+    (status mapped to 'rejected', tagged disposition='dismissed', NO reason
+    required), writes the 'vehicle_finding_dismissed' audit, and must NOT signal
+    the workflow nor execute the recommended action."""
+    client, supabase, temporal, call_order = _make_client(
+        finding_agent_key="vehicle-aging-analyst",
+        finding_type="stock_aging_90d",
+        finding_proposed_action="markdown",
+    )
+
+    response = client.post(
+        "/api/ops/findings/decision",
+        headers=_auth_header(),
+        json={
+            "finding_id": supabase.finding.id,
+            "workflow_id": supabase.finding.workflow_id,
+            "run_id": supabase.finding.run_id,
+            "decision": "dismiss",
+            "approver_id": "user-1",
+            "approver_name": "Casey",
+            # Intentionally NO "reason" — dismiss must not require one.
+        },
+    )
+
+    assert response.status_code == 202
+    assert response.json() == {"status": "accepted", "idempotent": False}
+
+    # Persisted out of the pending queue: status -> rejected, tagged dismissed.
+    assert len(supabase.persisted) == 1
+    persisted = supabase.persisted[0]
+    assert persisted["status"] == "rejected"
+    assert persisted["approver"]["disposition"] == "dismissed"
+    assert persisted["approver"]["note"] is None
+
+    # Dismiss is audited against the vehicle entity.
+    assert len(supabase.audit_events) == 1
+    audit = supabase.audit_events[0]
+    assert audit["event_type"] == "vehicle_finding_dismissed"
+    assert audit["entity_id"] == supabase.finding.contract_id
+    assert audit["finding_id"] == supabase.finding.id
+    assert audit["action_type"] == "markdown"
+    assert audit["payload"] == {"disposition": "dismissed"}
+
+    # Dismiss must NOT signal the workflow and must NOT execute the action.
+    assert temporal.signal_calls == []
+    assert supabase.execute_calls == []
+    assert call_order == ["persist"]
+
+
+def test_decision_dismiss_without_contract_id_still_persists_without_audit() -> None:
+    """A dismiss for a finding with no vehicle entity (contract_id) still persists
+    as rejected/dismissed; the audit is skipped because there is no entity to
+    anchor it to (the handler must not raise)."""
+    client, supabase, temporal, call_order = _make_client(
+        finding_agent_key="vehicle-aging-analyst",
+        finding_type="stock_aging_90d",
+        finding_proposed_action="monitor",
+    )
+    supabase.finding = replace(supabase.finding, contract_id=None)
+
+    response = client.post(
+        "/api/ops/findings/decision",
+        headers=_auth_header(),
+        json={
+            "finding_id": supabase.finding.id,
+            "decision": "dismiss",
+            "approver_id": "user-1",
+            "approver_name": "Casey",
+        },
+    )
+
+    assert response.status_code == 202
+    assert supabase.persisted[0]["status"] == "rejected"
+    assert supabase.persisted[0]["approver"]["disposition"] == "dismissed"
+    assert supabase.audit_events == []
+    assert supabase.execute_calls == []
+    assert temporal.signal_calls == []
 
 
 def test_decision_endpoint_reject_requires_reason() -> None:

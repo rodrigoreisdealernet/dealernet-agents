@@ -4,7 +4,7 @@
 // docs/planos-aprovados/2026-06-25-dia-conversacional-portal.md.
 
 import { create } from 'zustand'
-import { chatWithAssistant, type AssistantChatMessage } from '@/portal/lib/assistantApi'
+import { chatWithAssistant, type AssistantChatMessage, type AssistantChart } from '@/portal/lib/assistantApi'
 import { availableScreensFromMenu } from '@/portal/components/dai/daiSuggestions'
 import { usePortalStore } from '@/portal/store/portalStore'
 import type { Locale } from '@/i18n/locale'
@@ -13,6 +13,8 @@ export interface DaiMessage {
   id: string
   role: 'user' | 'assistant'
   text: string
+  /** Gráficos inline (só em mensagens do assistente). */
+  charts?: AssistantChart[]
 }
 
 interface DaiState {
@@ -68,7 +70,10 @@ export const useDaiStore = create<DaiState>((set, get) => ({
     try {
       const res = await chatWithAssistant(toApiMessages(history), context)
       set((s) => ({
-        messages: [...s.messages, { id: nextId(), role: 'assistant', text: res.reply || '…' }],
+        messages: [
+          ...s.messages,
+          { id: nextId(), role: 'assistant', text: res.reply || '…', charts: res.charts },
+        ],
         suggestions: res.suggestions ?? [],
         thinking: false,
       }))
