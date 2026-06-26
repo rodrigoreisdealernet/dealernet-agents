@@ -111,7 +111,7 @@ test('AC2: TopBar renderiza seletor de idioma pt-BR/en-US que chama setLocale', 
   const src = read('src/portal/components/TopBar.tsx')
   assert.match(src, /import \{ locales \} from ['"]@\/i18n\/locale['"]/, 'TopBar deve consumir a lista canonica de locales')
   assert.match(src, /const \{ locale, setLocale \} = useLocale\(\)/, 'TopBar deve ler locale/setLocale do contexto')
-  assert.match(src, /<Languages\s+size=\{16\}\s*\/>/, 'seletor deve exibir o icone de idioma')
+  assert.match(src, /<LocaleFlag\s+locale=\{locale\}\s*\/>/, 'seletor deve exibir a bandeira da lingua atual no trigger (apenas bandeira — issue #129)')
   assert.match(src, /title=\{t\(['"]language['"]\)\}/, 'trigger deve usar a chave shell.language')
   assert.match(src, /locales\.map\(\(option\) => \(/, 'seletor deve renderizar todas as locales suportadas')
   assert.match(src, /onSelect=\{\(\) => setLocale\(option\)\}/, 'selecionar uma opcao deve chamar setLocale sem reload')
