@@ -1,0 +1,97 @@
+{
+  "issue": "130",
+  "title": "feat(portal): Vendas de Veículos + separar estoque/vendidos no menu Veículos",
+  "slug": "feat-portal-vendas-de-veiculos",
+  "branch": "feature/130-feat-portal-vendas-de-veiculos",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/130",
+  "pr": "135",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/135",
+  "updatedAt": "2026-06-26T12:15:22.497Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "6 critérios de aceite (spec AI-DLC reaproveitada do corpo da issue)",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/130-feat-portal-vendas-de-veiculos.md"
+        }
+      ],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec aprovada pelo humano (--approved)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": "6 arquivos: menu (portalApi), registry, VehiclesInventory (filtro em_estoque), VehicleSales (nova), i18n pt-BR/en-US — commit 496659f",
+      "artifacts": [],
+      "notes": [
+        "Iniciando: lendo telas/menu; editando portalApi.ts MOCK_MENU",
+        "criando VehicleSales.tsx (read-only, status=vendido); VehiclesInventory filtrado por em_estoque",
+        "i18n pt-BR/en-US adicionados; revisão estática TS ok; commitando"
+      ],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "done",
+      "summary": "verify-vehicle-sales-wiring.mjs: 10 passing; suíte completa 200 passing",
+      "artifacts": [],
+      "notes": [
+        "tester: reviewed coder diff + spec; authoring verify-vehicle-sales-wiring.mjs",
+        "verify-vehicle-sales-wiring.mjs green (10/10); full npm test list 200/200",
+        "Opened draft PR #135 with verify-vehicle-sales-wiring.mjs (200/200 green)"
+      ],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "done",
+      "summary": "APPROVE em 1 iteração — cobertura sólida, asserções fortes nos dois sentidos do filtro",
+      "artifacts": [],
+      "notes": [
+        "Auditing wiring tests vs impl for 6 ACs"
+      ],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "done",
+      "summary": "APPROVE — sem bloqueios; split sem vazamento, sem regressão, i18n em paridade",
+      "artifacts": [
+        {
+          "label": "PR review",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/135"
+        }
+      ],
+      "notes": [
+        "Reviewed diff vs 6 ACs: APPROVE (posted as comment, self-approve blocked). em_estoque/vendido split holds, KPIs derived from filtered rows, i18n parity OK, read-only no write path. 10/10 wiring tests pass. PR marked ready."
+      ],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "waiting",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": "merge"
+    }
+  ]
+}
