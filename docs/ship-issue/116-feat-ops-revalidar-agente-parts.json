@@ -1,0 +1,84 @@
+{
+  "issue": "116",
+  "title": "Revalidar parts-inventory-advisor + corrigir HTTP 409 'Executar agora'",
+  "slug": "feat-ops-revalidar-agente-parts",
+  "branch": "feature/116-feat-ops-revalidar-agente-parts",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/116",
+  "pr": null,
+  "prUrl": null,
+  "updatedAt": "2026-06-26T10:49:25.259Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "6 critérios de aceite redigidos",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/116-feat-ops-revalidar-agente-parts.md"
+        }
+      ],
+      "notes": [
+        "Analisando run_agent_now, _MANUAL_RUN_WORKFLOWS e PRD do parts-inventory-advisor"
+      ],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec aprovada via --approved",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "running",
+      "summary": "",
+      "artifacts": [],
+      "notes": [
+        "Registrando parts-inventory-advisor em _MANUAL_RUN_WORKFLOWS + import"
+      ],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    }
+  ]
+}
