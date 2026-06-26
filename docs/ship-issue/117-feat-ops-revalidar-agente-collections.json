@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/117",
   "pr": "121",
   "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/121",
-  "updatedAt": "2026-06-26T10:53:07.129Z",
+  "updatedAt": "2026-06-26T10:57:08.884Z",
   "steps": [
     {
       "id": "spec",
@@ -52,8 +52,8 @@
     {
       "id": "test-review",
       "label": "05 · Test review",
-      "status": "running",
-      "summary": "",
+      "status": "done",
+      "summary": "1 iteration; AC4/AC5 gap closed; 120 passed",
       "artifacts": [],
       "notes": [],
       "gate": null
@@ -61,20 +61,25 @@
     {
       "id": "code-review",
       "label": "06 · Code review",
-      "status": "pending",
-      "summary": "",
-      "artifacts": [],
+      "status": "done",
+      "summary": "APPROVE — low risk, no blocking issues",
+      "artifacts": [
+        {
+          "label": "PR review",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/121"
+        }
+      ],
       "notes": [],
       "gate": null
     },
     {
       "id": "merge",
       "label": "Merge (human gate)",
-      "status": "pending",
+      "status": "waiting",
       "summary": "",
       "artifacts": [],
       "notes": [],
-      "gate": null
+      "gate": "merge"
     }
   ]
 }
