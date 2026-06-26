@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/118",
   "pr": "123",
   "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/123",
-  "updatedAt": "2026-06-26T11:16:48.984Z",
+  "updatedAt": "2026-06-26T11:21:39.030Z",
   "steps": [
     {
       "id": "spec",
@@ -60,8 +60,8 @@
     {
       "id": "test-review",
       "label": "05 · Test review",
-      "status": "running",
-      "summary": "",
+      "status": "done",
+      "summary": "PASS; 1 iteration (added ops-views visibility assertion); 16 pytest + 5 SQL green",
       "artifacts": [],
       "notes": [
         "Auditing issue118 test suite: reading test files + code under test",
@@ -74,20 +74,28 @@
     {
       "id": "code-review",
       "label": "06 · Code review",
-      "status": "pending",
-      "summary": "",
-      "artifacts": [],
-      "notes": [],
+      "status": "done",
+      "summary": "Approved — test-only diff, assertions match contract, no blockers",
+      "artifacts": [
+        {
+          "label": "PR review",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/123#issuecomment-4809114082"
+        }
+      ],
+      "notes": [
+        "Reviewing PR #123 diff: confirming test-only change, auditing assertions vs contract and SQL harness safety",
+        "APPROVE verdict posted on PR #123 (as comment — GitHub blocks self-approve). Test-only diff verified: no prod/schema/seed change; pytest 16 pass + node 5 pass; assertions match real contract; SQL harness BEGIN/ROLLBACK safe on shared DB"
+      ],
       "gate": null
     },
     {
       "id": "merge",
       "label": "Merge (human gate)",
-      "status": "pending",
+      "status": "waiting",
       "summary": "",
       "artifacts": [],
       "notes": [],
-      "gate": null
+      "gate": "merge"
     }
   ]
 }

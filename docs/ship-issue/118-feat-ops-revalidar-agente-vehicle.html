@@ -9,7 +9,7 @@
   .sub{color:#9ca3af;font-size:13px;margin-bottom:16px}
   .sub a{color:#60a5fa;text-decoration:none}
   .bar{height:8px;background:#1f2937;border-radius:99px;overflow:hidden;margin:12px 0 20px}
-  .bar>i{display:block;height:100%;background:#16a34a;width:57%}
+  .bar>i{display:block;height:100%;background:#16a34a;width:86%}
   .banner{background:#7c2d12;color:#fed7aa;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:14px}
   table{width:100%;border-collapse:collapse}
   td{padding:12px 8px;border-top:1px solid #1f2937;vertical-align:top}
@@ -24,9 +24,9 @@
   .foot{color:#6b7280;font-size:12px;margin-top:20px}
 </style></head><body><div class="wrap">
 <h1>ship-issue #118 — feat(ops): revalidar agente vehicle-aging-analyst ponta-a-ponta</h1>
-<div class="sub"><a href="https://github.com/rodrigoreisdealernet/dealernet-agents/issues/118">issue</a> · branch <code>feature/118-feat-ops-revalidar-agente-vehicle</code> · <a href="https://github.com/rodrigoreisdealernet/dealernet-agents/pull/123">PR #123</a> · 57% complete</div>
+<div class="sub"><a href="https://github.com/rodrigoreisdealernet/dealernet-agents/issues/118">issue</a> · branch <code>feature/118-feat-ops-revalidar-agente-vehicle</code> · <a href="https://github.com/rodrigoreisdealernet/dealernet-agents/pull/123">PR #123</a> · 86% complete</div>
 <div class="bar"><i></i></div>
-
+<div class="banner">🚧 Waiting on human gate: <b>merge</b></div>
 <table><tbody><tr class="done">
         <td class="ic" style="color:#16a34a">●</td>
         <td class="lbl">01 · Spec<div class="st" style="color:#16a34a">done</div></td>
@@ -59,30 +59,30 @@
           
           <ul class="notes"><li>reading spec and existing tests</li><li>baseline: running pytest -k vehicle</li><li>python suite green; adding SQL contract AC6/AC3 locks</li><li>running full python + sql suites for verification</li></ul>
         </td>
-      </tr><tr class="running">
-        <td class="ic" style="color:#2563eb">◐</td>
-        <td class="lbl">05 · Test review<div class="st" style="color:#2563eb">running</div></td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">05 · Test review<div class="st" style="color:#16a34a">done</div></td>
         <td class="meta">
-          
+          <div class="sum">PASS; 1 iteration (added ops-views visibility assertion); 16 pytest + 5 SQL green</div>
           
           <ul class="notes"><li>Auditing issue118 test suite: reading test files + code under test</li><li>Audit complete: 16 py + 4 sql green; verified deferred AC4/AC5 coverage is real; one minor AC2 view-visibility gap. Verdict PASS.</li><li>iteration 1: PASS with 1 non-blocking gap; looping to tester to pin ops_agent_status_view/ops_finding_kpis visibility</li><li>Adding AC2 visibility test: stock_aging_90d finding surfaces via ops_agent_status_view + ops_finding_kpis</li></ul>
         </td>
-      </tr><tr class="pending">
-        <td class="ic" style="color:#9ca3af">○</td>
-        <td class="lbl">06 · Code review<div class="st" style="color:#9ca3af">pending</div></td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">06 · Code review<div class="st" style="color:#16a34a">done</div></td>
         <td class="meta">
-          
-          
-          
+          <div class="sum">Approved — test-only diff, assertions match contract, no blockers</div>
+          <div class="arts"><a href="https://github.com/rodrigoreisdealernet/dealernet-agents/pull/123#issuecomment-4809114082">PR review</a></div>
+          <ul class="notes"><li>Reviewing PR #123 diff: confirming test-only change, auditing assertions vs contract and SQL harness safety</li><li>APPROVE verdict posted on PR #123 (as comment — GitHub blocks self-approve). Test-only diff verified: no prod/schema/seed change; pytest 16 pass + node 5 pass; assertions match real contract; SQL harness BEGIN/ROLLBACK safe on shared DB</li></ul>
         </td>
-      </tr><tr class="pending">
-        <td class="ic" style="color:#9ca3af">○</td>
-        <td class="lbl">Merge (human gate)<div class="st" style="color:#9ca3af">pending</div></td>
+      </tr><tr class="waiting">
+        <td class="ic" style="color:#d97706">⏸</td>
+        <td class="lbl">Merge (human gate)<div class="st" style="color:#d97706">waiting</div></td>
         <td class="meta">
           
           
           
         </td>
       </tr></tbody></table>
-<div class="foot">auto-refreshes every 5s · last update 2026-06-26T11:16:48.984Z</div>
+<div class="foot">auto-refreshes every 5s · last update 2026-06-26T11:21:39.030Z</div>
 </div></body></html>
