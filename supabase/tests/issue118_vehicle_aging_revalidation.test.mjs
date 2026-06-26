@@ -173,3 +173,62 @@ select 'prompt',
     `system prompt nao cobre as 5 acoes + proibicao de auto-aplicacao; saida=${out}`,
   )
 })
+
+// ---------------------------------------------------------------------------
+// AC2 (sub-clausula de visibilidade): um achado `stock_aging_90d` do agente
+//      vehicle-aging-analyst, registrado como pending_approval para um tenant
+//      demo, DEVE aflorar nas views de operacao consumidas pelo painel:
+//        - ops_agent_status_view  (linha do agente: pending_findings, badge,
+//          identified_delta)   def: migrations/20260608200000_ops_agent_identified_delta.sql:13-65
+//        - ops_finding_kpis       (KPIs do tenant: pending_count, recoverable_delta)
+//          def: migrations/20260607170000_ops_factory_persistence.sql:368-435
+//
+// Para ser pegador-de-regressao (e nao um "row existe / not null" tautologico),
+// medimos um BASELINE das duas views ANTES do insert e afirmamos o DELTA exato
+// que o achado provoca — se a view deixasse de refletir o achado, o delta seria
+// 0 e o teste falharia. delta=12500 e' escolhido para casar identified_delta
+// (status->qualquer) e recoverable_delta (status pending/approved).
+// ---------------------------------------------------------------------------
+test('AC2 visibilidade: achado stock_aging_90d aflora em ops_agent_status_view e ops_finding_kpis', () => {
+  const { ok, out, err } = withFixture(`
+create temp table _bl as
+select
+  (select pending_findings from ops_agent_status_view v
+     where v.tenant_id = (select id from tenants where tenant_key = 'demo-ops-a')
+       and v.agent_key = 'vehicle-aging-analyst') as asv_pending,
+  (select identified_delta from ops_agent_status_view v
+     where v.tenant_id = (select id from tenants where tenant_key = 'demo-ops-a')
+       and v.agent_key = 'vehicle-aging-analyst') as asv_delta,
+  (select pending_count from ops_finding_kpis k
+     where k.tenant_id = (select id from tenants where tenant_key = 'demo-ops-a')) as kpi_pending,
+  (select recoverable_delta from ops_finding_kpis k
+     where k.tenant_id = (select id from tenants where tenant_key = 'demo-ops-a')) as kpi_delta;
+
+insert into finding (tenant_id, agent_key, finding_type, severity, status,
+                     expected, billed, evidence, delta, fingerprint)
+select t.id, 'vehicle-aging-analyst', 'stock_aging_90d', 'high', 'pending_approval',
+       '{}', '{}', '{}', 12500.00, 'issue118-aging-visibility-fixture'
+  from tenants t
+ where t.tenant_key = 'demo-ops-a';
+
+select 'vis',
+       (v.pending_findings - b.asv_pending)::text,        -- +1 achado pendente do agente
+       (v.identified_delta - b.asv_delta)::text,          -- +12500 no identified_delta do agente
+       v.has_pending_badge::text,                         -- badge de pendencia ligado
+       (k.pending_count - b.kpi_pending)::text,           -- +1 no pending_count do tenant
+       (k.recoverable_delta - b.kpi_delta)::text          -- +12500 no recoverable_delta do tenant
+  from _bl b,
+       ops_agent_status_view v,
+       ops_finding_kpis k
+ where v.tenant_id = (select id from tenants where tenant_key = 'demo-ops-a')
+   and v.agent_key = 'vehicle-aging-analyst'
+   and k.tenant_id = (select id from tenants where tenant_key = 'demo-ops-a');
+`)
+  assert.ok(ok, `psql falhou: ${err}`)
+  // O achado recem-inserido tem que mover AMBAS as views exatamente do esperado.
+  assert.deepEqual(
+    find(out, 'vis'),
+    ['vis', '1', '12500.00', 'true', '1', '12500.00'],
+    `achado stock_aging_90d nao aflorou nas views de operacao; saida=${out}`,
+  )
+})

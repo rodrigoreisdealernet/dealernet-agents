@@ -4,9 +4,9 @@
   "slug": "feat-ops-revalidar-agente-vehicle",
   "branch": "feature/118-feat-ops-revalidar-agente-vehicle",
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/118",
-  "pr": null,
-  "prUrl": null,
-  "updatedAt": "2026-06-26T11:05:01.392Z",
+  "pr": "123",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/123",
+  "updatedAt": "2026-06-26T11:16:48.984Z",
   "steps": [
     {
       "id": "spec",
@@ -46,8 +46,8 @@
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "running",
-      "summary": "",
+      "status": "done",
+      "summary": "16 pytest + 4 SQL contract, all green; no prod change (revalidation)",
       "artifacts": [],
       "notes": [
         "reading spec and existing tests",
@@ -60,10 +60,15 @@
     {
       "id": "test-review",
       "label": "05 · Test review",
-      "status": "pending",
+      "status": "running",
       "summary": "",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "Auditing issue118 test suite: reading test files + code under test",
+        "Audit complete: 16 py + 4 sql green; verified deferred AC4/AC5 coverage is real; one minor AC2 view-visibility gap. Verdict PASS.",
+        "iteration 1: PASS with 1 non-blocking gap; looping to tester to pin ops_agent_status_view/ops_finding_kpis visibility",
+        "Adding AC2 visibility test: stock_aging_90d finding surfaces via ops_agent_status_view + ops_finding_kpis"
+      ],
       "gate": null
     },
     {
