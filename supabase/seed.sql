@@ -1,1009 +1,74 @@
--- Demo-only baseline seed data for UI usability.
+-- Demo seed data for UI usability — DIA DMS automotivo.
 --
--- Purpose:
---   Populate a coherent synthetic dataset so every core screen renders useful
---   rows/metrics in shared demo environments.
---
--- Idempotency:
---   This seed first removes prior rows for this baseline namespace
---   (`source_record_id` prefixed with `demo-baseline-`) and then recreates a
---   fixed dataset. Re-running yields the same cardinalities and KPI behavior.
+-- O antigo baseline Wynne (rental: contratos, clientes, ativos, faturas e os
+-- agentes/findings do Operations Factory revrec/credit/fleet/account-health/
+-- territory + 500 placeholders) foi REMOVIDO: o produto agora é o DMS automotivo
+-- (DIA). Apenas os tenants compartilhados demo-ops-a/b são preservados — o
+-- domínio DIA (config do agente vehicle-aging e ops findings) os reutiliza.
 
+begin;
+set local request.jwt.claim.role = 'service_role';
+
+-- Tenants compartilhados de ops (preservados do baseline Wynne removido).
+INSERT INTO tenants (tenant_key, name) VALUES
+  ('demo-ops-a', 'Demo Ops Tenant A'),
+  ('demo-ops-b', 'Demo Ops Tenant B')
+ON CONFLICT (tenant_key) DO UPDATE SET name = EXCLUDED.name;
+
+commit;
+
+-- ===========================================================================
+-- Purga do legado Wynne (rental / Operations Factory) — idempotente.
+-- Remove os dados de demo herdados do template de aluguel que não fazem parte do
+-- produto DIA (DMS automotivo). Mantém os tenants (acima) e o domínio DIA
+-- (abaixo). Os findings/config do agente DIA vehicle-aging-analyst são preservados
+-- (agent_key/namespace distintos). Ordem child→parent respeita as FKs
+-- (invoice_adjustment_draft/credit_change_proposal → finding → ops_workflow_run).
+-- ===========================================================================
 begin;
 set local request.jwt.claim.role = 'service_role';
 
 DO $$
 DECLARE
-  v_now timestamptz := now();
-
-  v_company_id uuid;
-  v_region_gulf uuid;
-  v_region_north uuid;
-  v_branch_north uuid;
-  v_branch_south uuid;
-
-  v_customer_ids uuid[] := '{}'::uuid[];
-  v_billing_ids uuid[] := '{}'::uuid[];
-  v_job_site_ids uuid[] := '{}'::uuid[];
-
-  v_category_ids uuid[] := '{}'::uuid[];
-
-  v_asset_ids uuid[] := '{}'::uuid[];
-  v_on_rent_asset_ids uuid[] := '{}'::uuid[];
-  v_transfer_asset_ids uuid[] := '{}'::uuid[];
-  v_hold_asset_ids uuid[] := '{}'::uuid[];
-
-  v_maintenance_ids uuid[] := '{}'::uuid[];
-  v_inspection_ids uuid[] := '{}'::uuid[];
-
-  v_order_ids uuid[] := '{}'::uuid[];
-  v_contract_ids uuid[] := '{}'::uuid[];
-
-  v_entity_id uuid;
-  v_branch_id uuid;
-  v_category_id uuid;
-  v_asset_status text;
-  v_operational_status text;
-  v_maintenance_due_at timestamptz;
-
-  v_fact_branch_on_rent uuid;
-  v_fact_branch_utilization uuid;
-  v_fact_asset_downtime uuid;
-  v_fact_asset_meter uuid;
-
-  i int;
-  j int;
+  v_wynne_agents text[] := ARRAY[
+    'revrec-analyst','credit-analyst','fleet-auditor',
+    'account-health-queue','territory-account-brief'
+  ];
 BEGIN
   PERFORM set_config('request.jwt.claim.role', 'service_role', true);
 
-  -- Remove previous baseline rows so the seed remains idempotent and reproducible.
-  -- Clean up portal scope tokens that reference demo contract entities before deleting those entities.
-  DELETE FROM portal_contract_scope_tokens
-  WHERE contract_id IN (
-    SELECT id FROM entities
-    WHERE entity_type = 'rental_contract'
-      AND source_record_id LIKE 'demo-baseline-rental-contract-%'
-  );
+  -- Drafts/propostas que referenciam findings (FK → finding).
+  DELETE FROM invoice_adjustment_draft;
+  DELETE FROM credit_change_proposal;
 
-  DELETE FROM entities
-  WHERE source_record_id LIKE 'demo-baseline-%';
+  -- Tokens de escopo do portal que referenciam contratos demo-baseline.
+  DELETE FROM portal_intake_scope_tokens;
+  DELETE FROM portal_contract_scope_tokens;
 
-  -- ---------------------------------------------------------------------------
-  -- Enterprise org hierarchy
-  -- ---------------------------------------------------------------------------
-  SELECT entity_id INTO v_company_id
-  FROM rental_upsert_entity_current_state(
-    p_entity_type => 'company',
-    p_source_record_id => 'demo-baseline-company-001',
-    p_data => jsonb_build_object(
-      'name', 'Dealernet Industrial Rentals',
-      'default_currency_code', 'USD',
-      'locale_code', 'en-US',
-      'tax_region_code', 'US-TX',
-      'timezone', 'America/Chicago',
-      'tenant', 'default'
-    )
-  );
+  -- Findings dos agentes Wynne (revrec/credit/fleet/account-health/territory)
+  -- + os 500 placeholders. Os do agente DIA (vehicle-aging-analyst) ficam.
+  DELETE FROM finding WHERE agent_key = ANY(v_wynne_agents);
 
-  SELECT entity_id INTO v_region_gulf
-  FROM rental_upsert_entity_current_state(
-    p_entity_type => 'region',
-    p_source_record_id => 'demo-baseline-region-gulf-coast',
-    p_data => jsonb_build_object(
-      'name', 'Gulf Coast',
-      'company_id', v_company_id,
-      'default_currency_code', 'USD',
-      'locale_code', 'en-US',
-      'tax_region_code', 'US-TX',
-      'timezone', 'America/Chicago'
-    )
-  );
-
-  SELECT entity_id INTO v_region_north
-  FROM rental_upsert_entity_current_state(
-    p_entity_type => 'region',
-    p_source_record_id => 'demo-baseline-region-north-texas',
-    p_data => jsonb_build_object(
-      'name', 'North Texas',
-      'company_id', v_company_id,
-      'default_currency_code', 'USD',
-      'locale_code', 'en-US',
-      'tax_region_code', 'US-TX',
-      'timezone', 'America/Chicago'
-    )
-  );
-
-  PERFORM rental_upsert_relationship('company_has_region', v_company_id, v_region_gulf);
-  PERFORM rental_upsert_relationship('company_has_region', v_company_id, v_region_north);
-
-  -- ---------------------------------------------------------------------------
-  -- Branches
-  -- ---------------------------------------------------------------------------
-  SELECT entity_id INTO v_branch_north
-  FROM rental_upsert_entity_current_state(
-    p_entity_type => 'branch',
-    p_source_record_id => 'demo-baseline-branch-north',
-    p_data => jsonb_build_object(
-      'name', 'Houston Central',
-      'branch_code', 'HOUC',
-      'region', 'Gulf Coast',
-      'region_id', v_region_gulf,
-      'company_id', v_company_id,
-      'default_currency_code', 'USD',
-      'locale_code', 'en-US',
-      'tax_region_code', 'US-TX',
-      'timezone', 'America/Chicago',
-      'city', 'Houston',
-      'state', 'TX'
-    )
-  );
-
-  SELECT entity_id INTO v_branch_south
-  FROM rental_upsert_entity_current_state(
-    p_entity_type => 'branch',
-    p_source_record_id => 'demo-baseline-branch-south',
-    p_data => jsonb_build_object(
-      'name', 'Dallas North Yard',
-      'branch_code', 'DALN',
-      'region', 'North Texas',
-      'region_id', v_region_north,
-      'company_id', v_company_id,
-      'default_currency_code', 'USD',
-      'locale_code', 'en-US',
-      'tax_region_code', 'US-TX',
-      'timezone', 'America/Chicago',
-      'city', 'Dallas',
-      'state', 'TX'
-    )
-  );
-
-  PERFORM rental_upsert_relationship('region_has_branch', v_region_gulf, v_branch_north);
-  PERFORM rental_upsert_relationship('region_has_branch', v_region_north, v_branch_south);
-
-  -- ---------------------------------------------------------------------------
-  -- Customers + billing accounts + contacts + job sites
-  -- ---------------------------------------------------------------------------
-  FOR i IN 1..4 LOOP
-    SELECT entity_id INTO v_entity_id
-    FROM rental_upsert_entity_current_state(
-      p_entity_type => 'customer',
-      p_source_record_id => format('demo-baseline-customer-%s', i),
-      p_data => jsonb_build_object(
-        'name', (ARRAY[
-          'Blue Mesa Civil Works',
-          'Ironwood Industrial Mechanics',
-          'Summit Arc Steel Services',
-          'Prairie Line Utility Builders'
-        ])[i],
-        'customer_type', CASE WHEN i % 2 = 0 THEN 'national' ELSE 'local' END,
-        'tier', CASE WHEN i <= 2 THEN 'gold' ELSE 'silver' END,
-        'industry', (ARRAY['heavy_civil', 'industrial_maintenance', 'steel_erection', 'pipeline'])[i],
-        'hq_address', (ARRAY[
-          '100 Demo Parkway, Yard District, TX 75001',
-          '245 Service Loop, Mockingbird Park, TX 75002',
-          '388 Crane Lane, Sampleton, TX 75003',
-          '520 Utility Row, Testview, TX 75004'
-        ])[i]
-      )
-    );
-    v_customer_ids := array_append(v_customer_ids, v_entity_id);
-
-    SELECT entity_id INTO v_entity_id
-    FROM rental_upsert_entity_current_state(
-      p_entity_type => 'billing_account',
-      p_source_record_id => format('demo-baseline-billing-%s', i),
-      p_data => jsonb_build_object(
-        'name', (ARRAY[
-          'Blue Mesa Civil - AP',
-          'Ironwood Industrial - AP',
-          'Summit Arc Steel - AP',
-          'Prairie Line Utility - AP'
-        ])[i],
-        'account_number', format('BA-TX-%s', lpad(i::text, 4, '0')),
-        'payment_terms', CASE WHEN i % 2 = 0 THEN 'NET45' ELSE 'NET30' END,
-        'credit_limit', (ARRAY[175000, 250000, 140000, 210000])[i],
-        'billing_email', (ARRAY[
-          'ap.blue-mesa@example.com',
-          'ap.ironwood@example.com',
-          'ap.summit-arc@example.com',
-          'ap.prairie-line@example.com'
-        ])[i]
-      )
-    );
-    v_billing_ids := array_append(v_billing_ids, v_entity_id);
-
-    PERFORM rental_upsert_relationship('customer_has_billing_account', v_customer_ids[i], v_billing_ids[i]);
-
-    SELECT entity_id INTO v_entity_id
-    FROM rental_upsert_entity_current_state(
-      p_entity_type => 'contact',
-      p_source_record_id => format('demo-baseline-contact-primary-%s', i),
-      p_data => jsonb_build_object(
-        'name', (ARRAY[
-          'Avery Quinn',
-          'Jordan Reese',
-          'Morgan Hale',
-          'Casey Rowan'
-        ])[i],
-        'role', 'Project Manager',
-        'email', (ARRAY[
-          'avery.quinn@example.com',
-          'jordan.reese@example.com',
-          'morgan.hale@example.com',
-          'casey.rowan@example.com'
-        ])[i],
-        'phone', (ARRAY[
-          '713-555-0142',
-          '281-555-0188',
-          '214-555-0126',
-          '972-555-0194'
-        ])[i],
-        'customer_id', v_customer_ids[i]
-      )
-    );
-    PERFORM rental_upsert_relationship('customer_has_contact', v_customer_ids[i], v_entity_id);
-
-    SELECT entity_id INTO v_entity_id
-    FROM rental_upsert_entity_current_state(
-      p_entity_type => 'job_site',
-      p_source_record_id => format('demo-baseline-job-site-primary-%s', i),
-      p_data => jsonb_build_object(
-        'name', (ARRAY[
-          'Route 77 Corridor Phase B',
-          'Harbor Works Turnaround Unit 3',
-          'North Channel Bridge Steel Package',
-          'Pioneer Ridge Compressor Expansion'
-        ])[i],
-        'address', (ARRAY[
-          '710 Worksite Way, Yard District, TX 75005',
-          '840 Fabrication Blvd, Mockingbird Park, TX 75006',
-          '905 Lift Access Rd, Sampleton, TX 75007',
-          '1120 Compressor Ct, Testview, TX 75008'
-        ])[i],
-        'customer_id', v_customer_ids[i]
-      )
-    );
-    v_job_site_ids := array_append(v_job_site_ids, v_entity_id);
-    PERFORM rental_upsert_relationship('customer_has_job_site', v_customer_ids[i], v_entity_id);
-
-    IF i <= 2 THEN
-      SELECT entity_id INTO v_entity_id
-      FROM rental_upsert_entity_current_state(
-        p_entity_type => 'contact',
-        p_source_record_id => format('demo-baseline-contact-secondary-%s', i),
-        p_data => jsonb_build_object(
-          'name', (ARRAY['Blake Carter', 'Taylor Monroe'])[i],
-          'role', 'Accounts Payable',
-          'email', (ARRAY[
-            'blake.carter@example.com',
-            'taylor.monroe@example.com'
-          ])[i],
-          'phone', (ARRAY['713-555-0221', '281-555-0235'])[i],
-          'customer_id', v_customer_ids[i]
-        )
-      );
-      PERFORM rental_upsert_relationship('customer_has_contact', v_customer_ids[i], v_entity_id);
-
-      SELECT entity_id INTO v_entity_id
-      FROM rental_upsert_entity_current_state(
-        p_entity_type => 'job_site',
-        p_source_record_id => format('demo-baseline-job-site-secondary-%s', i),
-        p_data => jsonb_build_object(
-          'name', (ARRAY[
-            'Grand Basin Drainage Package',
-            'Lakeview Refinery North Rack'
-          ])[i],
-          'address', (ARRAY[
-            '1300 Demo Basin Rd, Yard District, TX 75009',
-            '1425 Rail Spur Ave, Mockingbird Park, TX 75010'
-          ])[i],
-          'customer_id', v_customer_ids[i]
-        )
-      );
-      v_job_site_ids := array_append(v_job_site_ids, v_entity_id);
-      PERFORM rental_upsert_relationship('customer_has_job_site', v_customer_ids[i], v_entity_id);
-    END IF;
-  END LOOP;
-
-  -- ---------------------------------------------------------------------------
-  -- Customer profile enrichments: notes, documents, and fact rollups
-  -- ---------------------------------------------------------------------------
-  DECLARE
-    v_fact_customer_balance         uuid;
-    v_fact_customer_credit_limit    uuid;
-    v_fact_customer_avg_days        uuid;
-    v_fact_customer_payment_issue   uuid;
-    v_note_id                       uuid;
-    v_doc_id                        uuid;
-  BEGIN
-    SELECT id INTO v_fact_customer_balance        FROM fact_types WHERE key = 'customer_balance';
-    SELECT id INTO v_fact_customer_credit_limit   FROM fact_types WHERE key = 'customer_credit_limit';
-    SELECT id INTO v_fact_customer_avg_days       FROM fact_types WHERE key = 'customer_avg_days_to_pay';
-    SELECT id INTO v_fact_customer_payment_issue  FROM fact_types WHERE key = 'customer_payment_issue_flag';
-
-    FOR i IN 1..4 LOOP
-      -- Facts: balance and credit_limit per customer
-      INSERT INTO entity_facts (entity_id, fact_type_id, value, source_id)
-      VALUES (
-        v_customer_ids[i],
-        v_fact_customer_balance,
-        (ARRAY[42800, 118500, 9200, 76400])[i],
-        format('demo-baseline-customer-%s', i)
-      ) ON CONFLICT (entity_id, fact_type_id, dimension_id) DO UPDATE SET
-        value      = EXCLUDED.value,
-        source_id  = EXCLUDED.source_id,
-        updated_at = now();
-
-      INSERT INTO entity_facts (entity_id, fact_type_id, value, source_id)
-      VALUES (
-        v_customer_ids[i],
-        v_fact_customer_credit_limit,
-        (ARRAY[175000, 250000, 140000, 210000])[i],
-        format('demo-baseline-customer-%s', i)
-      ) ON CONFLICT (entity_id, fact_type_id, dimension_id) DO UPDATE SET
-        value      = EXCLUDED.value,
-        source_id  = EXCLUDED.source_id,
-        updated_at = now();
-
-      INSERT INTO entity_facts (entity_id, fact_type_id, value, source_id)
-      VALUES (
-        v_customer_ids[i],
-        v_fact_customer_avg_days,
-        (ARRAY[28, 34, 19, 41])[i],
-        format('demo-baseline-customer-%s', i)
-      ) ON CONFLICT (entity_id, fact_type_id, dimension_id) DO UPDATE SET
-        value      = EXCLUDED.value,
-        source_id  = EXCLUDED.source_id,
-        updated_at = now();
-
-      INSERT INTO entity_facts (entity_id, fact_type_id, value, source_id)
-      VALUES (
-        v_customer_ids[i],
-        v_fact_customer_payment_issue,
-        (ARRAY[0, 0, 1, 0])[i],
-        format('demo-baseline-customer-%s', i)
-      ) ON CONFLICT (entity_id, fact_type_id, dimension_id) DO UPDATE SET
-        value      = EXCLUDED.value,
-        source_id  = EXCLUDED.source_id,
-        updated_at = now();
-
-      -- Notes: one internal note per customer
-      SELECT entity_id INTO v_note_id
-      FROM rental_upsert_entity_current_state(
-        p_entity_type      => 'note',
-        p_source_record_id => format('demo-baseline-note-%s', i),
-        p_data             => jsonb_build_object(
-          'customer_id',  v_customer_ids[i],
-          'body',         (ARRAY[
-            'Preferred call window 07:00–09:00 CST. Escalate billing disputes to Avery Quinn.',
-            'Volume-discount agreement in place for heavy-lift equipment. Verify before quoting.',
-            'Payment delays noted on last two invoices. Require PO reference on all new orders.',
-            'Multi-site customer; coordinate delivery schedule with Casey Rowan two days ahead.'
-          ])[i],
-          'note_type',    'internal',
-          'created_by',   'seed'
-        )
-      );
-      PERFORM rental_upsert_relationship('customer_has_note', v_customer_ids[i], v_note_id);
-
-      -- Documents: one compliance metadata record per customer
-      SELECT entity_id INTO v_doc_id
-      FROM rental_upsert_entity_current_state(
-        p_entity_type      => 'document',
-        p_source_record_id => format('demo-baseline-doc-credit-app-%s', i),
-        p_data             => jsonb_build_object(
-          'customer_id',      v_customer_ids[i],
-          'document_type',    'credit_application',
-          'title',            'Credit Application',
-          'storage_ref',      format('customers/%s/credit_application.pdf', v_customer_ids[i]),
-          'mime_type',        'application/pdf',
-          'status',           'approved',
-          'reviewed_by',      'seed',
-          'expiry_date',      (now() + interval '2 years')::date
-        )
-      );
-      PERFORM rental_upsert_relationship('customer_has_document', v_customer_ids[i], v_doc_id);
-    END LOOP;
-  END;
-
-  -- ---------------------------------------------------------------------------
-  -- (Removed) CRM payment-issue seed — the CRM domain was pruned from the DIA core
-  -- schema (see migration 20260625120000_dia_core_prune_wynne_domain.sql).
-  -- ---------------------------------------------------------------------------
-
-  -- ---------------------------------------------------------------------------
-  -- Asset categories
-  -- ---------------------------------------------------------------------------
-  FOR i IN 1..5 LOOP
-    SELECT entity_id INTO v_entity_id
-    FROM rental_upsert_entity_current_state(
-      p_entity_type => 'asset_category',
-      p_source_record_id => format('demo-baseline-category-%s', i),
-      p_data => jsonb_build_object(
-        'name', (ARRAY['Earthmoving Excavators', 'Boom and Scissor Lifts', 'Power & Climate Control', 'Compaction Rollers', 'Worksite Attachments'])[i],
-        'default_rate_type', (ARRAY['daily', 'weekly', 'daily', 'weekly', 'fixed'])[i],
-        'default_rate_amount', (ARRAY[595, 1850, 365, 1125, 145])[i],
-        'utilization_group', (ARRAY['earthmoving', 'access', 'power', 'siteworks', 'attachments'])[i]
-      )
-    );
-    v_category_ids := array_append(v_category_ids, v_entity_id);
-  END LOOP;
-
-  -- ---------------------------------------------------------------------------
-  -- Assets (40 total, mixed statuses)
-  -- ---------------------------------------------------------------------------
-  FOR i IN 1..40 LOOP
-    v_branch_id := CASE WHEN i % 2 = 0 THEN v_branch_north ELSE v_branch_south END;
-    v_category_id := v_category_ids[((i - 1) % 5) + 1];
-
-    IF i <= 16 THEN
-      v_asset_status := 'available';
-      v_operational_status := 'available';
-    ELSIF i <= 28 THEN
-      v_asset_status := 'on_rent';
-      v_operational_status := 'on_rent';
-    ELSIF i <= 34 THEN
-      v_asset_status := 'in_maintenance';
-      v_operational_status := 'in_maintenance';
-    ELSIF i <= 37 THEN
-      v_asset_status := 'on_transfer';
-      v_operational_status := 'on_transfer';
-    ELSE
-      v_asset_status := 'on_inspection_hold';
-      v_operational_status := 'on_inspection_hold';
-    END IF;
-
-    IF i % 7 = 0 THEN
-      v_maintenance_due_at := v_now - interval '2 days';
-    ELSIF i % 4 = 0 THEN
-      v_maintenance_due_at := v_now + interval '5 days';
-    ELSE
-      v_maintenance_due_at := v_now + interval '25 days';
-    END IF;
-
-    SELECT entity_id INTO v_entity_id
-    FROM rental_upsert_entity_current_state(
-      p_entity_type => 'asset',
-      p_source_record_id => format('demo-baseline-asset-%s', lpad(i::text, 3, '0')),
-      p_data => jsonb_build_object(
-        'name', CASE ((i - 1) % 5)
-          WHEN 0 THEN (ARRAY['CAT 320 Excavator', 'CAT 323 Excavator', 'Komatsu PC210 Excavator', 'John Deere 210 P-Tier Excavator'])[1 + ((i - 1) % 4)]
-          WHEN 1 THEN (ARRAY['Genie S-65 Boom Lift', 'JLG 860SJ Boom Lift', 'JLG 1932R Scissor Lift', 'Skyjack SJIII 3219 Scissor Lift'])[1 + ((i - 1) % 4)]
-          WHEN 2 THEN (ARRAY['Generac MLG25 Generator', 'Atlas Copco QAS 45 Generator', 'Aggreko 5-Ton Portable AC Unit', 'Doosan G70 Generator'])[1 + ((i - 1) % 4)]
-          WHEN 3 THEN (ARRAY['Bomag BW177 D-5 Roller', 'Dynapac CA2500D Roller', 'Wacker Neuson RD27 Roller', 'CAT CS56B Roller'])[1 + ((i - 1) % 4)]
-          ELSE (ARRAY['CAT H120 Hammer Attachment', 'Paladin 72in Skid Steer Broom', 'Werk-Brau 48in Trenching Bucket', 'Auger Torque X4500 Earth Drill'])[1 + ((i - 1) % 4)]
-        END,
-        'identifier', format(
-          '%s-%s-%s',
-          CASE WHEN v_branch_id = v_branch_north THEN 'HOU' ELSE 'DAL' END,
-          (ARRAY['EXC', 'LFT', 'PWR', 'CMP', 'ATT'])[1 + ((i - 1) % 5)],
-          lpad(i::text, 3, '0')
-        ),
-        'make', CASE ((i - 1) % 5)
-          WHEN 0 THEN (ARRAY['CAT', 'CAT', 'Komatsu', 'John Deere'])[1 + ((i - 1) % 4)]
-          WHEN 1 THEN (ARRAY['Genie', 'JLG', 'JLG', 'Skyjack'])[1 + ((i - 1) % 4)]
-          WHEN 2 THEN (ARRAY['Generac', 'Atlas Copco', 'Aggreko', 'Doosan'])[1 + ((i - 1) % 4)]
-          WHEN 3 THEN (ARRAY['Bomag', 'Dynapac', 'Wacker Neuson', 'CAT'])[1 + ((i - 1) % 4)]
-          ELSE (ARRAY['CAT', 'Paladin', 'Werk-Brau', 'Auger Torque'])[1 + ((i - 1) % 4)]
-        END,
-        'model', CASE ((i - 1) % 5)
-          WHEN 0 THEN (ARRAY['320', '323', 'PC210', '210 P-Tier'])[1 + ((i - 1) % 4)]
-          WHEN 1 THEN (ARRAY['S-65', '860SJ', '1932R', 'SJIII 3219'])[1 + ((i - 1) % 4)]
-          WHEN 2 THEN (ARRAY['MLG25', 'QAS 45', '5-Ton PACU', 'G70'])[1 + ((i - 1) % 4)]
-          WHEN 3 THEN (ARRAY['BW177 D-5', 'CA2500D', 'RD27', 'CS56B'])[1 + ((i - 1) % 4)]
-          ELSE (ARRAY['H120', '72in Broom', '48in Trenching Bucket', 'X4500'])[1 + ((i - 1) % 4)]
-        END,
-        'year', 2017 + (i % 8),
-        'serial_number', format('TXR-%s', lpad((42000 + i)::text, 5, '0')),
-        'status', v_asset_status,
-        'operational_status', v_operational_status,
-        'ownership_type', CASE WHEN i <= 30 THEN 'owned' ELSE 'leased' END,
-        'asset_category_id', v_category_id,
-        'category_id', v_category_id,
-        'branch_id', v_branch_id,
-        'maintenance_due_at', v_maintenance_due_at,
-        'daily_rate', CASE ((i - 1) % 5)
-          WHEN 0 THEN (ARRAY[800, 820, 750, 770])[1 + ((i - 1) % 4)]
-          WHEN 1 THEN (ARRAY[350, 420, 280, 300])[1 + ((i - 1) % 4)]
-          WHEN 2 THEN (ARRAY[250, 290, 220, 260])[1 + ((i - 1) % 4)]
-          WHEN 3 THEN (ARRAY[450, 480, 380, 500])[1 + ((i - 1) % 4)]
-          ELSE (ARRAY[150, 120, 140, 130])[1 + ((i - 1) % 4)]
-        END,
-        'weekly_rate', CASE ((i - 1) % 5)
-          WHEN 0 THEN (ARRAY[2800, 2900, 2600, 2700])[1 + ((i - 1) % 4)]
-          WHEN 1 THEN (ARRAY[1200, 1450, 950, 1050])[1 + ((i - 1) % 4)]
-          WHEN 2 THEN (ARRAY[900, 1000, 750, 850])[1 + ((i - 1) % 4)]
-          WHEN 3 THEN (ARRAY[1600, 1700, 1350, 1800])[1 + ((i - 1) % 4)]
-          ELSE (ARRAY[500, 400, 475, 440])[1 + ((i - 1) % 4)]
-        END,
-        'monthly_rate', CASE ((i - 1) % 5)
-          WHEN 0 THEN (ARRAY[7500, 7800, 7000, 7200])[1 + ((i - 1) % 4)]
-          WHEN 1 THEN (ARRAY[3500, 4200, 2800, 3000])[1 + ((i - 1) % 4)]
-          WHEN 2 THEN (ARRAY[2800, 3200, 2400, 2900])[1 + ((i - 1) % 4)]
-          WHEN 3 THEN (ARRAY[4500, 4800, 3800, 5000])[1 + ((i - 1) % 4)]
-          ELSE (ARRAY[1400, 1100, 1300, 1200])[1 + ((i - 1) % 4)]
-        END,
-        'image_url', CASE ((i - 1) % 5)
-          WHEN 0 THEN '/equipment-images/earthmoving.svg'
-          WHEN 1 THEN '/equipment-images/boom-scissor-lifts.svg'
-          WHEN 2 THEN '/equipment-images/power-climate.svg'
-          WHEN 3 THEN '/equipment-images/compaction-rollers.svg'
-          ELSE '/equipment-images/worksite-attachments.svg'
-        END
-      )
-    );
-
-    v_asset_ids := array_append(v_asset_ids, v_entity_id);
-    PERFORM rental_upsert_relationship('branch_has_asset', v_branch_id, v_entity_id);
-    PERFORM rental_upsert_relationship('asset_category_has_asset', v_category_id, v_entity_id);
-
-    IF v_operational_status = 'on_rent' THEN
-      v_on_rent_asset_ids := array_append(v_on_rent_asset_ids, v_entity_id);
-    ELSIF v_operational_status = 'on_transfer' THEN
-      v_transfer_asset_ids := array_append(v_transfer_asset_ids, v_entity_id);
-    ELSIF v_operational_status = 'on_inspection_hold' THEN
-      v_hold_asset_ids := array_append(v_hold_asset_ids, v_entity_id);
-    END IF;
-  END LOOP;
-
-  IF coalesce(array_length(v_transfer_asset_ids, 1), 0) = 0 THEN
-    RAISE EXCEPTION 'Demo baseline seed expected at least one on_transfer asset for transfer records';
-  END IF;
-
-  IF coalesce(array_length(v_on_rent_asset_ids, 1), 0) = 0 THEN
-    RAISE EXCEPTION 'Demo baseline seed expected at least one on_rent asset for contract line assignment';
-  END IF;
-
-  -- ---------------------------------------------------------------------------
-  -- Branch utilization facts (analytics cards)
-  -- ---------------------------------------------------------------------------
-  SELECT id INTO v_fact_branch_on_rent FROM fact_types WHERE key = 'branch_on_rent_count';
-  SELECT id INTO v_fact_branch_utilization FROM fact_types WHERE key = 'branch_utilization_rate';
-
-  INSERT INTO entity_facts (entity_id, fact_type_id, value, metadata)
-  VALUES
-    (v_branch_north, v_fact_branch_on_rent, 6, jsonb_build_object('seed', 'demo-baseline')),
-    (v_branch_north, v_fact_branch_utilization, 30.0, jsonb_build_object('seed', 'demo-baseline')),
-    (v_branch_south, v_fact_branch_on_rent, 6, jsonb_build_object('seed', 'demo-baseline')),
-    (v_branch_south, v_fact_branch_utilization, 30.0, jsonb_build_object('seed', 'demo-baseline'))
-  ON CONFLICT (entity_id, fact_type_id, dimension_id)
-  DO UPDATE SET
-    value = EXCLUDED.value,
-    metadata = EXCLUDED.metadata,
-    updated_at = now();
-
-  -- ---------------------------------------------------------------------------
-  -- Maintenance records + relationships (drives open maintenance KPI)
-  -- ---------------------------------------------------------------------------
-  FOR i IN 1..10 LOOP
-    SELECT entity_id INTO v_entity_id
-    FROM rental_upsert_entity_current_state(
-      p_entity_type => 'maintenance_record',
-      p_source_record_id => format('demo-baseline-maintenance-%s', lpad(i::text, 3, '0')),
-      p_data => jsonb_build_object(
-        'name', (ARRAY[
-          '250-Hour PM Service',
-          'Hydraulic Hose Replacement',
-          'Track Tension Adjustment',
-          'Annual ANSI Boom Lift Inspection',
-          'Generator Load-Bank Test',
-          'Brake System Service',
-          'Cooling Fan Replacement',
-          'Electrical Harness Repair',
-          'Cab Glass Replacement',
-          'Final QC + Wash Rack Release'
-        ])[i],
-        'status', (ARRAY['open', 'scheduled', 'in_progress', 'awaiting_parts', 'triage', 'open', 'completed', 'closed', 'cancelled', 'completed'])[i],
-        'maintenance_type', CASE WHEN i % 3 = 0 THEN 'corrective' ELSE 'preventive' END,
-        'asset_id', v_asset_ids[((i - 1) % array_length(v_asset_ids, 1)) + 1],
-        'opened_at', v_now - make_interval(days => (i + 1)),
-        -- Seed records 7-10 as completed/closed examples so service-history and downtime rollups have finished cycles to read from.
-        'completed_at', CASE WHEN i >= 7 THEN v_now - make_interval(days => (i - 5)) ELSE null END,
-        'outcome', CASE
-          WHEN i >= 7 AND i % 4 = 0 THEN 'monitor'
-          WHEN i >= 7 THEN 'returned_to_service'
-          ELSE null
-        END,
-        'resolution_notes', CASE
-          WHEN i >= 7 THEN format('Completed maintenance cycle %s and verified safe return to service.', lpad(i::text, 3, '0'))
-          ELSE null
-        END,
-        'cost_summary', CASE
-          WHEN i >= 7 THEN format(
-            'Labor $%s · Parts $%s · External $%s · Total $%s',
-            120 + (i * 15),
-            CASE WHEN i % 3 = 0 THEN 90 + (i * 8) ELSE 35 + (i * 5) END,
-            CASE WHEN i % 4 = 0 THEN 60 ELSE 0 END,
-            (120 + (i * 15))
-              + (CASE WHEN i % 3 = 0 THEN 90 + (i * 8) ELSE 35 + (i * 5) END)
-              + (CASE WHEN i % 4 = 0 THEN 60 ELSE 0 END)
-          )
-          ELSE null
-        END,
-        'total_cost', CASE
-          WHEN i >= 7 THEN
-            (120 + (i * 15))
-            + (CASE WHEN i % 3 = 0 THEN 90 + (i * 8) ELSE 35 + (i * 5) END)
-            + (CASE WHEN i % 4 = 0 THEN 60 ELSE 0 END)
-          ELSE null
-        END
-      )
-    );
-    v_maintenance_ids := array_append(v_maintenance_ids, v_entity_id);
-
-    PERFORM rental_upsert_relationship(
-      'asset_has_maintenance_record',
-      v_asset_ids[((i - 1) % array_length(v_asset_ids, 1)) + 1],
-      v_entity_id
-    );
-  END LOOP;
-
-  -- ---------------------------------------------------------------------------
-  -- Inspections + relationships
-  -- ---------------------------------------------------------------------------
-  FOR i IN 1..12 LOOP
-    SELECT entity_id INTO v_entity_id
-    FROM rental_upsert_entity_current_state(
-      p_entity_type => 'inspection',
-      p_source_record_id => format('demo-baseline-inspection-%s', lpad(i::text, 3, '0')),
-      p_data => jsonb_build_object(
-        'name', format(
-          '%s Inspection %s',
-          initcap((ARRAY['checkout', 'return', 'service'])[1 + ((i - 1) % 3)]),
-          lpad(i::text, 3, '0')
-        ),
-        'inspection_type', (ARRAY['checkout', 'return', 'service'])[1 + ((i - 1) % 3)],
-        'outcome', CASE WHEN i % 4 = 0 THEN 'fail' ELSE 'pass' END,
-        'asset_id', v_asset_ids[((i + 5) % array_length(v_asset_ids, 1)) + 1],
-        'inspected_at', v_now - make_interval(days => i)
-      )
-    );
-    v_inspection_ids := array_append(v_inspection_ids, v_entity_id);
-
-    PERFORM rental_upsert_relationship(
-      'asset_has_inspection',
-      v_asset_ids[((i + 5) % array_length(v_asset_ids, 1)) + 1],
-      v_entity_id
-    );
-  END LOOP;
-
-  -- ---------------------------------------------------------------------------
-  -- Transfers
-  -- ---------------------------------------------------------------------------
-  FOR i IN 1..6 LOOP
-    SELECT entity_id INTO v_entity_id
-    FROM create_entity_with_version(
-      p_entity_type => 'transfer',
-      p_source_record_id => format('demo-baseline-transfer-%s', lpad(i::text, 3, '0')),
-      p_data => jsonb_build_object(
-        'name', format('Inter-branch Transfer %s', lpad(i::text, 3, '0')),
-        'status', (ARRAY['requested', 'approved', 'in_transit', 'received', 'requested', 'cancelled'])[i],
-        'asset_id', v_transfer_asset_ids[1 + ((i - 1) % greatest(array_length(v_transfer_asset_ids, 1), 1))],
-        'from_branch_id', CASE WHEN i % 2 = 0 THEN v_branch_north ELSE v_branch_south END,
-        'to_branch_id', CASE WHEN i % 2 = 0 THEN v_branch_south ELSE v_branch_north END,
-        'requested_at', v_now - make_interval(days => (7 + i))
-      )
-    );
-  END LOOP;
-
-  -- ---------------------------------------------------------------------------
-  -- Rental orders + rental order lines
-  -- ---------------------------------------------------------------------------
-  FOR i IN 1..12 LOOP
-    SELECT entity_id INTO v_entity_id
-    FROM create_entity_with_version(
-      p_entity_type => 'rental_order',
-      p_source_record_id => format('demo-baseline-rental-order-%s', lpad(i::text, 3, '0')),
-      p_data => jsonb_build_object(
-        'name', format('Rental Order %s - %s', lpad(i::text, 3, '0'), (ARRAY['Blue Mesa Civil', 'Ironwood Industrial', 'Summit Arc Steel', 'Prairie Line Utility'])[1 + ((i - 1) % 4)]),
-        'order_number', format('RO-%s', lpad(i::text, 4, '0')),
-        'status', (ARRAY['draft', 'quoted', 'approved', 'approved', 'converted', 'converted', 'converted', 'converted', 'cancelled', 'expired', 'quoted', 'draft'])[i],
-        'rental_type', CASE WHEN i % 3 = 0 THEN 'internal' ELSE 'external' END,
-        'branch_id', CASE WHEN i % 2 = 0 THEN v_branch_north ELSE v_branch_south END,
-        'requester_id', (ARRAY[
-          'dispatch-hub-a@example.com',
-          'dispatch-hub-b@example.com',
-          'inside-sales-hub-a@example.com',
-          'inside-sales-hub-b@example.com'
-        ])[1 + ((i - 1) % 4)],
-        'customer_id', v_customer_ids[1 + ((i - 1) % array_length(v_customer_ids, 1))],
-        'billing_account_id', v_billing_ids[1 + ((i - 1) % array_length(v_billing_ids, 1))],
-        'job_site_id', v_job_site_ids[1 + ((i - 1) % array_length(v_job_site_ids, 1))],
-        'notes', 'Priority dispatch window coordinated with branch yard',
-        'transaction_currency_code', (ARRAY['USD', 'CAD', 'EUR'])[1 + ((i - 1) % 3)],
-        'reporting_currency_code', 'USD',
-        'fx_rate_applied', (ARRAY[1.0, 0.74, 1.09])[1 + ((i - 1) % 3)],
-        'fx_rate_effective_at', (v_now - make_interval(days => (i % 7)))::text
-      )
-    );
-
-    v_order_ids := array_append(v_order_ids, v_entity_id);
-
-    FOR j IN 1..2 LOOP
-      SELECT entity_id INTO v_entity_id
-      FROM create_entity_with_version(
-        p_entity_type => 'rental_order_line',
-        p_source_record_id => format('demo-baseline-rental-order-line-%s-%s', lpad(i::text, 3, '0'), j),
-        p_data => jsonb_build_object(
-          'order_id', v_order_ids[i],
-          'line_number', j,
-          'status', CASE
-            WHEN i >= 5 AND j = 1 THEN 'checked_out'
-            WHEN i >= 7 AND j = 2 THEN 'returned'
-            ELSE 'pending'
-          END,
-          'category_id', v_category_ids[1 + ((i + j - 2) % array_length(v_category_ids, 1))],
-          'job_site_id', v_job_site_ids[1 + ((i - 1) % array_length(v_job_site_ids, 1))],
-          'quantity', 1,
-          'rate_type', (ARRAY['daily', 'weekly', 'monthly', 'fixed'])[1 + ((i + j - 2) % 4)],
-          'planned_start', v_now::date - make_interval(days => (20 - i)),
-          'planned_end', v_now::date + make_interval(days => (5 + j - i))
-        )
-      );
-    END LOOP;
-  END LOOP;
-
-  -- ---------------------------------------------------------------------------
-  -- Contracts + contract lines (checked_out + returned + pending)
-  -- ---------------------------------------------------------------------------
-  FOR i IN 1..6 LOOP
-    SELECT entity_id INTO v_entity_id
-    FROM create_entity_with_version(
-      p_entity_type => 'rental_contract',
-      p_source_record_id => format('demo-baseline-rental-contract-%s', lpad(i::text, 3, '0')),
-      p_data => jsonb_build_object(
-        'name', format('Executed Rental Contract %s', lpad(i::text, 3, '0')),
-        'contract_number', format('RC-%s', lpad(i::text, 4, '0')),
-        'order_id', v_order_ids[4 + i],
-        'status', (ARRAY['pending_execution', 'active', 'active', 'closed', 'closed', 'cancelled'])[i],
-        'rental_type', CASE WHEN i % 3 = 0 THEN 'internal' ELSE 'external' END,
-        'branch_id', CASE WHEN i % 2 = 0 THEN v_branch_north ELSE v_branch_south END,
-        'billing_account_id', v_billing_ids[1 + ((i - 1) % array_length(v_billing_ids, 1))],
-        'customer_id', v_customer_ids[1 + ((i - 1) % array_length(v_customer_ids, 1))],
-        'job_site_id', v_job_site_ids[1 + ((i - 1) % array_length(v_job_site_ids, 1))],
-        'transaction_currency_code', (ARRAY['USD', 'CAD', 'EUR'])[1 + ((i - 1) % 3)],
-        'reporting_currency_code', 'USD',
-        'fx_rate_applied', (ARRAY[1.0, 0.74, 1.09])[1 + ((i - 1) % 3)],
-        'fx_rate_effective_at', (v_now - make_interval(days => (i % 7)))::text
-      )
-    );
-
-    v_contract_ids := array_append(v_contract_ids, v_entity_id);
-
-    -- Line A
-    SELECT entity_id INTO v_entity_id
-    FROM create_entity_with_version(
-      p_entity_type => 'rental_contract_line',
-      p_source_record_id => format('demo-baseline-rental-contract-line-%s-a', lpad(i::text, 3, '0')),
-      p_data => jsonb_build_object(
-        'contract_id', v_contract_ids[i],
-        'order_id', v_order_ids[4 + i],
-        'asset_id', v_on_rent_asset_ids[1 + ((i - 1) % greatest(array_length(v_on_rent_asset_ids, 1), 1))],
-        'category_id', v_category_ids[1 + ((i - 1) % array_length(v_category_ids, 1))],
-        'rental_type', 'external',
-        'rate_type', 'daily',
-        'rate_amount', 375,
-        'status', CASE
-          WHEN i IN (2, 3) THEN 'checked_out'
-          WHEN i IN (4, 5) THEN 'returned'
-          ELSE 'pending'
-        END,
-        'planned_start', v_now - make_interval(days => (10 + i)),
-        'planned_end', CASE WHEN i = 2 THEN v_now - interval '3 days' ELSE v_now + make_interval(days => (5 - i)) END,
-        'actual_start', CASE WHEN i IN (2, 3, 4, 5) THEN v_now - make_interval(days => (9 + i)) ELSE null END,
-        'actual_end', CASE WHEN i IN (4, 5) THEN v_now - make_interval(days => (2 + i)) ELSE null END
-      )
-    );
-
-    -- Line B
-    SELECT entity_id INTO v_entity_id
-    FROM create_entity_with_version(
-      p_entity_type => 'rental_contract_line',
-      p_source_record_id => format('demo-baseline-rental-contract-line-%s-b', lpad(i::text, 3, '0')),
-      p_data => jsonb_build_object(
-        'contract_id', v_contract_ids[i],
-        'order_id', v_order_ids[4 + i],
-        'asset_id', v_on_rent_asset_ids[1 + ((i + 3) % greatest(array_length(v_on_rent_asset_ids, 1), 1))],
-        'category_id', v_category_ids[1 + (i % array_length(v_category_ids, 1))],
-        'rental_type', 'external',
-        'rate_type', 'weekly',
-        'rate_amount', 1200,
-        'status', CASE
-          WHEN i = 3 THEN 'checked_out'
-          WHEN i IN (4, 5) THEN 'returned'
-          WHEN i = 6 THEN 'cancelled'
-          ELSE 'pending'
-        END,
-        'planned_start', v_now - make_interval(days => (8 + i)),
-        'planned_end', CASE WHEN i = 3 THEN v_now - interval '1 day' ELSE v_now + make_interval(days => (6 - i)) END,
-        'actual_start', CASE WHEN i IN (3, 4, 5) THEN v_now - make_interval(days => (7 + i)) ELSE null END,
-        'actual_end', CASE WHEN i IN (4, 5) THEN v_now - make_interval(days => (1 + i)) ELSE null END
-      )
-    );
-  END LOOP;
-
-  -- ---------------------------------------------------------------------------
-  -- Portal scope token for demo contract (enables portal schedule E2E tests)
-  -- Token 'dia-demo-portal-scope-001' is a non-secret demo value used only
-  -- in dev/CI. Production tokens must be cryptographically random (32+ bytes)
-  -- and provisioned through a secure out-of-band channel — never derived from
-  -- predictable identifiers and never shared across environments.
-  -- ---------------------------------------------------------------------------
-  INSERT INTO portal_contract_scope_tokens (contract_id, token_hash, job_site_id)
-  VALUES (
-    v_contract_ids[2],
-    encode(digest('dia-demo-portal-scope-001', 'sha256'), 'hex'),
-    null
-  )
-  ON CONFLICT (contract_id) DO UPDATE
-    SET token_hash = EXCLUDED.token_hash,
-        updated_at = now();
-
-  -- ---------------------------------------------------------------------------
-  -- Portal intake scope token for demo customer (enables portal intake E2E
-  -- tests). Token 'dia-demo-intake-token-001' is a non-secret demo value
-  -- used only in dev/CI. Production tokens must be cryptographically random
-  -- (32+ bytes) and provisioned through a secure out-of-band channel.
-  -- ---------------------------------------------------------------------------
-  INSERT INTO portal_intake_scope_tokens
-    (tenant_id, customer_candidate_id, token_hash, expires_at, issued_by)
-  VALUES (
-    'tenant-demo',
-    'demo-intake-candidate-001',
-    encode(digest('dia-demo-intake-token-001', 'sha256'), 'hex'),
-    '9999-12-31 00:00:00+00'::timestamptz,
-    'seed'
-  )
-  ON CONFLICT (token_hash) DO UPDATE
-    SET expires_at = EXCLUDED.expires_at,
-        updated_at = now();
-
-  -- ---------------------------------------------------------------------------
-  -- Invoices (current + prior month revenue)
-  -- ---------------------------------------------------------------------------
-  FOR i IN 1..8 LOOP
-    SELECT entity_id INTO v_entity_id
-    FROM create_entity_with_version(
-      p_entity_type => 'invoice',
-      p_source_record_id => format('demo-baseline-invoice-%s', lpad(i::text, 3, '0')),
-      p_data => jsonb_build_object(
-        'name', format('Rental Invoice %s', lpad(i::text, 3, '0')),
-        'invoice_number', format('INV-%s', lpad(i::text, 5, '0')),
-        'status', (ARRAY['sent', 'paid', 'sent', 'paid', 'pending', 'paid', 'void', 'sent'])[i],
-        'invoice_date', CASE
-          WHEN i <= 5 THEN ((date_trunc('month', v_now)::date + (i + 1)))::text
-          ELSE ((date_trunc('month', v_now - interval '1 month')::date + i))::text
-        END,
-        'billing_period_start', (v_now::date - make_interval(days => (30 + i)))::text,
-        'billing_period_end', (v_now::date - make_interval(days => (20 - i)))::text,
-        'subtotal', (ARRAY[4200, 5100, 3800, 4600, 2900, 3300, 800, 4100])[i],
-        'tax', (ARRAY[336, 408, 304, 368, 232, 264, 64, 328])[i],
-        'total', (ARRAY[4536, 5508, 4104, 4968, 3132, 3564, 864, 4428])[i],
-        'branch_id', CASE WHEN i % 2 = 0 THEN v_branch_north ELSE v_branch_south END,
-        'customer_id', v_customer_ids[1 + ((i - 1) % array_length(v_customer_ids, 1))],
-        'billing_account_id', v_billing_ids[1 + ((i - 1) % array_length(v_billing_ids, 1))],
-        'contract_id', v_contract_ids[1 + ((i - 1) % array_length(v_contract_ids, 1))],
-        'job_site_id', v_job_site_ids[1 + ((i - 1) % array_length(v_job_site_ids, 1))],
-        'transaction_currency_code', (ARRAY['USD', 'CAD', 'EUR'])[1 + ((i - 1) % 3)],
-        'reporting_currency_code', 'USD',
-        'fx_rate_applied', (ARRAY[1.0, 0.74, 1.09])[1 + ((i - 1) % 3)],
-        'fx_rate_effective_at', (v_now - make_interval(days => (i % 7)))::text,
-        'billing_exception_reason', CASE WHEN i = 7 THEN 'Missing signed delivery ticket' ELSE null END
-      )
-    );
-  END LOOP;
-
-  -- ---------------------------------------------------------------------------
-  -- Time-series points for fleet reporting (downtime + meter readings)
-  -- ---------------------------------------------------------------------------
-  SELECT id INTO v_fact_asset_downtime FROM fact_types WHERE key = 'asset_downtime';
-  SELECT id INTO v_fact_asset_meter FROM fact_types WHERE key = 'asset_meter_reading';
-
-  FOR i IN 1..14 LOOP
-    INSERT INTO time_series_points (entity_id, fact_type_id, observed_at, data_payload, metadata, source_id)
-    VALUES (
-      v_asset_ids[1 + ((i - 1) % array_length(v_asset_ids, 1))],
-      v_fact_asset_downtime,
-      v_now - make_interval(days => i),
-      jsonb_build_object(
-        'downtime_minutes', 45 + (i * 12),
-        'maintenance_record_id', CASE
-          WHEN i % 4 = 0 THEN null
-          ELSE v_maintenance_ids[1 + ((i - 1) % array_length(v_maintenance_ids, 1))]
-        END,
-        'inspection_id', CASE
-          WHEN i % 4 = 0 THEN v_inspection_ids[1 + ((i - 1) % array_length(v_inspection_ids, 1))]
-          ELSE null
-        END
-      ),
-      jsonb_build_object('seed', 'demo-baseline', 'source', CASE WHEN i % 4 = 0 THEN 'inspection' ELSE 'maintenance' END),
-      format('demo-baseline-downtime-%s', lpad(i::text, 3, '0'))
-    );
-
-    INSERT INTO time_series_points (entity_id, fact_type_id, observed_at, data_payload, metadata, source_id)
-    VALUES (
-      v_asset_ids[1 + ((i + 3) % array_length(v_asset_ids, 1))],
-      v_fact_asset_meter,
-      v_now - make_interval(hours => (i * 6)),
-      jsonb_build_object(
-        'reading_value', 100 + (i * 9.5),
-        'reading_unit', 'hours'
-      ),
-      jsonb_build_object('seed', 'demo-baseline', 'source', 'meter'),
-      format('demo-baseline-meter-%s', lpad(i::text, 3, '0'))
-    );
-  END LOOP;
-
-  PERFORM refresh_org_scope_closure();
-  PERFORM refresh_entity_org_scopes();
-end;
-$$;
-
-DO $$
-DECLARE
-  v_retired_schema_keys text[] := ARRAY[
-    'revrec_finding_v1',
-    'fleet_finding_v1',
-    'credit_proposal_v1',
-    'account_health_thread_v1',
-    'territory_brief_item_v1'
-  ];
-  v_retired_agent_keys text[];
-BEGIN
-  SELECT COALESCE(array_agg(DISTINCT retired.key), ARRAY[]::text[])
-  INTO v_retired_agent_keys
-  FROM (
-    SELECT agent_key AS key
-    FROM ops_agent_config
-    WHERE output_schema_key = ANY(v_retired_schema_keys)
-
-    UNION
-
-    SELECT ev.data ->> 'agent_key' AS key
-    FROM entities e
-    JOIN entity_versions ev ON ev.entity_id = e.id
-    WHERE e.entity_type = 'agent_config'
-      AND ev.data ->> 'output_schema_key' = ANY(v_retired_schema_keys)
-  ) retired
-  WHERE retired.key IS NOT NULL;
-
-  DELETE FROM finding
-  WHERE agent_key = ANY(v_retired_agent_keys)
-     OR run_id IN (
-       SELECT run_id
-       FROM ops_workflow_run
-       WHERE workflow_key = ANY(v_retired_agent_keys)
-     );
-
+  -- Runs de workflow agora sem findings (legado Wynne). Mantém os referenciados.
   DELETE FROM ops_workflow_run
-  WHERE workflow_key = ANY(v_retired_agent_keys);
+  WHERE run_id NOT IN (SELECT run_id FROM finding WHERE run_id IS NOT NULL);
 
-  DELETE FROM ops_agent_config
-  WHERE agent_key = ANY(v_retired_agent_keys)
-     OR output_schema_key = ANY(v_retired_schema_keys);
+  -- Config desses agentes (tabela base + entity store).
+  DELETE FROM ops_agent_config WHERE agent_key = ANY(v_wynne_agents);
+  DELETE FROM entities
+  WHERE entity_type = 'agent_config'
+    AND split_part(source_record_id, ':', 3) = ANY(v_wynne_agents);
 
-  DELETE FROM entities e
-  WHERE e.entity_type = 'agent_config'
-    AND EXISTS (
-      SELECT 1
-      FROM entity_versions ev
-      WHERE ev.entity_id = e.id
-        AND (
-          ev.data ->> 'agent_key' = ANY(v_retired_agent_keys)
-          OR ev.data ->> 'output_schema_key' = ANY(v_retired_schema_keys)
-        )
-    );
+  -- Schemas de saída do legado (mantém apenas o do agente DIA).
+  DELETE FROM ops_output_schema_registry WHERE schema_key <> 'vehicle_aging_finding_v1';
 
-  DELETE FROM ops_output_schema_registry
-  WHERE schema_key = ANY(v_retired_schema_keys);
+  -- Câmbio multi-moeda (Wynne); o DIA opera em BRL.
+  DELETE FROM fx_rates;
 
-  INSERT INTO tenants (tenant_key, name)
-  VALUES
-    ('demo-ops-a', 'Demo Ops Tenant A'),
-    ('demo-ops-b', 'Demo Ops Tenant B')
-  ON CONFLICT (tenant_key) DO UPDATE
-    SET name = EXCLUDED.name;
-END;
+  -- Entidades do baseline rental (cascade → entity_versions, entity_facts,
+  -- time_series_points, relationships_v2).
+  DELETE FROM entities WHERE source_record_id LIKE 'demo-baseline-%';
+END
 $$;
 
 commit;
@@ -1012,9 +77,9 @@ commit;
 -- DIA dealership domain — RESET / zera banco (issue #46)
 -- Apaga TODOS os registros dos tipos DIA antes de repopular, para um dataset
 -- limpo (remove inclusive sobras não-demo que inflavam as contagens das views).
--- O tipo 'company' é COMPARTILHADO com o domínio rental, então aqui só
--- removemos as empresas do namespace DIA (demo-dia-company-%) — o baseline
--- rental/demo-baseline (empresas, contratos, tokens de portal) é preservado.
+-- O tipo 'company' era COMPARTILHADO com o antigo domínio rental; o baseline
+-- Wynne foi removido (bloco de purga acima), então aqui mantemos a limpeza do
+-- namespace DIA (demo-dia-company-%) por idempotência.
 -- ===========================================================================
 
 begin;
@@ -1038,13 +103,16 @@ $$;
 commit;
 
 -- ===========================================================================
--- DIA dealership domain — demo vehicles (issue #4, ampliado #46)
--- Idempotent namespace: source_record_id LIKE 'demo-dia-vehicle-%'.
--- ~120 veículos GERADOS POR LOJA (8 lojas, 15 cada) para concentrar os dados:
--- cada veículo herda a 'brand' e o 'store' da sua loja (marca consistente com a
--- loja, alinhado às 4 marcas / 8 lojas do bloco de empresas abaixo). Cobre
+-- DIA dealership domain — demo fleet, high volume (issue #4, ampliado #46)
+-- Idempotent namespace: source_record_id LIKE 'demo-dia-fleet-%'.
+-- ~120 veículos GERADOS POR LOJA (8 lojas, 15 cada) para concentrar os dados do
+-- BI: cada veículo herda a 'brand' e o 'store' da sua loja (marca consistente com
+-- a loja, alinhado às 4 marcas / 8 lojas do bloco de empresas abaixo). Cobre
 -- condition novo/usado, status em_estoque/vendido e days_in_stock de 0 a ~420
 -- (variando floor_plan_cost). Reuses rental_upsert_entity_current_state.
+-- NOTA: este namespace é o 'demo-dia-fleet-%' (volume p/ dashboards). Os 15
+-- veículos determinísticos do Vehicle Stock-Aging Analyst (#32) vivem no bloco
+-- 'demo-dia-vehicle-%' logo abaixo — namespaces separados de propósito.
 -- ===========================================================================
 
 begin;
@@ -1080,10 +148,10 @@ DECLARE
 BEGIN
   PERFORM set_config('request.jwt.claim.role', 'service_role', true);
 
-  -- Idempotent: drop prior demo vehicles, then recreate.
+  -- Idempotent: drop prior demo fleet, then recreate.
   DELETE FROM entities
   WHERE entity_type = 'vehicle'
-    AND source_record_id LIKE 'demo-dia-vehicle-%';
+    AND source_record_id LIKE 'demo-dia-fleet-%';
 
   FOR v_loja IN SELECT * FROM jsonb_array_elements(v_lojas)
   LOOP
@@ -1101,7 +169,7 @@ BEGIN
 
       PERFORM rental_upsert_entity_current_state(
         p_entity_type => 'vehicle',
-        p_source_record_id => format('demo-dia-vehicle-%s', lpad(v_seq::text, 3, '0')),
+        p_source_record_id => format('demo-dia-fleet-%s', lpad(v_seq::text, 3, '0')),
         p_data => jsonb_build_object(
           'name', concat_ws(' ', v_loja ->> 'brand', v_model, (2018 + (k % 9))::text),
           'condition', v_cond,
@@ -1113,10 +181,83 @@ BEGIN
           'purchase_date', to_char((v_now - (v_days || ' days')::interval)::date, 'YYYY-MM-DD'),
           'status', v_status,
           'store', v_loja ->> 'store',
-          'source_record_id', format('demo-dia-vehicle-%s', lpad(v_seq::text, 3, '0'))
+          'source_record_id', format('demo-dia-fleet-%s', lpad(v_seq::text, 3, '0'))
         )
       );
     END LOOP;
+  END LOOP;
+END
+$$;
+
+commit;
+
+-- ===========================================================================
+-- DIA dealership domain — Vehicle Stock-Aging Analyst fixtures (issue #32)
+-- Idempotent namespace: source_record_id LIKE 'demo-dia-vehicle-%' (EXATAMENTE 15).
+-- Conjunto determinístico que alimenta o contrato do #32
+-- (supabase/tests/vehicle_aging_contract.test.mjs): 9 em escopo (em_estoque,
+-- days_in_stock >= 75) e 6 controles (5 abaixo de 75d + 1 vendido). Separado do
+-- fleet de alto volume acima (demo-dia-fleet-%). days_in_stock é derivado como
+-- now()::date - purchase_date, então purchase_date = current_date - N dias.
+-- brand/store reutilizam as 4 marcas / 8 lojas existentes p/ manter o owner-brief
+-- alinhado. Reuses rental_upsert_entity_current_state sob o guard service_role.
+-- ===========================================================================
+
+begin;
+set local request.jwt.claim.role = 'service_role';
+
+DO $$
+DECLARE
+  v_today date := now()::date;
+  -- (sr, days_in_stock, status, brand, store, model, condition, cost) — as 9
+  -- linhas em_estoque com days>=75 produzem a ordem esperada por days desc:
+  -- 009=240, 005=200, 008=160, 002=120, 007=90, 015=89, 014=86, 013=80, 001=75.
+  v_fix jsonb := jsonb_build_array(
+    jsonb_build_object('sr','demo-dia-vehicle-001','days', 75,'status','em_estoque','brand','Fiat','store','Fiat São Paulo','model','Pulse','condition','usado','cost', 85000),
+    jsonb_build_object('sr','demo-dia-vehicle-002','days',120,'status','em_estoque','brand','Fiat','store','Fiat Campinas','model','Argo','condition','novo','cost', 82000),
+    jsonb_build_object('sr','demo-dia-vehicle-003','days', 40,'status','em_estoque','brand','Volkswagen','store','Volkswagen Porto Alegre','model','Polo','condition','usado','cost', 95000),
+    jsonb_build_object('sr','demo-dia-vehicle-004','days', 30,'status','em_estoque','brand','Volkswagen','store','Volkswagen Curitiba','model','Nivus','condition','novo','cost', 98000),
+    jsonb_build_object('sr','demo-dia-vehicle-005','days',200,'status','em_estoque','brand','Volvo','store','Volvo Caminhões Manaus','model','FH 460','condition','usado','cost',420000),
+    jsonb_build_object('sr','demo-dia-vehicle-006','days', 60,'status','em_estoque','brand','Honda','store','Honda Motos Belo Horizonte','model','CG 160','condition','novo','cost', 18000),
+    jsonb_build_object('sr','demo-dia-vehicle-007','days', 90,'status','em_estoque','brand','Honda','store','Honda Motos Salvador','model','Biz 125','condition','usado','cost', 16000),
+    jsonb_build_object('sr','demo-dia-vehicle-008','days',160,'status','em_estoque','brand','Fiat','store','Fiat São Paulo','model','Toro','condition','novo','cost', 90000),
+    jsonb_build_object('sr','demo-dia-vehicle-009','days',240,'status','em_estoque','brand','Volkswagen','store','Volkswagen Porto Alegre','model','T-Cross','condition','usado','cost', 99000),
+    jsonb_build_object('sr','demo-dia-vehicle-010','days', 20,'status','em_estoque','brand','Volvo','store','Volvo Caminhões Brasília','model','VM 270','condition','novo','cost',460000),
+    jsonb_build_object('sr','demo-dia-vehicle-011','days', 50,'status','em_estoque','brand','Honda','store','Honda Motos Belo Horizonte','model','CB 500','condition','usado','cost', 35000),
+    jsonb_build_object('sr','demo-dia-vehicle-012','days',100,'status','vendido','brand','Fiat','store','Fiat Campinas','model','Mobi','condition','usado','cost', 75000),
+    jsonb_build_object('sr','demo-dia-vehicle-013','days', 80,'status','em_estoque','brand','Volkswagen','store','Volkswagen Curitiba','model','Virtus','condition','novo','cost', 96000),
+    jsonb_build_object('sr','demo-dia-vehicle-014','days', 86,'status','em_estoque','brand','Volvo','store','Volvo Caminhões Manaus','model','FH 540','condition','usado','cost',480000),
+    jsonb_build_object('sr','demo-dia-vehicle-015','days', 89,'status','em_estoque','brand','Honda','store','Honda Motos Salvador','model','XRE 190','condition','novo','cost', 22000)
+  );
+  v_v jsonb;
+BEGIN
+  PERFORM set_config('request.jwt.claim.role', 'service_role', true);
+
+  -- Idempotent: drop prior deterministic demo vehicles, then recreate exactly 15.
+  DELETE FROM entities
+  WHERE entity_type = 'vehicle'
+    AND source_record_id LIKE 'demo-dia-vehicle-%';
+
+  FOR v_v IN SELECT * FROM jsonb_array_elements(v_fix)
+  LOOP
+    PERFORM rental_upsert_entity_current_state(
+      p_entity_type => 'vehicle',
+      p_source_record_id => v_v ->> 'sr',
+      p_data => jsonb_build_object(
+        'name', concat_ws(' ', v_v ->> 'brand', v_v ->> 'model',
+          CASE WHEN v_v ->> 'condition' = 'novo' THEN '2026' ELSE '2020' END),
+        'condition', v_v ->> 'condition',
+        'brand', v_v ->> 'brand',
+        'model', v_v ->> 'model',
+        'model_year', CASE WHEN v_v ->> 'condition' = 'novo' THEN 2026 ELSE 2020 END,
+        'cost', (v_v ->> 'cost')::numeric,
+        'sale_price', round((v_v ->> 'cost')::numeric * 1.18, -2),
+        'purchase_date', to_char(v_today - ((v_v ->> 'days')::int), 'YYYY-MM-DD'),
+        'status', v_v ->> 'status',
+        'store', v_v ->> 'store',
+        'source_record_id', v_v ->> 'sr'
+      )
+    );
   END LOOP;
 END
 $$;
@@ -1227,7 +368,6 @@ $$;
 -- ===========================================================================
 -- DIA dealership domain — demo companies + brands (issue #5)
 -- Idempotent namespaces: source_record_id LIKE 'demo-dia-company-%' / '-brand-%'.
--- Does NOT touch the pre-existing demo-baseline-company-* entries.
 -- Reuses rental_upsert_entity_current_state (the generic SCD2 upsert) under the
 -- service_role write guard.
 -- ===========================================================================
@@ -1318,8 +458,11 @@ commit;
 -- ===========================================================================
 -- DIA dealership domain — demo service orders / Oficina (issue #7)
 -- Idempotent namespace: source_record_id LIKE 'demo-dia-service-%'.
--- 10 orders across statuses, spread over the current and previous month.
--- At least 2 'concluida' with closed_at set so turnaround_hours populates.
+-- 18 ordens CURADAS cobrindo todos os status (aberta/em_andamento/concluida/
+-- cancelada), todas abertas DENTRO do mês corrente (conceito MÊS ATUAL do
+-- Morning Brief, #46 — clamp no 1º dia do mês). Pelo menos 2 'concluida' com
+-- closed_at p/ popular turnaround_hours. O VOLUME em massa vive no namespace
+-- separado 'demo-dia-svcvol-%' abaixo (não colide com este LIKE).
 -- Reuses rental_upsert_entity_current_state (the generic SCD2 upsert) under
 -- the service_role write guard.
 -- ===========================================================================
@@ -1368,7 +511,13 @@ BEGIN
 
   FOR v_item IN SELECT * FROM jsonb_array_elements(v_orders)
   LOOP
-    v_opened := v_now - ((v_item ->> 'open_days')::int || ' days')::interval;
+    -- Conceito MÊS ATUAL (#46): toda OS é aberta DENTRO do mês corrente. Mantém
+    -- 'open_days' como dias-atrás, mas trava no 1º dia do mês (clamp) para não
+    -- vazar para o mês anterior.
+    v_opened := greatest(
+      date_trunc('month', now()),
+      v_now - ((v_item ->> 'open_days')::int || ' days')::interval
+    );
 
     v_data := jsonb_build_object(
       'name', concat_ws(' - ', v_item ->> 'order_number', v_item ->> 'customer'),
@@ -1563,9 +712,13 @@ BEGIN
       CONTINUE;
     END IF;
 
+    -- Conceito MÊS ATUAL (#46): ignora o offset de mês ('mo') e ancora a venda no
+    -- mês corrente (dia 'day'), travando em hoje para não gerar data futura.
     v_sale_date := to_char(
-      (date_trunc('month', now()) + ((v_item ->> 'mo')::int || ' months')::interval
-        + (((v_item ->> 'day')::int - 1) || ' days')::interval)::date,
+      least(
+        (date_trunc('month', now()) + (((v_item ->> 'day')::int - 1) || ' days')::interval)::date,
+        now()::date
+      ),
       'YYYY-MM-DD'
     );
 
@@ -1604,7 +757,10 @@ commit;
 --   * peças em massa nascem com estoque amplo ('ok');
 --   * vendas em massa só referenciam essas peças com quantidades pequenas, então
 --     nunca disparam o guard de estoque insuficiente.
--- Namespaces dedicados (sufixo '-bNNN') para não colidir com o conjunto curado.
+-- Namespaces dedicados (sufixo 'svcvol'/'-bNNN' SEM o prefixo 'demo-dia-service-')
+-- para NÃO colidir com o conjunto curado 'demo-dia-service-%'. ATENÇÃO: um sufixo
+-- como '-bNNN' aplicado ao MESMO prefixo ('demo-dia-service-b001') ainda casa com
+-- LIKE 'demo-dia-service-%' — por isso o volume usa 'demo-dia-svcvol-%'.
 -- ===========================================================================
 
 -- (As marcas/empresas e os veículos NÃO têm bloco "em massa": as 4 marcas, as
@@ -1629,9 +785,18 @@ DECLARE
 BEGIN
   PERFORM set_config('request.jwt.claim.role', 'service_role', true);
 
+  -- Idempotent: drop prior mass service orders (namespace próprio, não-colidente).
+  DELETE FROM entities
+  WHERE entity_type = 'service_order'
+    AND source_record_id LIKE 'demo-dia-svcvol-%';
+
   FOR i IN 1..82 LOOP
     v_status := v_statuses[1 + (i % 4)];
-    v_opened := v_now - (((i * 3) % 90) || ' days')::interval;
+    -- MÊS ATUAL (#46): abre dentro do mês corrente (clamp no 1º dia do mês).
+    v_opened := greatest(
+      date_trunc('month', now()),
+      v_now - (((i * 3) % 28) || ' days')::interval
+    );
 
     v_data := jsonb_build_object(
       'name', format('OS-2026-B%s - %s', lpad(i::text, 3, '0'), v_custs[1 + (i % array_length(v_custs, 1))]),
@@ -1642,7 +807,7 @@ BEGIN
       'status', v_status,
       'opened_at', to_char(v_opened, 'YYYY-MM-DD"T"HH24:MI:SSOF'),
       'technician', v_techs[1 + (i % array_length(v_techs, 1))],
-      'source_record_id', format('demo-dia-service-b%s', lpad(i::text, 3, '0'))
+      'source_record_id', format('demo-dia-svcvol-%s', lpad(i::text, 3, '0'))
     );
 
     -- Concluídas ganham closed_at (turnaround) e receita; em_andamento receita parcial.
@@ -1657,7 +822,7 @@ BEGIN
 
     PERFORM rental_upsert_entity_current_state(
       p_entity_type => 'service_order',
-      p_source_record_id => format('demo-dia-service-b%s', lpad(i::text, 3, '0')),
+      p_source_record_id => format('demo-dia-svcvol-%s', lpad(i::text, 3, '0')),
       p_data => v_data
     );
   END LOOP;
@@ -1736,9 +901,13 @@ BEGIN
     SELECT unit_price INTO v_unit_price
     FROM v_dia_part_current WHERE entity_id = v_part_id;
 
+    -- MÊS ATUAL (#46): todas as vendas no mês corrente (sem recuar meses),
+    -- travadas em hoje para não gerar data futura.
     v_sale_date := to_char(
-      (date_trunc('month', now()) - ((i % 4) || ' months')::interval
-        + (((i * 7) % 27) || ' days')::interval)::date,
+      least(
+        (date_trunc('month', now()) + (((i * 7) % 27) || ' days')::interval)::date,
+        now()::date
+      ),
       'YYYY-MM-DD'
     );
 
