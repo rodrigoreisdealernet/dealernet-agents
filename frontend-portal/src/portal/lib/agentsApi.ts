@@ -85,6 +85,15 @@ export interface FindingRow {
   created_at: string
 }
 
+// Disposição persistida no finding (ops-api persist_disposition): jsonb com
+// quem decidiu (approver_id/approver_name), a nota/motivo e, em dismiss, a flag.
+export interface FindingApprover {
+  approver_id?: string | null
+  approver_name?: string | null
+  note?: string | null
+  disposition?: string | null
+}
+
 export interface FindingDetail extends FindingRow {
   run_id: string | null
   workflow_id: string | null
@@ -97,20 +106,9 @@ export interface FindingDetail extends FindingRow {
   evidence: Array<Record<string, unknown>> | null
   proposed_action: string | null
   rationale: string | null
-}
-
-export interface AuditEvent {
-  row_id: string
-  entity_id: string
-  entity_type: string | null
-  entity_name: string | null
-  fact_key: string | null
-  fact_label: string | null
-  observed_at: string
-  data_payload: Record<string, unknown> | null
-  metadata: Record<string, unknown> | null
-  source_id: string | null
-  point_order: number | null
+  // Histórico de decisão já persistido e exposto por ops_findings_view.
+  decided_at: string | null
+  approver: FindingApprover | null
 }
 
 export interface HomeKpis {
@@ -193,7 +191,7 @@ export async function getFindings(f: FindingsFilter = {}): Promise<FindingRow[]>
 }
 
 const FINDING_DETAIL_COLS =
-  'id, agent_key, run_id, workflow_id, contract_id, contract_label, line_item_id, line_item_label, customer_name, finding_type, severity, status, expected, expected_amount, billed, billed_amount, delta, evidence, proposed_action, confidence, rationale, created_at'
+  'id, agent_key, run_id, workflow_id, contract_id, contract_label, line_item_id, line_item_label, customer_name, finding_type, severity, status, expected, expected_amount, billed, billed_amount, delta, evidence, proposed_action, confidence, rationale, created_at, decided_at, approver'
 
 export async function getFinding(id: string): Promise<FindingDetail> {
   const res = (await supabase
@@ -202,20 +200,6 @@ export async function getFinding(id: string): Promise<FindingDetail> {
     .eq('id', id)
     .single()) as PgResponse<FindingDetail>
   return unwrap(res)
-}
-
-const AUDIT_COLS =
-  'row_id, entity_id, entity_type, entity_name, fact_key, fact_label, observed_at, data_payload, metadata, source_id, point_order'
-
-// Atenção: a coluna de filtro é entity_id (NÃO row_id) — ver ops-audit-trail.json.
-export async function getAuditTrail(entityId: string): Promise<AuditEvent[]> {
-  const res = (await supabase
-    .from('ops_audit_trail_view')
-    .select(AUDIT_COLS)
-    .eq('entity_id', entityId)
-    .order('observed_at', { ascending: true })
-    .order('point_order', { ascending: true })) as PgResponse<AuditEvent[]>
-  return unwrap(res) ?? []
 }
 
 const HOME_KPI_COLS =

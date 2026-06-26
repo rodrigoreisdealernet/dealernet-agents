@@ -1,0 +1,86 @@
+{
+  "issue": "97",
+  "title": "Finding Detail: evidência estruturada + histórico de decisão",
+  "slug": "finding-detail-evidencia-estruturada-historico",
+  "branch": "feature/97-finding-detail-evidencia-estruturada-historico",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/97",
+  "pr": null,
+  "prUrl": null,
+  "updatedAt": "2026-06-26T05:32:52.291Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "5 acceptance criteria drafted",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/97-finding-detail-evidencia-estruturada-historico.md"
+        }
+      ],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec approved by human (--approved)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": "6 files (FindingDetail.tsx, agentsApi.ts, registry.ts, 2 locales; AuditTrail.tsx removed)",
+      "artifacts": [],
+      "notes": [
+        "read FindingDetail/agentsApi/AuditTrail; widening getFinding + structuring evidence/decision history",
+        "tsc -b + verify scripts green; committing"
+      ],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "running",
+      "summary": "",
+      "artifacts": [],
+      "notes": [
+        "Read spec + diff (SHA ea2dda7); authoring verify-finding-detail.mjs covering AC1-AC5",
+        "15 new verify-finding-detail tests green; full npm test 184/184; tsc+vite build pass; committing"
+      ],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    }
+  ]
+}
