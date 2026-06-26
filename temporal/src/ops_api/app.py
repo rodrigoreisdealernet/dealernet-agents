@@ -61,6 +61,11 @@ from ..workflows.ops.territory_brief import (
     TerritoryAccountBriefWorkflowInput,
 )
 from ..workflows.rental import MaintenanceInvoiceWorkflow
+from ..agents.portal_assistant import (
+    allowed_screen_keys,
+    filter_actions_to_allowlist,
+    run_portal_assistant,
+)
 
 _CAN_OPERATE_ROLES = {"admin", "branch_manager", "field_operator"}
 _CAN_REPLAY_MULESOFT_ROLES = {"admin", "branch_manager"}
@@ -304,6 +309,28 @@ class AccountingExportTriggerRequest(BaseModel):
     period_end: str
     """End of the export period (ISO date YYYY-MM-DD, inclusive)."""
     basis: Literal["accrual", "cash", "all"] = "all"
+
+
+class AssistantChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1)
+
+
+class AssistantScreen(BaseModel):
+    component_key: str = Field(min_length=1)
+    title: str = Field(min_length=1)
+    solution: str | None = None
+
+
+class AssistantChatContext(BaseModel):
+    current_screen: str | None = None
+    available_screens: list[AssistantScreen] = Field(default_factory=list)
+    empresa_id: str | None = None
+
+
+class AssistantChatRequest(BaseModel):
+    messages: list[AssistantChatMessage] = Field(min_length=1)
+    context: AssistantChatContext = Field(default_factory=AssistantChatContext)
 
 
 @dataclass(frozen=True)
@@ -2482,6 +2509,40 @@ def create_app(
             ),
         )
         return {"runs": rows or [], "count": len(rows or [])}
+
+    @app.post("/api/ops/assistant/chat")
+    async def assistant_chat(
+        payload: AssistantChatRequest,
+        principal: Principal = Depends(_principal),
+        client: SupabaseServiceClient = Depends(_supabase_client),
+    ) -> dict[str, Any]:
+        """Live conversational turn for the Portal assistant (DIA).
+
+        Answers BI questions with read-only data and proposes UI navigation.
+        Navigation is allowlist-checked server-side against the screens the
+        frontend (permission-filtered menu) declared as available.
+        """
+        # Gate: principal must map to a known tenant (inherits the user's access).
+        await _authorized_tenant_id(principal=principal, client=client)
+
+        context = {
+            "current_screen": payload.context.current_screen,
+            "empresa_id": payload.context.empresa_id,
+            "available_screens": [s.model_dump() for s in payload.context.available_screens],
+        }
+        history = [m.model_dump() for m in payload.messages]
+
+        try:
+            reply = await run_portal_assistant(history, context)
+        except Exception as exc:  # noqa: BLE001 — never leak a stack to the client
+            logger.exception("assistant_chat failed")
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Assistant is temporarily unavailable",
+            ) from exc
+
+        reply = filter_actions_to_allowlist(reply, allowed_screen_keys(context))
+        return reply.model_dump(mode="json")
 
     return app
 

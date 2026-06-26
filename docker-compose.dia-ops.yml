@@ -63,6 +63,9 @@ services:
       - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
       - AZURE_OPENAI_DEPLOYMENT=${AZURE_OPENAI_DEPLOYMENT}
       - AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_API_VERSION}
+      # Local/dev only: tolerate corporate TLS interception (self-signed CA in chain).
+      # Empty default keeps verification ON elsewhere.
+      - AZURE_OPENAI_INSECURE_SSL=${AZURE_OPENAI_INSECURE_SSL:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
@@ -87,6 +90,9 @@ services:
       - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
       - AZURE_OPENAI_DEPLOYMENT=${AZURE_OPENAI_DEPLOYMENT}
       - AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_API_VERSION}
+      # Local/dev only: tolerate corporate TLS interception (self-signed CA in chain).
+      # Empty default keeps verification ON elsewhere.
+      - AZURE_OPENAI_INSECURE_SSL=${AZURE_OPENAI_INSECURE_SSL:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:

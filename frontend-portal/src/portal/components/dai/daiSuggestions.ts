@@ -66,3 +66,29 @@ export function daiSuggestionsFromMenu(
   }
   return out
 }
+
+/** Tela navegável que a DIA pode abrir (component_key + rótulo + solução de origem). */
+export interface AvailableScreen {
+  component_key: string
+  title: string
+  solution: string
+}
+
+/**
+ * Lista TODAS as telas nativas (kind 'component') que o usuário pode abrir,
+ * derivadas do menu já filtrado por permissão. É o allowlist enviado à DIA:
+ * o agente só pode propor abrir uma dessas — e o backend revalida.
+ */
+export function availableScreensFromMenu(menu: MenuItem[]): AvailableScreen[] {
+  const out: AvailableScreen[] = []
+  const seen = new Set<string>()
+  for (const solucao of menu) {
+    for (const leaf of leavesOf(solucao)) {
+      const key = leaf.spec?.componentKey
+      if (!key || leaf.spec?.kind !== 'component' || seen.has(key)) continue
+      seen.add(key)
+      out.push({ component_key: key, title: leaf.text, solution: solucao.text })
+    }
+  }
+  return out
+}

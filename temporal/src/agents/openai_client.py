@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
+import ssl
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from json import JSONDecodeError
 from typing import Any, Generic, Protocol, TypeVar
@@ -10,6 +12,22 @@ from urllib import error, request
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from ..config import AzureOpenAIEndpointConfig, settings
+
+
+def _truthy(value: str | None) -> bool:
+    return (value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _azure_ssl_context() -> ssl.SSLContext | None:
+    """Local/dev escape hatch for corporate TLS interception.
+
+    When ``AZURE_OPENAI_INSECURE_SSL`` is truthy, return an unverified context so
+    the call survives a self-signed CA in the chain (mirrors Dockerfile.local's
+    pip ``--trusted-host`` posture). Defaults to None → normal verification in prod.
+    """
+    if _truthy(os.getenv("AZURE_OPENAI_INSECURE_SSL")):
+        return ssl._create_unverified_context()
+    return None
 
 JsonValue = None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
 ResponseModelT = TypeVar("ResponseModelT", bound=BaseModel)
@@ -137,7 +155,7 @@ class AzureOpenAIChatTransport:
             },
             method="POST",
         )
-        with request.urlopen(req, timeout=60) as response:
+        with request.urlopen(req, timeout=60, context=_azure_ssl_context()) as response:
             return json.loads(response.read().decode("utf-8"))
 
 
