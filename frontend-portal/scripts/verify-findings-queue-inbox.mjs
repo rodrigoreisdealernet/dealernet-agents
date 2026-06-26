@@ -51,10 +51,19 @@ test('AC1 priorizacao: sortFindings usa severityRank critical->low e delta desc 
   const src = read(FINDINGS_QUEUE)
 
   const severityRank = functionBody(src, 'function severityRank')
-  assert.match(
-    severityRank,
-    /const\s+ranks:\s*Record<string,\s*number>\s*=\s*\{\s*critical:\s*0,\s*high:\s*1,\s*medium:\s*2,\s*low:\s*3\s*\}/,
-    'severityRank deve fixar a ordem critical=0, high=1, medium=2, low=3',
+  for (const [severity, rank] of [
+    ['critical', 0],
+    ['high', 1],
+    ['medium', 2],
+    ['low', 3],
+  ]) {
+    assert.match(severityRank, new RegExp(`${severity}:\\s*${rank}`), `severityRank deve mapear ${severity}:${rank}`)
+  }
+  assert.ok(
+    severityRank.indexOf('critical') < severityRank.indexOf('high') &&
+      severityRank.indexOf('high') < severityRank.indexOf('medium') &&
+      severityRank.indexOf('medium') < severityRank.indexOf('low'),
+    'severityRank deve manter a ordem critical -> high -> medium -> low',
   )
   assert.match(severityRank, /ranks\[severityKey\(value\)\]\s*\?\?\s*4/, 'severidade desconhecida deve ficar apos low')
 
@@ -90,6 +99,14 @@ test('AC2 filtro: status select oferece todos os estados e getFindings nao fica 
     'StatusFilter deve cobrir all/pending/approved/rejected/informational',
   )
   assert.match(src, /const\s+\[statusFilter,\s*setStatusFilter\]\s*=\s*useState<StatusFilter>/, 'deve manter statusFilter em estado React')
+  const statusOptionsBlock = src.slice(src.indexOf('const statusOptions'), src.indexOf('const colunas'))
+  const statusOptionValues = [...statusOptionsBlock.matchAll(/value:\s*'([^']+)'\s+as\s+const/g)].map(([, value]) => value)
+  assert.deepEqual(
+    statusOptionValues,
+    ['all', 'pending_approval', 'approved', 'rejected', 'informational'],
+    'statusOptions deve oferecer exatamente all + os 4 status esperados',
+  )
+  assert.equal(statusOptionValues.length, 5, 'statusOptions deve ter exatamente 5 opcoes')
   for (const value of ['all', 'pending_approval', 'approved', 'rejected', 'informational']) {
     assert.match(src, new RegExp(`value:\\s*'${value}'`), `statusOptions deve oferecer ${value}`)
   }
@@ -167,6 +184,32 @@ test('AC4 evidencia inline: severidade em badge, delta formatBRL, confianca form
   assert.match(mapper, /confianca:\s*formatPct\(f\.confidence\)/, 'linha deve formatar confianca com formatPct')
   assert.match(src, /componentKey:\s*'finding-detail'/, 'botao Revisar deve continuar abrindo finding-detail')
   assert.match(src, /\{t\('review'\)\}/, 'botao Revisar deve manter label i18n review')
+})
+
+// ---------------------------------------------------------------------------
+// AC5: polling a cada 10s recarrega a DataTable sem resetar selecao; estados
+//      loading/error/empty ficam a cargo da DataTable corporativa.
+// ---------------------------------------------------------------------------
+test('AC5 polling/estados: 10s interval, cleanup e selecao preservada', () => {
+  const src = read(FINDINGS_QUEUE)
+  const pollingStart = src.indexOf('// Polling')
+  assert.ok(pollingStart !== -1, 'deve haver bloco documentado de polling')
+  const pollingBody = src.slice(pollingStart, src.indexOf('const api', pollingStart))
+
+  assert.match(
+    pollingBody,
+    /window\.setInterval\(\s*\(\)\s*=>\s*setReloadKey\(\(k\)\s*=>\s*k\s*\+\s*1\),\s*10000\s*\)/,
+    'polling deve usar window.setInterval para incrementar reloadKey a cada 10s',
+  )
+  assert.match(
+    pollingBody,
+    /return\s+\(\)\s*=>\s*window\.clearInterval\(t\)/,
+    'polling deve limpar o interval no cleanup do useEffect',
+  )
+  assert.doesNotMatch(pollingBody, /setSelectedItems/, 'polling nao pode resetar selectedItems')
+  assert.match(src, /const\s+\[selectedItems,\s*setSelectedItems\]/, 'selectedItems deve existir separado de reloadKey')
+  assert.match(src, /const\s+\[reloadKey,\s*setReloadKey\]/, 'reloadKey deve existir separado de selectedItems')
+  assert.match(src, /<DataTable<FindingRowVM>/, 'loading/empty/error states devem ser delegados a DataTable corporativa')
 })
 
 // ---------------------------------------------------------------------------
