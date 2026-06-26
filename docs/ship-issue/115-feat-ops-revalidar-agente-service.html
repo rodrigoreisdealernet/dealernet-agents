@@ -1,0 +1,88 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta http-equiv="refresh" content="5">
+<title>ship-issue #115 — feat(ops): revalidar agente service-estimate-rescue ponta-a-ponta + corrigir HTTP 409 'Executar agora' (LEAD)</title>
+<style>
+  :root{font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  body{margin:0;background:#0b0e14;color:#e5e7eb;padding:24px}
+  .wrap{max-width:860px;margin:0 auto}
+  h1{font-size:18px;margin:0 0 4px}
+  .sub{color:#9ca3af;font-size:13px;margin-bottom:16px}
+  .sub a{color:#60a5fa;text-decoration:none}
+  .bar{height:8px;background:#1f2937;border-radius:99px;overflow:hidden;margin:12px 0 20px}
+  .bar>i{display:block;height:100%;background:#16a34a;width:86%}
+  .banner{background:#7c2d12;color:#fed7aa;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:14px}
+  table{width:100%;border-collapse:collapse}
+  td{padding:12px 8px;border-top:1px solid #1f2937;vertical-align:top}
+  .ic{font-size:18px;width:28px;text-align:center}
+  .lbl{font-weight:600;width:200px}
+  .st{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
+  .sum{font-size:14px;color:#d1d5db}
+  .arts{margin-top:6px;font-size:13px}
+  .arts a{color:#60a5fa;text-decoration:none}
+  .notes{margin:8px 0 0;padding-left:18px;color:#9ca3af;font-size:12px}
+  tr.running{background:#0f1b33}
+  .foot{color:#6b7280;font-size:12px;margin-top:20px}
+</style></head><body><div class="wrap">
+<h1>ship-issue #115 — feat(ops): revalidar agente service-estimate-rescue ponta-a-ponta + corrigir HTTP 409 'Executar agora' (LEAD)</h1>
+<div class="sub"><a href="https://github.com/rodrigoreisdealernet/dealernet-agents/issues/115">issue</a> · branch <code>feature/115-feat-ops-revalidar-agente-service</code> · <a href="https://github.com/rodrigoreisdealernet/dealernet-agents/pull/119">PR #119</a> · 86% complete</div>
+<div class="bar"><i></i></div>
+<div class="banner">🚧 Waiting on human gate: <b>merge</b></div>
+<table><tbody><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">01 · Spec<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">6 acceptance criteria drafted</div>
+          <div class="arts"><a href="docs/specs/115-feat-ops-revalidar-agente-service.md">Spec</a></div>
+          
+        </td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">02 · Approve (human gate)<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">Spec approved by human (--approved)</div>
+          
+          
+        </td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">03 · Code<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">1 file changed (temporal/src/ops_api/app.py): _MANUAL_RUN_WORKFLOWS registry + service-estimate-rescue</div>
+          
+          <ul class="notes"><li>Implementing module-level manual-run registry in ops_api/app.py</li><li>Committed registry-based manual run-now; 92/92 test_ops_api tests green</li></ul>
+        </td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">04 · Tests<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">+10 tests (102 passed in test_ops_api.py); 22 in test_ops_service_estimate.py</div>
+          
+          <ul class="notes"><li>Studying existing test patterns; running baseline suite</li><li>10 new tests added, suite green (102 passed); committing + opening draft PR</li><li>Draft PR #119 opened; suite green (102 passed, 10 new)</li></ul>
+        </td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">05 · Test review<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">1 iteration — solid; revert-protection empirically confirmed; AC3 low-sev pre-existing, non-blocking</div>
+          
+          <ul class="notes"><li>Auditing issue115 tests in test_ops_api.py: verified signal-client test pins the registry fix (revert simulation flips started-&gt;triggered), confirmed AC1/2/4/5/6 covered; flagging AC3 pending_approval/queue visibility only indirectly covered.</li></ul>
+        </td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">06 · Code review<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">APPROVE — no blockers; registry correct, prior behavior preserved, auth untouched</div>
+          <div class="arts"><a href="https://github.com/rodrigoreisdealernet/dealernet-agents/pull/119">PR review</a></div>
+          <ul class="notes"><li>diff review: verified registry preserves prior behavior for 4 agents, tenant-only input for service-estimate-rescue, envelope unchanged, auth untouched, worker registers workflow; 20 tests green</li></ul>
+        </td>
+      </tr><tr class="waiting">
+        <td class="ic" style="color:#d97706">⏸</td>
+        <td class="lbl">Merge (human gate)<div class="st" style="color:#d97706">waiting</div></td>
+        <td class="meta">
+          
+          
+          
+        </td>
+      </tr></tbody></table>
+<div class="foot">auto-refreshes every 5s · last update 2026-06-26T05:30:50.034Z</div>
+</div></body></html>

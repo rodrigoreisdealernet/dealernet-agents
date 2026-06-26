@@ -1,0 +1,96 @@
+{
+  "issue": "115",
+  "title": "feat(ops): revalidar agente service-estimate-rescue ponta-a-ponta + corrigir HTTP 409 'Executar agora' (LEAD)",
+  "slug": "feat-ops-revalidar-agente-service",
+  "branch": "feature/115-feat-ops-revalidar-agente-service",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/115",
+  "pr": "119",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/119",
+  "updatedAt": "2026-06-26T05:30:50.034Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "6 acceptance criteria drafted",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/115-feat-ops-revalidar-agente-service.md"
+        }
+      ],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec approved by human (--approved)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": "1 file changed (temporal/src/ops_api/app.py): _MANUAL_RUN_WORKFLOWS registry + service-estimate-rescue",
+      "artifacts": [],
+      "notes": [
+        "Implementing module-level manual-run registry in ops_api/app.py",
+        "Committed registry-based manual run-now; 92/92 test_ops_api tests green"
+      ],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "done",
+      "summary": "+10 tests (102 passed in test_ops_api.py); 22 in test_ops_service_estimate.py",
+      "artifacts": [],
+      "notes": [
+        "Studying existing test patterns; running baseline suite",
+        "10 new tests added, suite green (102 passed); committing + opening draft PR",
+        "Draft PR #119 opened; suite green (102 passed, 10 new)"
+      ],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "done",
+      "summary": "1 iteration — solid; revert-protection empirically confirmed; AC3 low-sev pre-existing, non-blocking",
+      "artifacts": [],
+      "notes": [
+        "Auditing issue115 tests in test_ops_api.py: verified signal-client test pins the registry fix (revert simulation flips started->triggered), confirmed AC1/2/4/5/6 covered; flagging AC3 pending_approval/queue visibility only indirectly covered."
+      ],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "done",
+      "summary": "APPROVE — no blockers; registry correct, prior behavior preserved, auth untouched",
+      "artifacts": [
+        {
+          "label": "PR review",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/119"
+        }
+      ],
+      "notes": [
+        "diff review: verified registry preserves prior behavior for 4 agents, tenant-only input for service-estimate-rescue, envelope unchanged, auth untouched, worker registers workflow; 20 tests green"
+      ],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "waiting",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": "merge"
+    }
+  ]
+}
