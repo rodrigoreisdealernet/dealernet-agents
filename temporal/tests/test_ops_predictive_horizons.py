@@ -72,9 +72,29 @@ def test_ac1_every_agent_projects_a_non_null_horizon_when_inputs_exist() -> None
     assert parts_days == 4
     assert _parts_predicted_breach_at(parts_days, today=_TODAY) == "2026-06-30T00:00:00Z"
 
-    service_date = _service_estimate_predicted_breach_at({"valid_until": "2026-07-01"})
+    service_date = _service_estimate_predicted_breach_at({"valid_from": "2026-06-24"})
     assert service_date == "2026-07-01T00:00:00Z"
     assert _service_estimate_days_to_breach(service_date, today=_TODAY) == 5
+
+
+def test_service_estimate_horizon_prefers_explicit_expiry_then_valid_from_window() -> None:
+    """AC1/AC4: service-estimate horizon uses real valid_from + auth window fallback."""
+    assert (
+        _service_estimate_predicted_breach_at(
+            {"valid_until": "2026-07-03", "valid_from": "2026-07-01"}
+        )
+        == "2026-07-03T00:00:00Z"
+    )
+    assert (
+        _service_estimate_predicted_breach_at({"valid_from": "2026-07-01T12:30:00Z"})
+        == "2026-07-08T12:30:00Z"
+    )
+    override = _service_estimate_predicted_breach_at(
+        {"valid_from": "2026-07-01"}, auth_window_days=3
+    )
+    assert override == "2026-07-04T00:00:00Z"
+    assert _service_estimate_days_to_breach(override, today=dt.date(2026, 6, 30)) == 4
+    assert _service_estimate_predicted_breach_at({}) is None
 
 
 def test_ac3_collections_band_crossing_math_is_deterministic() -> None:
