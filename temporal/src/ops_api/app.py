@@ -726,7 +726,7 @@ class TemporalSignalClient:
     async def run_agent_now(self, *, agent_key: str, tenant_id: str, locale: str | None = None) -> dict[str, Any]:
         schedule_id = _agent_schedule_id(agent_key=agent_key, tenant_id=tenant_id)
         resolved_locale = resolve_locale(locale)
-        if resolved_locale != DEFAULT_LOCALE:
+        if locale is not None:
             workflow_id = f"{schedule_id}:manual:{int(time.time() * 1000)}"
             start = {
                 "revrec-analyst": (
@@ -2370,7 +2370,7 @@ def create_app(
                 result = await temporal_client.run_agent_now(
                     agent_key=agent_key,
                     tenant_id=tenant_id,
-                    locale=payload.locale,
+                    locale=resolve_locale(payload.locale),
                 )
         except AgentScheduleNotProvisioned as exc:
             logger.warning(

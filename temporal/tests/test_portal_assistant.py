@@ -7,6 +7,7 @@ from typing import Any
 
 import pytest
 from temporal.src.agents import portal_assistant
+from temporal.src.agents.i18n import language_directive
 from temporal.src.agents.portal_assistant import (
     allowed_screen_keys,
     build_messages,
@@ -155,8 +156,9 @@ def test_build_messages_uses_english_directive_when_context_locale_is_en_us() ->
     )
 
     system_prompt = messages[0]["content"]
+    assert language_directive("en-US") in system_prompt
     assert "Reply in English (en-US)" in system_prompt
-    assert "Responda em português do Brasil" not in system_prompt
+    assert language_directive("pt-BR") not in system_prompt
 
 
 @pytest.mark.parametrize("context", [_CONTEXT, {**_CONTEXT, "locale": ""}, {**_CONTEXT, "locale": "fr-FR"}])
@@ -167,6 +169,7 @@ def test_build_messages_defaults_to_portuguese_directive_for_missing_or_unknown_
     )
 
     system_prompt = messages[0]["content"]
+    assert language_directive("pt-BR") in system_prompt
     assert "Responda em português do Brasil (pt-BR)" in system_prompt
     assert "Reply in English" not in system_prompt
 

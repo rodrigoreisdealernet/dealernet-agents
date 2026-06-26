@@ -31,7 +31,11 @@ from temporal.src.workflows.ops import (
     RejectFleetFindingSignal,
     RejectFindingSignal,
     RevenueRecognitionWorkflow,
+    RevenueRecognitionWorkflowInput,
 )
+from temporal.src.workflows.ops.credit import CreditRiskWorkflowInput
+from temporal.src.workflows.ops.disposition_queue import DispositionQueueWorkflowInput
+from temporal.src.workflows.ops.vehicle_aging import VehicleAgingWorkflowInput
 
 _FLEET_AUDITOR_AGENT_KEY = "fleet-auditor"
 
@@ -598,6 +602,22 @@ def test_i18n_run_agent_now_endpoint_forwards_valid_locale_to_temporal_client() 
     ]
 
 
+def test_i18n_run_agent_now_endpoint_resolves_invalid_locale_before_forwarding() -> None:
+    client, _supabase, temporal, _ = _make_client(role="field_operator")
+
+    response = client.post(
+        "/api/ops/agents/revrec-analyst/run",
+        headers=_auth_header(),
+        json={"locale": "fr-FR"},
+    )
+
+    assert response.status_code == 202
+    assert response.json()["status"] == "triggered"
+    assert temporal.run_agent_now_calls == [
+        {"agent_key": "revrec-analyst", "tenant_id": "tenant-a-id", "locale": "pt-BR"}
+    ]
+
+
 def test_ac3_run_agent_now_unknown_key_returns_404_without_temporal_interaction() -> None:
     client, supabase, temporal, _ = _make_client()
 
@@ -710,8 +730,20 @@ async def test_ac5_temporal_signal_client_triggers_schedule_with_skip_overlap() 
     assert fake_temporal_client.started_workflows == []
 
 
+@pytest.mark.parametrize(
+    ("agent_key", "input_type"),
+    [
+        ("revrec-analyst", RevenueRecognitionWorkflowInput),
+        ("vehicle-aging-analyst", VehicleAgingWorkflowInput),
+        ("credit-analyst", CreditRiskWorkflowInput),
+        ("disposition-queue", DispositionQueueWorkflowInput),
+    ],
+)
 @pytest.mark.asyncio
-async def test_i18n_temporal_signal_client_resolves_unknown_locale_to_default_schedule_path() -> None:
+async def test_i18n_temporal_signal_client_starts_each_workflow_with_valid_locale_input(
+    agent_key: str,
+    input_type: type[Any],
+) -> None:
     signal_client = TemporalSignalClient(temporal_address="temporal.example:7233", temporal_namespace="default")
     handle = _FakeScheduleHandle()
     fake_temporal_client = _FakeScheduleTemporalClient(handle)
@@ -721,41 +753,57 @@ async def test_i18n_temporal_signal_client_resolves_unknown_locale_to_default_sc
 
     signal_client._client_instance = fake_client_instance  # type: ignore[method-assign]
 
-    result = await signal_client.run_agent_now(agent_key="revrec-analyst", tenant_id="tenant-a-id", locale="fr-FR")
+    result = await signal_client.run_agent_now(agent_key=agent_key, tenant_id="tenant-a-id", locale="en-US")
 
-    assert result == {
-        "agent_key": "revrec-analyst",
-        "schedule_id": "ops:tenant-a-id:revrec-analyst",
-        "status": "triggered",
-    }
-    assert fake_temporal_client.schedule_ids == ["ops:tenant-a-id:revrec-analyst"]
-    assert handle.trigger_calls == [{"overlap": ScheduleOverlapPolicy.SKIP}]
-    assert fake_temporal_client.started_workflows == []
-
-
-@pytest.mark.asyncio
-async def test_i18n_temporal_signal_client_starts_workflow_with_valid_locale_input() -> None:
-    signal_client = TemporalSignalClient(temporal_address="temporal.example:7233", temporal_namespace="default")
-    handle = _FakeScheduleHandle()
-    fake_temporal_client = _FakeScheduleTemporalClient(handle)
-
-    async def fake_client_instance() -> _FakeScheduleTemporalClient:
-        return fake_temporal_client
-
-    signal_client._client_instance = fake_client_instance  # type: ignore[method-assign]
-
-    result = await signal_client.run_agent_now(agent_key="revrec-analyst", tenant_id="tenant-a-id", locale="en-US")
-
-    assert result["agent_key"] == "revrec-analyst"
-    assert result["schedule_id"] == "ops:tenant-a-id:revrec-analyst"
+    assert result["agent_key"] == agent_key
+    assert result["schedule_id"] == f"ops:tenant-a-id:{agent_key}"
     assert result["status"] == "started"
     assert result["locale"] == "en-US"
     assert fake_temporal_client.schedule_ids == []
     assert handle.trigger_calls == []
     assert len(fake_temporal_client.started_workflows) == 1
     workflow_input = fake_temporal_client.started_workflows[0]["workflow_input"]
+    assert isinstance(workflow_input, input_type)
     assert workflow_input.tenant_id == "tenant-a-id"
     assert workflow_input.locale == "en-US"
+
+
+@pytest.mark.parametrize(
+    ("agent_key", "input_type"),
+    [
+        ("revrec-analyst", RevenueRecognitionWorkflowInput),
+        ("vehicle-aging-analyst", VehicleAgingWorkflowInput),
+        ("credit-analyst", CreditRiskWorkflowInput),
+        ("disposition-queue", DispositionQueueWorkflowInput),
+    ],
+)
+@pytest.mark.asyncio
+async def test_i18n_temporal_signal_client_resolves_invalid_locale_on_each_workflow_input(
+    agent_key: str,
+    input_type: type[Any],
+) -> None:
+    signal_client = TemporalSignalClient(temporal_address="temporal.example:7233", temporal_namespace="default")
+    handle = _FakeScheduleHandle()
+    fake_temporal_client = _FakeScheduleTemporalClient(handle)
+
+    async def fake_client_instance() -> _FakeScheduleTemporalClient:
+        return fake_temporal_client
+
+    signal_client._client_instance = fake_client_instance  # type: ignore[method-assign]
+
+    result = await signal_client.run_agent_now(agent_key=agent_key, tenant_id="tenant-a-id", locale="fr-FR")
+
+    assert result["agent_key"] == agent_key
+    assert result["schedule_id"] == f"ops:tenant-a-id:{agent_key}"
+    assert result["status"] == "started"
+    assert result["locale"] == "pt-BR"
+    assert fake_temporal_client.schedule_ids == []
+    assert handle.trigger_calls == []
+    assert len(fake_temporal_client.started_workflows) == 1
+    workflow_input = fake_temporal_client.started_workflows[0]["workflow_input"]
+    assert isinstance(workflow_input, input_type)
+    assert workflow_input.tenant_id == "tenant-a-id"
+    assert workflow_input.locale == "pt-BR"
 
 
 @pytest.mark.asyncio
