@@ -60,7 +60,7 @@ BEGIN
     AND split_part(source_record_id, ':', 3) = ANY(v_wynne_agents);
 
   -- Schemas de saída do legado (mantém apenas o do agente DIA).
-  DELETE FROM ops_output_schema_registry WHERE schema_key <> 'vehicle_aging_finding_v1';
+  DELETE FROM ops_output_schema_registry WHERE schema_key NOT IN ('vehicle_aging_finding_v1', 'service_estimate_finding_v1');
 
   -- Câmbio multi-moeda (Wynne); o DIA opera em BRL.
   DELETE FROM fx_rates;
@@ -596,6 +596,104 @@ END
 $$;
 
 -- ===========================================================================
+-- Service Estimate Authorization Rescue agent config (issue #81)
+-- Seeds `service-estimate-rescue` for demo-ops-a and demo-ops-b in BOTH the
+-- entity store (entity_type='agent_config'; read by ops_agent_config_current →
+-- ops_load_agent_config and by the worker schedule reconcile) and the base
+-- `ops_agent_config` table (parity). enabled=true but schedule.enabled=false so
+-- the recurring run stays off by default. The output schema registry row is
+-- owned by migration 20260627090100_service_estimate_rescue_agent.sql.
+-- Assist-only: the agent only recommends a reviewable next contact/recovery
+-- action; it never sends SMS/notifications or authorizes/reprices estimates.
+-- Idempotent via DELETE-then-INSERT + ON CONFLICT; tenants come from the main
+-- ops seed above.
+-- ===========================================================================
+DO $$
+DECLARE
+  v_agent_key   text  := 'service-estimate-rescue';
+  v_schema_key  text  := 'service_estimate_finding_v1';
+  v_model       jsonb := '{"provider":"azure_openai","deployment":"gpt-4.1-mini","api_version":"2024-12-01-preview"}'::jsonb;
+  v_system_prompt text := 'You are the Service Estimate Authorization Rescue analyst for a vehicle dealership workshop. Rank workshop service estimates (orçamentos de OS) that are PENDING authorization or were DECLINED by recoverable revenue for tenant {tenant_id}, and recommend a reviewable next action (contact_customer, offer_discount, reprice, escalate, monitor). You are assist-only: never send SMS/notifications, never authorize, reprice, discount, or cancel an estimate, never generate VendaPerdida, and never move money — a human acts on your recommendation. Surface evidence and keep uncertainty explicit.';
+  v_user_prompt text := 'Assess estimate {estimate_id} on order {order_number} for customer {customer} (vehicle {vehicle}) for tenant {tenant_id}. Estimate status: {estimate_status}. Recoverable value: {recoverable_value}. Lost-sale reason: {lost_sale_reason}. Description: {estimate_description}. Severity: {severity}. Recommend the next human-approved contact/recovery action with supporting evidence. Evidence:\n{evidence_json}';
+  v_tools       jsonb := '[]'::jsonb;
+  v_thresholds  jsonb := '{"high_value_threshold":5000}'::jsonb;
+  v_bounds      jsonb := '{"max_findings_per_run":50,"max_estimates":200,"max_tool_rounds":2}'::jsonb;
+  v_schedule    jsonb := '{"cron":"0 7 * * 1-5","enabled":false}'::jsonb;
+  v_tenant_keys text[] := ARRAY['demo-ops-a','demo-ops-b'];
+  v_tenant_key  text;
+  v_tenant_id   uuid;
+  v_entity_id   uuid;
+BEGIN
+  PERFORM set_config('request.jwt.claim.role', 'service_role', true);
+
+  FOREACH v_tenant_key IN ARRAY v_tenant_keys
+  LOOP
+    SELECT id INTO v_tenant_id FROM tenants WHERE tenant_key = v_tenant_key;
+    IF v_tenant_id IS NULL THEN
+      RAISE EXCEPTION 'Service estimate rescue seed requires tenant % (run the main ops seed first)', v_tenant_key;
+    END IF;
+
+    DELETE FROM entities
+    WHERE entity_type = 'agent_config'
+      AND source_record_id = format('demo-ops-agent-config:%s:%s', v_tenant_id, v_agent_key);
+
+    INSERT INTO entities (entity_type, source_record_id)
+    VALUES ('agent_config', format('demo-ops-agent-config:%s:%s', v_tenant_id, v_agent_key))
+    ON CONFLICT (entity_type, source_record_id) DO UPDATE
+      SET source_record_id = EXCLUDED.source_record_id
+    RETURNING id INTO v_entity_id;
+
+    INSERT INTO entity_versions (entity_id, version_number, data)
+    VALUES (
+      v_entity_id,
+      1,
+      jsonb_build_object(
+        'tenant_id', v_tenant_id,
+        'agent_key', v_agent_key,
+        'enabled', true,
+        'model', v_model,
+        'system_prompt', v_system_prompt,
+        'user_prompt_template', v_user_prompt,
+        'tools', v_tools,
+        'output_schema_key', v_schema_key,
+        'thresholds', v_thresholds,
+        'bounds', v_bounds,
+        'schedule', v_schedule,
+        'auto_apply', false
+      )
+    )
+    ON CONFLICT (entity_id, version_number) DO UPDATE
+      SET data = EXCLUDED.data,
+          is_current = true,
+          valid_to = NULL;
+
+    INSERT INTO ops_agent_config (
+      tenant_id, agent_key, enabled, model,
+      system_prompt, user_prompt_template,
+      tools, output_schema_key, thresholds, bounds, schedule, auto_apply
+    )
+    VALUES (
+      v_tenant_id, v_agent_key, true, v_model,
+      v_system_prompt, v_user_prompt,
+      v_tools, v_schema_key, v_thresholds, v_bounds, v_schedule, false
+    )
+    ON CONFLICT (tenant_id, agent_key) DO UPDATE
+      SET enabled              = EXCLUDED.enabled,
+          model                = EXCLUDED.model,
+          system_prompt        = EXCLUDED.system_prompt,
+          user_prompt_template = EXCLUDED.user_prompt_template,
+          tools                = EXCLUDED.tools,
+          output_schema_key    = EXCLUDED.output_schema_key,
+          thresholds           = EXCLUDED.thresholds,
+          bounds               = EXCLUDED.bounds,
+          schedule             = EXCLUDED.schedule,
+          auto_apply           = EXCLUDED.auto_apply,
+          updated_at           = now();
+  END LOOP;
+END
+$$;
+
+-- ===========================================================================
 -- DIA dealership domain — demo companies + brands (issue #5)
 -- Idempotent namespaces: source_record_id LIKE 'demo-dia-company-%' / '-brand-%'.
 -- Reuses rental_upsert_entity_current_state (the generic SCD2 upsert) under the
@@ -708,7 +806,11 @@ DECLARE
     jsonb_build_object('sr','demo-dia-service-001','order_number','OS-2026-001','customer','Maria Souza','vehicle','BRA2E19','description','Revisão de 10.000 km','status','concluida','open_days',55,'turn_h',6,'revenue',850.00,'technician','Carlos'),
     jsonb_build_object('sr','demo-dia-service-002','order_number','OS-2026-002','customer','João Lima','vehicle','RIO3F45','description','Troca de pastilhas de freio','status','concluida','open_days',40,'turn_h',3,'revenue',520.00,'technician','Ana'),
     jsonb_build_object('sr','demo-dia-service-003','order_number','OS-2026-003','customer','Pedro Alves','vehicle','SAO7G88','description','Alinhamento e balanceamento','status','concluida','open_days',20,'turn_h',2,'revenue',280.00,'technician','Carlos'),
-    jsonb_build_object('sr','demo-dia-service-004','order_number','OS-2026-004','customer','Lucas Reis','vehicle','BHZ1H22','description','Diagnóstico eletrônico','status','em_andamento','open_days',5,'turn_h',null,'revenue',150.00,'technician','Ana'),
+    jsonb_build_object('sr','demo-dia-service-004','order_number','OS-2026-004','customer','Lucas Reis','vehicle','BHZ1H22','description','Diagnóstico eletrônico','status','em_andamento','open_days',5,'turn_h',null,'revenue',150.00,'technician','Ana',
+      'estimates', jsonb_build_array(
+        jsonb_build_object('estimate_id','demo-dia-service-004-est-1','status','pending','line_value',1200.00,'description','Troca de módulo de injeção'),
+        jsonb_build_object('estimate_id','demo-dia-service-004-est-2','status','declined','line_value',8000.00,'lost_sale_reason','cliente achou caro','description','Reparo de chicote elétrico')
+      )),
     jsonb_build_object('sr','demo-dia-service-005','order_number','OS-2026-005','customer','Fernanda Dias','vehicle','POA9J33','description','Troca de óleo e filtros','status','em_andamento','open_days',3,'turn_h',null,'revenue',420.00,'technician','Bruno'),
     jsonb_build_object('sr','demo-dia-service-006','order_number','OS-2026-006','customer','Roberto Nunes','vehicle','CWB4K11','description','Reparo do ar-condicionado','status','aberta','open_days',2,'turn_h',null,'revenue',null,'technician',null),
     jsonb_build_object('sr','demo-dia-service-007','order_number','OS-2026-007','customer','Camila Rocha','vehicle','REC6L77','description','Substituição de embreagem','status','aberta','open_days',1,'turn_h',null,'revenue',null,'technician','Bruno'),
@@ -720,7 +822,12 @@ DECLARE
     jsonb_build_object('sr','demo-dia-service-012','order_number','OS-2026-012','customer','Rafael Teixeira','vehicle','NAT3R12','description','Troca de correia dentada','status','concluida','open_days',33,'turn_h',12,'revenue',1450.00,'technician','Carlos'),
     jsonb_build_object('sr','demo-dia-service-013','order_number','OS-2026-013','customer','Patrícia Moraes','vehicle','MCZ8S21','description','Reparo de embreagem','status','concluida','open_days',15,'turn_h',5,'revenue',980.00,'technician','Ana'),
     -- em andamento adicionais
-    jsonb_build_object('sr','demo-dia-service-014','order_number','OS-2026-014','customer','Gustavo Barros','vehicle','BSB6T34','description','Funilaria e pintura','status','em_andamento','open_days',9,'turn_h',null,'revenue',2300.00,'technician','Bruno'),
+    jsonb_build_object('sr','demo-dia-service-014','order_number','OS-2026-014','customer','Gustavo Barros','vehicle','BSB6T34','description','Funilaria e pintura','status','em_andamento','open_days',9,'turn_h',null,'revenue',2300.00,'technician','Bruno',
+      'estimates', jsonb_build_array(
+        jsonb_build_object('estimate_id','demo-dia-service-014-est-1','status','pending','line_value',3500.00,'description','Pintura completa do capô e paralama'),
+        jsonb_build_object('estimate_id','demo-dia-service-014-est-2','status','declined','line_value',4200.00,'lost_sale_reason','cliente vai cotar em outra oficina','description','Troca de para-choque dianteiro'),
+        jsonb_build_object('estimate_id','demo-dia-service-014-est-3','status','authorized','line_value',900.00,'description','Polimento técnico')
+      )),
     jsonb_build_object('sr','demo-dia-service-015','order_number','OS-2026-015','customer','Sandra Lopes','vehicle','GYN2U55','description','Diagnóstico de ruído na suspensão','status','em_andamento','open_days',4,'turn_h',null,'revenue',null,'technician','Carlos'),
     -- abertas adicionais
     jsonb_build_object('sr','demo-dia-service-016','order_number','OS-2026-016','customer','Eduardo Pires','vehicle','THE9V77','description','Troca de fluido de freio','status','aberta','open_days',0,'turn_h',null,'revenue',null,'technician',null),
@@ -776,6 +883,12 @@ BEGIN
         'closed_at',
         to_char(v_opened + ((v_item ->> 'turn_h')::int || ' hours')::interval, 'YYYY-MM-DD"T"HH24:MI:SSOF')
       );
+    END IF;
+
+    -- Workshop estimate (orçamento de OS) lines feed v_dia_service_estimate_current
+    -- and the service-estimate-rescue agent (issue #81). Only some OS carry them.
+    IF v_item ? 'estimates' THEN
+      v_data := v_data || jsonb_build_object('estimates', v_item -> 'estimates');
     END IF;
 
     PERFORM rental_upsert_entity_current_state(
