@@ -210,6 +210,23 @@ def ops_list_open_finding_fingerprints(tenant_id: str) -> list[str]:
     return ops_revrec.ops_list_open_finding_fingerprints(tenant_id)
 
 
+@activity.defn(name="ops_vehicle_aging_expire_out_of_scope_findings")
+def ops_vehicle_aging_expire_out_of_scope_findings(
+    tenant_id: str,
+    in_scope_fingerprints: list[str],
+) -> int:
+    """Supersede open vehicle-aging findings no longer produced by the current run.
+
+    After a reseed, vehicle UUIDs (and thus fingerprints) change, so stale
+    findings never dedupe and linger as ``pending_approval``. This retires any
+    open finding for this tenant whose fingerprint is not in this run's in-scope
+    set, marking it ``superseded`` (preserves the audit trail). Returns the count.
+    """
+    return ops_revrec.ops_expire_out_of_scope_findings(
+        tenant_id, _AGENT_KEY, in_scope_fingerprints
+    )
+
+
 @activity.defn(name="ops_vehicle_aging_create_workflow_run")
 def ops_create_workflow_run(workflow_key: str, tenant_id: str, metadata: dict[str, Any]) -> dict[str, Any]:
     return ops_revrec.ops_create_workflow_run(workflow_key, tenant_id, metadata)
@@ -278,4 +295,5 @@ __all__ = [
     "ops_record_finding_disposition",
     "ops_scope_vehicle_aging",
     "ops_vehicle_aging_assess",
+    "ops_vehicle_aging_expire_out_of_scope_findings",
 ]

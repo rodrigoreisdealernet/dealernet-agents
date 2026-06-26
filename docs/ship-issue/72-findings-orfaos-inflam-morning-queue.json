@@ -6,14 +6,19 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/72",
   "pr": null,
   "prUrl": null,
-  "updatedAt": "2026-06-26T00:57:51.570Z",
+  "updatedAt": "2026-06-26T01:09:01.691Z",
   "steps": [
     {
       "id": "spec",
       "label": "01 · Spec",
-      "status": "running",
-      "summary": "",
-      "artifacts": [],
+      "status": "done",
+      "summary": "5 acceptance criteria drafted",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/72-findings-orfaos-inflam-morning-queue.md"
+        }
+      ],
       "notes": [
         "Iniciando spec a partir da issue #72"
       ],
@@ -22,8 +27,8 @@
     {
       "id": "approve",
       "label": "02 · Approve (human gate)",
-      "status": "pending",
-      "summary": "",
+      "status": "done",
+      "summary": "Spec approved by human",
       "artifacts": [],
       "notes": [],
       "gate": null
@@ -31,10 +36,13 @@
     {
       "id": "code",
       "label": "03 · Code",
-      "status": "pending",
+      "status": "running",
       "summary": "",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "Starting coder: reading vehicle-aging activities, workflow, seed.sql",
+        "A: seed.sql orphan purge added. B: superseded migration + ops_revrec helper + vehicle-aging activity wired into workflow/worker. SQL validated on live container; ruff clean."
+      ],
       "gate": null
     },
     {

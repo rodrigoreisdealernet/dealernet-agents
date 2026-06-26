@@ -1520,6 +1520,7 @@ async def main() -> None:
             ops_vehicle_aging.ops_scope_vehicle_aging,
             ops_vehicle_aging.ops_vehicle_aging_assess,
             ops_vehicle_aging.ops_list_open_finding_fingerprints,
+            ops_vehicle_aging.ops_vehicle_aging_expire_out_of_scope_findings,
             ops_vehicle_aging.ops_create_workflow_run,
             ops_vehicle_aging.ops_finalize_workflow_run,
             ops_vehicle_aging.ops_record_finding,

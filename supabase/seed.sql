@@ -929,3 +929,26 @@ END
 $$;
 
 commit;
+
+-- ===========================================================================
+-- Purga de findings órfãos do vehicle-aging (issue #72)
+-- Roda DEPOIS de recriar as entidades 'vehicle' (acima), então as entidades
+-- atuais já existem. Findings cujo contract_id não corresponde a uma entidade
+-- 'vehicle' atual ficaram pendurados de runs anteriores e inflam a Morning
+-- Queue / "DIA preparou estas ações". Idempotente: rodar de novo é seguro.
+-- ===========================================================================
+
+begin;
+set local request.jwt.claim.role = 'service_role';
+
+-- Purga de findings órfãos do vehicle-aging: contract_id que não corresponde a
+-- uma entidade 'vehicle' atual (os UUIDs de veículo mudam a cada reseed, então
+-- findings de runs anteriores ficam pendurados e inflam a Morning Queue).
+DELETE FROM finding f
+WHERE f.agent_key = 'vehicle-aging-analyst'
+  AND NOT EXISTS (
+    SELECT 1 FROM entities e
+    WHERE e.id = f.contract_id AND e.entity_type = 'vehicle'
+  );
+
+commit;
