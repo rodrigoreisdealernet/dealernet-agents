@@ -4,9 +4,9 @@
   "slug": "feat-ops-historico-de-execucoes",
   "branch": "feature/128-feat-ops-historico-de-execucoes",
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/128",
-  "pr": null,
-  "prUrl": null,
-  "updatedAt": "2026-06-26T14:55:33.181Z",
+  "pr": "144",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/144",
+  "updatedAt": "2026-06-26T15:06:53.469Z",
   "steps": [
     {
       "id": "spec",
@@ -52,24 +52,31 @@
       "id": "tests",
       "label": "04 · Tests",
       "status": "running",
-      "summary": "",
+      "summary": "SQL contract 8/8, frontend verify 232/232",
       "artifacts": [],
       "notes": [
         "Spawning tester agent",
         "writing SQL contract test for ops_agent_run_history_view (AC1-4, AC7)",
         "SQL contract 8/8 green; running frontend verify suite",
         "opening draft PR",
-        "draft PR #144 opened; SQL 8/8 + frontend 232/232 green"
+        "draft PR #144 opened; SQL 8/8 + frontend 232/232 green",
+        "added 15 ops_api endpoint tests (AC4/AC2/AC1); running full suites"
       ],
       "gate": null
     },
     {
       "id": "test-review",
       "label": "05 · Test review",
-      "status": "pending",
+      "status": "running",
       "summary": "",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "Spawning reviewer (mode tests)",
+        "Reading test files and code under test (migration, ops_api, frontend)",
+        "Findings ready: AC4 prod isolation + AC2 ordering + AC1 limit untested at endpoint level; posting review to PR #144",
+        "Review posted on PR #144: changes recommended — AC4 isolation tested on wrong path (service_role bypasses RLS), AC2 ordering tautological, AC1 limit untested; ops_api endpoint has 0 coverage despite existing TestClient harness",
+        "Iteration 1: looping endpoint-coverage gaps back to tester (AC4 RLS-bypass path, AC2 ordering, limit clamp)"
+      ],
       "gate": null
     },
     {

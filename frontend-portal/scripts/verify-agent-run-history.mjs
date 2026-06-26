@@ -75,6 +75,8 @@ test('AgentRunHistory: nome amigavel, polling 10s e estados de UI', () => {
   assert.match(src, /useFindingLabels\(\)/, 'deve usar useFindingLabels (nome amigavel)')
   assert.match(src, /agentLabel\(/, 'deve renderizar via agentLabel, nunca agent_key cru')
   assert.match(src, /setInterval\(\s*load\s*,\s*10000\s*\)/, 'deve fazer polling de 10s')
+  // Sem vazamento de polling: o efeito limpa o timer no cleanup.
+  assert.match(src, /clearInterval\(/, 'deve limpar o timer (clearInterval) no cleanup do efeito')
   assert.match(src, /t\(\s*['"]loading['"]\s*\)/, "estado de carregando t('loading')")
   assert.match(src, /t\(\s*['"]error['"]\s*\)/, "estado de erro t('error')")
   assert.match(src, /t\(\s*['"]empty['"]\s*\)/, "estado vazio t('empty')")

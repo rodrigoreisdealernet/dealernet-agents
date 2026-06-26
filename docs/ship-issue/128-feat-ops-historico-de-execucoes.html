@@ -24,7 +24,7 @@
   .foot{color:#6b7280;font-size:12px;margin-top:20px}
 </style></head><body><div class="wrap">
 <h1>ship-issue #128 — feat(ops): histórico de execuções por agente DIA (ops_agent_run_history_view) [U5]</h1>
-<div class="sub"><a href="https://github.com/rodrigoreisdealernet/dealernet-agents/issues/128">issue</a> · branch <code>feature/128-feat-ops-historico-de-execucoes</code>  · 43% complete</div>
+<div class="sub"><a href="https://github.com/rodrigoreisdealernet/dealernet-agents/issues/128">issue</a> · branch <code>feature/128-feat-ops-historico-de-execucoes</code> · <a href="https://github.com/rodrigoreisdealernet/dealernet-agents/pull/144">PR #144</a> · 43% complete</div>
 <div class="bar"><i></i></div>
 
 <table><tbody><tr class="done">
@@ -55,17 +55,17 @@
         <td class="ic" style="color:#2563eb">◐</td>
         <td class="lbl">04 · Tests<div class="st" style="color:#2563eb">running</div></td>
         <td class="meta">
+          <div class="sum">SQL contract 8/8, frontend verify 232/232</div>
           
-          
-          <ul class="notes"><li>Spawning tester agent</li><li>writing SQL contract test for ops_agent_run_history_view (AC1-4, AC7)</li><li>SQL contract 8/8 green; running frontend verify suite</li><li>opening draft PR</li><li>draft PR #144 opened; SQL 8/8 + frontend 232/232 green</li></ul>
+          <ul class="notes"><li>writing SQL contract test for ops_agent_run_history_view (AC1-4, AC7)</li><li>SQL contract 8/8 green; running frontend verify suite</li><li>opening draft PR</li><li>draft PR #144 opened; SQL 8/8 + frontend 232/232 green</li><li>added 15 ops_api endpoint tests (AC4/AC2/AC1); running full suites</li></ul>
         </td>
-      </tr><tr class="pending">
-        <td class="ic" style="color:#9ca3af">○</td>
-        <td class="lbl">05 · Test review<div class="st" style="color:#9ca3af">pending</div></td>
+      </tr><tr class="running">
+        <td class="ic" style="color:#2563eb">◐</td>
+        <td class="lbl">05 · Test review<div class="st" style="color:#2563eb">running</div></td>
         <td class="meta">
           
           
-          
+          <ul class="notes"><li>Spawning reviewer (mode tests)</li><li>Reading test files and code under test (migration, ops_api, frontend)</li><li>Findings ready: AC4 prod isolation + AC2 ordering + AC1 limit untested at endpoint level; posting review to PR #144</li><li>Review posted on PR #144: changes recommended — AC4 isolation tested on wrong path (service_role bypasses RLS), AC2 ordering tautological, AC1 limit untested; ops_api endpoint has 0 coverage despite existing TestClient harness</li><li>Iteration 1: looping endpoint-coverage gaps back to tester (AC4 RLS-bypass path, AC2 ordering, limit clamp)</li></ul>
         </td>
       </tr><tr class="pending">
         <td class="ic" style="color:#9ca3af">○</td>
@@ -84,5 +84,5 @@
           
         </td>
       </tr></tbody></table>
-<div class="foot">auto-refreshes every 5s · last update 2026-06-26T14:55:33.181Z</div>
+<div class="foot">auto-refreshes every 5s · last update 2026-06-26T15:06:53.469Z</div>
 </div></body></html>
