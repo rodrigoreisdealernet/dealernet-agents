@@ -214,5 +214,7 @@ def test_build_messages_injects_allowlist_into_system_prompt() -> None:
     )
     assert messages[0]["role"] == "system"
     assert "dia-sales" in messages[0]["content"]
+    # Period-disambiguation guidance must be present (issue #104).
+    assert "PERÍODO" in messages[0]["content"]
     assert messages[-1] == {"role": "user", "content": "oi"}
     assert allowed == {"dia-sales", "dia-overview"}
