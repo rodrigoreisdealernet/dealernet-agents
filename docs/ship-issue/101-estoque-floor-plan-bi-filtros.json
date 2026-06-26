@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/101",
   "pr": null,
   "prUrl": null,
-  "updatedAt": "2026-06-26T03:19:49.545Z",
+  "updatedAt": "2026-06-26T03:27:35.639Z",
   "steps": [
     {
       "id": "spec",
@@ -37,22 +37,27 @@
     {
       "id": "code",
       "label": "03 · Code",
-      "status": "running",
-      "summary": "",
+      "status": "done",
+      "summary": "filtros Marca/Empresa + métrica única + gráfico por marca; KPIs recalculados; colorByPoint no ChartCard; build/lint/parity verdes",
       "artifacts": [],
       "notes": [
         "Reading reference files (SalesDashboard, VehicleInventoryBI, ChartCard, agentsApi, i18n)",
-        "Code written (filters Marca/Empresa, metric selector, by-brand chart, recomputed KPIs, colorByPoint in ChartCard, i18n). Installing deps + building."
+        "Code written (filters Marca/Empresa, metric selector, by-brand chart, recomputed KPIs, colorByPoint in ChartCard, i18n). Installing deps + building.",
+        "Committed 8e6db23. Build OK, lint 0 errors, i18n-parity + kpi-format green. verify-vehicle-inventory-bi.mjs fails as expected (asserts old by-marca-loja/two-series + literal Carregando) — for tester."
       ],
       "gate": null
     },
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "pending",
+      "status": "running",
       "summary": "",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "Reading role + coder diff, studying existing verify scripts",
+        "Baseline 148/153 (5 fails, all in verify-vehicle-inventory-bi). Rewriting it for new filters/metric/single-series reality",
+        "Rewrote verify-vehicle-inventory-bi.mjs + added colorByPoint test to verify-chartcard.mjs. Full suite green 161/161 (was 148/153). Committing + opening draft PR"
+      ],
       "gate": null
     },
     {

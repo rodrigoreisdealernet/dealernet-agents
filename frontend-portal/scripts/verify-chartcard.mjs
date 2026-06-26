@@ -220,6 +220,36 @@ test('AC: recharts esta em dependencies de package.json', () => {
   )
 })
 
+// AC #101: prop colorByPoint colore cada barra de uma serie unica com uma cor
+// distinta da paleta, via <Cell> por ponto de dados (em vez de cor unica).
+test('AC #101: colorByPoint pinta cada barra de uma serie unica com <Cell> da paleta', () => {
+  const src = read(CHART_CARD_PATH)
+  // A prop existe no contrato.
+  assert.match(
+    src,
+    /\bcolorByPoint\b\?\s*:\s*boolean/,
+    'ChartCardProps deve declarar colorByPoint?: boolean',
+  )
+  // Cell vem do recharts.
+  assert.match(
+    src,
+    /import\s*\{[\s\S]*?\bCell\b[\s\S]*?\}\s*from\s*['"]recharts['"]/,
+    'ChartCard deve importar Cell de recharts',
+  )
+  // So aplica quando colorByPoint && exatamente uma serie.
+  assert.match(
+    src,
+    /colorByPoint\s*&&\s*series\.length\s*===\s*1/,
+    'o color-by-point so deve valer para uma unica serie (colorByPoint && series.length === 1)',
+  )
+  // Mapeia os pontos de dados para <Cell> com fill da paleta por indice.
+  assert.match(
+    src,
+    /data\.map\(\s*\(\s*_\s*,\s*\w+\s*\)\s*=>\s*\([\s\S]*?<Cell[\s\S]*?fill=\{DEFAULT_PALETTE\[\s*\w+\s*%\s*DEFAULT_PALETTE\.length\s*\]\}/,
+    'colorByPoint deve renderizar um <Cell> por ponto com fill distinto de DEFAULT_PALETTE',
+  )
+})
+
 // Non-Goal: ChartCard NAO deve estar registrado no registry (e widget, nao tela).
 test('Non-Goal: ChartCard NAO esta registrado no registry.ts (widget, nao tela)', () => {
   const registry = read('src/portal/renderers/registry.ts')
