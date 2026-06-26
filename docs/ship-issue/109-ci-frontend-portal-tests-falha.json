@@ -1,0 +1,85 @@
+{
+  "issue": "109",
+  "title": "CI: Frontend Portal Tests falha com node: bad option: --experimental-strip-types",
+  "slug": "ci-frontend-portal-tests-falha",
+  "branch": "feature/109-ci-frontend-portal-tests-falha",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/109",
+  "pr": "114",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/114",
+  "updatedAt": "2026-06-26T04:38:30.720Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "4 acceptance criteria drafted",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/109-ci-frontend-portal-tests-falha.md"
+        }
+      ],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec approved by human (--approved)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": ".github/workflows/ci.yml (node-version 20->22)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "done",
+      "summary": "3 guard tests added; full suite 169 passing",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "done",
+      "summary": "0 iteration(s); PASS",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "done",
+      "summary": "APPROVE — root cause fixed, low risk",
+      "artifacts": [
+        {
+          "label": "PR review",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/114"
+        }
+      ],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "waiting",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": "merge"
+    }
+  ]
+}
