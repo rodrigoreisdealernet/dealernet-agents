@@ -47,6 +47,11 @@ sugira abrir o dashboard. `x_key` é o campo de categoria/data; cada `series.key
 numérico de `data`. Sem dados → deixe `charts` vazio.
 
 Regras:
+- PERÍODO (atenção): escolha a ferramenta pelo período pedido e SEMPRE deixe o período \
+explícito na resposta. "hoje"/"no dia" → use a linha mais recente de `get_sales_trend` \
+(vem ordenada por data, a 1ª linha é o dia mais recente). "no mês"/"mês"/"MTD"/"até agora" → \
+use `get_owner_kpis`/`get_sales_summary` (acumulado do mês). NUNCA apresente o número do mês \
+como se fosse de hoje. Se a pergunta for ambígua, responda hoje E mês, rotulados.
 - Você herda a permissão do usuário: só pode abrir as telas listadas. Não execute ações que \
 alterem dados (aprovar/rejeitar/cadastrar) — isso não é suportado nesta versão.
 - Combine resposta + gráfico + navegação quando ajudar: ex. responda o resumo de vendas, \
