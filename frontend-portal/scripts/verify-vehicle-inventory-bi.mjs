@@ -135,21 +135,38 @@ test('AC #101 filtros: selects Marca/Empresa/Métrica com estado, opcao "Todas" 
     'empresaOptions (Empresa) deve vir de distinct(summary.map(r => r.store)) — empresa mapeia a store',
   )
 
-  // Tres <select> ligados a brand/empresa/metric com onChange.
+  // Tres <select> ligados a brand/empresa/metric com onChange. Para cada um,
+  // isolamos o BLOCO de abertura da tag `<select ...>` (do `<select` ate o `>`
+  // imediatamente antes do primeiro filho `<option`) e exigimos que value E
+  // onChange pertencam AO MESMO <select> — assim uma fiacao cruzada (value de um
+  // select, onChange de outro) falha. O lazy [\s\S]*? nao vaza para o proximo
+  // <select> porque ancoramos no `<option` filho que segue cada abertura.
+  // (Nao usamos [^>]* porque o `>` do arrow `=>` em onChange encerraria cedo.)
+  const selectOpenTags = [...src.matchAll(/<select\b[\s\S]*?>\s*<option\b/g)].map((m) => m[0])
+  assert.equal(selectOpenTags.length, 3, `esperado exatamente 3 <select> (Marca/Empresa/Métrica); encontrados ${selectOpenTags.length}`)
+
+  const brandSelect = selectOpenTags.find((tag) => /value=\{brand\}/.test(tag))
+  assert.ok(brandSelect, 'deve haver um <select> com value={brand}')
   assert.match(
-    src,
-    /<select[^>]*value=\{brand\}[^>]*onChange=\{\(\s*e\s*\)\s*=>\s*setBrand\(\s*e\.target\.value\s*\)\}/,
-    'deve haver <select> da Marca ligado a brand/setBrand',
+    brandSelect,
+    /onChange=\{\(\s*e\s*\)\s*=>\s*setBrand\(\s*e\.target\.value\s*\)\}/,
+    'o <select> da Marca (value={brand}) deve ter onChange que chama setBrand(e.target.value)',
   )
+
+  const empresaSelect = selectOpenTags.find((tag) => /value=\{empresa\}/.test(tag))
+  assert.ok(empresaSelect, 'deve haver um <select> com value={empresa}')
   assert.match(
-    src,
-    /<select[^>]*value=\{empresa\}[^>]*onChange=\{\(\s*e\s*\)\s*=>\s*setEmpresa\(\s*e\.target\.value\s*\)\}/,
-    'deve haver <select> da Empresa ligado a empresa/setEmpresa',
+    empresaSelect,
+    /onChange=\{\(\s*e\s*\)\s*=>\s*setEmpresa\(\s*e\.target\.value\s*\)\}/,
+    'o <select> da Empresa (value={empresa}) deve ter onChange que chama setEmpresa(e.target.value)',
   )
+
+  const metricSelect = selectOpenTags.find((tag) => /value=\{metric\}/.test(tag))
+  assert.ok(metricSelect, 'deve haver um <select> com value={metric}')
   assert.match(
-    src,
-    /value=\{metric\}[\s\S]{0,160}?onChange=\{\(\s*e\s*\)\s*=>\s*setMetric\(\s*e\.target\.value\s+as\s+Metric\s*\)\}/,
-    'deve haver <select> da Métrica ligado a metric/setMetric',
+    metricSelect,
+    /onChange=\{\(\s*e\s*\)\s*=>\s*setMetric\(\s*e\.target\.value\s+as\s+Metric\s*\)\}/,
+    'o <select> da Métrica (value={metric}) deve ter onChange que chama setMetric(e.target.value as Metric)',
   )
 
   // Opcao "Todas" em cada filtro (Marca e Empresa).
@@ -177,24 +194,46 @@ test('AC #101 filtro de veiculos: status em_estoque + marca + empresa/store', ()
   const block = src.match(/filteredVehicles\s*=\s*useMemo\([\s\S]*?\[[^\]]*\]\s*,?\s*\)/)?.[0] ?? ''
   assert.ok(block, 'nao foi possivel localizar o useMemo de filteredVehicles')
 
-  // status === 'em_estoque'
-  assert.match(
-    block,
-    /\.status\s*===\s*['"]em_estoque['"]/,
-    "filteredVehicles deve exigir status === 'em_estoque'",
+  // Deve ser um .filter() real cujo predicado conjuga (AND) as TRES condicoes
+  // numa unica expressao. Capturamos o corpo do callback ate o `)` do filter e
+  // exigimos a estrutura `A && B && C`, de modo que um OR (`||`) entre os grupos,
+  // ou a negacao de qualquer condicao, faca este teste falhar.
+  const filterCb = block.match(
+    /\.filter\(\s*\(\s*(\w+)\s*\)\s*=>([\s\S]*?)\)\s*,?\s*\[/,
   )
-  // filtro por marca (ALL passa, senao compara brand)
+  assert.ok(filterCb, 'filteredVehicles deve usar um .filter((v) => ...) real')
+  const param = filterCb[1]
+  const predicate = filterCb[2]
+  // status === 'em_estoque' (positivo, nao negado)
   assert.match(
-    block,
-    /brand\s*===\s*ALL\s*\|\|\s*\w+\.brand\s*===\s*brand/,
-    'filteredVehicles deve filtrar por marca (brand === ALL || v.brand === brand)',
+    predicate,
+    new RegExp(`${param}\\.status\\s*===\\s*['"]em_estoque['"]`),
+    "predicado deve exigir status === 'em_estoque'",
   )
-  // filtro por empresa sobre o campo store
+  // marca: (brand === ALL || v.brand === brand) — comparacao positiva.
   assert.match(
-    block,
-    /empresa\s*===\s*ALL\s*\|\|\s*\w+\.store\s*===\s*empresa/,
-    'filteredVehicles deve filtrar por empresa sobre o campo store (empresa === ALL || v.store === empresa)',
+    predicate,
+    new RegExp(`\\(\\s*brand\\s*===\\s*ALL\\s*\\|\\|\\s*${param}\\.brand\\s*===\\s*brand\\s*\\)`),
+    'predicado deve conter o grupo de marca (brand === ALL || v.brand === brand)',
   )
+  // empresa: (empresa === ALL || v.store === empresa) — sobre o campo store.
+  assert.match(
+    predicate,
+    new RegExp(`\\(\\s*empresa\\s*===\\s*ALL\\s*\\|\\|\\s*${param}\\.store\\s*===\\s*empresa\\s*\\)`),
+    'predicado deve conter o grupo de empresa (empresa === ALL || v.store === empresa)',
+  )
+  // E os tres grupos devem ser conjugados por && (AND), nao por || (OR). Esta
+  // assercao falha se o predicado for invertido para um OR entre os grupos.
+  assert.match(
+    predicate,
+    new RegExp(
+      `${param}\\.status\\s*===\\s*['"]em_estoque['"]\\s*&&\\s*\\(\\s*brand\\s*===\\s*ALL\\s*\\|\\|\\s*${param}\\.brand\\s*===\\s*brand\\s*\\)\\s*&&\\s*\\(\\s*empresa\\s*===\\s*ALL\\s*\\|\\|\\s*${param}\\.store\\s*===\\s*empresa\\s*\\)`,
+    ),
+    'predicado deve ser a CONJUNCAO (AND) das tres condicoes: status && (marca) && (empresa)',
+  )
+  // Garante que nenhum OR liga os grupos de nivel superior (so os ALL-guards usam ||).
+  const orCount = (predicate.match(/\|\|/g) ?? []).length
+  assert.equal(orCount, 2, 'o predicado deve ter exatamente 2 operadores || (apenas dentro dos guards ALL); um OR entre os grupos seria um terceiro')
   // dependencias do memo reagem aos filtros
   assert.match(
     block,
@@ -208,16 +247,32 @@ test('AC #101 summary filtrado: filteredSummary respeita marca + empresa/store',
   const src = read(VEHICLE_BI_PATH)
   const block = src.match(/filteredSummary\s*=\s*useMemo\([\s\S]*?\[[^\]]*\]\s*,?\s*\)/)?.[0] ?? ''
   assert.ok(block, 'nao foi possivel localizar o useMemo de filteredSummary')
+
+  // .filter() real cujo predicado conjuga (AND) marca + empresa.
+  const filterCb = block.match(/\.filter\(\s*\(\s*(\w+)\s*\)\s*=>([\s\S]*?)\)\s*,?\s*\[/)
+  assert.ok(filterCb, 'filteredSummary deve usar um .filter((r) => ...) real')
+  const param = filterCb[1]
+  const predicate = filterCb[2]
   assert.match(
-    block,
-    /brand\s*===\s*ALL\s*\|\|\s*\w+\.brand\s*===\s*brand/,
-    'filteredSummary deve filtrar por marca',
+    predicate,
+    new RegExp(`\\(\\s*brand\\s*===\\s*ALL\\s*\\|\\|\\s*${param}\\.brand\\s*===\\s*brand\\s*\\)`),
+    'filteredSummary deve filtrar por marca (brand === ALL || r.brand === brand)',
   )
   assert.match(
-    block,
-    /empresa\s*===\s*ALL\s*\|\|\s*\w+\.store\s*===\s*empresa/,
-    'filteredSummary deve filtrar por empresa sobre store',
+    predicate,
+    new RegExp(`\\(\\s*empresa\\s*===\\s*ALL\\s*\\|\\|\\s*${param}\\.store\\s*===\\s*empresa\\s*\\)`),
+    'filteredSummary deve filtrar por empresa sobre store (empresa === ALL || r.store === empresa)',
   )
+  // Os dois grupos devem ser conjugados por && (AND), nao por OR.
+  assert.match(
+    predicate,
+    new RegExp(
+      `\\(\\s*brand\\s*===\\s*ALL\\s*\\|\\|\\s*${param}\\.brand\\s*===\\s*brand\\s*\\)\\s*&&\\s*\\(\\s*empresa\\s*===\\s*ALL\\s*\\|\\|\\s*${param}\\.store\\s*===\\s*empresa\\s*\\)`,
+    ),
+    'filteredSummary deve ser a CONJUNCAO (AND) de marca && empresa',
+  )
+  const orCount = (predicate.match(/\|\|/g) ?? []).length
+  assert.equal(orCount, 2, 'predicado de filteredSummary deve ter exatamente 2 || (so os guards ALL); um OR entre os grupos seria um terceiro')
 })
 
 // AC #101 KPIs: os 4 KPIs sao recalculados a partir dos veiculos filtrados —
@@ -264,6 +319,20 @@ test('AC #101 KPIs: recalculados de filteredVehicles (sum cost, sum floor_plan, 
     /\w+\.days_in_stock\s*>\s*90/,
     'KPI parados +90 deve contar days_in_stock > 90',
   )
+
+  // O objeto retornado pelo useMemo deve expor EXATAMENTE os quatro campos —
+  // inventoryValue, floorPlanTotal, avgDays (round avg) e aged90 (count >90).
+  // Ancoramos no `return { ... }` para que a remocao de qualquer campo falhe.
+  const kpiReturn = kpiBlock.match(/return\s*\{[\s\S]*?\}/)?.[0] ?? ''
+  assert.ok(kpiReturn, 'kpis deve retornar um objeto literal com os campos dos KPIs')
+  assert.match(kpiReturn, /\binventoryValue\b\s*,/, 'objeto kpis deve incluir o campo inventoryValue (valor do estoque)')
+  assert.match(kpiReturn, /\bfloorPlanTotal\b\s*,/, 'objeto kpis deve incluir o campo floorPlanTotal (floor plan)')
+  assert.match(
+    kpiReturn,
+    /\bavgDays\s*:\s*daysCount\s*>\s*0\s*\?\s*Math\.round\(\s*daysSum\s*\/\s*daysCount\s*\)\s*:\s*0/,
+    'objeto kpis deve expor avgDays = round(daysSum/daysCount) com guarda de divisao por zero',
+  )
+  assert.match(kpiReturn, /\baged90\b\s*,?/, 'objeto kpis deve incluir o campo aged90 (parados +90)')
 
   // Os 4 KpiCard consomem o objeto kpis derivado.
   const kpiCount = (src.match(/<KpiCard\b/g) ?? []).length
