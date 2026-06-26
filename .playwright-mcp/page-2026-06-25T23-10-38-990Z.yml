@@ -1,0 +1,528 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e7]:
+      - navigation [ref=e9]:
+        - generic [ref=e11]:
+          - generic [ref=e12]:
+            - img [ref=e14] [cursor=pointer]
+            - link "website logo" [ref=e15] [cursor=pointer]:
+              - /url: https://docs.amberflo.io
+              - img "Website logo" [ref=e16]
+          - img [ref=e18] [cursor=pointer]
+      - main [ref=e24]:
+        - generic [ref=e30]:
+          - generic [ref=e31]:
+            - generic [ref=e32]: Metering
+            - img [ref=e34]
+          - generic [ref=e37] [cursor=pointer]: Ingestion Options
+        - generic [ref=e41]:
+          - generic [ref=e43]:
+            - generic [ref=e44]:
+              - heading "SDK Sample Code" [level=1] [ref=e45]
+              - generic [ref=e46]:
+                - generic [ref=e47]:
+                  - img [ref=e48]
+                  - generic [ref=e51]: 6 min
+                - generic [ref=e52]:
+                  - generic [ref=e53] [cursor=pointer]:
+                    - img [ref=e54]
+                    - generic [ref=e57]: Copy
+                  - img [ref=e59] [cursor=pointer]
+            - generic [ref=e63]:
+              - paragraph [ref=e66]:
+                - generic [ref=e68]: This sample demonstrates how to
+                - strong [ref=e72]: ingest meter events
+                - generic [ref=e74]: using the Amberflo SDK in a
+                - strong [ref=e78]: Spring Boot
+                - generic [ref=e80]: application.
+              - paragraph [ref=e83]:
+                - strong [ref=e87]: "Steps:"
+              - list [ref=e91]:
+                - listitem [ref=e92]:
+                  - strong [ref=e96]: Set Up the Amberflo Environment
+                  - generic [ref=e98]: Prepare your application environment with the required Amberflo client settings (e.g., API keys, region, etc.).
+              - list [ref=e102]:
+                - listitem [ref=e103]:
+                  - strong [ref=e107]: Configure Service Discovery
+                  - generic [ref=e109]: Set up your application to discover and communicate with Amberflo’s ingestion service.
+              - list [ref=e113]:
+                - listitem [ref=e114]:
+                  - strong [ref=e118]: Create a Helper Method
+                  - generic [ref=e120]: Implement a helper function to map your internal objects to the Amberflo ingestion payload format.
+              - paragraph [ref=e123]:
+                - generic [ref=e125]: "Maven dependencies (check for latest versions):"
+              - generic [ref=e129]:
+                - generic [ref=e132]:
+                  - button "XML" [ref=e138] [cursor=pointer]:
+                    - generic [ref=e139]: XML
+                  - button [ref=e141] [cursor=pointer]:
+                    - img [ref=e142]
+                - generic [ref=e150]:
+                  - generic:
+                    - generic: "1"
+                    - generic:
+                      - generic: <dependencies
+                      - text: ">"
+                    - generic: "2"
+                    - generic:
+                      - generic: <dependency
+                      - text: ">"
+                    - generic: "3"
+                    - generic:
+                      - generic: <groupId
+                      - text: ">"
+                    - text: io.amberflo
+                    - generic:
+                      - generic: </groupId
+                      - text: ">"
+                    - generic: "4"
+                    - generic:
+                      - generic: <artifactId
+                      - text: ">"
+                    - text: metering-java-client
+                    - generic:
+                      - generic: </artifactId
+                      - text: ">"
+                    - generic: "5"
+                    - generic:
+                      - generic: <version
+                      - text: ">"
+                    - text: 1.3.6
+                    - generic:
+                      - generic: </version
+                      - text: ">"
+                    - generic: "6"
+                    - generic:
+                      - generic: </dependency
+                      - text: ">"
+                    - generic: "7"
+                    - generic:
+                      - generic: <dependency
+                      - text: ">"
+                    - generic: "8"
+                    - generic:
+                      - generic: <groupId
+                      - text: ">"
+                    - text: org.projectlombok
+                    - generic:
+                      - generic: </groupId
+                      - text: ">"
+                    - generic: "9"
+                    - generic:
+                      - generic: <artifactId
+                      - text: ">"
+                    - text: lombok
+                    - generic:
+                      - generic: </artifactId
+                      - text: ">"
+                    - generic: "10"
+                    - generic:
+                      - generic: <version
+                      - text: ">"
+                    - text: 1.18.20
+                    - generic:
+                      - generic: </version
+                      - text: ">"
+                    - generic: "11"
+                    - generic:
+                      - generic: </dependency
+                      - text: ">"
+                    - generic: "12"
+                    - generic:
+                      - generic: </dependencies
+                      - text: ">"
+                  - textbox "Code editor" [ref=e151]: <dependencies> <dependency> <groupId>io.amberflo</groupId> <artifactId>metering-java-client</artifactId> <version>1.3.6</version> </dependency> <dependency> <groupId>org.projectlombok</groupId> <artifactId>lombok</artifactId> <version>1.18.20</version> </dependency> </dependencies>
+              - heading "Environment Setup DetailsEnvironment Setup Details" [level=3] [ref=e155] [cursor=pointer]:
+                - link "Environment Setup Details":
+                  - /url: "#environment-setup-details"
+                - strong [ref=e159]: Environment Setup Details
+              - list [ref=e163]:
+                - listitem [ref=e164]:
+                  - generic [ref=e166]: Configure the necessary environment variables for the Amberflo SDK client.
+              - list [ref=e170]:
+                - listitem [ref=e171]:
+                  - generic [ref=e173]: Add the required configuration entries to your application properties or environment.
+              - list [ref=e177]:
+                - listitem [ref=e178]:
+                  - generic [ref=e180]: Ensure the service is
+                  - strong [ref=e184]: discoverable
+                  - generic [ref=e186]: by the Amberflo client at runtime.
+              - generic [ref=e190]:
+                - generic [ref=e193]:
+                  - button "application.properties" [ref=e199] [cursor=pointer]:
+                    - generic [ref=e200]: application.properties
+                  - button [ref=e202] [cursor=pointer]:
+                    - img [ref=e203]
+                - generic [ref=e211]:
+                  - generic:
+                    - generic: "1"
+                    - text: amberflo.apiKey=your-api-key-here
+                    - generic: "2"
+                    - text: amberflo.region=US_West
+                    - generic: "3"
+                    - text: amberflo.domain=Prod
+                    - generic: "4"
+                    - text: amberflo.ingestion.frequency.seconds=1
+                    - generic: "5"
+                    - text: amberflo.ingestion.batch.size=10
+                    - generic: "6"
+                    - text: amberflo.isDebug=true
+                  - textbox "Code editor" [ref=e212]: amberflo.apiKey=your-api-key-here amberflo.region=US_West amberflo.domain=Prod amberflo.ingestion.frequency.seconds=1 amberflo.ingestion.batch.size=10 amberflo.isDebug=true
+              - img "Document image" [ref=e218] [cursor=pointer]
+              - generic [ref=e222]:
+                - generic [ref=e225]:
+                  - button "Java" [ref=e231] [cursor=pointer]:
+                    - generic [ref=e232]: Java
+                  - button [ref=e234] [cursor=pointer]:
+                    - img [ref=e235]
+                - generic [ref=e243]:
+                  - generic:
+                    - generic: "1"
+                    - text: import com.amberflo.metering.ingest.meter_message.Domain;
+                    - generic: "2"
+                    - text: import lombok.Getter;
+                    - generic: "3"
+                    - text: import org.springframework.beans.factory.annotation.Value;
+                    - generic: "4"
+                    - text: import org.springframework.stereotype.Component;
+                    - generic: "5"
+                    - text: import com.amberflo.metering.ingest.meter_message.Region;
+                    - generic: "6"
+                    - generic: "7"
+                    - text: "@Getter"
+                    - generic: "8"
+                    - text: "@Component"
+                    - generic: "9"
+                    - text: "public class AmberfloEnvironment {"
+                    - generic: "10"
+                    - generic: "11"
+                    - text: "@Value(\"${amberflo.apiKey}\")"
+                    - generic: "12"
+                    - text: private String apiKey;
+                    - generic: "13"
+                    - generic: "14"
+                    - text: "@Value(\"${amberflo.region}\")"
+                    - generic: "15"
+                    - text: private Region region;
+                    - generic: "16"
+                    - generic: "17"
+                    - text: "@Value(\"${amberflo.domain}\")"
+                    - generic: "18"
+                    - text: private Domain domain;
+                    - generic: "19"
+                    - generic: "20"
+                    - text: "@Value(\"${amberflo.ingestion.frequency.seconds}\")"
+                    - generic: "21"
+                    - text: private Double ingestionFrequencyInSeconds;
+                    - generic: "22"
+                    - generic: "23"
+                    - text: "@Value(\"${amberflo.ingestion.batch.size}\")"
+                    - generic: "24"
+                    - text: private Integer ingestionBatchSize;
+                    - generic: "25"
+                    - text: "}"
+                  - textbox "Code editor" [ref=e244]: "import com.amberflo.metering.ingest.meter_message.Domain; import lombok.Getter; import org.springframework.beans.factory.annotation.Value; import org.springframework.stereotype.Component; import com.amberflo.metering.ingest.meter_message.Region; @Getter @Component public class AmberfloEnvironment { @Value(\"${amberflo.apiKey}\") private String apiKey; @Value(\"${amberflo.region}\") private Region region; @Value(\"${amberflo.domain}\") private Domain domain; @Value(\"${amberflo.ingestion.frequency.seconds}\") private Double ingestionFrequencyInSeconds; @Value(\"${amberflo.ingestion.batch.size}\") private Integer ingestionBatchSize; }"
+              - heading "Setup Amberflo client bean for service discoverabilitySetup Amberflo client bean for service discoverability" [level=2] [ref=e248] [cursor=pointer]:
+                - link "Setup Amberflo client bean for service discoverability":
+                  - /url: "#setup-amberflo-client-bean-for-service-discoverabi"
+                - generic [ref=e250]: Setup Amberflo client bean for service discoverability
+              - paragraph [ref=e253]:
+                - generic [ref=e255]: Amberflo provides a
+                - strong [ref=e259]: singleton instance
+                - generic [ref=e261]: of the client to ensure efficient ingestion of meter events.
+              - paragraph [ref=e264]:
+                - generic [ref=e266]: To enable
+                - strong [ref=e270]: dependency injection
+                - generic [ref=e272]: "and make the client discoverable as a service within your Spring Boot application:"
+              - list [ref=e276]:
+                - listitem [ref=e277]:
+                  - generic [ref=e279]: Create a configuration class
+              - list [ref=e283]:
+                - listitem [ref=e284]:
+                  - generic [ref=e286]: Define a method that returns the Amberflo client as a
+                  - strong [ref=e290]: Spring bean
+              - paragraph [ref=e293]:
+                - generic [ref=e295]: This allows other components in your application to
+                - strong [ref=e299]: inject the Amberflo client
+                - generic [ref=e301]: where needed, promoting reusability and centralized configuration.
+              - generic [ref=e305]:
+                - generic [ref=e308]:
+                  - button "Java" [ref=e314] [cursor=pointer]:
+                    - generic [ref=e315]: Java
+                  - button [ref=e317] [cursor=pointer]:
+                    - img [ref=e318]
+                - generic [ref=e326]:
+                  - generic:
+                    - generic: "1"
+                    - text: import com.amberflo.metering.ingest.MeteringContext;
+                    - generic: "2"
+                    - text: import org.apache.logging.log4j.LogManager;
+                    - generic: "3"
+                    - text: import org.apache.logging.log4j.Logger;
+                    - generic: "4"
+                    - text: import org.springframework.beans.factory.annotation.Autowired;
+                    - generic: "5"
+                    - text: import org.springframework.context.annotation.Bean;
+                    - generic: "6"
+                    - text: import org.springframework.context.annotation.Configuration;
+                    - generic: "7"
+                    - generic: "8"
+                    - text: "@Configuration"
+                    - generic: "9"
+                    - text: "public class AmberfloClientConfig {"
+                    - generic: "10"
+                    - generic: "11"
+                    - text: "@Autowired"
+                    - generic: "12"
+                    - text: private AmberfloEnvironment amberfloEnvironment;
+                    - generic: "13"
+                    - generic: "14"
+                    - text: "@Bean"
+                    - generic: "15"
+                    - text: "public MeteringContext meteringContext() {"
+                    - generic: "16"
+                    - text: MeteringContext meteringContext = null;
+                    - generic: "17"
+                    - text: "try{"
+                    - generic: "18"
+                    - text: meteringContext = MeteringContext.createOrReplaceContext(
+                    - generic: "19"
+                    - text: this.amberfloEnvironment.getApiKey(),
+                    - generic: "20"
+                    - text: "//TODO: enter your service name here"
+                    - generic: "21"
+                    - text: //The service name will be added for all of your meters as an extra dimension.
+                    - generic: "22"
+                    - text: "\"service-name\","
+                    - generic: "23"
+                    - text: this.amberfloEnvironment.getDomain(),
+                    - generic: "24"
+                    - text: this.amberfloEnvironment.getRegion(),
+                    - generic: "25"
+                    - text: this.amberfloEnvironment.getIngestionFrequencyInSeconds(),
+                    - generic: "26"
+                    - text: this.amberfloEnvironment.getIngestionBatchSize());
+                    - generic: "27"
+                    - text: "if(meteringContext.meteringInstance() != null) {"
+                    - generic: "28"
+                    - text: "LOGGER.info(\"Amberflo client initialized with region={}, domain={}, frequency={}, batchSize={}\","
+                    - generic: "29"
+                    - text: this.amberfloEnvironment.getRegion(),
+                    - generic: "30"
+                    - text: this.amberfloEnvironment.getDomain(),
+                    - generic: "31"
+                    - text: this.amberfloEnvironment.getIngestionFrequencyInSeconds(),
+                    - generic: "32"
+                    - text: this.amberfloEnvironment.getIngestionBatchSize());
+                    - generic: "33"
+                    - text: "}"
+                    - generic: "34"
+                    - text: "}"
+                    - generic: "35"
+                    - text: "catch(Exception ex){"
+                    - generic: "36"
+                    - text: "LOGGER.error(\"Amberflo client initialization failed: {}\", ex.getMessage());"
+                    - generic: "37"
+                    - text: ex.printStackTrace();
+                    - generic: "38"
+                    - text: "}"
+                    - generic: "39"
+                    - generic: "40"
+                    - text: return meteringContext;
+                    - generic: "41"
+                    - text: "}"
+                    - generic: "42"
+                    - text: "}"
+                  - textbox "Code editor" [ref=e327]: "import com.amberflo.metering.ingest.MeteringContext; import org.apache.logging.log4j.LogManager; import org.apache.logging.log4j.Logger; import org.springframework.beans.factory.annotation.Autowired; import org.springframework.context.annotation.Bean; import org.springframework.context.annotation.Configuration; @Configuration public class AmberfloClientConfig { @Autowired private AmberfloEnvironment amberfloEnvironment; @Bean public MeteringContext meteringContext() { MeteringContext meteringContext = null; try{ meteringContext = MeteringContext.createOrReplaceContext( this.amberfloEnvironment.getApiKey(), //TODO: enter your service name here //The service name will be added for all of your meters as an extra dimension. \"service-name\", this.amberfloEnvironment.getDomain(), this.amberfloEnvironment.getRegion(), this.amberfloEnvironment.getIngestionFrequencyInSeconds(), this.amberfloEnvironment.getIngestionBatchSize()); if(meteringContext.meteringInstance() != null) { LOGGER.info(\"Amberflo client initialized with region={}, domain={}, frequency={}, batchSize={}\", this.amberfloEnvironment.getRegion(), this.amberfloEnvironment.getDomain(), this.amberfloEnvironment.getIngestionFrequencyInSeconds(), this.amberfloEnvironment.getIngestionBatchSize()); } } catch(Exception ex){ LOGGER.error(\"Amberflo client initialization failed: {}\", ex.getMessage()); ex.printStackTrace(); } return meteringContext; } }"
+              - heading "Entity to Amberflo payload mapperEntity to Amberflo payload mapper" [level=2] [ref=e331] [cursor=pointer]:
+                - link "Entity to Amberflo payload mapper":
+                  - /url: "#entity-to-amberflo-payload-mapper"
+                - generic [ref=e333]: Entity to Amberflo payload mapper
+              - paragraph [ref=e336]:
+                - generic [ref=e338]: In this approach, your internal entity is transformed into an
+                - strong [ref=e342]: Amberflo ingestion payload
+                - generic [ref=e344]: using a dedicated helper class.
+              - paragraph [ref=e347]:
+                - generic [ref=e349]: "For example:"
+              - list [ref=e353]:
+                - listitem [ref=e354]:
+                  - generic [ref=e356]: You have an entity class named
+                  - generic [ref=e359]: Event
+              - list [ref=e363]:
+                - listitem [ref=e364]:
+                  - generic [ref=e366]: This entity is mapped to the required SDK format in a helper class called
+                  - generic [ref=e369]: AmberfloMapper
+              - paragraph [ref=e372]:
+                - generic [ref=e374]: "The transformation logic is encapsulated in a method like:"
+              - generic [ref=e379]: AmberfloMapper.ingestMeterForEvent()
+              - paragraph [ref=e382]:
+                - generic [ref=e384]: This method can now be called
+                - strong [ref=e388]: from anywhere in your code
+                - generic [ref=e390]: ", allowing you to easily meter events across your application in a centralized and reusable way."
+              - paragraph [ref=e393]:
+                - generic [ref=e395]: "Sample entity class:"
+              - generic [ref=e399]:
+                - generic [ref=e402]:
+                  - button "Java" [ref=e408] [cursor=pointer]:
+                    - generic [ref=e409]: Java
+                  - button [ref=e411] [cursor=pointer]:
+                    - img [ref=e412]
+                - generic [ref=e420]:
+                  - generic:
+                    - generic: "1"
+                    - text: import java.io.Serializable;
+                    - generic: "2"
+                    - text: import javax.persistence.*;
+                    - generic: "3"
+                    - text: import lombok.AllArgsConstructor;
+                    - generic: "4"
+                    - text: import lombok.Getter;
+                    - generic: "5"
+                    - text: import lombok.NoArgsConstructor;
+                    - generic: "6"
+                    - text: import lombok.Setter;
+                    - generic: "7"
+                    - generic: "8"
+                    - text: "@Getter"
+                    - generic: "9"
+                    - text: "@Setter"
+                    - generic: "10"
+                    - text: "@NoArgsConstructor"
+                    - generic: "11"
+                    - text: "@AllArgsConstructor"
+                    - generic: "12"
+                    - text: "@Entity"
+                    - generic: "13"
+                    - text: "@Table(name = \"event\")"
+                    - generic: "14"
+                    - text: "public class Event implements Serializable {"
+                    - generic: "15"
+                    - text: private static final long serialVersionUID = 1L;
+                    - generic: "16"
+                    - generic: "17"
+                    - text: "@Id"
+                    - generic: "18"
+                    - text: "@GeneratedValue(strategy=GenerationType.IDENTITY)"
+                    - generic: "19"
+                    - text: private long id;
+                    - generic: "20"
+                    - generic: "21"
+                    - text: "@Column(name = \"event_source_type\")"
+                    - generic: "22"
+                    - text: private String eventSourceType;
+                    - generic: "23"
+                    - generic: "24"
+                    - text: "@Column(name = \"event_type\")"
+                    - generic: "25"
+                    - text: private String eventType;
+                    - generic: "26"
+                    - generic: "27"
+                    - text: "@Column(name = \"customer_id\")"
+                    - generic: "28"
+                    - text: private String customerId;
+                    - generic: "29"
+                    - text: "}"
+                  - textbox "Code editor" [ref=e421]: "import java.io.Serializable; import javax.persistence.*; import lombok.AllArgsConstructor; import lombok.Getter; import lombok.NoArgsConstructor; import lombok.Setter; @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Entity @Table(name = \"event\") public class Event implements Serializable { private static final long serialVersionUID = 1L; @Id @GeneratedValue(strategy=GenerationType.IDENTITY) private long id; @Column(name = \"event_source_type\") private String eventSourceType; @Column(name = \"event_type\") private String eventType; @Column(name = \"customer_id\") private String customerId; }"
+              - paragraph [ref=e424]:
+                - generic [ref=e426]: "Sample mapper helper:"
+              - generic [ref=e430]:
+                - generic [ref=e433]:
+                  - button "Java" [ref=e439] [cursor=pointer]:
+                    - generic [ref=e440]: Java
+                  - button [ref=e442] [cursor=pointer]:
+                    - img [ref=e443]
+                - generic [ref=e451]:
+                  - generic:
+                    - generic: "1"
+                    - text: import org.apache.logging.log4j.LogManager;
+                    - generic: "2"
+                    - text: import org.apache.logging.log4j.Logger;
+                    - generic: "3"
+                    - generic: "4"
+                    - text: import java.time.LocalDateTime;
+                    - generic: "5"
+                    - text: import java.time.ZoneOffset;
+                    - generic: "6"
+                    - text: import java.util.HashMap;
+                    - generic: "7"
+                    - text: import java.util.Map;
+                    - generic: "8"
+                    - generic: "9"
+                    - text: import static com.amberflo.metering.ingest.MeteringContext.metering;
+                    - generic: "10"
+                    - generic: "11"
+                    - text: "public class AmberfloMapper {"
+                    - generic: "12"
+                    - text: private static final Logger LOGGER = LogManager.getLogger();
+                    - generic: "13"
+                    - generic: "14"
+                    - text: "public static void ingestMeterForEvent(final Event event, final String meterName){"
+                    - generic: "15"
+                    - text: "try {"
+                    - generic: "16"
+                    - text: final String customerId = event.getCustomerId();
+                    - generic: "17"
+                    - text: final double meterValue = 1.0;
+                    - generic: "18"
+                    - text: final LocalDateTime eventTime = LocalDateTime.now(ZoneOffset.UTC);
+                    - generic: "19"
+                    - text: final Map<String, String> dimensions = new HashMap();
+                    - generic: "20"
+                    - text: dimensions.put("event_source_type", event.getEventSourceType());
+                    - generic: "21"
+                    - text: dimensions.put("event_type", event.getEventType());
+                    - generic: "22"
+                    - text: metering().meter(customerId, meterName, meterValue, eventTime, dimensions);
+                    - generic: "23"
+                    - text: "LOGGER.info(\"Amberflo ingestion: event id {}, customerId {}, meter {}, event source type {}, event type {}\","
+                    - generic: "24"
+                    - text: event.getId(), customerId, meterName, dimensions.get("event_source_type"), dimensions.get("event_type"));
+                    - generic: "25"
+                    - text: "} catch (Exception ex) {"
+                    - generic: "26"
+                    - text: "LOGGER.error(\"Amberflo ingestion failed: {}\", ex.getMessage());"
+                    - generic: "27"
+                    - text: ex.printStackTrace();
+                    - generic: "28"
+                    - text: "}"
+                    - generic: "29"
+                    - text: "}"
+                    - generic: "30"
+                    - text: "}"
+                  - textbox "Code editor" [ref=e452]: "import org.apache.logging.log4j.LogManager; import org.apache.logging.log4j.Logger; import java.time.LocalDateTime; import java.time.ZoneOffset; import java.util.HashMap; import java.util.Map; import static com.amberflo.metering.ingest.MeteringContext.metering; public class AmberfloMapper { private static final Logger LOGGER = LogManager.getLogger(); public static void ingestMeterForEvent(final Event event, final String meterName){ try { final String customerId = event.getCustomerId(); final double meterValue = 1.0; final LocalDateTime eventTime = LocalDateTime.now(ZoneOffset.UTC); final Map<String, String> dimensions = new HashMap(); dimensions.put(\"event_source_type\", event.getEventSourceType()); dimensions.put(\"event_type\", event.getEventType()); metering().meter(customerId, meterName, meterValue, eventTime, dimensions); LOGGER.info(\"Amberflo ingestion: event id {}, customerId {}, meter {}, event source type {}, event type {}\", event.getId(), customerId, meterName, dimensions.get(\"event_source_type\"), dimensions.get(\"event_type\")); } catch (Exception ex) { LOGGER.error(\"Amberflo ingestion failed: {}\", ex.getMessage()); ex.printStackTrace(); } } }"
+              - paragraph [ref=e455]
+          - generic [ref=e457]:
+            - generic [ref=e458]:
+              - generic [ref=e459]:
+                - generic [ref=e460]:
+                  - img [ref=e461]
+                  - text: Updated 06 Mar 2026
+                - img "Doc contributor" [ref=e466]
+              - generic [ref=e468]:
+                - generic [ref=e469]: Did this page help you?
+                - generic [ref=e471]:
+                  - button "Did this page help you? Yes" [ref=e473] [cursor=pointer]:
+                    - img [ref=e474]
+                    - generic [ref=e476]: "Yes"
+                  - button "Did this page help you? No" [ref=e478] [cursor=pointer]:
+                    - img [ref=e479]
+                    - generic [ref=e481]: "No"
+            - generic [ref=e483]:
+              - link "PREVIOUS API Gateway - Kong" [ref=e484] [cursor=pointer]:
+                - /url: /agsWgc6ft9Obe93vhmOF1
+                - img [ref=e486]
+                - generic [ref=e489]:
+                  - generic [ref=e490]: PREVIOUS
+                  - generic [ref=e491]: API Gateway - Kong
+              - link "NEXT Backfill Meters and Customers" [ref=e492] [cursor=pointer]:
+                - /url: /kIRvibWfzrRdC3ZHDrYCW
+                - generic [ref=e493]:
+                  - generic [ref=e494]: NEXT
+                  - generic [ref=e495]: Backfill Meters and Customers
+                - img [ref=e497]
+            - link "Docs powered by Archbee" [ref=e502] [cursor=pointer]:
+              - /url: https://www.archbee.com/?utm_campaign=hosted-docs&utm_medium=referral&utm_source=docs.amberflo.io
+              - generic [ref=e503]: Docs powered by
+              - generic [ref=e504]: Archbee
+    - region "Notifications alt+T"
+  - alert [ref=e506]

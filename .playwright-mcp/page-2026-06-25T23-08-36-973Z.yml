@@ -1,0 +1,250 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e7]:
+      - navigation [ref=e9]:
+        - generic [ref=e11]:
+          - generic [ref=e12]:
+            - img [ref=e14] [cursor=pointer]
+            - link "website logo" [ref=e15] [cursor=pointer]:
+              - /url: https://docs.amberflo.io
+              - img "Website logo" [ref=e16]
+          - img [ref=e18] [cursor=pointer]
+      - main [ref=e24]:
+        - generic [ref=e28]:
+          - generic [ref=e30]:
+            - generic [ref=e31]:
+              - heading "What is Amberflo?" [level=1] [ref=e32]
+              - generic [ref=e33]:
+                - generic [ref=e34]:
+                  - img [ref=e35]
+                  - generic [ref=e38]: 6 min
+                - generic [ref=e39]:
+                  - generic [ref=e40] [cursor=pointer]:
+                    - img [ref=e41]
+                    - generic [ref=e44]: Copy
+                  - img [ref=e46] [cursor=pointer]
+            - generic [ref=e50]:
+              - paragraph [ref=e53]:
+                - generic [ref=e55]: Amberflo is a platform for
+                - strong [ref=e59]: understanding AI costs and monetizing AI usage
+                - generic [ref=e61]: .
+              - paragraph [ref=e64]:
+                - generic [ref=e66]: "As software shifts toward AI-powered features, agents, and autonomous workflows, two things become inseparable:"
+              - list [ref=e70]:
+                - listitem [ref=e71]:
+                  - strong [ref=e75]: What your AI workloads cost
+              - list [ref=e79]:
+                - listitem [ref=e80]:
+                  - strong [ref=e84]: What you charge customers for using them
+              - paragraph [ref=e87]:
+                - generic [ref=e89]: Traditional billing systems were not designed for this new model. AI usage is dynamic, request-based, and often priced differently across models and providers. At the same time, AI-native products frequently charge customers based on the same underlying usage signals.
+              - paragraph [ref=e92]:
+                - generic [ref=e94]: Amberflo bridges this gap by bringing
+                - strong [ref=e98]: AI cost visibility and customer billing into a single platform
+                - generic [ref=e100]: .
+              - paragraph [ref=e103]:
+                - generic [ref=e105]: With Amberflo, you can track how much your AI workloads cost, understand how those costs are distributed across teams or products, and generate accurate billing for customers based on that same usage data.
+              - paragraph [ref=e108]
+              - heading "The Shift to AI Usage-Based EconomicsThe Shift to AI Usage-Based Economics" [level=1] [ref=e112] [cursor=pointer]:
+                - link "The Shift to AI Usage-Based Economics":
+                  - /url: "#the-shift-to-ai-usage-based-economics"
+                - strong [ref=e116]: The Shift to AI Usage-Based Economics
+              - paragraph [ref=e119]:
+                - generic [ref=e121]: AI changes how software costs are incurred and how products are monetized.
+              - paragraph [ref=e124]:
+                - generic [ref=e126]: "In traditional SaaS systems:"
+              - list [ref=e130]:
+                - listitem [ref=e131]:
+                  - generic [ref=e133]: Infrastructure costs and customer billing were often separate concerns.
+              - list [ref=e137]:
+                - listitem [ref=e138]:
+                  - generic [ref=e140]: Billing was typically subscription-based.
+              - paragraph [ref=e143]:
+                - generic [ref=e145]: "In AI-driven products:"
+              - list [ref=e149]:
+                - listitem [ref=e150]:
+                  - generic [ref=e152]: Costs are generated
+                  - strong [ref=e156]: per request
+                  - generic [ref=e158]: ","
+                  - strong [ref=e162]: per token
+                  - generic [ref=e164]: ", or"
+                  - strong [ref=e168]: per operation
+                  - generic [ref=e170]: .
+              - list [ref=e174]:
+                - listitem [ref=e175]:
+                  - generic [ref=e177]: AI providers charge dynamically across models and regions.
+              - list [ref=e181]:
+                - listitem [ref=e182]:
+                  - generic [ref=e184]: Customer pricing is frequently
+                  - strong [ref=e188]: usage-based or hybrid usage + subscription
+                  - generic [ref=e190]: .
+              - paragraph [ref=e193]:
+                - generic [ref=e195]: "This creates a new operational challenge:"
+              - list [ref=e199]:
+                - listitem [ref=e200]:
+                  - generic [ref=e202]: You must continuously understand
+                  - strong [ref=e206]: cost, revenue, and margin
+                  - generic [ref=e208]: at the level of real AI usage.
+              - paragraph [ref=e211]:
+                - generic [ref=e213]: Amberflo provides the system of record for this.
+              - paragraph [ref=e216]
+              - heading "Amberflo PlatformAmberflo Platform" [level=1] [ref=e220] [cursor=pointer]:
+                - link "Amberflo Platform":
+                  - /url: "#amberflo-platform"
+                - strong [ref=e224]: Amberflo Platform
+              - paragraph [ref=e227]:
+                - generic [ref=e229]: Amberflo brings together three core capabilities required to operate AI-powered products at scale.
+              - paragraph [ref=e232]
+              - heading "1. AI Usage and Cost Intelligence1. AI Usage and Cost Intelligence" [level=2] [ref=e236] [cursor=pointer]:
+                - link "1. AI Usage and Cost Intelligence":
+                  - /url: "#1-ai-usage-and-cost-intelligence"
+                - strong [ref=e240]: 1. AI Usage and Cost Intelligence
+              - paragraph [ref=e243]:
+                - generic [ref=e245]: Amberflo captures detailed AI usage data and converts it into accurate cost visibility.
+              - paragraph [ref=e248]:
+                - generic [ref=e250]: Organizations can track usage across models, providers, teams, applications, or customers.
+              - paragraph [ref=e253]:
+                - generic [ref=e255]: "Capabilities include:"
+              - list [ref=e259]:
+                - listitem [ref=e260]:
+                  - generic [ref=e262]: Real-time AI usage tracking across models and providers
+              - list [ref=e266]:
+                - listitem [ref=e267]:
+                  - generic [ref=e269]: Token-level usage and cost attribution
+              - list [ref=e273]:
+                - listitem [ref=e274]:
+                  - generic [ref=e276]: Cost visibility by business unit, product, workload, or customer
+              - list [ref=e280]:
+                - listitem [ref=e281]:
+                  - generic [ref=e283]: AI spend dashboards and analytics
+              - list [ref=e287]:
+                - listitem [ref=e288]:
+                  - generic [ref=e290]: Cost guardrails, budgets, and alerts
+              - paragraph [ref=e293]:
+                - generic [ref=e295]: This allows teams to understand
+                - strong [ref=e299]: where AI costs originate and how they evolve over time
+                - generic [ref=e301]: .
+              - paragraph [ref=e304]
+              - heading "2. AI Monetization and Customer Billing2. AI Monetization and Customer Billing" [level=2] [ref=e308] [cursor=pointer]:
+                - link "2. AI Monetization and Customer Billing":
+                  - /url: "#2-ai-monetization-and-customer-billing"
+                - strong [ref=e312]: 2. AI Monetization and Customer Billing
+              - paragraph [ref=e315]:
+                - generic [ref=e317]: Amberflo enables companies to monetize AI usage with precision.
+              - paragraph [ref=e320]:
+                - generic [ref=e322]: Using the same usage data that drives cost visibility, Amberflo can generate customer-facing billing aligned with how AI is actually consumed.
+              - paragraph [ref=e325]:
+                - generic [ref=e327]: "Capabilities include:"
+              - list [ref=e331]:
+                - listitem [ref=e332]:
+                  - generic [ref=e334]: Meter AI usage at customer, tenant, or feature level
+              - list [ref=e338]:
+                - listitem [ref=e339]:
+                  - generic [ref=e341]: Configure flexible usage-based pricing models
+              - list [ref=e345]:
+                - listitem [ref=e346]:
+                  - generic [ref=e348]: Support tiers, bundles, overages, and prepaid usage
+              - list [ref=e352]:
+                - listitem [ref=e353]:
+                  - generic [ref=e355]: Generate invoices and billing reports
+              - list [ref=e359]:
+                - listitem [ref=e360]:
+                  - generic [ref=e362]: Provide usage transparency to customers
+              - paragraph [ref=e365]:
+                - generic [ref=e367]: This ensures your revenue model stays aligned with the underlying usage that drives your infrastructure costs.
+              - paragraph [ref=e370]
+              - heading "3. Margin and Unit Economics for AI3. Margin and Unit Economics for AI" [level=2] [ref=e374] [cursor=pointer]:
+                - link "3. Margin and Unit Economics for AI":
+                  - /url: "#3-margin-and-unit-economics-for-ai"
+                - strong [ref=e378]: 3. Margin and Unit Economics for AI
+              - paragraph [ref=e381]:
+                - generic [ref=e383]: AI-native products must constantly manage the relationship between
+                - strong [ref=e387]: cost and revenue
+                - generic [ref=e389]: .
+              - paragraph [ref=e392]:
+                - generic [ref=e394]: Amberflo connects usage, cost, and billing so you can understand the financial performance of your AI features.
+              - paragraph [ref=e397]:
+                - generic [ref=e399]: "With Amberflo you can answer questions like:"
+              - list [ref=e403]:
+                - listitem [ref=e404]:
+                  - generic [ref=e406]: What does each AI feature actually cost to run?
+              - list [ref=e410]:
+                - listitem [ref=e411]:
+                  - generic [ref=e413]: How much revenue does each customer generate relative to their usage?
+              - list [ref=e417]:
+                - listitem [ref=e418]:
+                  - generic [ref=e420]: Are we making money on our AI-powered services?
+              - paragraph [ref=e423]:
+                - generic [ref=e425]: By combining cost intelligence and billing into one system, Amberflo enables teams to manage
+                - strong [ref=e429]: AI economics in real time
+                - generic [ref=e431]: .
+              - paragraph [ref=e434]
+              - heading "Built for AI-Native ProductsBuilt for AI-Native Products" [level=1] [ref=e438] [cursor=pointer]:
+                - link "Built for AI-Native Products":
+                  - /url: "#built-for-ai-native-products"
+                - strong [ref=e442]: Built for AI-Native Products
+              - paragraph [ref=e445]:
+                - generic [ref=e447]: Amberflo is designed for companies building AI-powered products, platforms, and agents.
+              - paragraph [ref=e450]:
+                - generic [ref=e452]: It integrates with modern AI stacks and supports rapidly evolving models, pricing structures, and workloads.
+              - paragraph [ref=e455]:
+                - generic [ref=e457]: "Whether you are:"
+              - list [ref=e461]:
+                - listitem [ref=e462]:
+                  - generic [ref=e464]: Tracking internal AI usage across teams
+              - list [ref=e468]:
+                - listitem [ref=e469]:
+                  - generic [ref=e471]: Understanding the cost of AI features in your product
+              - list [ref=e475]:
+                - listitem [ref=e476]:
+                  - generic [ref=e478]: Charging customers for AI-powered services
+              - paragraph [ref=e481]:
+                - generic [ref=e483]: Amberflo provides the infrastructure needed to manage both
+                - strong [ref=e487]: AI spend and AI revenue
+                - generic [ref=e489]: in a single platform.
+              - paragraph [ref=e492]
+              - heading "Join our Discord ChannelJoin our Discord Channel" [level=1] [ref=e496] [cursor=pointer]:
+                - link "Join our Discord Channel":
+                  - /url: "#join-our-discord-channel"
+                - generic [ref=e498]: Join our Discord Channel
+              - paragraph [ref=e501]:
+                - generic [ref=e503]: For questions, best practices, and help getting the most out of Amberflo, join our community on
+                - strong [ref=e507]: Discord
+                - generic [ref=e509]: . It’s the fastest way to get answers, share feedback, and connect with other teams building AI-powered products.
+              - paragraph [ref=e512]:
+                - generic [ref=e514]: Our team actively monitors the community and is happy to help with setup, usage questions, or ideas on how to structure AI cost tracking and billing for your product.
+              - paragraph [ref=e517]:
+                - strong [ref=e521]: "Join the Amberflo Discord:"
+                - link "https://discord.gg/femn96kV8z" [ref=e524] [cursor=pointer]:
+                  - /url: https://discord.gg/femn96kV8z
+                  - generic [ref=e527]: https://discord.gg/femn96kV8z
+          - generic [ref=e529]:
+            - generic [ref=e530]:
+              - generic [ref=e531]:
+                - generic [ref=e532]:
+                  - img [ref=e533]
+                  - text: Updated 06 Mar 2026
+                - generic [ref=e535]:
+                  - img "Doc contributor" [ref=e538]
+                  - img "Doc contributor" [ref=e541]
+              - generic [ref=e543]:
+                - generic [ref=e544]: Did this page help you?
+                - generic [ref=e546]:
+                  - button "Did this page help you? Yes" [ref=e548] [cursor=pointer]:
+                    - img [ref=e549]
+                    - generic [ref=e551]: "Yes"
+                  - button "Did this page help you? No" [ref=e553] [cursor=pointer]:
+                    - img [ref=e554]
+                    - generic [ref=e556]: "No"
+            - link "NEXT Quick Start" [ref=e559] [cursor=pointer]:
+              - /url: /quick-start
+              - generic [ref=e560]:
+                - generic [ref=e561]: NEXT
+                - generic [ref=e562]: Quick Start
+              - img [ref=e564]
+            - link "Docs powered by Archbee" [ref=e569] [cursor=pointer]:
+              - /url: https://www.archbee.com/?utm_campaign=hosted-docs&utm_medium=referral&utm_source=docs.amberflo.io
+              - generic [ref=e570]: Docs powered by
+              - generic [ref=e571]: Archbee
+    - region "Notifications alt+T"
+  - alert [ref=e573]

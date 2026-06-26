@@ -1,0 +1,353 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e7]:
+      - navigation [ref=e9]:
+        - generic [ref=e11]:
+          - generic [ref=e12]:
+            - img [ref=e14] [cursor=pointer]
+            - link "website logo" [ref=e15] [cursor=pointer]:
+              - /url: https://docs.amberflo.io
+              - img "Website logo" [ref=e16]
+          - img [ref=e18] [cursor=pointer]
+      - main [ref=e24]:
+        - generic [ref=e32]: Cost Tracking
+        - generic [ref=e36]:
+          - generic [ref=e38]:
+            - generic [ref=e39]:
+              - heading "Meter Rates (Cost Calculation)" [level=1] [ref=e40]
+              - generic [ref=e41]:
+                - generic [ref=e42]:
+                  - img [ref=e43]
+                  - generic [ref=e46]: 9 min
+                - generic [ref=e47]:
+                  - generic [ref=e48] [cursor=pointer]:
+                    - img [ref=e49]
+                    - generic [ref=e52]: Copy
+                  - img [ref=e54] [cursor=pointer]
+            - generic [ref=e58]:
+              - paragraph [ref=e61]:
+                - generic [ref=e63]: Meter rates define how usage is converted into
+                - strong [ref=e67]: cost
+                - generic [ref=e69]: .
+              - paragraph [ref=e72]:
+                - generic [ref=e74]: This page explains how to configure cost rates on a meter so that all incoming usage can be translated into accurate spend.
+              - paragraph [ref=e77]:
+                - generic [ref=e79]: This assumes you have already created one or more meters.
+              - heading "How Meter Rates WorkHow Meter Rates Work" [level=2] [ref=e83] [cursor=pointer]:
+                - link "How Meter Rates Work":
+                  - /url: "#how-meter-rates-work"
+                - strong [ref=e87]: How Meter Rates Work
+              - paragraph [ref=e90]:
+                - generic [ref=e92]: "When usage is ingested into a meter, Amberflo:"
+              - list [ref=e96]:
+                - listitem [ref=e97]:
+                  - generic [ref=e99]: Matches the usage to a
+                  - strong [ref=e103]: meter
+              - list [ref=e107]:
+                - listitem [ref=e108]:
+                  - generic [ref=e110]: Applies a
+                  - strong [ref=e114]: rate
+                  - generic [ref=e116]: defined on that meter
+              - list [ref=e120]:
+                - listitem [ref=e121]:
+                  - generic [ref=e123]: Calculates the resulting
+                  - strong [ref=e127]: cost
+              - paragraph [ref=e130]:
+                - generic [ref=e132]: The rate is the rule that determines how each unit of usage is valued.
+              - paragraph [ref=e135]:
+                - generic [ref=e137]: Rates can change over time. When they do, you create a new rate configuration and apply it going forward.
+              - heading "Navigate to Meter RatesNavigate to Meter Rates" [level=2] [ref=e141] [cursor=pointer]:
+                - link "Navigate to Meter Rates":
+                  - /url: "#navigate-to-meter-rates"
+                - strong [ref=e145]: Navigate to Meter Rates
+              - list [ref=e149]:
+                - listitem [ref=e150]:
+                  - generic [ref=e152]: Go to
+                  - strong [ref=e156]: Cost → Configure → Meters
+              - list [ref=e160]:
+                - listitem [ref=e161]:
+                  - generic [ref=e163]: Select the meter you want to configure
+              - list [ref=e167]:
+                - listitem [ref=e168]:
+                  - generic [ref=e170]: On the meter details page, click the
+                  - strong [ref=e174]: Rate
+                  - generic [ref=e176]: tab (middle tab)
+              - list [ref=e180]:
+                - listitem [ref=e181]:
+                  - generic [ref=e183]: Click
+                  - strong [ref=e187]: Create Meter Rate
+                  - generic [ref=e189]: (top right)
+              - heading "Create a Meter RateCreate a Meter Rate" [level=2] [ref=e193] [cursor=pointer]:
+                - link "Create a Meter Rate":
+                  - /url: "#create-a-meter-rate"
+                - strong [ref=e197]: Create a Meter Rate
+              - heading "Basic FieldsBasic Fields" [level=3] [ref=e201] [cursor=pointer]:
+                - link "Basic Fields":
+                  - /url: "#basic-fields"
+                - strong [ref=e205]: Basic Fields
+              - list [ref=e209]:
+                - listitem [ref=e210]:
+                  - strong [ref=e214]: Label
+                  - generic [ref=e216]: "A name for the rate configurationSince rates may change over time, use a label that reflects the version or context. Examples:"
+              - list [ref=e220]:
+                - listitem [ref=e221]:
+                  - generic [ref=e223]: OpenAI Pricing - Jan 2026
+              - list [ref=e227]:
+                - listitem [ref=e228]:
+                  - generic [ref=e230]: v1 Cost Rates
+              - list [ref=e234]:
+                - listitem [ref=e235]:
+                  - generic [ref=e237]: GPT Model Pricing Q1
+              - list [ref=e241]:
+                - listitem [ref=e242]:
+                  - strong [ref=e246]: Description (optional)
+                  - generic [ref=e248]: Add context about what this rate represents
+              - heading "Choose a Rate ModelChoose a Rate Model" [level=2] [ref=e252] [cursor=pointer]:
+                - link "Choose a Rate Model":
+                  - /url: "#choose-a-rate-model"
+                - strong [ref=e256]: Choose a Rate Model
+              - paragraph [ref=e259]:
+                - generic [ref=e261]: Amberflo supports two primary models for cost calculation.
+              - heading "1. Per Unit1. Per Unit" [level=3] [ref=e265] [cursor=pointer]:
+                - link "1. Per Unit":
+                  - /url: "#1-per-unit"
+                - strong [ref=e269]: 1. Per Unit
+              - paragraph [ref=e272]:
+                - generic [ref=e274]: Each unit of usage has the same cost.
+              - paragraph [ref=e277]:
+                - strong [ref=e281]: "Example:"
+              - list [ref=e285]:
+                - listitem [ref=e286]:
+                  - generic [ref=e288]: Every API call costs $0.005
+              - list [ref=e292]:
+                - listitem [ref=e293]:
+                  - generic [ref=e295]: Every job execution costs $0.10
+              - paragraph [ref=e298]:
+                - generic [ref=e300]: This model is appropriate when cost does not vary based on context.
+              - heading "2. Per Unit with Dimensions (Recommended)2. Per Unit with Dimensions (Recommended)" [level=3] [ref=e304] [cursor=pointer]:
+                - link "2. Per Unit with Dimensions (Recommended)":
+                  - /url: "#2-per-unit-with-dimensions-recommended"
+                - strong [ref=e308]: 2. Per Unit with Dimensions (Recommended)
+              - paragraph [ref=e311]:
+                - generic [ref=e313]: Cost varies based on attributes of the usage.
+              - paragraph [ref=e316]:
+                - generic [ref=e318]: This is the standard approach for most real-world systems.
+              - paragraph [ref=e321]:
+                - strong [ref=e325]: Why Use Dimensions
+              - paragraph [ref=e328]:
+                - generic [ref=e330]: "In many systems, cost is not uniform. It depends on factors such as:"
+              - list [ref=e334]:
+                - listitem [ref=e335]:
+                  - generic [ref=e337]: Type of operation
+              - list [ref=e341]:
+                - listitem [ref=e342]:
+                  - generic [ref=e344]: Resource used
+              - list [ref=e348]:
+                - listitem [ref=e349]:
+                  - generic [ref=e351]: Configuration of the request
+              - paragraph [ref=e354]:
+                - generic [ref=e356]: "For example, with token-based usage:"
+              - list [ref=e360]:
+                - listitem [ref=e361]:
+                  - strong [ref=e365]: Input tokens
+                  - generic [ref=e367]: and
+                  - strong [ref=e371]: output tokens
+                  - generic [ref=e373]: have different costs
+              - list [ref=e377]:
+                - listitem [ref=e378]:
+                  - generic [ref=e380]: Different
+                  - strong [ref=e384]: models
+                  - generic [ref=e386]: have different pricing
+              - paragraph [ref=e389]:
+                - generic [ref=e391]: These differences are captured using dimensions.
+              - heading "Build the Rate TableBuild the Rate Table" [level=2] [ref=e395] [cursor=pointer]:
+                - link "Build the Rate Table":
+                  - /url: "#build-the-rate-table"
+                - strong [ref=e399]: Build the Rate Table
+              - paragraph [ref=e402]:
+                - generic [ref=e404]: When using
+                - strong [ref=e408]: Per Unit with Dimensions
+                - generic [ref=e410]: ", you define a table of rates."
+              - list [ref=e414]:
+                - listitem [ref=e415]:
+                  - generic [ref=e417]: Each
+                  - strong [ref=e421]: column
+                  - generic [ref=e423]: represents a dimension
+              - list [ref=e427]:
+                - listitem [ref=e428]:
+                  - generic [ref=e430]: Each
+                  - strong [ref=e434]: row
+                  - generic [ref=e436]: represents a unique combination of dimension values
+              - list [ref=e440]:
+                - listitem [ref=e441]:
+                  - generic [ref=e443]: Each row has a
+                  - strong [ref=e447]: per-unit cost
+              - heading "Example StructureExample Structure" [level=3] [ref=e451] [cursor=pointer]:
+                - link "Example Structure":
+                  - /url: "#example-structure"
+                - strong [ref=e455]: Example Structure
+              - paragraph [ref=e458]:
+                - generic [ref=e460]: "If your meter includes:"
+              - list [ref=e464]:
+                - listitem [ref=e465]:
+                  - generic [ref=e467]: model
+              - list [ref=e471]:
+                - listitem [ref=e472]:
+                  - generic [ref=e474]: token_type
+              - paragraph [ref=e477]:
+                - generic [ref=e479]: "Your table might include rows like:"
+              - list [ref=e483]:
+                - listitem [ref=e484]:
+                  - generic [ref=e486]: model = A, token_type = input → cost X
+              - list [ref=e490]:
+                - listitem [ref=e491]:
+                  - generic [ref=e493]: model = A, token_type = output → cost Y
+              - list [ref=e497]:
+                - listitem [ref=e498]:
+                  - generic [ref=e500]: model = B, token_type = input → cost Z
+              - paragraph [ref=e503]:
+                - generic [ref=e505]: Each combination can have a different cost.
+              - heading "Configuring the TableConfiguring the Table" [level=2] [ref=e509] [cursor=pointer]:
+                - link "Configuring the Table":
+                  - /url: "#configuring-the-table"
+                - strong [ref=e513]: Configuring the Table
+              - list [ref=e517]:
+                - listitem [ref=e518]:
+                  - generic [ref=e520]: Remove any dimensions that are not relevant to cost calculation (for example, workload is typically used for attribution, not pricing)
+              - list [ref=e524]:
+                - listitem [ref=e525]:
+                  - generic [ref=e527]: Use
+                  - strong [ref=e531]: Add Row
+                  - generic [ref=e533]: to define new combinations
+              - list [ref=e537]:
+                - listitem [ref=e538]:
+                  - generic [ref=e540]: Use
+                  - strong [ref=e544]: Add Column
+                  - generic [ref=e546]: if you need to include additional dimensions
+              - paragraph [ref=e549]:
+                - generic [ref=e551]: "For each row:"
+              - list [ref=e555]:
+                - listitem [ref=e556]:
+                  - generic [ref=e558]: Set the dimension values
+              - list [ref=e562]:
+                - listitem [ref=e563]:
+                  - generic [ref=e565]: Enter the corresponding
+                  - strong [ref=e569]: cost per unit
+              - heading "Automation OptionsAutomation Options" [level=2] [ref=e573] [cursor=pointer]:
+                - link "Automation Options":
+                  - /url: "#automation-options"
+                - strong [ref=e577]: Automation Options
+              - paragraph [ref=e580]:
+                - generic [ref=e582]: You do not need to configure rates manually in the UI.
+              - paragraph [ref=e585]:
+                - generic [ref=e587]: "Amberflo supports:"
+              - list [ref=e591]:
+                - listitem [ref=e592]:
+                  - strong [ref=e596]: API-based configuration
+              - list [ref=e600]:
+                - listitem [ref=e601]:
+                  - strong [ref=e605]: CSV import
+              - paragraph [ref=e608]:
+                - generic [ref=e610]: "This allows you to:"
+              - list [ref=e614]:
+                - listitem [ref=e615]:
+                  - generic [ref=e617]: Sync rates from external pricing sources
+              - list [ref=e621]:
+                - listitem [ref=e622]:
+                  - generic [ref=e624]: Update rates programmatically
+              - list [ref=e628]:
+                - listitem [ref=e629]:
+                  - generic [ref=e631]: Manage large pricing tables efficiently
+              - heading "Saving and Applying RatesSaving and Applying Rates" [level=2] [ref=e635] [cursor=pointer]:
+                - link "Saving and Applying Rates":
+                  - /url: "#saving-and-applying-rates"
+                - strong [ref=e639]: Saving and Applying Rates
+              - paragraph [ref=e642]:
+                - generic [ref=e644]: "Once your rate configuration is complete:"
+              - list [ref=e648]:
+                - listitem [ref=e649]:
+                  - generic [ref=e651]: Click
+                  - strong [ref=e655]: Save
+              - paragraph [ref=e658]:
+                - generic [ref=e660]: "From that point forward:"
+              - list [ref=e664]:
+                - listitem [ref=e665]:
+                  - generic [ref=e667]: All new usage events for that meter will use this rate configuration
+              - list [ref=e671]:
+                - listitem [ref=e672]:
+                  - generic [ref=e674]: Cost will be calculated automatically based on the defined rules
+              - heading "Updating Rates Over TimeUpdating Rates Over Time" [level=2] [ref=e678] [cursor=pointer]:
+                - link "Updating Rates Over Time":
+                  - /url: "#updating-rates-over-time"
+                - strong [ref=e682]: Updating Rates Over Time
+              - paragraph [ref=e685]:
+                - generic [ref=e687]: "Rates change. When they do:"
+              - list [ref=e691]:
+                - listitem [ref=e692]:
+                  - generic [ref=e694]: Create a
+                  - strong [ref=e698]: new meter rate
+              - list [ref=e702]:
+                - listitem [ref=e703]:
+                  - generic [ref=e705]: Use a clear label to indicate the new version
+              - list [ref=e709]:
+                - listitem [ref=e710]:
+                  - generic [ref=e712]: Apply it going forward
+              - paragraph [ref=e715]:
+                - generic [ref=e717]: Do not overwrite previous configurations if you need historical accuracy.
+              - heading "SummarySummary" [level=2] [ref=e721] [cursor=pointer]:
+                - link "Summary":
+                  - /url: "#summary"
+                - strong [ref=e725]: Summary
+              - paragraph [ref=e728]:
+                - generic [ref=e730]: Meter rates are the foundation of cost calculation in Amberflo.
+              - paragraph [ref=e733]:
+                - generic [ref=e735]: "They:"
+              - list [ref=e739]:
+                - listitem [ref=e740]:
+                  - generic [ref=e742]: Define how usage translates into cost
+              - list [ref=e746]:
+                - listitem [ref=e747]:
+                  - generic [ref=e749]: Support both simple and complex pricing logic
+              - list [ref=e753]:
+                - listitem [ref=e754]:
+                  - generic [ref=e756]: Allow variation based on dimensions
+              - list [ref=e760]:
+                - listitem [ref=e761]:
+                  - generic [ref=e763]: Can be managed manually or programmatically
+              - paragraph [ref=e766]:
+                - generic [ref=e768]: Accurate rates ensure that your cost data reflects the real behavior of your systems.
+          - generic [ref=e770]:
+            - generic [ref=e771]:
+              - generic [ref=e772]:
+                - generic [ref=e773]:
+                  - img [ref=e774]
+                  - text: Updated 20 Apr 2026
+                - img "Doc contributor" [ref=e779]
+              - generic [ref=e781]:
+                - generic [ref=e782]: Did this page help you?
+                - generic [ref=e784]:
+                  - button "Did this page help you? Yes" [ref=e786] [cursor=pointer]:
+                    - img [ref=e787]
+                    - generic [ref=e789]: "Yes"
+                  - button "Did this page help you? No" [ref=e791] [cursor=pointer]:
+                    - img [ref=e792]
+                    - generic [ref=e794]: "No"
+            - generic [ref=e796]:
+              - link "PREVIOUS Data Export" [ref=e797] [cursor=pointer]:
+                - /url: /data-export
+                - img [ref=e799]
+                - generic [ref=e802]:
+                  - generic [ref=e803]: PREVIOUS
+                  - generic [ref=e804]: Data Export
+              - link "NEXT Workloads" [ref=e805] [cursor=pointer]:
+                - /url: /workloads
+                - generic [ref=e806]:
+                  - generic [ref=e807]: NEXT
+                  - generic [ref=e808]: Workloads
+                - img [ref=e810]
+            - link "Docs powered by Archbee" [ref=e815] [cursor=pointer]:
+              - /url: https://www.archbee.com/?utm_campaign=hosted-docs&utm_medium=referral&utm_source=docs.amberflo.io
+              - generic [ref=e816]: Docs powered by
+              - generic [ref=e817]: Archbee
+    - region "Notifications alt+T"
+  - alert [ref=e819]

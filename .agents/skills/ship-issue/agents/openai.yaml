@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ship Issue"
+  short_description: "Run the issue-to-merge pipeline"
+  default_prompt: "Use $ship-issue to ship a single GitHub issue through the repo pipeline."

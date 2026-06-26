@@ -1,0 +1,211 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e7]:
+      - navigation [ref=e9]:
+        - generic [ref=e11]:
+          - generic [ref=e12]:
+            - img [ref=e14] [cursor=pointer]
+            - link "website logo" [ref=e15] [cursor=pointer]:
+              - /url: https://docs.amberflo.io
+              - img "Website logo" [ref=e16]
+          - img [ref=e18] [cursor=pointer]
+      - main [ref=e24]:
+        - generic [ref=e32]: Metering
+        - generic [ref=e36]:
+          - generic [ref=e38]:
+            - generic [ref=e39]:
+              - heading "Metering Overview" [level=1] [ref=e40]
+              - generic [ref=e41]:
+                - generic [ref=e42]:
+                  - img [ref=e43]
+                  - generic [ref=e46]: 3 min
+                - generic [ref=e47]:
+                  - generic [ref=e48] [cursor=pointer]:
+                    - img [ref=e49]
+                    - generic [ref=e52]: Copy
+                  - img [ref=e54] [cursor=pointer]
+            - generic [ref=e58]:
+              - heading "Metering UsageMetering Usage" [level=2] [ref=e62] [cursor=pointer]:
+                - link "Metering Usage":
+                  - /url: "#metering-usage"
+                - generic [ref=e64]: Metering Usage
+              - paragraph [ref=e67]:
+                - generic [ref=e69]: "Amberflo Metering Service enables you to ask and answer the following question in real-time and with accuracy:"
+                - strong [ref=e73]: What was used by whom, when, where, and how much?
+              - heading "Meter Event Data StructureMeter Event Data Structure" [level=3] [ref=e77] [cursor=pointer]:
+                - link "Meter Event Data Structure":
+                  - /url: "#meter-event-data-structure"
+                - generic [ref=e79]: Meter Event Data Structure
+              - paragraph [ref=e82]:
+                - generic [ref=e84]: "Amberflo's Meter Event data structure captures this information clearly and concisely:"
+              - table [ref=e89]:
+                - rowgroup [ref=e93]:
+                  - row "Aspect Details" [ref=e94]:
+                    - columnheader "Aspect" [ref=e95]:
+                      - paragraph [ref=e99]:
+                        - generic [ref=e101]: Aspect
+                    - columnheader "Details" [ref=e102]:
+                      - paragraph [ref=e106]:
+                        - generic [ref=e108]: Details
+                - rowgroup [ref=e109]:
+                  - row "What Meter name and API name" [ref=e110]:
+                    - cell "What" [ref=e111]:
+                      - paragraph [ref=e115]:
+                        - generic [ref=e117]: What
+                    - cell "Meter name and API name" [ref=e118]:
+                      - paragraph [ref=e122]:
+                        - generic [ref=e124]: Meter name and API name
+                  - row "Whom CustomerID" [ref=e125]:
+                    - cell "Whom" [ref=e126]:
+                      - paragraph [ref=e130]:
+                        - generic [ref=e132]: Whom
+                    - cell "CustomerID" [ref=e133]:
+                      - paragraph [ref=e137]:
+                        - generic [ref=e139]: CustomerID
+                  - row "When Timestamp" [ref=e140]:
+                    - cell "When" [ref=e141]:
+                      - paragraph [ref=e145]:
+                        - generic [ref=e147]: When
+                    - cell "Timestamp" [ref=e148]:
+                      - paragraph [ref=e152]:
+                        - generic [ref=e154]: Timestamp
+                  - row "How much Meter value" [ref=e155]:
+                    - cell "How much" [ref=e156]:
+                      - paragraph [ref=e160]:
+                        - generic [ref=e162]: How much
+                    - cell "Meter value" [ref=e163]:
+                      - paragraph [ref=e167]:
+                        - generic [ref=e169]: Meter value
+                  - row "Where Dimensions" [ref=e170]:
+                    - cell "Where" [ref=e171]:
+                      - paragraph [ref=e175]:
+                        - generic [ref=e177]: Where
+                    - cell "Dimensions" [ref=e178]:
+                      - paragraph [ref=e182]:
+                        - generic [ref=e184]: Dimensions
+              - paragraph [ref=e187]:
+                - strong [ref=e191]: Accurate, Real-time, Secure, and Reliable Usage Data
+              - paragraph [ref=e194]:
+                - strong [ref=e198]: Meters are facts!
+                - generic [ref=e200]: To build trust and efficiency, you need a metering service that provides an accurate, real-time, and secure single source of truth for usage and consumption data. Amberflo Cloud Metering Service is designed from the ground up to deliver just that.
+              - paragraph [ref=e203]:
+                - strong [ref=e207]: Standardized Usage Tracking Across All Systems
+              - paragraph [ref=e210]:
+                - generic [ref=e212]: Amberflo offers a
+                - strong [ref=e216]: standardized and flexible API interface
+                - generic [ref=e218]: for metering product usage across your technology stack.
+              - paragraph [ref=e221]:
+                - strong [ref=e225]: "Benefits of standardization:"
+              - list [ref=e229]:
+                - listitem [ref=e230]:
+                  - generic [ref=e232]: Accelerate development and deployment
+              - list [ref=e236]:
+                - listitem [ref=e237]:
+                  - generic [ref=e239]: Enhance cross-team collaboration and data sharing
+              - list [ref=e243]:
+                - listitem [ref=e244]:
+                  - generic [ref=e246]: Focus resources on core products and services
+              - list [ref=e250]:
+                - listitem [ref=e251]:
+                  - generic [ref=e253]: Reduce metering and billing errors
+              - list [ref=e257]:
+                - listitem [ref=e258]:
+                  - generic [ref=e260]: Improve customer satisfaction
+              - paragraph [ref=e263]:
+                - strong [ref=e267]: Meter Any Resource Type
+              - paragraph [ref=e270]:
+                - generic [ref=e272]: Our standardized and flexible meter definition API and data structure form the foundation for driving accuracy, visibility, and insights — both internally and for your customers.
+              - paragraph [ref=e275]:
+                - strong [ref=e279]: Decoupled from Pricing and Billing
+              - paragraph [ref=e282]:
+                - generic [ref=e284]: Amberflo Cloud Metering Service operates
+                - strong [ref=e288]: independently of pricing and billing
+                - generic [ref=e290]: . This ensures you have a highly scalable system of record for usage and consumption data, without dependencies on pricing models.
+              - paragraph [ref=e293]:
+                - generic [ref=e295]: For those who need it, the system seamlessly integrates with Amberflo's Usage-Based Pricing and Billing Service — but you can also use the Cloud Metering Service alone and export data via API to third-party systems.
+              - paragraph [ref=e298]:
+                - strong [ref=e302]: Seamless Integration with Your Tech Stack
+              - paragraph [ref=e305]:
+                - generic [ref=e307]: No need for a rip-and-replace approach. Amberflo integrates smoothly with your existing technology stack.
+              - paragraph [ref=e310]:
+                - generic [ref=e312]: "We provide:"
+              - list [ref=e316]:
+                - listitem [ref=e317]:
+                  - strong [ref=e321]: Language-specific SDKs
+              - list [ref=e325]:
+                - listitem [ref=e326]:
+                  - strong [ref=e330]: Direct third-party system integrations
+              - paragraph [ref=e333]:
+                - strong [ref=e337]: Automatic Data Transformation & Aggregation
+              - paragraph [ref=e340]:
+                - generic [ref=e342]: "Let us handle the heavy lifting:"
+              - list [ref=e346]:
+                - listitem [ref=e347]:
+                  - generic [ref=e349]: Ingestion
+              - list [ref=e353]:
+                - listitem [ref=e354]:
+                  - generic [ref=e356]: Transformation
+              - list [ref=e360]:
+                - listitem [ref=e361]:
+                  - generic [ref=e363]: Aggregation
+              - list [ref=e367]:
+                - listitem [ref=e368]:
+                  - generic [ref=e370]: Time series distribution
+              - list [ref=e374]:
+                - listitem [ref=e375]:
+                  - generic [ref=e377]: On-demand invoice and bill generation
+              - paragraph [ref=e380]:
+                - generic [ref=e382]: Simply send us the meters, we take care of the rest.
+              - paragraph [ref=e385]:
+                - strong [ref=e389]: Real-time Alerts & Notifications
+              - paragraph [ref=e392]:
+                - generic [ref=e394]: Set
+                - strong [ref=e398]: usage and cost limits
+                - generic [ref=e400]: with ease. Get real-time alerts and notifications so you’re always in control.
+              - paragraph [ref=e403]:
+                - strong [ref=e407]: Usage Explorer
+              - paragraph [ref=e410]:
+                - generic [ref=e412]: Access fast, on-demand, and actionable usage reports and invoices, all in real-time.
+              - paragraph [ref=e415]:
+                - strong [ref=e419]: API-First Approach
+              - paragraph [ref=e422]:
+                - generic [ref=e424]: Amberflo is an
+                - strong [ref=e428]: API-first platform
+                - generic [ref=e430]: . Every feature and artifact can be accessed and managed through our APIs and SDKs.
+          - generic [ref=e432]:
+            - generic [ref=e433]:
+              - generic [ref=e434]:
+                - generic [ref=e435]:
+                  - img [ref=e436]
+                  - text: Updated 15 May 2026
+                - generic [ref=e438]:
+                  - img "Doc contributor" [ref=e441]
+                  - img "Doc contributor" [ref=e444]
+              - generic [ref=e446]:
+                - generic [ref=e447]: Did this page help you?
+                - generic [ref=e449]:
+                  - button "Did this page help you? Yes" [ref=e451] [cursor=pointer]:
+                    - img [ref=e452]
+                    - generic [ref=e454]: "Yes"
+                  - button "Did this page help you? No" [ref=e456] [cursor=pointer]:
+                    - img [ref=e457]
+                    - generic [ref=e459]: "No"
+            - generic [ref=e461]:
+              - link "PREVIOUS Alert Webhooks" [ref=e462] [cursor=pointer]:
+                - /url: /bh82nLyx8cc7vgCSv-a7d
+                - img [ref=e464]
+                - generic [ref=e467]:
+                  - generic [ref=e468]: PREVIOUS
+                  - generic [ref=e469]: Alert Webhooks
+              - link "NEXT Meter Definition" [ref=e470] [cursor=pointer]:
+                - /url: /Kuek_c0SM-eAh1YbP5DOB
+                - generic [ref=e471]:
+                  - generic [ref=e472]: NEXT
+                  - generic [ref=e473]: Meter Definition
+                - img [ref=e475]
+            - link "Docs powered by Archbee" [ref=e480] [cursor=pointer]:
+              - /url: https://www.archbee.com/?utm_campaign=hosted-docs&utm_medium=referral&utm_source=docs.amberflo.io
+              - generic [ref=e481]: Docs powered by
+              - generic [ref=e482]: Archbee
+    - region "Notifications alt+T"
+  - alert [ref=e484]

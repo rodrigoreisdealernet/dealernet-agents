@@ -1,0 +1,869 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e7]:
+      - navigation [ref=e9]:
+        - generic [ref=e11]:
+          - generic [ref=e12]:
+            - img [ref=e14] [cursor=pointer]
+            - link "website logo" [ref=e15] [cursor=pointer]:
+              - /url: https://docs.amberflo.io
+              - img "Website logo" [ref=e16]
+          - img [ref=e18] [cursor=pointer]
+      - main [ref=e24]:
+        - generic [ref=e32]: Metering
+        - generic [ref=e36]:
+          - generic [ref=e38]:
+            - generic [ref=e39]:
+              - heading "Meter Corrections (undo events)" [level=1] [ref=e40]
+              - generic [ref=e41]:
+                - generic [ref=e42]:
+                  - img [ref=e43]
+                  - generic [ref=e46]: 18 min
+                - generic [ref=e47]:
+                  - generic [ref=e48] [cursor=pointer]:
+                    - img [ref=e49]
+                    - generic [ref=e52]: Copy
+                  - img [ref=e54] [cursor=pointer]
+            - generic [ref=e58]:
+              - heading "IntroductionIntroduction" [level=1] [ref=e62] [cursor=pointer]:
+                - link "Introduction":
+                  - /url: "#introduction"
+                - generic [ref=e64]: Introduction
+              - paragraph [ref=e67]:
+                - generic [ref=e69]: Occasionally, a source system may send
+                - strong [ref=e73]: incorrect or unintended meter events
+                - generic [ref=e75]: "to Amberflo. This could be due to:"
+              - list [ref=e79]:
+                - listitem [ref=e80]:
+                  - generic [ref=e82]: A
+                  - strong [ref=e86]: bug
+                  - generic [ref=e88]: that results in over-reporting or under-reporting usage
+              - list [ref=e92]:
+                - listitem [ref=e93]:
+                  - generic [ref=e95]: An event that was mistakenly triggered and needs to be
+                  - strong [ref=e99]: retracted
+              - paragraph [ref=e102]:
+                - strong [ref=e106]: How do you correct an invoice or bill based on inaccurate usage data?
+              - paragraph [ref=e109]:
+                - strong [ref=e113]: How do you undo (delete) incorrect meters?
+              - 'heading "Amberflo''s Solution: Undo Ingested MetersAmberflo''s Solution: Undo Ingested Meters" [level=3] [ref=e117] [cursor=pointer]':
+                - 'link "Amberflo''s Solution: Undo Ingested Meters"':
+                  - /url: "#amberflos-solution-undo-ingested-meters"
+                - strong [ref=e121]: "Amberflo's Solution: Undo Ingested Meters"
+              - paragraph [ref=e124]:
+                - generic [ref=e126]: Amberflo provides a built-in capability to
+                - strong [ref=e130]: cancel (undo)
+                - generic [ref=e132]: one or more meter events after ingestion.
+              - paragraph [ref=e135]:
+                - generic [ref=e137]: This ensures Amberflo remains a
+                - strong [ref=e141]: reliable system of record
+                - generic [ref=e143]: "by supporting:"
+              - list [ref=e147]:
+                - listitem [ref=e148]:
+                  - strong [ref=e152]: Idempotency
+              - list [ref=e156]:
+                - listitem [ref=e157]:
+                  - strong [ref=e161]: Data deduplication
+              - list [ref=e165]:
+                - listitem [ref=e166]:
+                  - strong [ref=e170]: Accurate correction of historical usage
+              - heading "How It WorksHow It Works" [level=3] [ref=e174] [cursor=pointer]:
+                - link "How It Works":
+                  - /url: "#how-it-works"
+                - strong [ref=e178]: How It Works
+              - paragraph [ref=e181]:
+                - generic [ref=e183]: Amberflo exposes an
+                - strong [ref=e187]: easy-to-use API
+                - generic [ref=e189]: "that allows you to:"
+              - list [ref=e193]:
+                - listitem [ref=e194]:
+                  - generic [ref=e196]: Cancel a
+                  - strong [ref=e200]: single usage event
+              - list [ref=e204]:
+                - listitem [ref=e205]:
+                  - generic [ref=e207]: Cancel a
+                  - strong [ref=e211]: batch of events
+              - paragraph [ref=e214]:
+                - generic [ref=e216]: "When meter events are canceled, the system:"
+              - list [ref=e220]:
+                - listitem [ref=e221]:
+                  - strong [ref=e225]: Updates all relevant usage aggregations
+              - list [ref=e229]:
+                - listitem [ref=e230]:
+                  - strong [ref=e234]: Propagates changes to downstream systems
+                  - generic [ref=e236]: ", including:"
+              - list [ref=e240]:
+                - listitem [ref=e241]:
+                  - generic [ref=e243]: Invoices
+              - list [ref=e247]:
+                - listitem [ref=e248]:
+                  - generic [ref=e250]: Rewards
+              - list [ref=e254]:
+                - listitem [ref=e255]:
+                  - generic [ref=e257]: Payment calculations
+              - paragraph [ref=e260]:
+                - generic [ref=e262]: This guarantees your billing and reporting stay accurate, even when corrections are needed.
+              - heading "Examples where meter events need to be undone (and corrected)Examples where meter events need to be undone (and corrected)" [level=1] [ref=e266] [cursor=pointer]:
+                - link "Examples where meter events need to be undone (and corrected)":
+                  - /url: "#examples-where-meter-events-need-to-be-undone-and"
+                - generic [ref=e268]: Examples where meter events need to be undone (and corrected)
+              - heading "System ErrorsSystem Errors" [level=2] [ref=e272] [cursor=pointer]:
+                - link "System Errors":
+                  - /url: "#system-errors"
+                - generic [ref=e274]: System Errors
+              - paragraph [ref=e277]:
+                - generic [ref=e279]: These errors are typically the result of
+                - strong [ref=e283]: bugs or data issues
+                - generic [ref=e285]: in the source system that sent incorrect or incomplete meter events to Amberflo. Since the root cause lies within the originating system, we refer to them as
+                - strong [ref=e289]: system errors
+                - generic [ref=e291]: .
+              - heading "Example:Example:" [level=3] [ref=e295] [cursor=pointer]:
+                - link "Example:":
+                  - /url: "#example"
+                - generic [ref=e297]: "Example:"
+              - paragraph [ref=e300]:
+                - generic [ref=e302]: Let’s assume a company named Smart-ML uses Amberflo for usage-based pricing.
+              - paragraph [ref=e305]:
+                - generic [ref=e307]: Smart-ML tracks a meter called
+                - strong [ref=e311]
+                - generic [ref=e313]: "api-calls, which includes the following dimensions: region, cluster and host-type."
+              - paragraph [ref=e316]:
+                - strong [ref=e320]: "What went wrong:"
+              - list [ref=e324]:
+                - listitem [ref=e325]:
+                  - generic [ref=e327]: On February 2, 2022 at 1:00 AM, a bad deployment introduced a bug.
+              - list [ref=e331]:
+                - listitem [ref=e332]:
+                  - generic [ref=e334]: As a result, all api-calls events sent to Amberflo after that time were missing values for the cluster and host-type dimensions.
+              - paragraph [ref=e337]:
+                - strong [ref=e341]: "Discovery and Correction:"
+              - list [ref=e345]:
+                - listitem [ref=e346]:
+                  - generic [ref=e348]: On February 15, 2022 at 4:00 PM, George, a Product Manager at Smart-ML, noticed irregularities in the usage data.
+              - list [ref=e352]:
+                - listitem [ref=e353]:
+                  - generic [ref=e355]: After investigating, the Smart-ML on-call engineering team concluded that all api-calls meter events sent since 2/2/2022 were invalid and needed to be undone and corrected.
+              - paragraph [ref=e358]:
+                - generic [ref=e360]: This is a typical case where meter correction via Amberflo’s undo functionality is essential to maintain data accuracy and ensure downstream billing or analytics remain trustworthy.
+              - heading "Unintentional or unsuccessful usageUnintentional or unsuccessful usage" [level=2] [ref=e364] [cursor=pointer]:
+                - link "Unintentional or unsuccessful usage":
+                  - /url: "#unintentional-or-unsuccessful-usage"
+                - generic [ref=e366]: Unintentional or unsuccessful usage
+              - paragraph [ref=e369]:
+                - generic [ref=e371]: Unlike systematic errors caused by bugs or incorrect data in the source system,
+                - strong [ref=e375]: unintentional or unsuccessful usage
+                - generic [ref=e377]: refers to events that occur naturally during regular use of a service.
+              - paragraph [ref=e380]:
+                - generic [ref=e382]: In these cases, a customer attempts (or begins) to use a resource, but the intended action is ultimately
+                - strong [ref=e386]: canceled or aborted
+                - generic [ref=e388]: ", resulting in the resource"
+                - strong [ref=e392]: not actually being used
+                - generic [ref=e394]: .
+              - heading "Example:Example:" [level=3] [ref=e398] [cursor=pointer]:
+                - link "Example:":
+                  - /url: "#example-1"
+                - generic [ref=e400]: "Example:"
+              - paragraph [ref=e403]:
+                - generic [ref=e407]: Rabbit-IO
+                - generic [ref=e409]: is a company that enables users to build and run big-data pipelines on its clusters—essentially a PaaS provider.
+                - generic [ref=e413]: Smart-ML
+                - generic [ref=e415]: is a customer of
+                - generic [ref=e419]: Rabbit-IO
+                - generic [ref=e421]: .
+              - paragraph [ref=e424]:
+                - generic [ref=e426]: On 3/3/2022 at 3:21 AM,
+                - generic [ref=e430]: Smart-ML
+                - generic [ref=e432]: submits a request to start a data pipeline job.
+                - generic [ref=e436]: Rabbit-IO
+                - generic [ref=e438]: ":"
+              - list [ref=e442]:
+                - listitem [ref=e443]:
+                  - generic [ref=e445]: Assigns machines from Cluster X for the job
+              - list [ref=e449]:
+                - listitem [ref=e450]:
+                  - generic [ref=e452]: Sends an event to Amberflo indicating that
+                  - generic [ref=e456]: Smart-ML
+                  - generic [ref=e458]: has started using Cluster X
+              - paragraph [ref=e461]:
+                - generic [ref=e463]: However, if the job was canceled shortly afterward (e.g., due to a user action or a failure), the resource wasn’t actually used—making the original meter event
+                - strong [ref=e467]: invalid
+                - generic [ref=e469]: and a candidate for correction.
+              - generic [ref=e473]:
+                - generic [ref=e476]:
+                  - button "JSON" [ref=e482] [cursor=pointer]:
+                    - generic [ref=e483]: JSON
+                  - button [ref=e485] [cursor=pointer]:
+                    - img [ref=e486]
+                - generic [ref=e494]:
+                  - generic:
+                    - generic: "1"
+                    - text: "{"
+                    - generic: "2"
+                    - text: "\"customerId\": \"Smart-ML-123\", // the actual customer id of Smart-ML"
+                    - generic: "3"
+                    - text: "\"meterApiName\": \"cpu-used\","
+                    - generic: "4"
+                    - text: "\"meterValue\": 500, // let's assume the job takes 500 cpus"
+                    - generic: "5"
+                    - text: "\"meterTimeInMillis\": 1646320860, // 3/3/2022 at 3:21am"
+                    - generic: "6"
+                    - text: "\"dimensions\":{"
+                    - generic: "7"
+                    - text: "\"cluster\": \"X\","
+                    - generic: "8"
+                    - text: "\"tenant_type\": \"Tech\""
+                    - generic: "9"
+                    - text: "}"
+                    - generic: "10"
+                    - text: "}"
+                  - textbox "Code editor" [ref=e495]: "{ \"customerId\": \"Smart-ML-123\", // the actual customer id of Smart-ML \"meterApiName\": \"cpu-used\", \"meterValue\": 500, // let's assume the job takes 500 cpus \"meterTimeInMillis\": 1646320860, // 3/3/2022 at 3:21am \"dimensions\":{ \"cluster\": \"X\", \"tenant_type\": \"Tech\" } }"
+              - paragraph [ref=e498]:
+                - generic [ref=e500]: But then, 15 minutes later at 3:36 AM, Cluster X goes down and the job fails. Since the data pipeline job was never successfully executed, Rabbit-IO decides *not to charge Smart-ML for the failed usage. As a result, they want to cancel the original meter event sent to Amberflo—because the resource was ultimately not used.
+              - heading "Coping with System ErrorsCoping with System Errors" [level=1] [ref=e504] [cursor=pointer]:
+                - link "Coping with System Errors":
+                  - /url: "#coping-with-system-errors"
+                - generic [ref=e506]: Coping with System Errors
+              - paragraph [ref=e509]:
+                - generic [ref=e511]: To help cope with ‘System Errors’ Amberflo exposes a
+                - strong [ref=e515]: ‘filtering-rules’ API
+                - generic [ref=e517]: . This API allows you to define rules for filtering out and removing sets of previously ingested meter events.
+              - heading "Example:Example:" [level=3] [ref=e521] [cursor=pointer]:
+                - link "Example:":
+                  - /url: "#example-2"
+                - generic [ref=e523]: "Example:"
+              - paragraph [ref=e526]:
+                - generic [ref=e528]: "If we take the ‘Smart-ML’ example, then in order to filter out bad ‘api-calls’, all ‘Smart-ML’ needs to do is:"
+              - paragraph [ref=e531]:
+                - link "https://app.amberflo.io/ingest-snapshot/custom-filtering-rules" [ref=e532] [cursor=pointer]:
+                  - /url: https://app.amberflo.io/ingest-snapshot/custom-filtering-rules
+                  - generic [ref=e535]: https://app.amberflo.io/ingest-snapshot/custom-filtering-rules
+                - generic [ref=e537]: ":"
+              - generic [ref=e541]:
+                - generic [ref=e544]:
+                  - button "JSON" [ref=e550] [cursor=pointer]:
+                    - generic [ref=e551]: JSON
+                  - button [ref=e553] [cursor=pointer]:
+                    - img [ref=e554]
+                - generic [ref=e562]:
+                  - generic:
+                    - generic: "1"
+                    - text: "{"
+                    - generic: "2"
+                    - text: "\"type\": \"by_property_filter_out\","
+                    - generic: "3"
+                    - text: "\"id\": \"2-2-2022-api-calls-cancelation\","
+                    - generic: "4"
+                    - text: "\"ingestionTimeRange\": {"
+                    - generic: "5"
+                    - text: "\"startTimeInSeconds\": 1643763600, // 2/2/2022 1am"
+                    - generic: "6"
+                    - text: "\"endTimeInSeconds\": 1644940800 // 2/15/2022 4pm"
+                    - generic: "7"
+                    - text: "},"
+                    - generic: "8"
+                    - text: "\"meterApiName\": \"api-calls\""
+                    - generic: "9"
+                    - text: "}"
+                  - textbox "Code editor" [ref=e563]: "{ \"type\": \"by_property_filter_out\", \"id\": \"2-2-2022-api-calls-cancelation\", \"ingestionTimeRange\": { \"startTimeInSeconds\": 1643763600, // 2/2/2022 1am \"endTimeInSeconds\": 1644940800 // 2/15/2022 4pm }, \"meterApiName\": \"api-calls\" }"
+              - heading "Advanced filters:Advanced filters:" [level=3] [ref=e567] [cursor=pointer]:
+                - link "Advanced filters:":
+                  - /url: "#advanced-filters"
+                - generic [ref=e569]: "Advanced filters:"
+              - paragraph [ref=e572]:
+                - generic [ref=e574]: In some cases, you may not need to cancel all meter events within a time range—only a subset that meets specific criteria.
+              - heading "Example :Example :" [level=3] [ref=e578] [cursor=pointer]:
+                - link "Example :":
+                  - /url: "#example-3"
+                - strong [ref=e582]: "Example :"
+              - paragraph [ref=e585]:
+                - generic [ref=e587]: Let’s assume
+                - generic [ref=e591]: Smart-ML
+                - generic [ref=e593]: experienced a bad deployment only in the region us-west-1.
+              - paragraph [ref=e596]:
+                - generic [ref=e598]: In this case, there's no need to undo all api-calls events between 2/2/2022 1:00 AM and 2/15/2022 4:00 PM. Instead, you want to target only the events where the region dimension is equal to us-west-1.
+              - heading "How to Apply the FilterHow to Apply the Filter" [level=3] [ref=e602] [cursor=pointer]:
+                - link "How to Apply the Filter":
+                  - /url: "#how-to-apply-the-filter"
+                - strong [ref=e606]: How to Apply the Filter
+              - paragraph [ref=e609]:
+                - generic [ref=e611]: To define this type of filter, use the dimensionValuesMap property and specify the
+                - strong [ref=e615]: dimension keys and values
+                - generic [ref=e617]: you want to match. This ensures that only events with the specified dimension values will be selected for cancellation.
+              - paragraph [ref=e620]:
+                - link "https://app.amberflo.io/ingest-snapshot/custom-filtering-rules" [ref=e621] [cursor=pointer]:
+                  - /url: https://app.amberflo.io/ingest-snapshot/custom-filtering-rules
+                  - generic [ref=e624]: https://app.amberflo.io/ingest-snapshot/custom-filtering-rules
+                - generic [ref=e626]: ":"
+              - generic [ref=e630]:
+                - generic [ref=e633]:
+                  - button "JSON" [ref=e639] [cursor=pointer]:
+                    - generic [ref=e640]: JSON
+                  - button [ref=e642] [cursor=pointer]:
+                    - img [ref=e643]
+                - generic [ref=e651]:
+                  - generic:
+                    - generic: "1"
+                    - text: "{"
+                    - generic: "2"
+                    - text: "\"type\": \"by_property_filter_out\","
+                    - generic: "3"
+                    - text: "\"id\": \"2-2-2022-api-calls-cancelation\","
+                    - generic: "4"
+                    - text: "\"ingestionTimeRange\": {"
+                    - generic: "5"
+                    - text: "\"startTimeInSeconds\": 1643763600, // 2/2/2022 1am"
+                    - generic: "6"
+                    - text: "\"endTimeInSeconds\": 1644940800 // 2/15/2022 4pm"
+                    - generic: "7"
+                    - text: "},"
+                    - generic: "8"
+                    - text: "\"meterApiName\": \"api-calls\","
+                    - generic: "9"
+                    - text: "\"dimensionValuesMap\": {"
+                    - generic: "10"
+                    - text: "\"region\": ["
+                    - generic: "11"
+                    - text: "\"us-west-1\""
+                    - generic: "12"
+                    - text: "]"
+                    - generic: "13"
+                    - text: "}"
+                    - generic: "14"
+                    - text: "}"
+                  - textbox "Code editor" [ref=e652]: "{ \"type\": \"by_property_filter_out\", \"id\": \"2-2-2022-api-calls-cancelation\", \"ingestionTimeRange\": { \"startTimeInSeconds\": 1643763600, // 2/2/2022 1am \"endTimeInSeconds\": 1644940800 // 2/15/2022 4pm }, \"meterApiName\": \"api-calls\", \"dimensionValuesMap\": { \"region\": [ \"us-west-1\" ] } }"
+              - paragraph [ref=e655]:
+                - generic [ref=e657]: "For more information, please refer to our filtering rules API:"
+                - link "Create or update a filtering rule" [ref=e658] [cursor=pointer]:
+                  - /url: https://docs.amberflo.io/reference/create-or-update-a-filtering-rule
+                  - generic [ref=e661]: Create or update a filtering rule
+              - paragraph [ref=e664]:
+                - generic [ref=e666]: 📘
+                - generic [ref=e670]: Notice
+              - paragraph [ref=e673]:
+                - generic [ref=e675]: "When using the filtering and meter cancellation tools, please keep the following considerations in mind:"
+              - paragraph [ref=e678]:
+                - strong [ref=e684]: Time limitations
+              - list [ref=e688]:
+                - listitem [ref=e689]:
+                  - generic [ref=e691]: Meter events can only be
+                  - strong [ref=e695]: canceled within one year
+                  - generic [ref=e697]: of their original ingestion date.
+              - list [ref=e701]:
+                - listitem [ref=e702]:
+                  - generic [ref=e704]: Events older than one year are not eligible for cancellation.
+              - paragraph [ref=e707]:
+                - strong [ref=e713]: Impact on Payments
+              - list [ref=e717]:
+                - listitem [ref=e718]:
+                  - generic [ref=e720]: You can
+                  - strong [ref=e724]: cancel usage events and replace them
+                  - generic [ref=e726]: with corrected ones as needed.
+              - list [ref=e730]:
+                - listitem [ref=e731]:
+                  - generic [ref=e733]: However, cancellations
+                  - strong [ref=e737]: cannot modify invoices
+                  - generic [ref=e739]: that are already
+                  - strong [ref=e743]: locked
+                  - generic [ref=e745]: (i.e., past their grace period).
+              - paragraph [ref=e748]:
+                - strong [ref=e752]: What does “locked” mean?
+              - list [ref=e756]:
+                - listitem [ref=e757]:
+                  - generic [ref=e759]: A locked invoice is considered
+                  - strong [ref=e763]: final and paid
+                  - generic [ref=e765]: .
+              - list [ref=e769]:
+                - listitem [ref=e770]:
+                  - generic [ref=e772]: "In these cases, any necessary adjustments should be handled via:"
+              - list [ref=e776]:
+                - listitem [ref=e777]:
+                  - generic [ref=e779]: A refund
+              - list [ref=e783]:
+                - listitem [ref=e784]:
+                  - generic [ref=e786]: A future discount or credit
+              - heading "Canceling unintentional or unsuccessful events Canceling unintentional or unsuccessful events" [level=1] [ref=e790] [cursor=pointer]:
+                - link "Canceling unintentional or unsuccessful events":
+                  - /url: "#canceling-unintentional-or-unsuccessful-events"
+                - generic [ref=e792]: Canceling unintentional or unsuccessful events
+              - paragraph [ref=e795]:
+                - generic [ref=e797]: You can use the
+                - strong [ref=e801]: filtering mechanism
+                - generic [ref=e803]: described earlier to target and cancel specific events based on their
+                - strong [ref=e807]: unique ID
+                - generic [ref=e809]: .
+              - 'heading "Method 1: Using Unique IDMethod 1: Using Unique ID" [level=3] [ref=e813] [cursor=pointer]':
+                - 'link "Method 1: Using Unique ID"':
+                  - /url: "#method-1-using-unique-id"
+                - strong [ref=e817]: "Method 1: Using Unique ID"
+              - paragraph [ref=e820]:
+                - generic [ref=e822]: If you have the
+                - strong [ref=e826]: unique ID
+                - generic [ref=e828]: "of the event to be canceled:"
+              - list [ref=e832]:
+                - listitem [ref=e833]:
+                  - generic [ref=e835]: Add it to the dimensionValuesMap property
+              - list [ref=e839]:
+                - listitem [ref=e840]:
+                  - generic [ref=e842]: "This allows for a precise and reliable cancellation, assuming:"
+              - list [ref=e846]:
+                - listitem [ref=e847]:
+                  - generic [ref=e849]: You have the correct unique ID
+              - list [ref=e853]:
+                - listitem [ref=e854]:
+                  - generic [ref=e856]: The same unique ID hasn’t been reused for another event
+              - 'heading "Method 2: Using Resource-Related PropertiesMethod 2: Using Resource-Related Properties" [level=3] [ref=e860] [cursor=pointer]':
+                - 'link "Method 2: Using Resource-Related Properties"':
+                  - /url: "#method-2-using-resource-related-properties"
+                - strong [ref=e864]: "Method 2: Using Resource-Related Properties"
+              - paragraph [ref=e867]:
+                - generic [ref=e869]: "If the unique ID is not available, but you have other identifying information—such as:"
+              - list [ref=e873]:
+                - listitem [ref=e874]:
+                  - generic [ref=e876]: Customer ID
+              - list [ref=e880]:
+                - listitem [ref=e881]:
+                  - generic [ref=e883]: Meter name
+              - list [ref=e887]:
+                - listitem [ref=e888]:
+                  - generic [ref=e890]: Dimension values (e.g., region, cluster)
+              - paragraph [ref=e893]:
+                - generic [ref=e895]: Then Amberflo can support an alternative filtering approach using those
+                - strong [ref=e899]: resource-related properties
+                - generic [ref=e901]: .
+              - paragraph [ref=e904]:
+                - generic [ref=e906]: This allows you to
+                - strong [ref=e910]: cancel specific events
+                - generic [ref=e912]: even without the exact unique ID, provided that the filtering criteria are sufficient to isolate the correct events.
+              - paragraph [ref=e915]:
+                - generic [ref=e917]: First, let’s define “
+                - strong [ref=e921]: resource related properties
+                - generic [ref=e923]: "”. These related properties depend on the meter type as described below:"
+              - img "Document image" [ref=e929] [cursor=pointer]
+              - paragraph [ref=e932]:
+                - generic [ref=e934]: As described above, the resource-related properties help identify the specific
+                - strong [ref=e938]: resource instance
+                - generic [ref=e940]: that was used to serve the customer.
+              - paragraph [ref=e943]:
+                - generic [ref=e945]: To cancel the events associated with that resource, simply send a
+                - strong [ref=e949]: new ingest event
+                - generic [ref=e951]: that includes the appropriate resource ID and related dimensions
+                - strong [ref=e955]
+                - generic [ref=e957]: "and an additional dimension:"
+                - generic [ref=e960]: “aflo.cancel_previous_resource_event”
+                - generic [ref=e962]: with
+                - generic [ref=e965]: “true”
+                - generic [ref=e967]: as its value. This instructs Amberflo to
+                - strong [ref=e971]: locate and cancel any previously ingested events
+                - generic [ref=e973]: "related to that resource. For example, for the ‘Rabbit-IO’ example mentioned above, ‘Rabbit-IO’ needs to send the following ingest event in order to cancel the usage:"
+              - paragraph [ref=e976]:
+                - link "https://app.amberflo.io/ingest" [ref=e977] [cursor=pointer]:
+                  - /url: https://app.amberflo.io/ingest
+                  - generic [ref=e980]: https://app.amberflo.io/ingest
+                - generic [ref=e982]: ":"
+              - generic [ref=e986]:
+                - generic [ref=e989]:
+                  - button "JSON" [ref=e995] [cursor=pointer]:
+                    - generic [ref=e996]: JSON
+                  - button [ref=e998] [cursor=pointer]:
+                    - img [ref=e999]
+                - generic [ref=e1007]:
+                  - generic:
+                    - generic: "1"
+                    - text: "[{"
+                    - generic: "2"
+                    - text: "\"customerId\": \"Smart-ML-123\", // the actual customer id of Smart-ML"
+                    - generic: "3"
+                    - text: "\"meterApiName\": \"cpu-used\","
+                    - generic: "4"
+                    - text: "\"meterValue\": 0, // the value of the cancellation event doesn’t matter"
+                    - generic: "5"
+                    - text: "\"meterTimeInMillis\": 1666278270000, // 10/20/2022 at 15:04:30"
+                    - generic: "6"
+                    - text: "\"dimensions\": {"
+                    - generic: "7"
+                    - text: "\"cluster\": \"X\","
+                    - generic: "8"
+                    - text: "\"aflo.cancel_previous_resource_event\": \"true\""
+                    - generic: "9"
+                    - text: "}"
+                    - generic: "10"
+                    - text: "}]"
+                  - textbox "Code editor" [ref=e1008]: "[{ \"customerId\": \"Smart-ML-123\", // the actual customer id of Smart-ML \"meterApiName\": \"cpu-used\", \"meterValue\": 0, // the value of the cancellation event doesn’t matter \"meterTimeInMillis\": 1666278270000, // 10/20/2022 at 15:04:30 \"dimensions\": { \"cluster\": \"X\", \"aflo.cancel_previous_resource_event\": \"true\" } }]"
+              - paragraph [ref=e1011]:
+                - generic [ref=e1013]: 📘
+                - strong [ref=e1017]
+                - strong [ref=e1023]: Limitations
+              - paragraph [ref=e1026]:
+                - generic [ref=e1028]: When canceling events using
+                - strong [ref=e1032]: resource-related properties
+                - generic [ref=e1034]: "and the aflo.cancel_previous_resource_event flag, there are a few important constraints to keep in mind:"
+              - paragraph [ref=e1037]:
+                - strong [ref=e1041]: 1. 9-Hour Time Limit
+              - paragraph [ref=e1044]:
+                - generic [ref=e1046]: You have up to
+                - strong [ref=e1050]: 9 hours from the time a resource starts being used
+                - generic [ref=e1052]: to cancel the associated usage event.
+              - paragraph [ref=e1055]:
+                - strong [ref=e1059]: 2. Timestamp of the Cancellation Event
+              - list [ref=e1063]:
+                - listitem [ref=e1064]:
+                  - generic [ref=e1066]: The
+                  - strong [ref=e1070]: timestamp of the cancellation event
+                  - generic [ref=e1072]: must be
+                  - strong [ref=e1076]: no later than 9 hours after
+                  - generic [ref=e1078]: the original usage event.
+              - list [ref=e1082]:
+                - listitem [ref=e1083]:
+                  - generic [ref=e1085]: "For best results, set the cancellation event’s timestamp to be:"
+              - list [ref=e1089]:
+                - listitem [ref=e1090]:
+                  - generic [ref=e1092]: As
+                  - strong [ref=e1096]: close as possible
+                  - generic [ref=e1098]: to the original event
+              - list [ref=e1102]:
+                - listitem [ref=e1103]:
+                  - generic [ref=e1105]: Or even use the
+                  - strong [ref=e1109]: exact same timestamp
+                  - generic [ref=e1111]: as the event you are canceling
+              - paragraph [ref=e1114]:
+                - strong [ref=e1118]: Why These Limitations Exist
+                - strong [ref=e1124]: "?"
+              - paragraph [ref=e1127]:
+                - generic [ref=e1129]: When you define a cancellation event using only
+                - strong [ref=e1133]: resource-related properties
+                - generic [ref=e1135]: ", you're not explicitly identifying the exact meter event to be canceled (e.g., by unique ID)."
+              - paragraph [ref=e1138]:
+                - generic [ref=e1140]: Because of this, Amberflo operates under the assumption that you're targeting a
+                - strong [ref=e1144]: recent event
+                - generic [ref=e1146]: "and will:"
+              - list [ref=e1150]:
+                - listitem [ref=e1151]:
+                  - generic [ref=e1153]: Search for the
+                  - strong [ref=e1157]: most recent event
+                  - generic [ref=e1159]: related to the specified resource within the last 9 hours
+              - list [ref=e1163]:
+                - listitem [ref=e1164]:
+                  - generic [ref=e1166]: Cancel that event
+                  - strong [ref=e1170]: if it exists
+              - paragraph [ref=e1173]:
+                - strong [ref=e1177]: "Important:"
+                - generic [ref=e1179]: If the same resource was used more than once in that time window, Amberflo will cancel only the most recent of those events.
+              - paragraph [ref=e1182]:
+                - generic [ref=e1184]: Also note that the value of the cancellation event does not matter, because its only purpose is to signal the system to drop the matching usage record—not to report usage.
+              - heading "Canceling unintentional or unsuccessful Usage (advance)Canceling unintentional or unsuccessful Usage (advance)" [level=2] [ref=e1188] [cursor=pointer]:
+                - link "Canceling unintentional or unsuccessful Usage (advance)":
+                  - /url: "#canceling-unintentional-or-unsuccessful-usage-adva"
+                - generic [ref=e1190]: Canceling unintentional or unsuccessful Usage (advance)
+              - paragraph [ref=e1193]:
+                - generic [ref=e1195]: The
+                - generic [ref=e1198]: aflo.cancel_previous_resource_event flag
+                - generic [ref=e1200]: ", as described earlier, is used for"
+                - strong [ref=e1204]: dynamically canceling usage events
+                - generic [ref=e1206]: ". This mechanism can target events such as:"
+                - strong [ref=e1210]: start
+                - generic [ref=e1212]: using a resource
+                - strong [ref=e1216]: ", stop"
+                - generic [ref=e1218]: using a resource
+                - strong [ref=e1222]: ","
+                - generic [ref=e1224]: or an
+                - strong [ref=e1228]: update
+                - generic [ref=e1230]: to the usage rate
+                - strong [ref=e1234]: .
+              - paragraph [ref=e1237]:
+                - generic [ref=e1239]: For
+                - strong [ref=e1243]: Max
+                - generic [ref=e1245]: or
+                - strong [ref=e1249]: Total Duration meters
+                - generic [ref=e1251]: ", Amberflo supports an additional flag to refine cancellation behavior:"
+                - generic [ref=e1254]: "\"aflo.ignore_cancellation_if_no_usage\""
+                - generic [ref=e1256]: This secondary flag is only meaningful when used together with
+                - generic [ref=e1259]: aflo.cancel_previous_resource_event
+                - generic [ref=e1261]: ". If aflo.ignore_cancellation_if_no_usage is set to true, Amberflo will: ignore the cancellation of a \"stop\" event if there was"
+                - strong [ref=e1265]: no usage
+                - generic [ref=e1267]: recorded between the original start and stop events.
+              - paragraph [ref=e1270]:
+                - generic [ref=e1272]: This prevents cancellations from
+                - strong [ref=e1276]: invalidating periods where no actual usage occurred
+                - generic [ref=e1278]: —a useful safeguard for duration-based meters.
+              - heading "Example:Example:" [level=3] [ref=e1282] [cursor=pointer]:
+                - link "Example:":
+                  - /url: "#example-4"
+                - strong [ref=e1286]: "Example:"
+              - paragraph [ref=e1289]:
+                - generic [ref=e1291]: "Let’s assume you are using a total-duration meter and the following three events were ingested:"
+              - generic [ref=e1295]:
+                - generic [ref=e1298]:
+                  - button "JSON" [ref=e1304] [cursor=pointer]:
+                    - generic [ref=e1305]: JSON
+                  - button [ref=e1307] [cursor=pointer]:
+                    - img [ref=e1308]
+                - generic [ref=e1316]:
+                  - generic:
+                    - generic: "1"
+                    - text: // Start usage
+                    - generic: "2"
+                    - text: "{"
+                    - generic: "3"
+                    - text: "\"customerId\": \"Smart-ML-123\", // the actual customer id of Smart-ML"
+                    - generic: "4"
+                    - text: "\"meterApiName\": \"cpu-used\","
+                    - generic: "5"
+                    - text: "\"meterValue\": 10,"
+                    - generic: "6"
+                    - text: "\"meterTimeInMillis\": 1646321760, // 3/3/2022 at 3:36am"
+                    - generic: "7"
+                    - text: "\"dimensions\": {"
+                    - generic: "8"
+                    - text: "\"cluster\": \"X\","
+                    - generic: "9"
+                    - text: "}"
+                    - generic: "10"
+                    - text: "},"
+                    - generic: "11"
+                    - text: // Stop usage
+                    - generic: "12"
+                    - text: "{"
+                    - generic: "13"
+                    - text: "\"customerId\": \"Smart-ML-123\", // the actual customer id of Smart-ML"
+                    - generic: "14"
+                    - text: "\"meterApiName\": \"cpu-used\","
+                    - generic: "15"
+                    - text: "\"meterValue\": 0,"
+                    - generic: "16"
+                    - text: "\"meterTimeInMillis\": 1646321820, // 3/3/2022 at 3:37am"
+                    - generic: "17"
+                    - text: "\"dimensions\": {"
+                    - generic: "18"
+                    - text: "\"cluster\": \"X\","
+                    - generic: "19"
+                    - text: "}"
+                    - generic: "20"
+                    - text: "},"
+                    - generic: "21"
+                    - text: // Cancelation
+                    - generic: "22"
+                    - text: "{"
+                    - generic: "23"
+                    - text: "\"customerId\": \"Smart-ML-123\", // the actual customer id of Smart-ML"
+                    - generic: "24"
+                    - text: "\"meterApiName\": \"cpu-used\","
+                    - generic: "25"
+                    - text: "\"meterValue\": 0,"
+                    - generic: "26"
+                    - text: "\"meterTimeInMillis\": 1646321880, // 3/3/2022 at 3:38am"
+                    - generic: "27"
+                    - text: "\"dimensions\": {"
+                    - generic: "28"
+                    - text: "\"cluster\": \"X\","
+                    - generic: "29"
+                    - text: "\"aflo.cancel_previous_resource_event\": \"true\""
+                    - generic: "30"
+                    - text: "}"
+                    - generic: "31"
+                    - text: "}"
+                  - textbox "Code editor" [ref=e1317]: "// Start usage { \"customerId\": \"Smart-ML-123\", // the actual customer id of Smart-ML \"meterApiName\": \"cpu-used\", \"meterValue\": 10, \"meterTimeInMillis\": 1646321760, // 3/3/2022 at 3:36am \"dimensions\": { \"cluster\": \"X\", } }, // Stop usage { \"customerId\": \"Smart-ML-123\", // the actual customer id of Smart-ML \"meterApiName\": \"cpu-used\", \"meterValue\": 0, \"meterTimeInMillis\": 1646321820, // 3/3/2022 at 3:37am \"dimensions\": { \"cluster\": \"X\", } }, // Cancelation { \"customerId\": \"Smart-ML-123\", // the actual customer id of Smart-ML \"meterApiName\": \"cpu-used\", \"meterValue\": 0, \"meterTimeInMillis\": 1646321880, // 3/3/2022 at 3:38am \"dimensions\": { \"cluster\": \"X\", \"aflo.cancel_previous_resource_event\": \"true\" } }"
+              - paragraph [ref=e1320]:
+                - generic [ref=e1322]: "As mentioned, event cancelation cancels the latest event regardless of what it indicates. So in the example above, after applying the dynamic cancellation, we will be left with only the start event:"
+              - generic [ref=e1326]:
+                - generic [ref=e1329]:
+                  - button "JSON" [ref=e1335] [cursor=pointer]:
+                    - generic [ref=e1336]: JSON
+                  - button [ref=e1338] [cursor=pointer]:
+                    - img [ref=e1339]
+                - generic [ref=e1347]:
+                  - generic:
+                    - generic: "1"
+                    - text: // Start usage
+                    - generic: "2"
+                    - text: "{"
+                    - generic: "3"
+                    - text: "\"customerId\": \"Smart-ML-123\", // the actual customer id of Smart-ML"
+                    - generic: "4"
+                    - text: "\"meterApiName\": \"cpu-used\","
+                    - generic: "5"
+                    - text: "\"meterValue\": 10,"
+                    - generic: "6"
+                    - text: "\"meterTimeInMillis\": 1646321760, // 3/3/2022 at 3:36am"
+                    - generic: "7"
+                    - text: "\"dimensions\": {"
+                    - generic: "8"
+                    - text: "\"cluster\": \"X\","
+                    - generic: "9"
+                    - text: "}"
+                    - generic: "10"
+                    - text: "}"
+                  - textbox "Code editor" [ref=e1348]: "// Start usage { \"customerId\": \"Smart-ML-123\", // the actual customer id of Smart-ML \"meterApiName\": \"cpu-used\", \"meterValue\": 10, \"meterTimeInMillis\": 1646321760, // 3/3/2022 at 3:36am \"dimensions\": { \"cluster\": \"X\", } }"
+              - paragraph [ref=e1351]:
+                - generic [ref=e1353]: Now, if we want the dynamic cancellation to cancel existing
+                - strong [ref=e1357]: usage events
+                - generic [ref=e1359]: (as opposed to cancelling any type of events), we will need to add the
+                - generic [ref=e1362]: "\"aflo.ignore_cancellation_if_no_usage\""
+                - generic [ref=e1364]: ", with"
+                - generic [ref=e1367]: "\"true\""
+                - generic [ref=e1369]: "as a value, to the 3rd event. So the sequence of events sent to Amberflo will look like:"
+              - generic [ref=e1373]:
+                - generic [ref=e1376]:
+                  - button "JSON" [ref=e1382] [cursor=pointer]:
+                    - generic [ref=e1383]: JSON
+                  - button [ref=e1385] [cursor=pointer]:
+                    - img [ref=e1386]
+                - generic [ref=e1394]:
+                  - generic:
+                    - generic: "1"
+                    - text: // Start usage
+                    - generic: "2"
+                    - text: "{"
+                    - generic: "3"
+                    - text: "\"customerId\": \"Smart-ML-123\", // the actual customer id of Smart-ML"
+                    - generic: "4"
+                    - text: "\"meterApiName\": \"cpu-used\","
+                    - generic: "5"
+                    - text: "\"meterValue\": 10,"
+                    - generic: "6"
+                    - text: "\"meterTimeInMillis\": 1646321760, // 3/3/2022 at 3:36am"
+                    - generic: "7"
+                    - text: "\"dimensions\": {"
+                    - generic: "8"
+                    - text: "\"cluster\": \"X\","
+                    - generic: "9"
+                    - text: "}"
+                    - generic: "10"
+                    - text: "},"
+                    - generic: "11"
+                    - text: // Stop usage
+                    - generic: "12"
+                    - text: "{"
+                    - generic: "13"
+                    - text: "\"customerId\": \"Smart-ML-123\", // the actual customer id of Smart-ML"
+                    - generic: "14"
+                    - text: "\"meterApiName\": \"cpu-used\","
+                    - generic: "15"
+                    - text: "\"meterValue\": 0,"
+                    - generic: "16"
+                    - text: "\"meterTimeInMillis\": 1646321820, // 3/3/2022 at 3:37am"
+                    - generic: "17"
+                    - text: "\"dimensions\": {"
+                    - generic: "18"
+                    - text: "\"cluster\": \"X\","
+                    - generic: "19"
+                    - text: "}"
+                    - generic: "20"
+                    - text: "},"
+                    - generic: "21"
+                    - text: // Cancelation
+                    - generic: "22"
+                    - text: "{"
+                    - generic: "23"
+                    - text: "\"customerId\": \"Smart-ML-123\", // the actual customer id of Smart-ML"
+                    - generic: "24"
+                    - text: "\"meterApiName\": \"cpu-used\","
+                    - generic: "25"
+                    - text: "\"meterValue\": 0,"
+                    - generic: "26"
+                    - text: "\"meterTimeInMillis\": 1646321880, // 3/3/2022 at 3:38am"
+                    - generic: "27"
+                    - text: "\"dimensions\": {"
+                    - generic: "28"
+                    - text: "\"cluster\": \"X\","
+                    - generic: "29"
+                    - text: "\"aflo.cancel_previous_resource_event\": \"true\","
+                    - generic: "30"
+                    - text: "\"aflo.ignore_cancellation_if_no_usage\": \"true\" // <== NOTICE: Additional Secondary Flag"
+                    - generic: "31"
+                    - text: "}"
+                    - generic: "32"
+                    - text: "}"
+                  - textbox "Code editor" [ref=e1395]: "// Start usage { \"customerId\": \"Smart-ML-123\", // the actual customer id of Smart-ML \"meterApiName\": \"cpu-used\", \"meterValue\": 10, \"meterTimeInMillis\": 1646321760, // 3/3/2022 at 3:36am \"dimensions\": { \"cluster\": \"X\", } }, // Stop usage { \"customerId\": \"Smart-ML-123\", // the actual customer id of Smart-ML \"meterApiName\": \"cpu-used\", \"meterValue\": 0, \"meterTimeInMillis\": 1646321820, // 3/3/2022 at 3:37am \"dimensions\": { \"cluster\": \"X\", } }, // Cancelation { \"customerId\": \"Smart-ML-123\", // the actual customer id of Smart-ML \"meterApiName\": \"cpu-used\", \"meterValue\": 0, \"meterTimeInMillis\": 1646321880, // 3/3/2022 at 3:38am \"dimensions\": { \"cluster\": \"X\", \"aflo.cancel_previous_resource_event\": \"true\", \"aflo.ignore_cancellation_if_no_usage\": \"true\" // <== NOTICE: Additional Secondary Flag } }"
+              - paragraph [ref=e1398]:
+                - generic [ref=e1400]: "In this case the result of the system run will be:"
+              - generic [ref=e1404]:
+                - generic [ref=e1407]:
+                  - button "JSON" [ref=e1413] [cursor=pointer]:
+                    - generic [ref=e1414]: JSON
+                  - button [ref=e1416] [cursor=pointer]:
+                    - img [ref=e1417]
+                - generic [ref=e1425]:
+                  - generic:
+                    - generic: "1"
+                    - text: "{"
+                    - generic: "2"
+                    - text: "\"customerId\": \"Smart-ML-123\", // the actual customer id of Smart-ML"
+                    - generic: "3"
+                    - text: "\"meterApiName\": \"cpu-used\","
+                    - generic: "4"
+                    - text: "\"meterValue\": 10,"
+                    - generic: "5"
+                    - text: "\"meterTimeInMillis\": 1646321760, // 3/3/2022 at 3:36am"
+                    - generic: "6"
+                    - text: "\"dimensions\": {"
+                    - generic: "7"
+                    - text: "\"cluster\": \"X\","
+                    - generic: "8"
+                    - text: "}"
+                    - generic: "9"
+                    - text: "},"
+                    - generic: "10"
+                    - text: // Stop usage
+                    - generic: "11"
+                    - text: "{"
+                    - generic: "12"
+                    - text: "\"customerId\": \"Smart-ML-123\", // the actual customer id of Smart-ML"
+                    - generic: "13"
+                    - text: "\"meterApiName\": \"cpu-used\","
+                    - generic: "14"
+                    - text: "\"meterValue\": 0,"
+                    - generic: "15"
+                    - text: "\"meterTimeInMillis\": 1646321820, // 3/3/2022 at 3:37am"
+                    - generic: "16"
+                    - text: "\"dimensions\": {"
+                    - generic: "17"
+                    - text: "\"cluster\": \"X\","
+                    - generic: "18"
+                    - text: "}"
+                    - generic: "19"
+                    - text: "}"
+                  - textbox "Code editor" [ref=e1426]: "{ \"customerId\": \"Smart-ML-123\", // the actual customer id of Smart-ML \"meterApiName\": \"cpu-used\", \"meterValue\": 10, \"meterTimeInMillis\": 1646321760, // 3/3/2022 at 3:36am \"dimensions\": { \"cluster\": \"X\", } }, // Stop usage { \"customerId\": \"Smart-ML-123\", // the actual customer id of Smart-ML \"meterApiName\": \"cpu-used\", \"meterValue\": 0, \"meterTimeInMillis\": 1646321820, // 3/3/2022 at 3:37am \"dimensions\": { \"cluster\": \"X\", } }"
+              - paragraph [ref=e1429]:
+                - generic [ref=e1431]: This is because there was no usage to cancel for the 3rd event.
+              - paragraph [ref=e1434]:
+                - generic [ref=e1436]: 📘
+                - strong [ref=e1442]: NOTICE
+              - paragraph [ref=e1445]:
+                - strong [ref=e1451]: "\"aflo.ignore_cancellation_if_no_usage\" has a meaning only in the context of \"Max\" or \"Total Duration\" meters."
+          - generic [ref=e1453]:
+            - generic [ref=e1454]:
+              - generic [ref=e1455]:
+                - generic [ref=e1456]:
+                  - img [ref=e1457]
+                  - text: Updated 25 Feb 2026
+                - generic [ref=e1459]:
+                  - img "Doc contributor" [ref=e1462]
+                  - img "Doc contributor" [ref=e1465]
+              - generic [ref=e1467]:
+                - generic [ref=e1468]: Did this page help you?
+                - generic [ref=e1470]:
+                  - button "Did this page help you? Yes" [ref=e1472] [cursor=pointer]:
+                    - img [ref=e1473]
+                    - generic [ref=e1475]: "Yes"
+                  - button "Did this page help you? No" [ref=e1477] [cursor=pointer]:
+                    - img [ref=e1478]
+                    - generic [ref=e1480]: "No"
+            - generic [ref=e1482]:
+              - link "PREVIOUS Backfill Meters and Customers" [ref=e1483] [cursor=pointer]:
+                - /url: /kIRvibWfzrRdC3ZHDrYCW
+                - img [ref=e1485]
+                - generic [ref=e1488]:
+                  - generic [ref=e1489]: PREVIOUS
+                  - generic [ref=e1490]: Backfill Meters and Customers
+              - link "NEXT Meter Ingest Automatic Failover" [ref=e1491] [cursor=pointer]:
+                - /url: /EsQORHtOYXQ42ClJY5NTy
+                - generic [ref=e1492]:
+                  - generic [ref=e1493]: NEXT
+                  - generic [ref=e1494]: Meter Ingest Automatic Failover
+                - img [ref=e1496]
+            - link "Docs powered by Archbee" [ref=e1501] [cursor=pointer]:
+              - /url: https://www.archbee.com/?utm_campaign=hosted-docs&utm_medium=referral&utm_source=docs.amberflo.io
+              - generic [ref=e1502]: Docs powered by
+              - generic [ref=e1503]: Archbee
+    - region "Notifications alt+T"
+  - alert [ref=e1505]

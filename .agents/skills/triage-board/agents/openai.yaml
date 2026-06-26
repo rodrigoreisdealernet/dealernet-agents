@@ -1,0 +1,4 @@
+interface:
+  display_name: "Triage Board"
+  short_description: "Audit and repair GitHub project board gaps"
+  default_prompt: "Use $triage-board to audit and repair the GitHub project board."

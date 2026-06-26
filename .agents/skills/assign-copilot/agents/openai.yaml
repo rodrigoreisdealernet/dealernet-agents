@@ -1,0 +1,4 @@
+interface:
+  display_name: "Assign Copilot"
+  short_description: "Assign Copilot to a GitHub issue"
+  default_prompt: "Use $assign-copilot to assign Copilot to a GitHub issue."

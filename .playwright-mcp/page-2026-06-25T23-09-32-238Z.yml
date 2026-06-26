@@ -1,0 +1,221 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e7]:
+      - navigation [ref=e9]:
+        - generic [ref=e11]:
+          - generic [ref=e12]:
+            - img [ref=e14] [cursor=pointer]
+            - link "website logo" [ref=e15] [cursor=pointer]:
+              - /url: https://docs.amberflo.io
+              - img "Website logo" [ref=e16]
+          - img [ref=e18] [cursor=pointer]
+      - main [ref=e24]:
+        - generic [ref=e32]: Metering
+        - generic [ref=e36]:
+          - generic [ref=e38]:
+            - generic [ref=e39]:
+              - heading "Ingestion Options" [level=1] [ref=e40]
+              - generic [ref=e41]:
+                - generic [ref=e42]:
+                  - img [ref=e43]
+                  - generic [ref=e46]: 2 min
+                - generic [ref=e47]:
+                  - generic [ref=e48] [cursor=pointer]:
+                    - img [ref=e49]
+                    - generic [ref=e52]: Copy
+                  - img [ref=e54] [cursor=pointer]
+            - generic [ref=e58]:
+              - paragraph [ref=e61]:
+                - generic [ref=e63]: A successful usage-based business model with metered billing is built on the foundation of an
+                - strong [ref=e67]: accurate usage data collection strategy
+                - generic [ref=e69]: .
+              - paragraph [ref=e72]:
+                - generic [ref=e74]: Amberflo provides multiple easy ways to begin collecting data without the need to re-tool your systems.
+              - heading "SDKSDK" [level=2] [ref=e78] [cursor=pointer]:
+                - link "SDK":
+                  - /url: "#sdk"
+                - generic [ref=e80]: SDK
+              - paragraph [ref=e83]:
+                - generic [ref=e85]: "Using the Amberflo SDK gives you:"
+              - list [ref=e89]:
+                - listitem [ref=e90]:
+                  - generic [ref=e92]: More control
+              - list [ref=e96]:
+                - listitem [ref=e97]:
+                  - generic [ref=e99]: Immediate feedback via response codes
+              - list [ref=e103]:
+                - listitem [ref=e104]:
+                  - generic [ref=e106]: Support for batching records
+              - list [ref=e110]:
+                - listitem [ref=e111]:
+                  - generic [ref=e113]: Flush-on-demand functionality
+              - paragraph [ref=e116]:
+                - strong [ref=e120]: Batching Records
+                - generic [ref=e122]: Amberflo SDKs are designed to support
+                - strong [ref=e126]: high-throughput environments
+                - generic [ref=e128]: .
+              - paragraph [ref=e131]:
+                - generic [ref=e133]: "You can confidently:"
+              - list [ref=e137]:
+                - listitem [ref=e138]:
+                  - generic [ref=e140]: Send
+                  - strong [ref=e144]: hundreds of meter records per second
+              - list [ref=e148]:
+                - listitem [ref=e149]:
+                  - generic [ref=e151]: Deploy the SDK on web servers handling
+                  - strong [ref=e155]: high volumes of traffic
+              - list [ref=e159]:
+                - listitem [ref=e160]:
+                  - generic [ref=e162]: Ensure accuracy and availability
+                  - strong [ref=e166]: from day one
+              - paragraph [ref=e169]:
+                - strong [ref=e173]: "How it works:"
+              - paragraph [ref=e176]:
+                - generic [ref=e178]: Each call is
+                - strong [ref=e182]: queued in memory
+                - generic [ref=e184]: ", not sent immediately over HTTP. Messages are"
+                - strong [ref=e188]: batched and flushed in the background
+                - generic [ref=e190]: ", allowing for much faster performance."
+              - paragraph [ref=e193]:
+                - generic [ref=e195]: You can configure the
+                - strong [ref=e199]: batch size
+                - generic [ref=e201]: and the
+                - strong [ref=e205]: flush rate.
+              - paragraph [ref=e208]
+              - paragraph [ref=e211]:
+                - strong [ref=e215]: Flush on demand (Blocking call)
+                - generic [ref=e217]: You can
+                - strong [ref=e221]: flush the queue manually
+                - generic [ref=e223]: "—for example, at the end of your program—to ensure no data is left unsent. Just call the flush method:"
+              - paragraph [ref=e226]:
+                - generic [ref=e229]: metering.flush()
+              - paragraph [ref=e232]:
+                - strong [ref=e236]: "Important:"
+                - generic [ref=e238]: This is a
+                - strong [ref=e242]: blocking call
+                - generic [ref=e244]: —it will pause the calling thread until the queue is empty. We recommend using it only in
+                - strong [ref=e248]: cleanup scripts
+                - generic [ref=e250]: ", not during request processing."
+              - heading "Non-SDKNon-SDK" [level=2] [ref=e254] [cursor=pointer]:
+                - link "Non-SDK":
+                  - /url: "#non-sdk"
+                - generic [ref=e256]: Non-SDK
+              - paragraph [ref=e259]:
+                - generic [ref=e261]: We
+                - strong [ref=e265]: strongly recommend using our SDK for AWS S3
+                - generic [ref=e267]: ", as it offers the best of both worlds:"
+              - list [ref=e271]:
+                - listitem [ref=e272]:
+                  - generic [ref=e274]: Access to
+                  - strong [ref=e278]: rich SDK features
+                  - generic [ref=e280]: (see above)
+              - list [ref=e284]:
+                - listitem [ref=e285]:
+                  - generic [ref=e287]: Guaranteed
+                  - strong [ref=e291]: AWS S3 uptime SLA
+                  - generic [ref=e293]: for meter ingestion
+              - paragraph [ref=e296]:
+                - generic [ref=e298]: "However, we fully support cases where using a third-party SDK isn’t possible or preferred. In such scenarios, Amberflo offers multiple alternatives:"
+              - paragraph [ref=e301]:
+                - strong [ref=e305]: Amberflo Application
+                - generic [ref=e307]: The Amberflo web application provides a
+                - strong [ref=e311]: rich set of real-time dashboards
+                - generic [ref=e313]: "for visualizing:"
+              - list [ref=e317]:
+                - listitem [ref=e318]:
+                  - strong [ref=e322]: Usage
+              - list [ref=e326]:
+                - listitem [ref=e327]:
+                  - strong [ref=e331]: Revenue
+              - paragraph [ref=e334]:
+                - generic [ref=e336]: "Dashboards can be filtered by:"
+              - list [ref=e340]:
+                - listitem [ref=e341]:
+                  - strong [ref=e345]: Customer
+              - list [ref=e349]:
+                - listitem [ref=e350]:
+                  - strong [ref=e354]: Meter name
+              - list [ref=e358]:
+                - listitem [ref=e359]:
+                  - strong [ref=e363]: Custom dimensions
+              - paragraph [ref=e366]:
+                - strong [ref=e370]: Amberflo API
+                - generic [ref=e372]: Amberflo is an
+                - strong [ref=e376]: API-first platform
+                - generic [ref=e378]: . Every feature and object can be accessed programmatically via our APIs and SDKs.
+              - paragraph [ref=e381]:
+                - strong [ref=e385]: AWS S3
+                - generic [ref=e387]: Amberflo provides access to an
+                - strong [ref=e391]: Amazon S3 bucket
+                - generic [ref=e393]: with predefined
+                - strong [ref=e397]: permissions and controls
+                - generic [ref=e399]: to write meter data directly.
+              - paragraph [ref=e402]:
+                - strong [ref=e406]: Logging Systems
+                - generic [ref=e408]: Many companies already use
+                - strong [ref=e412]: centralized logging infrastructure
+                - generic [ref=e414]: (e.g.,
+                - strong [ref=e418]: AWS CloudWatch
+                - generic [ref=e420]: ) for operational insights.
+              - paragraph [ref=e423]:
+                - generic [ref=e425]: While logging systems aren't built specifically for metering, they can serve as a
+                - strong [ref=e429]: "\"catch-all\""
+                - generic [ref=e431]: for usage data streams because they’re deeply integrated into your systems.
+              - paragraph [ref=e434]:
+                - generic [ref=e436]: "Amberflo supports this approach by:"
+              - list [ref=e440]:
+                - listitem [ref=e441]:
+                  - generic [ref=e443]: Allowing you to
+                  - strong [ref=e447]: write meter events to your logging system
+              - list [ref=e451]:
+                - listitem [ref=e452]:
+                  - strong [ref=e456]: Extracting
+                  - generic [ref=e458]: meter events from it using supported connectors
+              - paragraph [ref=e461]:
+                - generic [ref=e463]: We currently provide a connector for
+                - strong [ref=e467]: AWS CloudWatch
+                - generic [ref=e471]: . We’re continuously adding
+                - strong [ref=e475]: new out-of-the-box integrations
+                - generic [ref=e477]: —check the
+                - strong [ref=e481]: Integrations
+                - generic [ref=e483]: section for updates.
+              - paragraph [ref=e486]:
+                - generic [ref=e488]: If you have a specific request, please contact us.
+              - paragraph [ref=e491]
+          - generic [ref=e493]:
+            - generic [ref=e494]:
+              - generic [ref=e495]:
+                - generic [ref=e496]:
+                  - img [ref=e497]
+                  - text: Updated 06 Mar 2026
+                - generic [ref=e499]:
+                  - img "Doc contributor" [ref=e502]
+                  - img "Doc contributor" [ref=e505]
+              - generic [ref=e507]:
+                - generic [ref=e508]: Did this page help you?
+                - generic [ref=e510]:
+                  - button "Did this page help you? Yes" [ref=e512] [cursor=pointer]:
+                    - img [ref=e513]
+                    - generic [ref=e515]: "Yes"
+                  - button "Did this page help you? No" [ref=e517] [cursor=pointer]:
+                    - img [ref=e518]
+                    - generic [ref=e520]: "No"
+            - generic [ref=e522]:
+              - link "PREVIOUS Meter Dimensions" [ref=e523] [cursor=pointer]:
+                - /url: /X5R6rZCMAdOCx6hovNvNB
+                - img [ref=e525]
+                - generic [ref=e528]:
+                  - generic [ref=e529]: PREVIOUS
+                  - generic [ref=e530]: Meter Dimensions
+              - link "NEXT AWS S3" [ref=e531] [cursor=pointer]:
+                - /url: /0VgQf-_p_FcLw3z7LWwud
+                - generic [ref=e532]:
+                  - generic [ref=e533]: NEXT
+                  - generic [ref=e534]: AWS S3
+                - img [ref=e536]
+            - link "Docs powered by Archbee" [ref=e541] [cursor=pointer]:
+              - /url: https://www.archbee.com/?utm_campaign=hosted-docs&utm_medium=referral&utm_source=docs.amberflo.io
+              - generic [ref=e542]: Docs powered by
+              - generic [ref=e543]: Archbee
+    - region "Notifications alt+T"
+  - alert [ref=e545]

@@ -1,0 +1,636 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e7]:
+      - navigation [ref=e9]:
+        - generic [ref=e11]:
+          - generic [ref=e12]:
+            - img [ref=e14] [cursor=pointer]
+            - link "website logo" [ref=e15] [cursor=pointer]:
+              - /url: https://docs.amberflo.io
+              - img "Website logo" [ref=e16]
+          - img [ref=e18] [cursor=pointer]
+      - main [ref=e24]:
+        - generic [ref=e32]: Common Use Cases
+        - generic [ref=e36]:
+          - generic [ref=e38]:
+            - generic [ref=e39]:
+              - heading "Billing for LLM tokens" [level=1] [ref=e40]
+              - generic [ref=e41]:
+                - generic [ref=e42]:
+                  - img [ref=e43]
+                  - generic [ref=e46]: 21 min
+                - generic [ref=e47]:
+                  - generic [ref=e48] [cursor=pointer]:
+                    - img [ref=e49]
+                    - generic [ref=e52]: Copy
+                  - img [ref=e54] [cursor=pointer]
+            - generic [ref=e58]:
+              - paragraph [ref=e61]:
+                - generic [ref=e63]: "This guide shows how to bill customers for an AI chatbot product using:"
+              - list [ref=e67]:
+                - listitem [ref=e68]:
+                  - strong [ref=e72]: API calls (per request)
+              - list [ref=e76]:
+                - listitem [ref=e77]:
+                  - strong [ref=e81]: LLM tokens (input + output, priced differently by model)
+              - paragraph [ref=e84]:
+                - generic [ref=e86]: This is a real-world billing pattern used by most AI products.
+              - paragraph [ref=e89]:
+                - generic [ref=e91]: "By the end, you will have:"
+              - list [ref=e95]:
+                - listitem [ref=e96]:
+                  - generic [ref=e98]: Multiple meters (API calls + tokens)
+              - list [ref=e102]:
+                - listitem [ref=e103]:
+                  - generic [ref=e105]: A pricing plan with
+                  - strong [ref=e109]: multiple rate types
+              - list [ref=e113]:
+                - listitem [ref=e114]:
+                  - generic [ref=e116]: Dimensional pricing (model + token type)
+              - list [ref=e120]:
+                - listitem [ref=e121]:
+                  - generic [ref=e123]: A customer receiving a fully broken-down invoice
+              - heading "The ScenarioThe Scenario" [level=2] [ref=e127] [cursor=pointer]:
+                - link "The Scenario":
+                  - /url: "#the-scenario"
+                - strong [ref=e131]: The Scenario
+              - paragraph [ref=e134]:
+                - generic [ref=e136]: You are building an
+                - strong [ref=e140]: AI chatbot SaaS
+                - generic [ref=e142]: .
+              - paragraph [ref=e145]:
+                - generic [ref=e147]: "Your pricing model:"
+              - list [ref=e151]:
+                - listitem [ref=e152]:
+                  - generic [ref=e154]: $0.01 per API request
+              - list [ref=e158]:
+                - listitem [ref=e159]:
+                  - generic [ref=e161]: "Token usage billed based on:"
+              - list [ref=e165]:
+                - listitem [ref=e166]:
+                  - strong [ref=e170]: Model
+                  - generic [ref=e172]: (Model A vs Model B)
+              - list [ref=e176]:
+                - listitem [ref=e177]:
+                  - strong [ref=e181]: Token type
+                  - generic [ref=e183]: (input vs output)
+              - paragraph [ref=e186]:
+                - generic [ref=e188]: This reflects how real AI systems are priced.
+              - heading "What You’ll BuildWhat You’ll Build" [level=2] [ref=e192] [cursor=pointer]:
+                - link "What You’ll Build":
+                  - /url: "#what-youll-build"
+                - strong [ref=e196]: What You’ll Build
+              - paragraph [ref=e199]:
+                - generic [ref=e201]: "You will implement:"
+              - generic [ref=e206]: API Request → Flat charge LLM Tokens → Dimensional pricing (model + type) → Combined into a single invoice
+              - 'heading "Step 1: Create MetersStep 1: Create Meters" [level=2] [ref=e210] [cursor=pointer]':
+                - 'link "Step 1: Create Meters"':
+                  - /url: "#step-1-create-meters"
+                - strong [ref=e214]: "Step 1: Create Meters"
+              - paragraph [ref=e217]:
+                - generic [ref=e219]: You need
+                - strong [ref=e223]: two meters
+                - generic [ref=e225]: .
+              - heading "1A. API Calls Meter (Simple)1A. API Calls Meter (Simple)" [level=3] [ref=e229] [cursor=pointer]:
+                - link "1A. API Calls Meter (Simple)":
+                  - /url: "#1a-api-calls-meter-simple"
+                - strong [ref=e233]: 1A. API Calls Meter (Simple)
+              - heading "NavigateNavigate" [level=3] [ref=e237] [cursor=pointer]:
+                - link "Navigate":
+                  - /url: "#navigate"
+                - strong [ref=e241]: Navigate
+              - list [ref=e245]:
+                - listitem [ref=e246]:
+                  - generic [ref=e248]: Go to
+                  - strong [ref=e252]: Meters
+              - list [ref=e256]:
+                - listitem [ref=e257]:
+                  - generic [ref=e259]: Click
+                  - strong [ref=e263]: Create Meter
+              - heading "ConfigureConfigure" [level=3] [ref=e267] [cursor=pointer]:
+                - link "Configure":
+                  - /url: "#configure"
+                - strong [ref=e271]: Configure
+              - list [ref=e275]:
+                - listitem [ref=e276]:
+                  - strong [ref=e280]: Label
+                  - generic [ref=e282]: ": API Calls"
+              - list [ref=e286]:
+                - listitem [ref=e287]:
+                  - strong [ref=e291]: API Name
+                  - generic [ref=e293]: ": auto-generated"
+              - list [ref=e297]:
+                - listitem [ref=e298]:
+                  - strong [ref=e302]: Meter Type
+                  - generic [ref=e304]: ": Count"
+              - paragraph [ref=e307]:
+                - generic [ref=e309]: No dimensions required.
+              - paragraph [ref=e312]:
+                - generic [ref=e314]: "Note: You"
+                - generic [ref=e318]: can
+                - generic [ref=e320]: add dimensions (endpoint, region, etc.) for analytics or cost tracking, but they are not needed for billing here.
+              - paragraph [ref=e323]:
+                - generic [ref=e325]: Click
+                - strong [ref=e329]: Create
+                - generic [ref=e331]: .
+              - heading "1B. LLM Tokens Meter (Dimensional)1B. LLM Tokens Meter (Dimensional)" [level=3] [ref=e335] [cursor=pointer]:
+                - link "1B. LLM Tokens Meter (Dimensional)":
+                  - /url: "#1b-llm-tokens-meter-dimensional"
+                - strong [ref=e339]: 1B. LLM Tokens Meter (Dimensional)
+              - heading "NavigateNavigate" [level=3] [ref=e343] [cursor=pointer]:
+                - link "Navigate":
+                  - /url: "#navigate-1"
+                - strong [ref=e347]: Navigate
+              - list [ref=e351]:
+                - listitem [ref=e352]:
+                  - generic [ref=e354]: Go to
+                  - strong [ref=e358]: Meters
+              - list [ref=e362]:
+                - listitem [ref=e363]:
+                  - generic [ref=e365]: Click
+                  - strong [ref=e369]: Create Meter
+              - heading "ConfigureConfigure" [level=3] [ref=e373] [cursor=pointer]:
+                - link "Configure":
+                  - /url: "#configure-1"
+                - strong [ref=e377]: Configure
+              - list [ref=e381]:
+                - listitem [ref=e382]:
+                  - strong [ref=e386]: Label
+                  - generic [ref=e388]: ": LLM Tokens"
+              - list [ref=e392]:
+                - listitem [ref=e393]:
+                  - strong [ref=e397]: Meter Type
+                  - generic [ref=e399]: ": Count"
+              - heading "Add DimensionsAdd Dimensions" [level=3] [ref=e403] [cursor=pointer]:
+                - link "Add Dimensions":
+                  - /url: "#add-dimensions"
+                - strong [ref=e407]: Add Dimensions
+              - paragraph [ref=e410]:
+                - generic [ref=e412]: "Add:"
+              - list [ref=e416]:
+                - listitem [ref=e417]:
+                  - generic [ref=e419]: model
+              - list [ref=e423]:
+                - listitem [ref=e424]:
+                  - generic [ref=e426]: type (input, output)
+              - paragraph [ref=e429]:
+                - generic [ref=e431]: These are
+                - strong [ref=e435]: required
+                - generic [ref=e437]: for realistic AI pricing.
+              - paragraph [ref=e440]:
+                - generic [ref=e442]: Click
+                - strong [ref=e446]: Create
+                - generic [ref=e448]: .
+              - 'heading "Step 2: Create a Pricing PlanStep 2: Create a Pricing Plan" [level=2] [ref=e452] [cursor=pointer]':
+                - 'link "Step 2: Create a Pricing Plan"':
+                  - /url: "#step-2-create-a-pricing-plan"
+                - strong [ref=e456]: "Step 2: Create a Pricing Plan"
+              - heading "NavigateNavigate" [level=3] [ref=e460] [cursor=pointer]:
+                - link "Navigate":
+                  - /url: "#navigate-2"
+                - strong [ref=e464]: Navigate
+              - list [ref=e468]:
+                - listitem [ref=e469]:
+                  - generic [ref=e471]: Go to
+                  - strong [ref=e475]: Pricing
+              - list [ref=e479]:
+                - listitem [ref=e480]:
+                  - generic [ref=e482]: Click
+                  - strong [ref=e486]: Create Pricing Plan
+              - heading "ConfigureConfigure" [level=3] [ref=e490] [cursor=pointer]:
+                - link "Configure":
+                  - /url: "#configure-2"
+                - strong [ref=e494]: Configure
+              - list [ref=e498]:
+                - listitem [ref=e499]:
+                  - strong [ref=e503]: Name
+                  - generic [ref=e505]: ": Chatbot Usage Plan"
+              - list [ref=e509]:
+                - listitem [ref=e510]:
+                  - strong [ref=e514]: Billing Period
+                  - generic [ref=e516]: ": Monthly"
+              - paragraph [ref=e519]:
+                - generic [ref=e521]: Click
+                - strong [ref=e525]: Continue
+                - generic [ref=e527]: .
+              - 'heading "Step 3: Add RatesStep 3: Add Rates" [level=2] [ref=e531] [cursor=pointer]':
+                - 'link "Step 3: Add Rates"':
+                  - /url: "#step-3-add-rates"
+                - strong [ref=e535]: "Step 3: Add Rates"
+              - paragraph [ref=e538]:
+                - generic [ref=e540]: You will add
+                - strong [ref=e544]: two rates
+                - generic [ref=e546]: to the same plan.
+              - heading "3A. API Calls Rate (Per Unit)3A. API Calls Rate (Per Unit)" [level=3] [ref=e550] [cursor=pointer]:
+                - link "3A. API Calls Rate (Per Unit)":
+                  - /url: "#3a-api-calls-rate-per-unit"
+                - strong [ref=e554]: 3A. API Calls Rate (Per Unit)
+              - list [ref=e558]:
+                - listitem [ref=e559]:
+                  - generic [ref=e561]: Click
+                  - strong [ref=e565]: Add Rate
+              - list [ref=e569]:
+                - listitem [ref=e570]:
+                  - generic [ref=e572]: Select
+                  - strong [ref=e576]: Usage-Based
+              - paragraph [ref=e579]:
+                - generic [ref=e581]: "Configure:"
+              - list [ref=e585]:
+                - listitem [ref=e586]:
+                  - strong [ref=e590]: Meter
+                  - generic [ref=e592]: ": API Calls"
+              - list [ref=e596]:
+                - listitem [ref=e597]:
+                  - strong [ref=e601]: Rate Model
+                  - generic [ref=e603]: ": Per Unit"
+              - list [ref=e607]:
+                - listitem [ref=e608]:
+                  - strong [ref=e612]: Price
+                  - generic [ref=e614]: ": 0.01"
+              - paragraph [ref=e617]:
+                - generic [ref=e619]: "This means:"
+              - list [ref=e623]:
+                - listitem [ref=e624]:
+                  - generic [ref=e626]: Every API request = $0.01
+              - heading "3B. LLM Tokens Rate (Dimensional)3B. LLM Tokens Rate (Dimensional)" [level=3] [ref=e630] [cursor=pointer]:
+                - link "3B. LLM Tokens Rate (Dimensional)":
+                  - /url: "#3b-llm-tokens-rate-dimensional"
+                - strong [ref=e634]: 3B. LLM Tokens Rate (Dimensional)
+              - list [ref=e638]:
+                - listitem [ref=e639]:
+                  - generic [ref=e641]: Click
+                  - strong [ref=e645]: Add Rate
+                  - generic [ref=e647]: again
+              - list [ref=e651]:
+                - listitem [ref=e652]:
+                  - generic [ref=e654]: Select
+                  - strong [ref=e658]: Usage-Based
+              - paragraph [ref=e661]:
+                - generic [ref=e663]: "Configure:"
+              - list [ref=e667]:
+                - listitem [ref=e668]:
+                  - strong [ref=e672]: Meter
+                  - generic [ref=e674]: ": LLM Tokens"
+              - list [ref=e678]:
+                - listitem [ref=e679]:
+                  - strong [ref=e683]: Rate Model
+                  - generic [ref=e685]: ": Dimensions"
+              - list [ref=e689]:
+                - listitem [ref=e690]:
+                  - strong [ref=e694]: Tier Model
+                  - generic [ref=e696]: ": Per Unit"
+              - heading "Define Pricing MatrixDefine Pricing Matrix" [level=3] [ref=e700] [cursor=pointer]:
+                - link "Define Pricing Matrix":
+                  - /url: "#define-pricing-matrix"
+                - strong [ref=e704]: Define Pricing Matrix
+              - paragraph [ref=e707]:
+                - generic [ref=e709]: "You will define rates based on:"
+              - list [ref=e713]:
+                - listitem [ref=e714]:
+                  - generic [ref=e716]: model
+              - list [ref=e720]:
+                - listitem [ref=e721]:
+                  - generic [ref=e723]: type
+              - paragraph [ref=e726]:
+                - generic [ref=e728]: "Example:"
+              - table [ref=e733]:
+                - rowgroup [ref=e738]:
+                  - row "model type price per token" [ref=e739]:
+                    - columnheader "model" [ref=e740]:
+                      - paragraph [ref=e744]:
+                        - strong [ref=e748]: model
+                    - columnheader "type" [ref=e749]:
+                      - paragraph [ref=e753]:
+                        - strong [ref=e757]: type
+                    - columnheader "price per token" [ref=e758]:
+                      - paragraph [ref=e762]:
+                        - strong [ref=e766]: price per token
+                - rowgroup [ref=e767]:
+                  - row "model_a input 0.00001" [ref=e768]:
+                    - cell "model_a" [ref=e769]:
+                      - paragraph [ref=e773]:
+                        - generic [ref=e775]: model_a
+                    - cell "input" [ref=e776]:
+                      - paragraph [ref=e780]:
+                        - generic [ref=e782]: input
+                    - cell "0.00001" [ref=e783]:
+                      - paragraph [ref=e787]:
+                        - generic [ref=e789]: "0.00001"
+                  - row "model_a output 0.00002" [ref=e790]:
+                    - cell "model_a" [ref=e791]:
+                      - paragraph [ref=e795]:
+                        - generic [ref=e797]: model_a
+                    - cell "output" [ref=e798]:
+                      - paragraph [ref=e802]:
+                        - generic [ref=e804]: output
+                    - cell "0.00002" [ref=e805]:
+                      - paragraph [ref=e809]:
+                        - generic [ref=e811]: "0.00002"
+                  - row "model_b input 0.000005" [ref=e812]:
+                    - cell "model_b" [ref=e813]:
+                      - paragraph [ref=e817]:
+                        - generic [ref=e819]: model_b
+                    - cell "input" [ref=e820]:
+                      - paragraph [ref=e824]:
+                        - generic [ref=e826]: input
+                    - cell "0.000005" [ref=e827]:
+                      - paragraph [ref=e831]:
+                        - generic [ref=e833]: "0.000005"
+                  - row "model_b output 0.00001" [ref=e834]:
+                    - cell "model_b" [ref=e835]:
+                      - paragraph [ref=e839]:
+                        - generic [ref=e841]: model_b
+                    - cell "output" [ref=e842]:
+                      - paragraph [ref=e846]:
+                        - generic [ref=e848]: output
+                    - cell "0.00001" [ref=e849]:
+                      - paragraph [ref=e853]:
+                        - generic [ref=e855]: "0.00001"
+              - paragraph [ref=e858]:
+                - generic [ref=e860]: Each row is a separate pricing rule.
+              - heading "ImportantImportant" [level=3] [ref=e864] [cursor=pointer]:
+                - link "Important":
+                  - /url: "#important"
+                - strong [ref=e868]: Important
+              - list [ref=e872]:
+                - listitem [ref=e873]:
+                  - generic [ref=e875]: You are pricing
+                  - strong [ref=e879]: each combination independently
+              - list [ref=e883]:
+                - listitem [ref=e884]:
+                  - generic [ref=e886]: This is how real AI pricing works
+              - paragraph [ref=e889]:
+                - generic [ref=e891]: Click
+                - strong [ref=e895]: Save
+                - generic [ref=e897]: .
+              - 'heading "Step 4: Create a CustomerStep 4: Create a Customer" [level=2] [ref=e901] [cursor=pointer]':
+                - 'link "Step 4: Create a Customer"':
+                  - /url: "#step-4-create-a-customer"
+                - strong [ref=e905]: "Step 4: Create a Customer"
+              - heading "NavigateNavigate" [level=3] [ref=e909] [cursor=pointer]:
+                - link "Navigate":
+                  - /url: "#navigate-3"
+                - strong [ref=e913]: Navigate
+              - list [ref=e917]:
+                - listitem [ref=e918]:
+                  - generic [ref=e920]: Go to
+                  - strong [ref=e924]: Customers
+              - list [ref=e928]:
+                - listitem [ref=e929]:
+                  - generic [ref=e931]: Click
+                  - strong [ref=e935]: Create Customer
+              - heading "ConfigureConfigure" [level=3] [ref=e939] [cursor=pointer]:
+                - link "Configure":
+                  - /url: "#configure-3"
+                - strong [ref=e943]: Configure
+              - list [ref=e947]:
+                - listitem [ref=e948]:
+                  - strong [ref=e952]: Customer Name
+                  - generic [ref=e954]: ": Test Customer"
+              - list [ref=e958]:
+                - listitem [ref=e959]:
+                  - strong [ref=e963]: Customer ID
+                  - generic [ref=e965]: ": test_customer"
+              - paragraph [ref=e968]:
+                - generic [ref=e970]: Click
+                - strong [ref=e974]: Save
+                - generic [ref=e976]: .
+              - 'heading "Step 5: Assign Pricing PlanStep 5: Assign Pricing Plan" [level=2] [ref=e980] [cursor=pointer]':
+                - 'link "Step 5: Assign Pricing Plan"':
+                  - /url: "#step-5-assign-pricing-plan"
+                - strong [ref=e984]: "Step 5: Assign Pricing Plan"
+              - list [ref=e988]:
+                - listitem [ref=e989]:
+                  - generic [ref=e991]: Open the customer
+              - list [ref=e995]:
+                - listitem [ref=e996]:
+                  - generic [ref=e998]: In
+                  - strong [ref=e1002]: Pricing Plans
+                  - generic [ref=e1004]: ", click"
+                  - strong [ref=e1008]: Assign Plan
+              - paragraph [ref=e1011]:
+                - generic [ref=e1013]: "Configure:"
+              - list [ref=e1017]:
+                - listitem [ref=e1018]:
+                  - strong [ref=e1022]: Plan
+                  - generic [ref=e1024]: ": Chatbot Usage Plan"
+              - list [ref=e1028]:
+                - listitem [ref=e1029]:
+                  - strong [ref=e1033]: Start Date
+                  - generic [ref=e1035]: ": Now"
+              - paragraph [ref=e1038]:
+                - generic [ref=e1040]: Click
+                - strong [ref=e1044]: Assign Plan
+                - generic [ref=e1046]: .
+              - 'heading "Step 6: Send UsageStep 6: Send Usage" [level=2] [ref=e1050] [cursor=pointer]':
+                - 'link "Step 6: Send Usage"':
+                  - /url: "#step-6-send-usage"
+                - strong [ref=e1054]: "Step 6: Send Usage"
+              - paragraph [ref=e1057]:
+                - generic [ref=e1059]: Now you simulate real usage.
+              - heading "NavigateNavigate" [level=3] [ref=e1063] [cursor=pointer]:
+                - link "Navigate":
+                  - /url: "#navigate-4"
+                - strong [ref=e1067]: Navigate
+              - list [ref=e1071]:
+                - listitem [ref=e1072]:
+                  - generic [ref=e1074]: Go to
+                  - strong [ref=e1078]: Meters
+              - list [ref=e1082]:
+                - listitem [ref=e1083]:
+                  - generic [ref=e1085]: Open
+                  - strong [ref=e1089]: LLM Tokens
+              - list [ref=e1093]:
+                - listitem [ref=e1094]:
+                  - generic [ref=e1096]: Click
+                  - strong [ref=e1100]: Event Upload
+              - heading "Example Event (Tokens)Example Event (Tokens)" [level=3] [ref=e1104] [cursor=pointer]:
+                - link "Example Event (Tokens)":
+                  - /url: "#example-event-tokens"
+                - strong [ref=e1108]: Example Event (Tokens)
+              - generic [ref=e1113]: "[ { \"meterApiName\": \"llm_tokens\", \"meterValue\": 1000, \"dimensions\": { \"model\": \"model_a\", \"type\": \"input\" } } ]"
+              - paragraph [ref=e1116]:
+                - generic [ref=e1118]: "Send multiple events for different combinations:"
+              - list [ref=e1122]:
+                - listitem [ref=e1123]:
+                  - generic [ref=e1125]: model_a + input
+              - list [ref=e1129]:
+                - listitem [ref=e1130]:
+                  - generic [ref=e1132]: model_a + output
+              - list [ref=e1136]:
+                - listitem [ref=e1137]:
+                  - generic [ref=e1139]: model_b + input
+              - heading "API Calls EventAPI Calls Event" [level=3] [ref=e1143] [cursor=pointer]:
+                - link "API Calls Event":
+                  - /url: "#api-calls-event"
+                - strong [ref=e1147]: API Calls Event
+              - paragraph [ref=e1150]:
+                - generic [ref=e1152]: "Send another event using the API Calls meter:"
+              - generic [ref=e1157]: "[ { \"meterApiName\": \"api_calls\", \"meterValue\": 10 } ]"
+              - 'heading "Step 7: View the InvoiceStep 7: View the Invoice" [level=2] [ref=e1161] [cursor=pointer]':
+                - 'link "Step 7: View the Invoice"':
+                  - /url: "#step-7-view-the-invoice"
+                - strong [ref=e1165]: "Step 7: View the Invoice"
+              - heading "NavigateNavigate" [level=3] [ref=e1169] [cursor=pointer]:
+                - link "Navigate":
+                  - /url: "#navigate-5"
+                - strong [ref=e1173]: Navigate
+              - list [ref=e1177]:
+                - listitem [ref=e1178]:
+                  - generic [ref=e1180]: Go to
+                  - strong [ref=e1184]: Customers
+              - list [ref=e1188]:
+                - listitem [ref=e1189]:
+                  - generic [ref=e1191]: Open your customer
+              - heading "What You’ll SeeWhat You’ll See" [level=3] [ref=e1195] [cursor=pointer]:
+                - link "What You’ll See":
+                  - /url: "#what-youll-see"
+                - strong [ref=e1199]: What You’ll See
+              - paragraph [ref=e1202]:
+                - generic [ref=e1204]: "Your invoice will include:"
+              - list [ref=e1208]:
+                - listitem [ref=e1209]:
+                  - generic [ref=e1211]: API call charges
+              - list [ref=e1215]:
+                - listitem [ref=e1216]:
+                  - generic [ref=e1218]: Token usage charges
+              - paragraph [ref=e1221]:
+                - generic [ref=e1223]: "By default, token charges are broken down by:"
+              - list [ref=e1227]:
+                - listitem [ref=e1228]:
+                  - generic [ref=e1230]: Model
+              - list [ref=e1234]:
+                - listitem [ref=e1235]:
+                  - generic [ref=e1237]: Token type
+              - paragraph [ref=e1240]:
+                - generic [ref=e1242]: "Example:"
+              - generic [ref=e1247]: Model A - Input Tokens → $X Model A - Output Tokens → $Y Model B - Input Tokens → $Z API Calls → $W Total → $T
+              - heading "Important NoteImportant Note" [level=3] [ref=e1251] [cursor=pointer]:
+                - link "Important Note":
+                  - /url: "#important-note"
+                - strong [ref=e1255]: Important Note
+              - paragraph [ref=e1258]:
+                - generic [ref=e1260]: You
+                - strong [ref=e1264]: do not have to expose this level of detail
+                - generic [ref=e1266]: to your customers.
+              - list [ref=e1270]:
+                - listitem [ref=e1271]:
+                  - generic [ref=e1273]: This breakdown is the default
+              - list [ref=e1277]:
+                - listitem [ref=e1278]:
+                  - generic [ref=e1280]: You can simplify how invoices are presented
+              - heading "If You Don’t See DataIf You Don’t See Data" [level=3] [ref=e1284] [cursor=pointer]:
+                - link "If You Don’t See Data":
+                  - /url: "#if-you-dont-see-data"
+                - strong [ref=e1288]: If You Don’t See Data
+              - list [ref=e1292]:
+                - listitem [ref=e1293]:
+                  - generic [ref=e1295]: Refresh the page
+              - list [ref=e1299]:
+                - listitem [ref=e1300]:
+                  - generic [ref=e1302]: Amberflo does not auto-refresh
+              - paragraph [ref=e1305]:
+                - generic [ref=e1307]: "If still empty:"
+              - list [ref=e1311]:
+                - listitem [ref=e1312]:
+                  - generic [ref=e1314]: Confirm events were sent
+              - list [ref=e1318]:
+                - listitem [ref=e1319]:
+                  - generic [ref=e1321]: Confirm dimensions match pricing
+              - list [ref=e1325]:
+                - listitem [ref=e1326]:
+                  - generic [ref=e1328]: Confirm plan is assigned
+              - heading "What You Just BuiltWhat You Just Built" [level=2] [ref=e1332] [cursor=pointer]:
+                - link "What You Just Built":
+                  - /url: "#what-you-just-built"
+                - strong [ref=e1336]: What You Just Built
+              - paragraph [ref=e1339]:
+                - generic [ref=e1341]: "You implemented a real AI billing system:"
+              - list [ref=e1345]:
+                - listitem [ref=e1346]:
+                  - generic [ref=e1348]: Multiple meters
+              - list [ref=e1352]:
+                - listitem [ref=e1353]:
+                  - generic [ref=e1355]: Mixed pricing models
+              - list [ref=e1359]:
+                - listitem [ref=e1360]:
+                  - generic [ref=e1362]: Dimensional pricing
+              - list [ref=e1366]:
+                - listitem [ref=e1367]:
+                  - generic [ref=e1369]: Unified invoice
+              - heading "Why This MattersWhy This Matters" [level=2] [ref=e1373] [cursor=pointer]:
+                - link "Why This Matters":
+                  - /url: "#why-this-matters"
+                - strong [ref=e1377]: Why This Matters
+              - paragraph [ref=e1380]:
+                - generic [ref=e1382]: "This pattern lets you:"
+              - list [ref=e1386]:
+                - listitem [ref=e1387]:
+                  - generic [ref=e1389]: Price different models differently
+              - list [ref=e1393]:
+                - listitem [ref=e1394]:
+                  - generic [ref=e1396]: Charge input vs output tokens separately
+              - list [ref=e1400]:
+                - listitem [ref=e1401]:
+                  - generic [ref=e1403]: Combine request-based and usage-based billing
+              - paragraph [ref=e1406]:
+                - generic [ref=e1408]: This is how modern AI products monetize.
+              - heading "Next StepsNext Steps" [level=2] [ref=e1412] [cursor=pointer]:
+                - link "Next Steps":
+                  - /url: "#next-steps"
+                - strong [ref=e1416]: Next Steps
+              - list [ref=e1420]:
+                - listitem [ref=e1421]:
+                  - generic [ref=e1423]: Add
+                  - strong [ref=e1427]: tiered pricing
+                  - generic [ref=e1429]: for tokens
+              - list [ref=e1433]:
+                - listitem [ref=e1434]:
+                  - generic [ref=e1436]: Introduce
+                  - strong [ref=e1440]: discounts or credits
+              - list [ref=e1444]:
+                - listitem [ref=e1445]:
+                  - generic [ref=e1447]: Connect to
+                  - strong [ref=e1451]: cost tracking
+                  - generic [ref=e1453]: for margin visibility
+              - paragraph [ref=e1456]:
+                - generic [ref=e1458]: "For internal cost attribution, see:"
+                - link "Workloads" [ref=e1460] [cursor=pointer]:
+                  - /url: /workloads
+          - generic [ref=e1462]:
+            - generic [ref=e1463]:
+              - generic [ref=e1464]:
+                - generic [ref=e1465]:
+                  - img [ref=e1466]
+                  - text: Updated 01 May 2026
+                - generic [ref=e1468]:
+                  - img "Doc contributor" [ref=e1471]
+                  - img "Doc contributor" [ref=e1474]
+              - generic [ref=e1476]:
+                - generic [ref=e1477]: Did this page help you?
+                - generic [ref=e1479]:
+                  - button "Did this page help you? Yes" [ref=e1481] [cursor=pointer]:
+                    - img [ref=e1482]
+                    - generic [ref=e1484]: "Yes"
+                  - button "Did this page help you? No" [ref=e1486] [cursor=pointer]:
+                    - img [ref=e1487]
+                    - generic [ref=e1489]: "No"
+            - generic [ref=e1491]:
+              - link "PREVIOUS Cost Visibility Quick Start" [ref=e1492] [cursor=pointer]:
+                - /url: /cost-visibility-quick-start
+                - img [ref=e1494]
+                - generic [ref=e1497]:
+                  - generic [ref=e1498]: PREVIOUS
+                  - generic [ref=e1499]: Cost Visibility Quick Start
+              - 'link "NEXT Hybrid: Subscription with Overages" [ref=e1500] [cursor=pointer]':
+                - /url: /hybrid-subscription-with-overages
+                - generic [ref=e1501]:
+                  - generic [ref=e1502]: NEXT
+                  - generic [ref=e1503]: "Hybrid: Subscription with Overages"
+                - img [ref=e1505]
+            - link "Docs powered by Archbee" [ref=e1510] [cursor=pointer]:
+              - /url: https://www.archbee.com/?utm_campaign=hosted-docs&utm_medium=referral&utm_source=docs.amberflo.io
+              - generic [ref=e1511]: Docs powered by
+              - generic [ref=e1512]: Archbee
+    - region "Notifications alt+T"
+  - alert [ref=e1514]

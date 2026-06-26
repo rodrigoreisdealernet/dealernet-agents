@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ship Batch"
+  short_description: "Ship multiple issues in dependency order"
+  default_prompt: "Use $ship-batch to ship multiple GitHub issues with isolated worktrees."

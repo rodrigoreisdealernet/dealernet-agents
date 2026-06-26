@@ -1,0 +1,205 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e7]:
+      - navigation [ref=e9]:
+        - generic [ref=e11]:
+          - generic [ref=e12]:
+            - img [ref=e14] [cursor=pointer]
+            - link "website logo" [ref=e15] [cursor=pointer]:
+              - /url: https://docs.amberflo.io
+              - img "Website logo" [ref=e16]
+          - img [ref=e18] [cursor=pointer]
+      - main [ref=e24]:
+        - generic [ref=e32]: Metering
+        - generic [ref=e36]:
+          - generic [ref=e38]:
+            - generic [ref=e39]:
+              - heading "Meter Definition" [level=1] [ref=e40]
+              - generic [ref=e41]:
+                - generic [ref=e42]:
+                  - img [ref=e43]
+                  - generic [ref=e46]: 4 min
+                - generic [ref=e47]:
+                  - generic [ref=e48] [cursor=pointer]:
+                    - img [ref=e49]
+                    - generic [ref=e52]: Copy
+                  - img [ref=e54] [cursor=pointer]
+            - generic [ref=e58]:
+              - heading "Defining Your First MeterDefining Your First Meter" [level=1] [ref=e62] [cursor=pointer]:
+                - link "Defining Your First Meter":
+                  - /url: "#defining-your-first-meter"
+                - generic [ref=e64]: Defining Your First Meter
+              - paragraph [ref=e67]:
+                - generic [ref=e69]: There are three main parts to a meter definition. These parts are detailed below to help you create the right meter for your needs.
+              - heading "Meter EventMeter Event" [level=2] [ref=e73] [cursor=pointer]:
+                - link "Meter Event":
+                  - /url: "#meter-event"
+                - generic [ref=e75]: Meter Event
+              - paragraph [ref=e78]:
+                - generic [ref=e80]: A meter event is a usage event sent to Amberflo for ingestion and aggregation. Any single usage event ingested via any ingestion sources and options supported constitutes a meter event.
+              - heading "Name & Description FieldsName & Description Fields" [level=2] [ref=e84] [cursor=pointer]:
+                - link "Name & Description Fields":
+                  - /url: "#name-description-fields"
+                - strong [ref=e88]: Name & Description F
+                - generic [ref=e90]: ields
+              - paragraph [ref=e93]:
+                - strong [ref=e97]: Label
+                - generic [ref=e99]: is the meter's name that will be displayed throughout the dashboard. This field can be changed after activating the meter.
+              - paragraph [ref=e102]:
+                - strong [ref=e106]: Meter Api Name
+                - generic [ref=e108]: is the technical label of the meter used by the backend processes. This is also the identifier for event ingestion. This field
+                - strong [ref=e112]: can not
+                - generic [ref=e114]: be changed after activating the meter.
+              - paragraph [ref=e117]:
+                - strong [ref=e121]: Description
+                - generic [ref=e123]: allows you to leave a brief explanation of what the meter is. This is viewable when looking at the meter definitions. This field can be changed after activating the meter.
+              - heading "Types of MetersTypes of Meters" [level=2] [ref=e127] [cursor=pointer]:
+                - link "Types of Meters":
+                  - /url: "#types-of-meters"
+                - generic [ref=e129]: Types of Meters
+              - paragraph [ref=e132]:
+                - generic [ref=e134]: "Amberflo supports three types of meters: count meters, continuous meters, and seat-based meters. Each type serves a specific purpose and is tailored to handle event data in different ways."
+              - list [ref=e138]:
+                - listitem [ref=e139]:
+                  - strong [ref=e143]: Count Meters
+              - list [ref=e149]:
+                - listitem [ref=e150]:
+                  - strong [ref=e154]: Functionality
+                  - generic [ref=e156]: ": Count meters increment their value each time an event occurs and provide summary statistics when queried."
+              - list [ref=e160]:
+                - listitem [ref=e161]:
+                  - strong [ref=e165]: Use Cases
+                  - generic [ref=e167]: ":"
+              - list [ref=e171]:
+                - listitem [ref=e172]:
+                  - generic [ref=e174]: Monitoring total API calls.
+              - list [ref=e178]:
+                - listitem [ref=e179]:
+                  - generic [ref=e181]: Tracking the number of transactions in a system.
+              - list [ref=e185]:
+                - listitem [ref=e186]:
+                  - generic [ref=e188]: Measuring the total volume of error occurrences.
+              - list [ref=e192]:
+                - listitem [ref=e193]:
+                  - strong [ref=e197]: Advantages
+                  - generic [ref=e199]: ":"
+              - list [ref=e203]:
+                - listitem [ref=e204]:
+                  - generic [ref=e206]: Simple to implement and use.
+              - list [ref=e210]:
+                - listitem [ref=e211]:
+                  - generic [ref=e213]: Offers a clear overview of event totals over time.
+              - list [ref=e217]:
+                - listitem [ref=e218]:
+                  - generic [ref=e220]: Provides flexibility in summarizing data with MAX, AVG, and SUM statistics.
+              - list [ref=e224]:
+                - listitem [ref=e225]:
+                  - strong [ref=e229]: Continuous Meters
+              - list [ref=e235]:
+                - listitem [ref=e236]:
+                  - strong [ref=e240]: Functionality
+                  - generic [ref=e242]: ": Continuous meters log the start and stop of an event, calculating the total duration or quantity of usage between these points."
+              - list [ref=e246]:
+                - listitem [ref=e247]:
+                  - strong [ref=e251]: Use Cases
+                  - generic [ref=e253]: ":"
+              - list [ref=e257]:
+                - listitem [ref=e258]:
+                  - generic [ref=e260]: Measuring application uptime.
+              - list [ref=e264]:
+                - listitem [ref=e265]:
+                  - generic [ref=e267]: Tracking active session durations for users.
+              - list [ref=e271]:
+                - listitem [ref=e272]:
+                  - generic [ref=e274]: Monitoring resource utilization, such as CPU or memory usage, over time.
+              - list [ref=e278]:
+                - listitem [ref=e279]:
+                  - strong [ref=e283]: Advantages
+                  - generic [ref=e285]: ":"
+              - list [ref=e289]:
+                - listitem [ref=e290]:
+                  - generic [ref=e292]: Provides precise tracking of time-based usage.
+              - list [ref=e296]:
+                - listitem [ref=e297]:
+                  - generic [ref=e299]: Ideal for billing systems and resource management.
+              - list [ref=e303]:
+                - listitem [ref=e304]:
+                  - strong [ref=e308]: Seat-based Meters
+              - list [ref=e314]:
+                - listitem [ref=e315]:
+                  - strong [ref=e319]: Functionality
+                  - generic [ref=e321]: ": Seat-based meters keep track of the number of active users or instances at any given time, providing a way to measure compliance with seat-based licensing agreements. (This can be found under \"Advanced Mode\" in the Create Meter UI flow)"
+              - list [ref=e325]:
+                - listitem [ref=e326]:
+                  - strong [ref=e330]: Use Cases
+                  - generic [ref=e332]: ":"
+              - list [ref=e336]:
+                - listitem [ref=e337]:
+                  - generic [ref=e339]: Monitoring software license utilization.
+              - list [ref=e343]:
+                - listitem [ref=e344]:
+                  - generic [ref=e346]: Ensuring compliance with subscription-based services.
+              - list [ref=e350]:
+                - listitem [ref=e351]:
+                  - generic [ref=e353]: Tracking active user accounts in a system.
+              - list [ref=e357]:
+                - listitem [ref=e358]:
+                  - strong [ref=e362]: Advantages
+                  - generic [ref=e364]: ":"
+              - list [ref=e368]:
+                - listitem [ref=e369]:
+                  - generic [ref=e371]: Simplifies compliance with licensing agreements.
+              - list [ref=e375]:
+                - listitem [ref=e376]:
+                  - generic [ref=e378]: Provides visibility into resource allocation and usage.
+              - list [ref=e382]:
+                - listitem [ref=e383]:
+                  - generic [ref=e385]: Supports capacity planning and cost optimization
+              - paragraph [ref=e388]:
+                - generic [ref=e390]: To create your
+              - heading "Meter DimensionsMeter Dimensions" [level=2] [ref=e394] [cursor=pointer]:
+                - link "Meter Dimensions":
+                  - /url: "#meter-dimensions"
+                - generic [ref=e396]: Meter Dimensions
+              - paragraph [ref=e399]:
+                - generic [ref=e401]: Meter dimensions are the last piece to meter definitions. These dimensions may take a bit more thought into what should qualify as a dimension and be sent as additional information to a meter event. More details on this can be found
+                - link "here" [ref=e403] [cursor=pointer]:
+                  - /url: https://enterprise-reference.amberflo.io/docs/dimensions
+                - generic [ref=e405]: .
+          - generic [ref=e407]:
+            - generic [ref=e408]:
+              - generic [ref=e409]:
+                - generic [ref=e410]:
+                  - img [ref=e411]
+                  - text: Updated 15 May 2026
+                - generic [ref=e413]:
+                  - img "Doc contributor" [ref=e416]
+                  - img "Doc contributor" [ref=e419]
+              - generic [ref=e421]:
+                - generic [ref=e422]: Did this page help you?
+                - generic [ref=e424]:
+                  - button "Did this page help you? Yes" [ref=e426] [cursor=pointer]:
+                    - img [ref=e427]
+                    - generic [ref=e429]: "Yes"
+                  - button "Did this page help you? No" [ref=e431] [cursor=pointer]:
+                    - img [ref=e432]
+                    - generic [ref=e434]: "No"
+            - generic [ref=e436]:
+              - link "PREVIOUS Metering Overview" [ref=e437] [cursor=pointer]:
+                - /url: /FnunOXNtnuNOvk6n54-9V
+                - img [ref=e439]
+                - generic [ref=e442]:
+                  - generic [ref=e443]: PREVIOUS
+                  - generic [ref=e444]: Metering Overview
+              - link "NEXT Meter Dimensions" [ref=e445] [cursor=pointer]:
+                - /url: /X5R6rZCMAdOCx6hovNvNB
+                - generic [ref=e446]:
+                  - generic [ref=e447]: NEXT
+                  - generic [ref=e448]: Meter Dimensions
+                - img [ref=e450]
+            - link "Docs powered by Archbee" [ref=e455] [cursor=pointer]:
+              - /url: https://www.archbee.com/?utm_campaign=hosted-docs&utm_medium=referral&utm_source=docs.amberflo.io
+              - generic [ref=e456]: Docs powered by
+              - generic [ref=e457]: Archbee
+    - region "Notifications alt+T"
+  - alert [ref=e459]
