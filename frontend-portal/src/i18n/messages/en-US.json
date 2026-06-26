@@ -254,6 +254,7 @@
     "dealership": "Dealership",
     "dealership-veiculos": "Vehicles",
     "dealership-vehicles": "Vehicle Inventory",
+    "dealership-vehicle-sales": "Vehicle Sales",
     "dealership-oficina": "Service",
     "dealership-service-orders": "Service Orders",
     "dealership-pecas": "Parts",
@@ -301,6 +302,8 @@
       "pendingLower": "pending",
       "identified": "Identified",
       "lastRun": "Last run",
+      "nextRun": "Next run",
+      "noSchedule": "No scheduled run",
       "runNow": "Run now",
       "running": "Running…",
       "runSuccess": "Trigger requested",
@@ -515,6 +518,18 @@
       "inStock": "in_stock",
       "sold": "sold",
       "store": "Store"
+    },
+    "vehicleSales": {
+      "title": "Vehicle Sales",
+      "subtitle": "Sold vehicles — revenue from sale price.",
+      "unitsSold": "Units sold",
+      "revenue": "Revenue",
+      "soldVehicles": "Sold vehicles",
+      "vehicle": "Vehicle",
+      "condition": "Condition",
+      "salePrice": "Sale price",
+      "purchaseDate": "Purchase date",
+      "noSales": "No sold vehicles."
     },
     "partsInventory": {
       "title": "Parts Inventory",

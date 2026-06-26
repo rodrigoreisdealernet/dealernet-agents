@@ -92,3 +92,11 @@ Ainda não há uma suíte automatizada ampla; para mudanças de schema, confie n
 ---
 
 Este CLAUDE.md é o mapa canônico ([`AGENTS.md`](./AGENTS.md) é um symlink para ele): onde se sobrepõe a [`README.md`](./README.md) ou [`DATABASE.md`](./DATABASE.md), prevalecem esses docs vivos.
+
+---
+
+## AI-DLC — Spec Driven Development (framework instalado)
+
+Este repositório usa o framework **AI-DLC** ([aidlc-workflows](https://github.com/rodrigoreisdealernet/aidlc-workflows), v1.0.0) para desenvolvimento orientado a especificação. Ao iniciar qualquer trabalho de desenvolvimento de software, **siga primeiro** o workflow abaixo; os detalhes das regras são resolvidos a partir de `.aidlc-rule-details/`.
+
+@.github/instructions/ai-dlc-workflow.instructions.md

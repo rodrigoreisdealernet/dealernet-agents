@@ -19,6 +19,8 @@ export const componentRegistry: Record<string, LazyExoticComponent<ComponentType
   'dia-vehicle-inventory': lazy(() => import('@/portal/renderers/screens/VehicleInventoryBI')),
   // DIA dealership domain (issue #4) — primeira entidade de negócio com CRUD.
   'dia-vehicles': lazy(() => import('@/portal/renderers/screens/VehiclesInventory')),
+  // DIA dealership domain (issue #130) — vendas de veículos (status = vendido), read-only.
+  'dia-vehicle-sales': lazy(() => import('@/portal/renderers/screens/VehicleSales')),
   // DIA dealership domain (issue #5) — dados mestres empresa/marca com CRUD.
   'dia-companies': lazy(() => import('@/portal/renderers/screens/CompaniesCrud')),
   'dia-brands': lazy(() => import('@/portal/renderers/screens/BrandsCrud')),
@@ -36,6 +38,8 @@ export const componentRegistry: Record<string, LazyExoticComponent<ComponentType
   'dia-service-dashboard': lazy(() => import('@/portal/renderers/screens/ServiceDashboard')),
   // Morning Brief do Dono (issue #43) — visão por marca → lojas → ações do agente.
   'morning-brief': lazy(() => import('@/portal/renderers/screens/MorningBrief')),
+  // Contas a Receber (Fast BI) — fonte do agente collections-prioritizer.
+  'dia-receivables': lazy(() => import('@/portal/renderers/screens/ReceivablesBI')),
 }
 
 export function resolveComponent(key: string) {

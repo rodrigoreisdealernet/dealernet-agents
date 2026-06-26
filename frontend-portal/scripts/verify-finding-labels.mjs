@@ -34,6 +34,7 @@ const PT_BR = 'src/i18n/messages/pt-BR.json'
 const EN_US = 'src/i18n/messages/en-US.json'
 
 const ACTIONS = ['markdown', 'transfer', 'prioritize_sale', 'wholesale_auction', 'monitor']
+const FINDING_TYPES = ['floor_plan_band_escalation', 'margin_erosion', 'carryover_model_year']
 
 // ---------------------------------------------------------------------------
 // AC7: pt-BR e en-US trazem o namespace `labels` com nomes amigaveis para o
@@ -55,13 +56,15 @@ test('AC7 i18n: labels.agents/findingTypes/actions existem e sao nao-vazios em p
     )
     assert.notEqual(labels.agents['vehicle-aging-analyst'].trim(), '', `${locale} agent label nao pode ser vazio`)
 
-    // Tipo de finding stock_aging_90d.
-    assert.equal(
-      typeof labels.findingTypes?.stock_aging_90d,
-      'string',
-      `${locale} deve definir labels.findingTypes.stock_aging_90d`,
-    )
-    assert.notEqual(labels.findingTypes.stock_aging_90d.trim(), '', `${locale} finding type label nao pode ser vazio`)
+    // Tipos de finding antecipatorios (floor plan / margem / carryover).
+    for (const ft of FINDING_TYPES) {
+      assert.equal(
+        typeof labels.findingTypes?.[ft],
+        'string',
+        `${locale} deve definir labels.findingTypes.${ft}`,
+      )
+      assert.notEqual(labels.findingTypes[ft].trim(), '', `${locale} finding type label ${ft} nao pode ser vazio`)
+    }
 
     // Cada acao recomendada.
     for (const action of ACTIONS) {
@@ -86,16 +89,18 @@ test('AC7 i18n: labels sao nomes humanos (diferentes do codigo cru) e localizado
   // Nao podem ser apenas o eco do codigo cru.
   assert.notEqual(pt.agents['vehicle-aging-analyst'], 'vehicle-aging-analyst')
   assert.notEqual(en.agents['vehicle-aging-analyst'], 'vehicle-aging-analyst')
-  assert.notEqual(pt.findingTypes.stock_aging_90d, 'stock_aging_90d')
-  assert.notEqual(en.findingTypes.stock_aging_90d, 'stock_aging_90d')
+  for (const ft of FINDING_TYPES) {
+    assert.notEqual(pt.findingTypes[ft], ft, `pt-BR finding type ${ft} nao pode ser o codigo cru`)
+    assert.notEqual(en.findingTypes[ft], ft, `en-US finding type ${ft} nao pode ser o codigo cru`)
+  }
   for (const action of ACTIONS) {
     assert.notEqual(pt.actions[action], action, `pt-BR action ${action} nao pode ser o codigo cru`)
     assert.notEqual(en.actions[action], action, `en-US action ${action} nao pode ser o codigo cru`)
   }
 
-  // pt-BR != en-US para pelo menos o agente e o tipo (prova de localizacao real).
+  // pt-BR != en-US para pelo menos o agente e um tipo (prova de localizacao real).
   assert.notEqual(pt.agents['vehicle-aging-analyst'], en.agents['vehicle-aging-analyst'])
-  assert.notEqual(pt.findingTypes.stock_aging_90d, en.findingTypes.stock_aging_90d)
+  assert.notEqual(pt.findingTypes.carryover_model_year, en.findingTypes.carryover_model_year)
 })
 
 // ---------------------------------------------------------------------------

@@ -33,9 +33,11 @@ from temporal.src.workflows.ops import (
     RevenueRecognitionWorkflow,
     RevenueRecognitionWorkflowInput,
 )
+from temporal.src.workflows.ops.collections_prioritizer import CollectionsPrioritizerWorkflowInput
 from temporal.src.workflows.ops.credit import CreditRiskWorkflowInput
 from temporal.src.workflows.ops.disposition_queue import DispositionQueueWorkflowInput
 from temporal.src.workflows.ops.service_estimate_rescue import ServiceEstimateRescueWorkflowInput
+from temporal.src.workflows.ops.parts_inventory import PartsInventoryWorkflowInput
 from temporal.src.workflows.ops.vehicle_aging import VehicleAgingWorkflowInput
 
 _FLEET_AUDITOR_AGENT_KEY = "fleet-auditor"
@@ -973,6 +975,170 @@ async def test_issue115_signal_client_service_estimate_rescue_locale_none_falls_
         "status": "triggered",
     }
     assert fake_temporal_client.schedule_ids == ["ops:tenant-a-id:service-estimate-rescue"]
+    assert handle.trigger_calls == [{"overlap": ScheduleOverlapPolicy.SKIP}]
+    assert fake_temporal_client.started_workflows == []
+
+
+@pytest.mark.asyncio
+async def test_issue116_signal_client_parts_inventory_advisor_starts_workflow_directly() -> None:
+    """Issue #116 (AC1/AC2): a manual run with a non-None locale starts
+    ``PartsInventoryWorkflow`` directly (status ``started``) instead of falling
+    through to the never-provisioned schedule trigger that produced the old HTTP
+    409. The workflow input is tenant-only (no locale leakage) and the recurring
+    schedule is never touched (assist-only, off by default).
+    """
+    signal_client = TemporalSignalClient(temporal_address="temporal.example:7233", temporal_namespace="default")
+    handle = _FakeScheduleHandle()
+    fake_temporal_client = _FakeScheduleTemporalClient(handle)
+
+    async def fake_client_instance() -> _FakeScheduleTemporalClient:
+        return fake_temporal_client
+
+    signal_client._client_instance = fake_client_instance  # type: ignore[method-assign]
+
+    result = await signal_client.run_agent_now(
+        agent_key="parts-inventory-advisor", tenant_id="tenant-a-id", locale="pt-BR"
+    )
+
+    # AC1 — the run is started, not 409; the response identifies a started run.
+    assert result["agent_key"] == "parts-inventory-advisor"
+    assert result["schedule_id"] == "ops:tenant-a-id:parts-inventory-advisor"
+    assert result["status"] == "started"
+    assert result["workflow_id"].startswith("ops:tenant-a-id:parts-inventory-advisor:manual:")
+
+    # AC3 — the recurring schedule is never resolved or triggered.
+    assert fake_temporal_client.schedule_ids == []
+    assert handle.trigger_calls == []
+
+    # AC2 — exactly one workflow started, with the tenant-only input.
+    assert len(fake_temporal_client.started_workflows) == 1
+    started = fake_temporal_client.started_workflows[0]
+    workflow_input = started["workflow_input"]
+    assert isinstance(workflow_input, PartsInventoryWorkflowInput)
+    assert workflow_input.tenant_id == "tenant-a-id"
+    # Non-Goal — input stays tenant-only; locale must not leak onto the input.
+    assert not hasattr(workflow_input, "locale")
+    assert started["kwargs"]["id"] == result["workflow_id"]
+
+
+@pytest.mark.asyncio
+async def test_issue116_signal_client_parts_inventory_advisor_ignores_invalid_locale() -> None:
+    """Issue #116 (AC1/AC2): an invalid/unsupported locale still starts the
+    workflow directly. The resolved locale is echoed in the envelope, but the
+    tenant-only workflow input is unaffected (no locale attribute)."""
+    signal_client = TemporalSignalClient(temporal_address="temporal.example:7233", temporal_namespace="default")
+    handle = _FakeScheduleHandle()
+    fake_temporal_client = _FakeScheduleTemporalClient(handle)
+
+    async def fake_client_instance() -> _FakeScheduleTemporalClient:
+        return fake_temporal_client
+
+    signal_client._client_instance = fake_client_instance  # type: ignore[method-assign]
+
+    result = await signal_client.run_agent_now(
+        agent_key="parts-inventory-advisor", tenant_id="tenant-a-id", locale="fr-FR"
+    )
+
+    assert result["status"] == "started"
+    assert result["locale"] == "pt-BR"
+    assert handle.trigger_calls == []
+    assert len(fake_temporal_client.started_workflows) == 1
+    workflow_input = fake_temporal_client.started_workflows[0]["workflow_input"]
+    assert isinstance(workflow_input, PartsInventoryWorkflowInput)
+    assert workflow_input.tenant_id == "tenant-a-id"
+    assert not hasattr(workflow_input, "locale")
+
+
+@pytest.mark.asyncio
+async def test_issue116_signal_client_parts_inventory_advisor_locale_none_falls_back_to_trigger() -> None:
+    """Issue #116 (AC3 / no-regression): with ``locale is None`` the path is
+    unchanged — it still triggers the schedule (status ``triggered``) and starts
+    no workflow directly, leaving the assist-only recurring schedule untouched."""
+    signal_client = TemporalSignalClient(temporal_address="temporal.example:7233", temporal_namespace="default")
+    handle = _FakeScheduleHandle()
+    fake_temporal_client = _FakeScheduleTemporalClient(handle)
+
+    async def fake_client_instance() -> _FakeScheduleTemporalClient:
+        return fake_temporal_client
+
+    signal_client._client_instance = fake_client_instance  # type: ignore[method-assign]
+
+    result = await signal_client.run_agent_now(agent_key="parts-inventory-advisor", tenant_id="tenant-a-id")
+
+    assert result == {
+        "agent_key": "parts-inventory-advisor",
+        "schedule_id": "ops:tenant-a-id:parts-inventory-advisor",
+        "status": "triggered",
+    }
+    assert fake_temporal_client.schedule_ids == ["ops:tenant-a-id:parts-inventory-advisor"]
+    assert handle.trigger_calls == [{"overlap": ScheduleOverlapPolicy.SKIP}]
+    assert fake_temporal_client.started_workflows == []
+
+
+@pytest.mark.asyncio
+async def test_issue117_signal_client_collections_prioritizer_starts_workflow_directly() -> None:
+    """Issue #117 (AC1): a manual run-now for ``collections-prioritizer`` with a
+    non-None locale starts ``CollectionsPrioritizerWorkflow`` directly (status
+    ``started``) instead of falling through to the never-provisioned schedule
+    trigger that produced the old HTTP 409. The workflow input is tenant-only
+    (no locale leakage) and the recurring schedule is never touched (assist-only,
+    off by default)."""
+    signal_client = TemporalSignalClient(temporal_address="temporal.example:7233", temporal_namespace="default")
+    handle = _FakeScheduleHandle()
+    fake_temporal_client = _FakeScheduleTemporalClient(handle)
+
+    async def fake_client_instance() -> _FakeScheduleTemporalClient:
+        return fake_temporal_client
+
+    signal_client._client_instance = fake_client_instance  # type: ignore[method-assign]
+
+    result = await signal_client.run_agent_now(
+        agent_key="collections-prioritizer", tenant_id="tenant-a-id", locale="pt-BR"
+    )
+
+    # AC1 — the run is started, not 409; the response identifies a started run.
+    assert result["agent_key"] == "collections-prioritizer"
+    assert result["schedule_id"] == "ops:tenant-a-id:collections-prioritizer"
+    assert result["status"] == "started"
+    assert result["workflow_id"].startswith("ops:tenant-a-id:collections-prioritizer:manual:")
+
+    # AC2 — the recurring schedule is never resolved or triggered.
+    assert fake_temporal_client.schedule_ids == []
+    assert handle.trigger_calls == []
+
+    # AC1 — exactly one workflow started, with the tenant-only input.
+    assert len(fake_temporal_client.started_workflows) == 1
+    started = fake_temporal_client.started_workflows[0]
+    workflow_input = started["workflow_input"]
+    assert isinstance(workflow_input, CollectionsPrioritizerWorkflowInput)
+    assert workflow_input.tenant_id == "tenant-a-id"
+    # Non-Goal — input stays tenant-only; locale must not leak onto the input.
+    assert not hasattr(workflow_input, "locale")
+    assert started["kwargs"]["id"] == result["workflow_id"]
+
+
+@pytest.mark.asyncio
+async def test_issue117_signal_client_collections_prioritizer_locale_none_falls_back_to_trigger() -> None:
+    """Issue #117 (AC2 / no-regression): with ``locale is None`` the path is
+    unchanged — it still triggers the schedule (status ``triggered``) and starts
+    no workflow directly. This guards the preserved fallback branch."""
+    signal_client = TemporalSignalClient(temporal_address="temporal.example:7233", temporal_namespace="default")
+    handle = _FakeScheduleHandle()
+    fake_temporal_client = _FakeScheduleTemporalClient(handle)
+
+    async def fake_client_instance() -> _FakeScheduleTemporalClient:
+        return fake_temporal_client
+
+    signal_client._client_instance = fake_client_instance  # type: ignore[method-assign]
+
+    result = await signal_client.run_agent_now(agent_key="collections-prioritizer", tenant_id="tenant-a-id")
+
+    assert result == {
+        "agent_key": "collections-prioritizer",
+        "schedule_id": "ops:tenant-a-id:collections-prioritizer",
+        "status": "triggered",
+    }
+    assert fake_temporal_client.schedule_ids == ["ops:tenant-a-id:collections-prioritizer"]
     assert handle.trigger_calls == [{"overlap": ScheduleOverlapPolicy.SKIP}]
     assert fake_temporal_client.started_workflows == []
 

@@ -287,6 +287,25 @@ async def test_non_vehicle_aging_finding_is_skipped() -> None:
 
 
 @pytest.mark.asyncio
+async def test_issue117_collections_priority_finding_is_assist_only_skipped() -> None:
+    """Issue #117 (AC4/AC5): a ``collections_priority`` finding is assist-only —
+    ``execute_finding_action`` short-circuits to ``{"skipped": True}`` with no
+    money movement or outbound side effect, so approve/reject/dismiss only
+    persists the disposition + audit trail upstream and never 500s."""
+    client = _FakeClient(current=_vehicle(100000))
+
+    result = await client.execute_finding_action(
+        finding=_finding("prioritize", finding_type="collections_priority"), approver=_APPROVER
+    )
+
+    assert result == {"executed": False, "skipped": True}
+    assert client.get_action_calls == []  # short-circuits before any work
+    assert client.appended_versions == []
+    assert client.inserted_actions == []
+    assert client.audit_events == []
+
+
+@pytest.mark.asyncio
 async def test_missing_action_is_skipped() -> None:
     client = _FakeClient(current=_vehicle(100000))
 
