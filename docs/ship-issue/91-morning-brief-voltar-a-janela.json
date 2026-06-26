@@ -4,9 +4,9 @@
   "slug": "91-morning-brief-voltar-a-janela",
   "branch": "feature/91-morning-brief-voltar-a-janela",
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/91",
-  "pr": null,
-  "prUrl": null,
-  "updatedAt": "2026-06-26T02:55:49.995Z",
+  "pr": "94",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/94",
+  "updatedAt": "2026-06-26T02:59:57.645Z",
   "steps": [
     {
       "id": "spec",
@@ -48,8 +48,8 @@
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "running",
-      "summary": "",
+      "status": "done",
+      "summary": "7 testes (inclui prova da reversao + Peças/AT/FP preservados)",
       "artifacts": [],
       "notes": [
         "Escrevendo testes de contrato da janela dia-anterior (Peças/AT/FP preservados); rodando contra o Postgres vivo"
@@ -59,10 +59,13 @@
     {
       "id": "test-review",
       "label": "05 · Test review",
-      "status": "pending",
+      "status": "running",
       "summary": "",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "2 blocking gaps: AC3 missing cancelada test + weak discount assertion",
+        "tester: Peças agora cobre cancelada + valor exato com desconto (iter 1)"
+      ],
       "gate": null
     },
     {

@@ -175,35 +175,42 @@ rollback;
 })
 
 // ---------------------------------------------------------------------------
-// AC3 — Peças preservadas + dia anterior: uma venda de peça (part_sale,
-// sale_date = ONTEM, referenciando uma peça em estoque) faz pecas_value sair
-// NON-NULL e > 0; uma venda de peça datada de ANTEONTEM NÃO soma a pecas_value.
-// Prova a correção (part_sale/sale_date/valor=quantity*unit_price-discount) E a
-// nova janela. Comparamos o pecas_value group-wide nos dois cenários (rollback
-// isola cada um, então cada cenário só vê suas próprias linhas + o seed).
+// AC3 — Peças preservadas + dia anterior. Quatro garantias, todas medindo o
+// DELTA de pecas_value (before/after na MESMA txn) — robusto ao fato de
+// pecas_value ser group-wide (cross join na view) e ver também o seed:
+//   (1) VALOR EXATO COM DESCONTO: peça vendida ONTEM com desconto != 0 faz
+//       pecas_value subir EXATAMENTE quantity*unit_price - discount
+//       (10*60 - 100 = 500.00). Uma regressão na fórmula do desconto falha aqui.
+//   (2) ANTEONTEM não soma (prova a nova janela — entraria sob MTD).
+//   (3) CANCELADA de ONTEM é EXCLUÍDA (fix preservado: <> 'cancelada').
 // ---------------------------------------------------------------------------
-test('AC3: peça de ONTEM popula pecas_value (>0); peça de ANTEONTEM NÃO soma', () => {
-  // Cenário 1: peça vendida ONTEM (deve contar).
+test('AC3: peça de ONTEM soma o valor EXATO (qty*price-desconto); ANTEONTEM e CANCELADA não somam', () => {
+  // Cenário 1 (VALOR EXATO COM DESCONTO): mede o delta que UMA venda de ONTEM,
+  // com desconto != 0, provoca em pecas_value. delta deve ser EXATAMENTE
+  // 10*60 - 100 = 500.00, exercitando quantity*unit_price - coalesce(discount,0).
   const sqlYesterday = `${AS_ADMIN}
+select 'before', coalesce(pecas_value, 0) from v_dia_owner_brief_by_brand limit 1;
 select create_part(
-  '{"part_number":"ZZ91-P1","description":"Peca 91","quantity_in_stock":"100","unit_cost":"10","unit_price":"100","status":"ativo","source_record_id":"zz91-part-ontem"}'::jsonb) \\g /dev/null
+  '{"part_number":"ZZ91-P1","description":"Peca 91","quantity_in_stock":"100","unit_cost":"10","unit_price":"60","status":"ativo","source_record_id":"zz91-part-ontem"}'::jsonb) \\g /dev/null
 select create_part_sale(jsonb_build_object(
   'part_id', (select id from entities where entity_type = 'part' and source_record_id = 'zz91-part-ontem')::text,
-  'quantity', 5, 'unit_price', 100, 'discount', 0, 'sale_date', ${yesterday})) \\g /dev/null
-select 'pec', (pecas_value is not null), (pecas_value >= 500)
-  from v_dia_owner_brief_by_brand limit 1;
+  'quantity', 10, 'unit_price', 60, 'discount', 100, 'sale_date', ${yesterday})) \\g /dev/null
+select 'after', coalesce(pecas_value, 0) from v_dia_owner_brief_by_brand limit 1;
 rollback;
 `
   const r1 = psql(sqlYesterday)
   assert.ok(r1.ok, `psql falhou: ${r1.err}`)
-  assert.deepEqual(
-    rows(r1.out)('pec'),
-    ['pec', 't', 't'],
-    'pecas_value deveria ser NON-NULL e >= 500 (5*100) com venda de peça de ONTEM',
+  const before1 = Number(rows(r1.out)('before')?.[1])
+  const after1 = Number(rows(r1.out)('after')?.[1])
+  // delta EXATO = 10*60 - 100 = 500.00 (formatado a 2 casas, como numeric(18,2)).
+  assert.equal(
+    (after1 - before1).toFixed(2),
+    '500.00',
+    `venda de ONTEM (qty 10 * unit_price 60 - discount 100) deveria somar EXATAMENTE 500.00 a pecas_value (before=${before1}, after=${after1})`,
   )
 
-  // Cenário 2: peça vendida ANTEONTEM — NÃO deve somar a pecas_value. Capturamos
-  // pecas_value ANTES e DEPOIS da inserção na mesma txn: deve ficar IGUAL (ou NULL).
+  // Cenário 2 (ANTEONTEM não soma): mede o delta de uma venda de ANTEONTEM —
+  // deve ser 0 (entraria sob MTD, não sob dia-anterior).
   const sqlTwoDaysAgo = `${AS_ADMIN}
 select 'before', coalesce(pecas_value, 0) from v_dia_owner_brief_by_brand limit 1;
 select create_part(
@@ -216,12 +223,35 @@ rollback;
 `
   const r2 = psql(sqlTwoDaysAgo)
   assert.ok(r2.ok, `psql falhou: ${r2.err}`)
-  const before = rows(r2.out)('before')?.[1]
-  const after = rows(r2.out)('after')?.[1]
+  const before2 = rows(r2.out)('before')?.[1]
+  const after2 = rows(r2.out)('after')?.[1]
   assert.equal(
-    after,
-    before,
-    `peça de ANTEONTEM NÃO deveria somar a pecas_value (before=${before}, after=${after}); entraria sob MTD`,
+    after2,
+    before2,
+    `peça de ANTEONTEM NÃO deveria somar a pecas_value (before=${before2}, after=${after2}); entraria sob MTD`,
+  )
+
+  // Cenário 3 (CANCELADA de ONTEM excluída): uma venda de peça datada de ONTEM
+  // mas com status='cancelada' NÃO pode somar a pecas_value (fix preservado:
+  // a view filtra coalesce(status,'registrada') <> 'cancelada'). delta = 0.
+  const sqlCancelled = `${AS_ADMIN}
+select 'before', coalesce(pecas_value, 0) from v_dia_owner_brief_by_brand limit 1;
+select create_part(
+  '{"part_number":"ZZ91-P3","description":"Peca 91c","quantity_in_stock":"100","unit_cost":"10","unit_price":"100","status":"ativo","source_record_id":"zz91-part-cancelada"}'::jsonb) \\g /dev/null
+select create_part_sale(jsonb_build_object(
+  'part_id', (select id from entities where entity_type = 'part' and source_record_id = 'zz91-part-cancelada')::text,
+  'quantity', 7, 'unit_price', 100, 'discount', 0, 'status', 'cancelada', 'sale_date', ${yesterday})) \\g /dev/null
+select 'after', coalesce(pecas_value, 0) from v_dia_owner_brief_by_brand limit 1;
+rollback;
+`
+  const r3 = psql(sqlCancelled)
+  assert.ok(r3.ok, `psql falhou: ${r3.err}`)
+  const before3 = rows(r3.out)('before')?.[1]
+  const after3 = rows(r3.out)('after')?.[1]
+  assert.equal(
+    after3,
+    before3,
+    `venda de peça 'cancelada' de ONTEM deveria ser excluída de pecas_value (before=${before3}, after=${after3}); fix preservado`,
   )
 })
 
