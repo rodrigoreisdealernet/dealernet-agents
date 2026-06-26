@@ -1,0 +1,93 @@
+{
+  "issue": "118",
+  "title": "feat(ops): revalidar agente vehicle-aging-analyst ponta-a-ponta",
+  "slug": "feat-ops-revalidar-agente-vehicle",
+  "branch": "feature/118-feat-ops-revalidar-agente-vehicle",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/118",
+  "pr": "123",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/123",
+  "updatedAt": "2026-06-26T11:16:48.984Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "6 acceptance criteria drafted",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/118-feat-ops-revalidar-agente-vehicle.md"
+        }
+      ],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec approved by human (--approved)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": "No production change required (revalidation); all 6 ACs already met — see code agent evidence",
+      "artifacts": [],
+      "notes": [
+        "Reviewing existing vehicle-aging-analyst impl against acceptance criteria",
+        "Verified all 6 acceptance criteria against existing code; no production change required (non-regression confirmed)"
+      ],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "done",
+      "summary": "16 pytest + 4 SQL contract, all green; no prod change (revalidation)",
+      "artifacts": [],
+      "notes": [
+        "reading spec and existing tests",
+        "baseline: running pytest -k vehicle",
+        "python suite green; adding SQL contract AC6/AC3 locks",
+        "running full python + sql suites for verification"
+      ],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "running",
+      "summary": "",
+      "artifacts": [],
+      "notes": [
+        "Auditing issue118 test suite: reading test files + code under test",
+        "Audit complete: 16 py + 4 sql green; verified deferred AC4/AC5 coverage is real; one minor AC2 view-visibility gap. Verdict PASS.",
+        "iteration 1: PASS with 1 non-blocking gap; looping to tester to pin ops_agent_status_view/ops_finding_kpis visibility",
+        "Adding AC2 visibility test: stock_aging_90d finding surfaces via ops_agent_status_view + ops_finding_kpis"
+      ],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    }
+  ]
+}
