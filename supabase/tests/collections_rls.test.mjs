@@ -56,6 +56,29 @@ set local role authenticated;
 select set_config('request.jwt.claims', '${claims(appRole)}', true) \\g /dev/null
 `
 
+
+const asServiceRole = () => `
+begin;
+set local role service_role;
+select set_config('request.jwt.claims', '${JSON.stringify({ role: 'service_role', sub: 'service-role-test' })}', true) \\g /dev/null
+`
+
+function captureSqlOutcome(stmt, tableName = '_r') {
+  return `
+create temp table ${tableName} (outcome text) on commit drop;
+do $$ declare
+  v_rows int := 0;
+begin
+  ${stmt}
+  get diagnostics v_rows = row_count;
+  execute format('insert into %I values ($1)', '${tableName}') using 'ROWS=' || v_rows;
+exception when others then
+  execute format('insert into %I values ($1)', '${tableName}') using 'SQLSTATE=' || SQLSTATE;
+end $$;
+select outcome from ${tableName};
+`
+}
+
 function captureSqlstate(stmt) {
   return `
 create temp table _r (outcome text) on commit drop;
@@ -171,6 +194,70 @@ rollback;
   const contact = psql(contactSql)
   assert.ok(contact.ok, `psql failed: ${contact.err}`)
   assert.equal(contact.out, 'SQLSTATE=42501')
+})
+
+
+test('AC-4 direct read_only writes to entities and entity_versions are blocked', () => {
+  const sql = `${asWriter('read_only')}
+${captureSqlOutcome(`insert into entities (entity_type, source_record_id) values ('receivable', 'TEST-direct-entity-insert');`)}
+rollback;
+`
+  const entityInsert = psql(sql)
+  assert.ok(entityInsert.ok, `psql failed: ${entityInsert.err}`)
+  assert.notEqual(entityInsert.out, 'ROWS=1', `read_only direct entities insert should be blocked; got ${entityInsert.out}`)
+
+  const versionSql = `
+begin;
+set local role authenticated;
+select set_config('request.jwt.claims', '${claims('admin')}', true) \\g /dev/null
+create temp table _r on commit drop as
+  select entity_id from create_receivable('${receivableData({
+    customer_id: 'TEST-CUSTOMER-DIRECT-RLS',
+    source_record_id: 'TEST-direct-rls-rec',
+  })}'::jsonb);
+select set_config('request.jwt.claims', '${claims('read_only')}', true) \\g /dev/null
+${captureSqlOutcome(`insert into entity_versions (entity_id, version_number, data) values ((select entity_id from _r), 99, '{"status":"aberto"}'::jsonb);`, '_version_insert')}
+rollback;
+`
+  const versionInsert = psql(versionSql)
+  assert.ok(versionInsert.ok, `psql failed: ${versionInsert.err}`)
+  assert.notEqual(versionInsert.out, 'ROWS=1', `read_only direct entity_versions insert should be blocked; got ${versionInsert.out}`)
+
+  const updateSql = `
+begin;
+set local role authenticated;
+select set_config('request.jwt.claims', '${claims('admin')}', true) \\g /dev/null
+create temp table _r on commit drop as
+  select entity_id from create_receivable('${receivableData({
+    customer_id: 'TEST-CUSTOMER-DIRECT-UPD',
+    source_record_id: 'TEST-direct-update-rec',
+  })}'::jsonb);
+select set_config('request.jwt.claims', '${claims('read_only')}', true) \\g /dev/null
+${captureSqlOutcome(`update entities set source_record_id = 'TEST-direct-update-hacked' where id = (select entity_id from _r);`, '_entity_update')}
+${captureSqlOutcome(`update entity_versions set data = data || '{"balance":"999999"}'::jsonb where entity_id = (select entity_id from _r) and is_current;`, '_version_update')}
+rollback;
+`
+  const updates = psql(updateSql)
+  assert.ok(updates.ok, `psql failed: ${updates.err}`)
+  const lines = updates.out.split('\n').filter(Boolean)
+  assert.equal(lines.length, 2, `expected two direct-update outcomes; got ${updates.out}`)
+  for (const line of lines) {
+    assert.notEqual(line, 'ROWS=1', `read_only direct update should be blocked or affect 0 rows; got ${line}`)
+  }
+})
+
+test('AC-4 service_role can create_receivable via hardened RPC', () => {
+  const sql = `${asServiceRole()}
+select 'created', entity_id is not null, version_number
+from create_receivable('${receivableData({
+    customer_id: 'TEST-CUSTOMER-SERVICE-ROLE',
+    source_record_id: 'TEST-service-role-rec',
+  })}'::jsonb);
+rollback;
+`
+  const { ok, out, err } = psql(sql)
+  assert.ok(ok, `psql failed: ${err}`)
+  assert.deepEqual(parseLabeled(out)('created'), ['created', 't', '1'])
 })
 
 test('AC-4 branch_manager can create receivables and collection contacts', () => {

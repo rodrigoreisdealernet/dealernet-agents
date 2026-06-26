@@ -27,6 +27,7 @@ from temporal.src.activities.ops_collections import (
     _collections_finding_for_storage,
     _collections_fingerprint,
     _severity_for_days,
+    ops_collections_assess,
     ops_scope_collections,
 )
 from temporal.src.agents.collections_prioritizer import (
@@ -221,6 +222,8 @@ async def test_run_collections_prioritizer_rejects_extra_field_from_model() -> N
             user_prompt_template="u",
             transport=transport,
         )
+    assert len(transport.calls) == 2
+    assert transport.tools_seen == [[], []]
 
 
 class _FakeSelectClient:
@@ -280,6 +283,7 @@ def fake_collections_views(monkeypatch: pytest.MonkeyPatch) -> _FakeSelectClient
         _receivable_row("rec-a1", "cust-a", balance=7000.0, days_overdue=95),
         _receivable_row("rec-a2", "cust-a", balance=1500.0, days_overdue=10),
         _receivable_row("rec-b1", "cust-b", balance=4000.0, days_overdue=40),
+        _receivable_row("rec-near", "cust-near", balance=600.0, days_overdue=0, due_offset_days=3),
         _receivable_row("rec-c1", "cust-c", balance=9000.0, days_overdue=0, due_offset_days=10),
         _receivable_row("rec-d1", "cust-d", balance=8000.0, days_overdue=60, status="liquidado"),
     ]
@@ -333,7 +337,8 @@ def test_scope_orders_by_exposure_sets_severity_fingerprint_and_bounded_notes(
 ) -> None:
     scoped = ops_scope_collections(_TENANT, {"thresholds": {"near_due_days": -5}})
 
-    assert [item["customer_id"] for item in scoped] == ["cust-a", "cust-b"]
+    assert [item["customer_id"] for item in scoped] == ["cust-a", "cust-b", "cust-near"]
+    assert "cust-near" in [item["customer_id"] for item in scoped]
     assert "cust-c" not in [item["customer_id"] for item in scoped]
     assert "cust-d" not in [item["customer_id"] for item in scoped]
 
@@ -351,6 +356,76 @@ def test_scope_orders_by_exposure_sets_severity_fingerprint_and_bounded_notes(
     assert len(by_customer["cust-a"]["recent_collection_contacts"][0]["note"]) <= 240
     assert by_customer["cust-a"]["recent_collection_contacts"][0]["note"].endswith("…")
     assert by_customer["cust-b"]["severity"] == "high"
+    assert by_customer["cust-near"]["max_days_overdue"] == 0
+    assert by_customer["cust-near"]["severity"] == "low"
+
+
+@pytest.mark.asyncio
+async def test_ops_collections_assess_prompt_uses_bounded_contact_notes(monkeypatch: pytest.MonkeyPatch) -> None:
+    raw_note = "PROMISE-PII-RAW " * 40
+    rows = [
+        _receivable_row("rec-pii", "cust-pii", balance=2500.0, days_overdue=12),
+    ]
+    contacts = [
+        {
+            "entity_id": f"contact-{idx}",
+            "source_record_id": f"TEST-contact-{idx}",
+            "customer_id": "cust-pii",
+            "receivable_id": "rec-pii",
+            "action": "call",
+            "note": raw_note if idx == 6 else f"short note {idx}",
+            "contact_date": f"2026-01-0{idx + 1}",
+            "next_contact_date": None,
+            "result": "promised",
+        }
+        for idx in range(7)
+    ]
+    client = _FakeSelectClient(
+        {
+            "v_dia_receivable_current": rows,
+            "v_dia_collection_contact_current": contacts,
+        }
+    )
+    monkeypatch.setattr(ops_revrec, "_ops_client", client)
+    scoped_payload = ops_scope_collections(_TENANT, {"thresholds": {"near_due_days": -5}})[0]
+    bounded_note = scoped_payload["recent_collection_contacts"][0]["note"]
+    assert len(scoped_payload["recent_collection_contacts"]) == 5
+    assert len(bounded_note) <= 240
+    assert bounded_note.endswith("…")
+    assert bounded_note != raw_note
+
+    captured: dict[str, Any] = {}
+
+    async def fake_run(payload: Mapping[str, Any], **kwargs: Any) -> dict[str, Any]:
+        captured["payload"] = payload
+        captured["system_prompt"] = kwargs["system_prompt"]
+        captured["user_prompt_template"] = kwargs["user_prompt_template"]
+        return {
+            "customer_id": payload["customer_id"],
+            "recommended_action": "call",
+            "next_step_note": "Call with bounded evidence.",
+            "evidence": [bounded_note, *["extra evidence " + str(i) for i in range(6)]],
+            "confidence": 0.7,
+            "rationale": "bounded note reviewed",
+        }
+
+    monkeypatch.setattr(ops_collections, "run_collections_prioritizer", fake_run)
+    result = await ops_collections_assess(
+        scoped_payload,
+        {
+            "system_prompt": "Use bounded evidence for {customer_id}.",
+            "user_prompt_template": "Evidence: {evidence_json}",
+            "bounds": {"max_tool_rounds": 0},
+        },
+    )
+
+    rendered_prompt = captured["user_prompt_template"]
+    assert bounded_note[:-1] in rendered_prompt
+    assert "\\u2026" in rendered_prompt
+    assert raw_note not in rendered_prompt
+    assert len(result["evidence"]) == 5
+    assert result["evidence"][0] == bounded_note
+    assert raw_note not in json.dumps(result["evidence"])
 
 
 def test_scope_respects_max_customers_bound(fake_collections_views: _FakeSelectClient) -> None:
