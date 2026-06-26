@@ -115,10 +115,6 @@ function LoginForm({ onForgot }: { onForgot: () => void }) {
       className="space-y-4"
       noValidate
     >
-      <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
-        {t('pocMode')}
-      </div>
-
       <Field label={t('user')} htmlFor="usuario" icon={<User size={16} />}>
         <input
           id="usuario"

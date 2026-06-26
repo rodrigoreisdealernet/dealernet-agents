@@ -105,7 +105,6 @@
     "login": {
       "recoverHint": "Enter your user name to recover your password",
       "connectError": "Could not connect. Check your connection.",
-      "pocMode": "POC mode — any login automatically enters as the demo user (admin).",
       "user": "User",
       "password": "Password",
       "hidePassword": "Hide password",

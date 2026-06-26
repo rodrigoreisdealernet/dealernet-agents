@@ -105,7 +105,6 @@
     "login": {
       "recoverHint": "Informe seu usuário para recuperar a senha",
       "connectError": "Não foi possível conectar. Verifique sua conexão.",
-      "pocMode": "Modo POC — qualquer login entra automaticamente como o usuário demo (admin).",
       "user": "Usuário",
       "password": "Senha",
       "hidePassword": "Ocultar senha",
