@@ -4,6 +4,9 @@ __pycache__/
 *.egg-info/
 *.egg
 
+# Config pessoal/por-máquina do Claude Code
+.claude/launch.json
+
 # Dependencies and build output
 node_modules/
 dist/
