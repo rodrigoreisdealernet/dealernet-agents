@@ -103,16 +103,17 @@ $$;
 commit;
 
 -- ===========================================================================
--- DIA dealership domain — demo fleet, high volume (issue #4, ampliado #46)
+-- DIA dealership domain — frota: HISTÓRICO DE VENDAS DO ANO (issue #4/#46)
 -- Idempotent namespace: source_record_id LIKE 'demo-dia-fleet-%'.
--- ~120 veículos GERADOS POR LOJA (8 lojas, 15 cada) para concentrar os dados do
--- BI: cada veículo herda a 'brand' e o 'store' da sua loja (marca consistente com
--- a loja, alinhado às 4 marcas / 8 lojas do bloco de empresas abaixo). Cobre
--- condition novo/usado, status em_estoque/vendido e days_in_stock de 0 a ~420
--- (variando floor_plan_cost). Reuses rental_upsert_entity_current_state.
--- NOTA: este namespace é o 'demo-dia-fleet-%' (volume p/ dashboards). Os 15
--- veículos determinísticos do Vehicle Stock-Aging Analyst (#32) vivem no bloco
--- 'demo-dia-vehicle-%' logo abaixo — namespaces separados de propósito.
+-- Gera, POR LOJA (8 lojas), um histórico de 12 meses de VENDAS de veículos com
+-- montantes DINÂMICOS por loja × mês × dia (sales_base da loja × sazonalidade do
+-- mês × jitter), além de um ESTOQUE ENXUTO (4 em_estoque por loja). Cada venda
+-- registra sold_at (data da venda no mês correspondente), purchase_date anterior
+-- (período em estoque), condition novo/usado e preços/margens variados; marca e
+-- loja consistentes. Reuses rental_upsert_entity_current_state.
+-- NOTA: namespace 'demo-dia-fleet-%'. Os 15 veículos determinísticos do Vehicle
+-- Stock-Aging Analyst (#32) vivem em 'demo-dia-vehicle-%' (em_estoque), logo
+-- abaixo — namespaces separados de propósito.
 -- ===========================================================================
 
 begin;
@@ -120,31 +121,43 @@ set local request.jwt.claim.role = 'service_role';
 
 DO $$
 DECLARE
-  v_now timestamptz := now();
+  v_now   timestamptz := now();
+  v_today date := now()::date;
   -- store/brand alinhados às 4 marcas e 8 lojas (2 por marca). cost_base reflete
-  -- o segmento (motos baratas, caminhões caros) e cada loja tem seus modelos.
-  -- A geração (days_in_stock 0..~420) inclui veículos em_estoque na faixa 75-90d
-  -- e acima de 90d, cobrindo o que o Vehicle Stock-Aging Analyst (#32) precisa.
+  -- o segmento (motos baratas, caminhões caros); sales_base é o volume MENSAL
+  -- típico de vendas da loja (flagship vende mais; caminhões poucos e caros;
+  -- motos muitas e baratas). Cada loja tem seus modelos.
   v_lojas jsonb := jsonb_build_array(
-    jsonb_build_object('store','Fiat São Paulo','brand','Fiat','cost_base',85000,'models',jsonb_build_array('Pulse','Argo','Mobi','Cronos','Toro','Strada')),
-    jsonb_build_object('store','Fiat Campinas','brand','Fiat','cost_base',82000,'models',jsonb_build_array('Pulse','Argo','Mobi','Cronos','Fastback','Fiorino')),
-    jsonb_build_object('store','Volkswagen Porto Alegre','brand','Volkswagen','cost_base',95000,'models',jsonb_build_array('Polo','Nivus','T-Cross','Virtus','Golf','Saveiro')),
-    jsonb_build_object('store','Volkswagen Curitiba','brand','Volkswagen','cost_base',98000,'models',jsonb_build_array('Polo','Nivus','T-Cross','Virtus','Taos','Amarok')),
-    jsonb_build_object('store','Volvo Caminhões Manaus','brand','Volvo','cost_base',420000,'models',jsonb_build_array('FH 460','VM 270','FH 540','VM 220')),
-    jsonb_build_object('store','Volvo Caminhões Brasília','brand','Volvo','cost_base',460000,'models',jsonb_build_array('FH 460','VM 270','FH 540','FMX 500')),
-    jsonb_build_object('store','Honda Motos Belo Horizonte','brand','Honda','cost_base',18000,'models',jsonb_build_array('CG 160','Biz 125','CB 500','XRE 300','PCX 160')),
-    jsonb_build_object('store','Honda Motos Salvador','brand','Honda','cost_base',16000,'models',jsonb_build_array('CG 160','Biz 125','CB 300','XRE 190','Pop 110'))
+    jsonb_build_object('store','Fiat São Paulo','brand','Fiat','cost_base',85000,'sales_base',5,'models',jsonb_build_array('Pulse','Argo','Mobi','Cronos','Toro','Strada')),
+    jsonb_build_object('store','Fiat Campinas','brand','Fiat','cost_base',82000,'sales_base',4,'models',jsonb_build_array('Pulse','Argo','Mobi','Cronos','Fastback','Fiorino')),
+    jsonb_build_object('store','Volkswagen Porto Alegre','brand','Volkswagen','cost_base',95000,'sales_base',4,'models',jsonb_build_array('Polo','Nivus','T-Cross','Virtus','Golf','Saveiro')),
+    jsonb_build_object('store','Volkswagen Curitiba','brand','Volkswagen','cost_base',98000,'sales_base',3,'models',jsonb_build_array('Polo','Nivus','T-Cross','Virtus','Taos','Amarok')),
+    jsonb_build_object('store','Volvo Caminhões Manaus','brand','Volvo','cost_base',420000,'sales_base',2,'models',jsonb_build_array('FH 460','VM 270','FH 540','VM 220')),
+    jsonb_build_object('store','Volvo Caminhões Brasília','brand','Volvo','cost_base',460000,'sales_base',2,'models',jsonb_build_array('FH 460','VM 270','FH 540','FMX 500')),
+    jsonb_build_object('store','Honda Motos Belo Horizonte','brand','Honda','cost_base',18000,'sales_base',6,'models',jsonb_build_array('CG 160','Biz 125','CB 500','XRE 300','PCX 160')),
+    jsonb_build_object('store','Honda Motos Salvador','brand','Honda','cost_base',16000,'sales_base',5,'models',jsonb_build_array('CG 160','Biz 125','CB 300','XRE 190','Pop 110'))
   );
+  -- Sazonalidade mensal (m=0 é o mês corrente; m=11 é 11 meses atrás).
+  v_seasonal numeric[] := ARRAY[1.00, 0.85, 1.10, 0.95, 1.25, 0.70, 1.05, 1.30, 0.90, 1.15, 0.80, 1.40];
   v_loja jsonb;
   v_models jsonb;
   v_nmodels int;
+  v_loja_idx int := 0;
   v_seq int := 0;
-  k int;
+  v_base numeric;
+  m int; j int; s int;
+  v_month_start date;
+  v_dim int;
+  v_count int;
+  v_day int;
+  v_sold date;
   v_cond text;
-  v_status text;
-  v_cost numeric;
   v_model text;
-  v_days int;
+  v_year int;
+  v_margin numeric;
+  v_cost numeric;
+  v_price numeric;
+  v_purchase date;
 BEGIN
   PERFORM set_config('request.jwt.claim.role', 'service_role', true);
 
@@ -155,35 +168,89 @@ BEGIN
 
   FOR v_loja IN SELECT * FROM jsonb_array_elements(v_lojas)
   LOOP
-    v_models  := v_loja -> 'models';
-    v_nmodels := jsonb_array_length(v_models);
+    v_loja_idx := v_loja_idx + 1;
+    v_models   := v_loja -> 'models';
+    v_nmodels  := jsonb_array_length(v_models);
+    v_base     := (v_loja ->> 'cost_base')::numeric;
 
-    FOR k IN 1..15 LOOP
+    -- ESTOQUE ENXUTO: 4 veículos em_estoque por loja, purchase_date espalhado
+    -- (inclui unidades > 90 dias para alimentar Floor Plan / aging).
+    FOR s IN 1..4 LOOP
       v_seq    := v_seq + 1;
-      v_cond   := CASE WHEN k % 2 = 0 THEN 'novo' ELSE 'usado' END;
-      v_status := CASE WHEN k % 7 = 0 THEN 'vendido' ELSE 'em_estoque' END;
-      v_model  := v_models ->> (k % v_nmodels);
-      v_days   := (k * 29) % 420;
-      v_cost   := (v_loja ->> 'cost_base')::numeric
-                  + ((k % 8) * ((v_loja ->> 'cost_base')::numeric * 0.05));
+      v_cond   := CASE WHEN s % 2 = 0 THEN 'novo' ELSE 'usado' END;
+      v_model  := v_models ->> (s % v_nmodels);
+      v_year   := CASE WHEN v_cond = 'novo' THEN 2026 ELSE 2020 + (s % 5) END;
+      v_cost   := round(v_base * (1 + (s % 5) * 0.04) * (CASE WHEN v_cond = 'usado' THEN 0.7 ELSE 1 END), 2);
+      v_price  := round(v_cost * 1.15, -2);
+      v_purchase := v_today - (20 + s * 45);   -- 65,110,155,200 dias em estoque
 
       PERFORM rental_upsert_entity_current_state(
         p_entity_type => 'vehicle',
-        p_source_record_id => format('demo-dia-fleet-%s', lpad(v_seq::text, 3, '0')),
+        p_source_record_id => format('demo-dia-fleet-%s', lpad(v_seq::text, 4, '0')),
         p_data => jsonb_build_object(
-          'name', concat_ws(' ', v_loja ->> 'brand', v_model, (2018 + (k % 9))::text),
+          'name', concat_ws(' ', v_loja ->> 'brand', v_model, v_year::text),
           'condition', v_cond,
           'brand', v_loja ->> 'brand',
           'model', v_model,
-          'model_year', CASE WHEN v_cond = 'novo' THEN 2026 ELSE 2018 + (k % 8) END,
-          'cost', round(v_cost, 2),
-          'sale_price', round(v_cost * 1.18, -2),
-          'purchase_date', to_char((v_now - (v_days || ' days')::interval)::date, 'YYYY-MM-DD'),
-          'status', v_status,
+          'model_year', v_year,
+          'cost', v_cost,
+          'sale_price', v_price,
+          'purchase_date', to_char(v_purchase, 'YYYY-MM-DD'),
+          'status', 'em_estoque',
           'store', v_loja ->> 'store',
-          'source_record_id', format('demo-dia-fleet-%s', lpad(v_seq::text, 3, '0'))
+          'source_record_id', format('demo-dia-fleet-%s', lpad(v_seq::text, 4, '0'))
         )
       );
+    END LOOP;
+
+    -- HISTÓRICO DE VENDAS: 12 meses (m=0 corrente .. m=11). O montante por
+    -- loja/mês varia (sales_base × sazonalidade × jitter); cada venda cai num dia
+    -- variado do mês, com preço/margem/condição próprios.
+    FOR m IN 0..11 LOOP
+      v_month_start := (date_trunc('month', now()) - (m || ' months')::interval)::date;
+      v_dim := extract(day from (v_month_start + interval '1 month' - interval '1 day'))::int;
+      v_count := greatest(
+        1,
+        round((v_loja ->> 'sales_base')::numeric
+              * v_seasonal[1 + (m % 12)]
+              * (1 + ((v_loja_idx + m) % 4) * 0.10))::int
+      );
+
+      FOR j IN 1..v_count LOOP
+        v_seq  := v_seq + 1;
+        v_day  := ((v_loja_idx * 7 + m * 13 + j * 17) % v_dim) + 1;
+        v_sold := v_month_start + (v_day - 1);
+        IF v_sold > v_today THEN v_sold := v_today; END IF;  -- mês corrente: nunca futuro
+
+        v_cond   := CASE WHEN (j + m + v_loja_idx) % 3 = 0 THEN 'usado' ELSE 'novo' END;
+        v_model  := v_models ->> ((j + m) % v_nmodels);
+        v_year   := CASE WHEN v_cond = 'novo' THEN 2025 + (m % 2) ELSE 2017 + ((j + m) % 7) END;
+        v_margin := 0.08 + ((j * 5 + m * 3 + v_loja_idx) % 14) * 0.01;          -- 8%..21%
+        v_cost   := round(v_base
+                          * (1 + ((j + m) % 6) * 0.03)
+                          * (CASE WHEN v_cond = 'usado' THEN 0.68 ELSE 1 END), 2);
+        v_price  := round(v_cost * (1 + v_margin), -2);
+        v_purchase := v_sold - (25 + ((j * 11 + m) % 70));                       -- 25..94 dias em estoque
+
+        PERFORM rental_upsert_entity_current_state(
+          p_entity_type => 'vehicle',
+          p_source_record_id => format('demo-dia-fleet-%s', lpad(v_seq::text, 4, '0')),
+          p_data => jsonb_build_object(
+            'name', concat_ws(' ', v_loja ->> 'brand', v_model, v_year::text),
+            'condition', v_cond,
+            'brand', v_loja ->> 'brand',
+            'model', v_model,
+            'model_year', v_year,
+            'cost', v_cost,
+            'sale_price', v_price,
+            'purchase_date', to_char(v_purchase, 'YYYY-MM-DD'),
+            'sold_at', to_char(v_sold, 'YYYY-MM-DD'),
+            'status', 'vendido',
+            'store', v_loja ->> 'store',
+            'source_record_id', format('demo-dia-fleet-%s', lpad(v_seq::text, 4, '0'))
+          )
+        );
+      END LOOP;
     END LOOP;
   END LOOP;
 END
@@ -767,7 +834,7 @@ commit;
 --  8 lojas e os ~120 veículos por loja já são criados nos blocos curados acima.
 --  Aqui em baixo geram-se apenas OS, peças e vendas em massa.)
 
--- --- Ordens de serviço em massa (~82) -------------------------------------
+-- --- Ordens de serviço em massa (~100, espalhadas por 12 MESES) ---------
 begin;
 set local request.jwt.claim.role = 'service_role';
 
@@ -778,7 +845,10 @@ DECLARE
   v_descs    text[] := ARRAY['Revisão programada','Troca de óleo','Reparo de freios','Diagnóstico eletrônico','Alinhamento e balanceamento','Troca de embreagem','Reparo de suspensão','Funilaria e pintura','Troca de bateria','Reparo do ar-condicionado'];
   v_techs    text[] := ARRAY['Carlos','Ana','Bruno','Diego','Eduardo',null];
   v_custs    text[] := ARRAY['Cliente A','Cliente B','Cliente C','Cliente D','Cliente E','Cliente F','Cliente G','Cliente H'];
-  i int;
+  v_seasonal numeric[] := ARRAY[1.00, 0.85, 1.10, 0.95, 1.25, 0.70, 1.05, 1.30, 0.90, 1.15, 0.80, 1.40];
+  v_today date := now()::date;
+  v_seq int := 0;
+  m int; j int; v_cnt int; v_dim int; v_day int;
   v_status text;
   v_opened timestamptz;
   v_data jsonb;
@@ -790,41 +860,49 @@ BEGIN
   WHERE entity_type = 'service_order'
     AND source_record_id LIKE 'demo-dia-svcvol-%';
 
-  FOR i IN 1..82 LOOP
-    v_status := v_statuses[1 + (i % 4)];
-    -- MÊS ATUAL (#46): abre dentro do mês corrente (clamp no 1º dia do mês).
-    v_opened := greatest(
-      date_trunc('month', now()),
-      v_now - (((i * 3) % 28) || ' days')::interval
-    );
+  -- HISTÓRICO DE 12 MESES: o montante por mês varia (sazonalidade); cada OS abre
+  -- num dia variado do mês. m=0 é o mês corrente (clamp para não gerar futuro).
+  FOR m IN 0..11 LOOP
+    v_dim := extract(day from ((date_trunc('month', now()) - (m || ' months')::interval)
+                               + interval '1 month' - interval '1 day'))::int;
+    v_cnt := greatest(4, round(8 * v_seasonal[1 + (m % 12)])::int);   -- ~6..11 por mês
 
-    v_data := jsonb_build_object(
-      'name', format('OS-2026-B%s - %s', lpad(i::text, 3, '0'), v_custs[1 + (i % array_length(v_custs, 1))]),
-      'order_number', format('OS-2026-B%s', lpad(i::text, 3, '0')),
-      'customer', v_custs[1 + (i % array_length(v_custs, 1))],
-      'vehicle', format('%s%s%s%s', chr(65 + (i % 26)), chr(65 + ((i * 2) % 26)), chr(65 + ((i * 3) % 26)), lpad((i % 10000)::text, 4, '0')),
-      'description', v_descs[1 + (i % array_length(v_descs, 1))],
-      'status', v_status,
-      'opened_at', to_char(v_opened, 'YYYY-MM-DD"T"HH24:MI:SSOF'),
-      'technician', v_techs[1 + (i % array_length(v_techs, 1))],
-      'source_record_id', format('demo-dia-svcvol-%s', lpad(i::text, 3, '0'))
-    );
+    FOR j IN 1..v_cnt LOOP
+      v_seq := v_seq + 1;
+      v_status := v_statuses[1 + ((m + j) % 4)];
+      v_day := ((m * 13 + j * 17) % v_dim) + 1;
+      v_opened := (date_trunc('month', now()) - (m || ' months')::interval)
+                  + ((v_day - 1) || ' days')::interval;
+      IF v_opened::date > v_today THEN v_opened := v_now; END IF;   -- mês corrente: nunca futuro
 
-    -- Concluídas ganham closed_at (turnaround) e receita; em_andamento receita parcial.
-    IF v_status = 'concluida' THEN
-      v_data := v_data || jsonb_build_object(
-        'closed_at', to_char(v_opened + (((i % 12) + 2) || ' hours')::interval, 'YYYY-MM-DD"T"HH24:MI:SSOF'),
-        'revenue', 200 + ((i % 20) * 95)
+      v_data := jsonb_build_object(
+        'name', format('OS-VOL-%s - %s', lpad(v_seq::text, 4, '0'), v_custs[1 + (v_seq % array_length(v_custs, 1))]),
+        'order_number', format('OS-VOL-%s', lpad(v_seq::text, 4, '0')),
+        'customer', v_custs[1 + (v_seq % array_length(v_custs, 1))],
+        'vehicle', format('%s%s%s%s', chr(65 + (v_seq % 26)), chr(65 + ((v_seq * 2) % 26)), chr(65 + ((v_seq * 3) % 26)), lpad((v_seq % 10000)::text, 4, '0')),
+        'description', v_descs[1 + (v_seq % array_length(v_descs, 1))],
+        'status', v_status,
+        'opened_at', to_char(v_opened, 'YYYY-MM-DD"T"HH24:MI:SSOF'),
+        'technician', v_techs[1 + (v_seq % array_length(v_techs, 1))],
+        'source_record_id', format('demo-dia-svcvol-%s', lpad(v_seq::text, 4, '0'))
       );
-    ELSIF v_status = 'em_andamento' AND i % 2 = 0 THEN
-      v_data := v_data || jsonb_build_object('revenue', 150 + ((i % 15) * 70));
-    END IF;
 
-    PERFORM rental_upsert_entity_current_state(
-      p_entity_type => 'service_order',
-      p_source_record_id => format('demo-dia-svcvol-%s', lpad(i::text, 3, '0')),
-      p_data => v_data
-    );
+      -- Concluídas ganham closed_at (turnaround) e receita; em_andamento receita parcial.
+      IF v_status = 'concluida' THEN
+        v_data := v_data || jsonb_build_object(
+          'closed_at', to_char(v_opened + (((v_seq % 12) + 2) || ' hours')::interval, 'YYYY-MM-DD"T"HH24:MI:SSOF'),
+          'revenue', 200 + ((v_seq % 20) * 95)
+        );
+      ELSIF v_status = 'em_andamento' AND v_seq % 2 = 0 THEN
+        v_data := v_data || jsonb_build_object('revenue', 150 + ((v_seq % 15) * 70));
+      END IF;
+
+      PERFORM rental_upsert_entity_current_state(
+        p_entity_type => 'service_order',
+        p_source_record_id => format('demo-dia-svcvol-%s', lpad(v_seq::text, 4, '0')),
+        p_data => v_data
+      );
+    END LOOP;
   END LOOP;
 END
 $$;
@@ -872,7 +950,7 @@ $$;
 
 commit;
 
--- --- Vendas em massa (~88, só contra as peças em massa de estoque amplo) ---
+-- --- Vendas em massa (~125, 12 MESES, só contra peças de estoque amplo) ---
 begin;
 set local request.jwt.claim.role = 'service_role';
 
@@ -880,7 +958,10 @@ DO $$
 DECLARE
   v_custs text[] := ARRAY['Auto Center Vitória','Oficina do Zé','Frota Rápida Ltda','Mecânica Central','Cliente Balcão','TransLog Transportes','Garagem Premium','Oficina Bairro'];
   v_sellers text[] := ARRAY['Marina Souza','Carlos Lima','João Pedro','Aline Costa','Rafael Dias'];
-  i int;
+  v_seasonal numeric[] := ARRAY[1.00, 0.85, 1.10, 0.95, 1.25, 0.70, 1.05, 1.30, 0.90, 1.15, 0.80, 1.40];
+  v_today date := now()::date;
+  v_seq int := 0;
+  m int; j int; v_cnt int; v_dim int; v_day int;
   v_part_id uuid;
   v_part_sr text;
   v_unit_price numeric;
@@ -888,42 +969,53 @@ DECLARE
 BEGIN
   PERFORM set_config('request.jwt.claim.role', 'service_role', true);
 
-  FOR i IN 1..88 LOOP
-    -- referencia peças em massa (1..74), cada uma com estoque amplo
-    v_part_sr := format('demo-dia-part-b%s', lpad((1 + ((i - 1) % 74))::text, 3, '0'));
+  -- HISTÓRICO DE 12 MESES: vendas espalhadas pelos meses (montante por mês varia
+  -- com a sazonalidade). Só referenciam as peças em massa (estoque amplo >=120)
+  -- com qty pequena (1..3), então o total vendido por peça no ano NÃO estoura o
+  -- estoque (não dispara o guard de estoque insuficiente). m=0 é o mês corrente.
+  FOR m IN 0..11 LOOP
+    v_dim := extract(day from ((date_trunc('month', now()) - (m || ' months')::interval)
+                               + interval '1 month' - interval '1 day'))::int;
+    v_cnt := greatest(6, round(10 * v_seasonal[1 + (m % 12)])::int);   -- ~7..14 por mês
 
-    SELECT id INTO v_part_id
-    FROM entities
-    WHERE entity_type = 'part' AND source_record_id = v_part_sr;
+    FOR j IN 1..v_cnt LOOP
+      v_seq := v_seq + 1;
+      -- referencia peças em massa (1..74), cada uma com estoque amplo
+      v_part_sr := format('demo-dia-part-b%s', lpad((1 + (v_seq % 74))::text, 3, '0'));
 
-    CONTINUE WHEN v_part_id IS NULL;
+      SELECT id INTO v_part_id
+      FROM entities
+      WHERE entity_type = 'part' AND source_record_id = v_part_sr;
 
-    SELECT unit_price INTO v_unit_price
-    FROM v_dia_part_current WHERE entity_id = v_part_id;
+      CONTINUE WHEN v_part_id IS NULL;
 
-    -- MÊS ATUAL (#46): todas as vendas no mês corrente (sem recuar meses),
-    -- travadas em hoje para não gerar data futura.
-    v_sale_date := to_char(
-      least(
-        (date_trunc('month', now()) + (((i * 7) % 27) || ' days')::interval)::date,
-        now()::date
-      ),
-      'YYYY-MM-DD'
-    );
+      SELECT unit_price INTO v_unit_price
+      FROM v_dia_part_current WHERE entity_id = v_part_id;
 
-    PERFORM create_part_sale(
-      jsonb_build_object(
-        'part_id', v_part_id::text,
-        'quantity', 1 + (i % 5),                 -- 1..5, << estoque (>=120)
-        'unit_price', coalesce(v_unit_price, 49.90),
-        'discount', CASE WHEN i % 4 = 0 THEN round((i % 30)::numeric, 2) ELSE 0 END,
-        'sale_date', v_sale_date,
-        'customer', v_custs[1 + (i % array_length(v_custs, 1))],
-        'salesperson', v_sellers[1 + (i % array_length(v_sellers, 1))],
-        'channel', 'balcao',
-        'source_record_id', format('demo-dia-part-sale-b%s', lpad(i::text, 3, '0'))
-      )
-    );
+      v_day := ((m * 11 + j * 13) % v_dim) + 1;
+      v_sale_date := to_char(
+        least(
+          (date_trunc('month', now()) - (m || ' months')::interval
+            + ((v_day - 1) || ' days')::interval)::date,
+          v_today
+        ),
+        'YYYY-MM-DD'
+      );
+
+      PERFORM create_part_sale(
+        jsonb_build_object(
+          'part_id', v_part_id::text,
+          'quantity', 1 + (v_seq % 3),             -- 1..3 (ano todo << estoque >=120)
+          'unit_price', coalesce(v_unit_price, 49.90),
+          'discount', CASE WHEN v_seq % 4 = 0 THEN round((v_seq % 30)::numeric, 2) ELSE 0 END,
+          'sale_date', v_sale_date,
+          'customer', v_custs[1 + (v_seq % array_length(v_custs, 1))],
+          'salesperson', v_sellers[1 + (v_seq % array_length(v_sellers, 1))],
+          'channel', 'balcao',
+          'source_record_id', format('demo-dia-part-sale-b%s', lpad(v_seq::text, 4, '0'))
+        )
+      );
+    END LOOP;
   END LOOP;
 END
 $$;
