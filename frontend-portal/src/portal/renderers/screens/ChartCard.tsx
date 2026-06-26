@@ -68,10 +68,8 @@ export interface ChartCardProps {
   valueFormat?: ValueFormat
   emptyMessage?: string
   height?: number
-  /**
-   * Quando true e houver exatamente uma série (bar), colore cada barra com uma
-   * cor distinta da paleta (em vez de uma cor única para toda a série).
-   */
+  /** BAR de série única: pinta cada barra com uma cor distinta (cicla a paleta),
+   *  como o pie faz por fatia. Ignorado em line/pie ou com múltiplas séries. */
   colorByPoint?: boolean
 }
 
@@ -197,10 +195,7 @@ export function ChartCard({
               >
                 {colorByPoint && series.length === 1
                   ? data.map((_, i) => (
-                      <Cell
-                        key={`bar-cell-${i}`}
-                        fill={DEFAULT_PALETTE[i % DEFAULT_PALETTE.length]}
-                      />
+                      <Cell key={`bar-${i}`} fill={DEFAULT_PALETTE[i % DEFAULT_PALETTE.length]} />
                     ))
                   : null}
               </Bar>

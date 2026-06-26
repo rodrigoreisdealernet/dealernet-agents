@@ -240,7 +240,6 @@
     "morning-brief-owner": "Morning Brief",
     "ai-agents-dashboard": "Agents Dashboard",
     "ai-morning-queue": "Morning Queue",
-    "ai-audit-trail": "Audit Trail",
     "fast-bi": "Fast BI",
     "fast-bi-visao-geral": "Overview",
     "fast-bi-executive": "Executive Dashboard",
@@ -362,7 +361,9 @@
       "rejected": "Rejected",
       "informational": "Informational",
       "findingDetailTitle": "Finding detail",
-      "review": "Review"
+      "review": "Review",
+      "selectFinding": "Select {label}",
+      "selectedCount": "{count} selected"
     },
     "diaOverview": {
       "title": "Owner Overview",
@@ -404,7 +405,10 @@
       "salesOverTime": "Sales over time — NV × UV",
       "salesByBrand": "Sales by brand",
       "units": "Units",
-      "mixTitle": "New × Used mix"
+      "mixTitle": "New × Used mix",
+      "month": "Month",
+      "prevMonth": "Previous month",
+      "nextMonth": "Next month"
     },
     "serviceDashboard": {
       "title": "Service — Fast BI",
@@ -714,10 +718,10 @@
       "brandStore": "Brand / Store",
       "confirmFailed": "Failed to confirm",
       "dismissFailed": "Failed to dismiss",
-      "currentMonth": "Current month",
+      "previousDay": "Yesterday",
       "byBrandTap": "By brand · tap to see stores",
-      "noMonthData": "No month data.",
-      "desktopTitle": "Result by brand and store · current month"
+      "noPreviousDayData": "No sales yesterday.",
+      "desktopTitle": "Result by brand and store · previous day"
     }
   }
 }

@@ -41,6 +41,29 @@ function menuBlock() {
   return src.slice(start, end)
 }
 
+// Recorta SO o grupo de topo 'ai-ops' (Operacoes de IA), do seu `id: 'ai-ops'`
+// ate o inicio do proximo grupo de topo ('fast-bi'). Permite afirmar as folhas
+// e a ordem da reorganizacao da issue #93 sem casar ids de outros grupos.
+function aiOpsBlock() {
+  const block = menuBlock()
+  const start = block.indexOf("id: 'ai-ops'")
+  assert.ok(start !== -1, "MOCK_MENU deve conter o grupo de topo id: 'ai-ops'")
+  const end = block.indexOf("id: 'fast-bi'", start)
+  assert.ok(end !== -1 && end > start, "nao encontrei o fim do grupo ai-ops (proximo grupo 'fast-bi')")
+  return block.slice(start, end)
+}
+
+// Le e parseia um JSON de mensagens i18n, retornando o sub-objeto `menu`.
+function menuMessages(locale) {
+  const relPath = `src/i18n/messages/${locale}.json`
+  let parsed
+  assert.doesNotThrow(() => {
+    parsed = JSON.parse(read(relPath))
+  }, `${relPath} deve ser JSON valido`)
+  assert.ok(parsed && parsed.menu && typeof parsed.menu === 'object', `${relPath} deve conter o objeto "menu"`)
+  return parsed.menu
+}
+
 test('Dedup: existe EXATAMENTE uma secao "Fast BI" (antes havia duas)', () => {
   const block = menuBlock()
   const fastBiCount = matchAll(/text:\s*'([^']*)'/g, block).filter((t) => t === 'Fast BI').length
@@ -116,4 +139,88 @@ test('Coerencia de icone: toda folha (spec com componentKey) define icon no spec
   for (const s of leaves) {
     assert.ok(s.includes('icon:'), `spec de tela sem icon (aba/janela ficaria sem icone): ${s}`)
   }
+})
+
+// ---------------------------------------------------------------------------
+// Issue #93 — Reorganizacao do grupo "Operacoes de IA" (ai-ops) e aposentadoria
+// de "Trilha de Auditoria" como item de topo. Cada teste rastreia um criterio de
+// aceite (AC) da spec docs/specs/93-reorganizar-o-menu-operacoes-de.md.
+// ---------------------------------------------------------------------------
+
+test('AC1: "Trilha de Auditoria" saiu do menu (sem leaf ai-audit-trail nem componentKey audit-trail)', () => {
+  const block = menuBlock()
+  const aiOps = aiOpsBlock()
+  // Nao deve existir o item de topo nem dentro do grupo ai-ops.
+  assert.ok(!block.includes("id: 'ai-audit-trail'"), "o leaf id: 'ai-audit-trail' deve ter sido removido do menu")
+  assert.ok(!aiOps.includes("id: 'ai-audit-trail'"), "ai-audit-trail nao pode estar no grupo ai-ops")
+  // Nenhuma folha do menu pode apontar para a tela audit-trail (so abre por contexto).
+  const compKeys = matchAll(/componentKey:\s*'([^']+)'/g, block)
+  assert.ok(!compKeys.includes('audit-trail'), "nenhum item do menu pode usar componentKey 'audit-trail'")
+  // E o rotulo "Trilha de Auditoria" nao deve aparecer mais no bloco do menu.
+  assert.ok(!block.includes('Trilha de Auditoria'), "o texto 'Trilha de Auditoria' nao deve sobrar no menu")
+})
+
+test('AC2: a tela audit-trail continua registrada no registry (abrivel por contexto)', () => {
+  const reg = read('src/portal/renderers/registry.ts')
+  const regKeys = new Set(matchAll(/'([^']+)'\s*:\s*lazy\(/g, reg))
+  assert.ok(
+    regKeys.has('audit-trail'),
+    "audit-trail deve PERMANECER em componentRegistry para abrir a partir de um finding",
+  )
+  // resolveComponent('audit-trail') precisa resolver: a chave existe e mapeia para um lazy import.
+  assert.match(
+    reg,
+    /'audit-trail':\s*lazy\(\(\)\s*=>\s*import\(/,
+    "audit-trail deve mapear para um componente lazy em registry.ts",
+  )
+})
+
+test('AC3: grupo ai-ops com as telas remanescentes na ordem coerente (Morning Brief primeiro)', () => {
+  const aiOps = aiOpsBlock()
+  // Ids das folhas (3o nivel) na ordem em que aparecem no grupo ai-ops.
+  const leafIds = matchAll(/id:\s*'([^']+)'/g, aiOps).filter((id) => id !== 'ai-ops')
+  assert.deepEqual(
+    leafIds,
+    ['morning-brief-owner', 'ai-agents-dashboard', 'ai-morning-queue'],
+    'ai-ops deve listar Morning Brief primeiro, depois Painel de Agentes e Fila Matinal',
+  )
+  // E os componentKeys das telas, na mesma ordem, batem com as telas-ancora da IA.
+  const compKeys = matchAll(/componentKey:\s*'([^']+)'/g, aiOps)
+  assert.deepEqual(
+    compKeys,
+    ['morning-brief', 'agents-dashboard', 'findings-queue'],
+    'ai-ops deve mapear morning-brief, agents-dashboard e findings-queue nessa ordem',
+  )
+})
+
+test('AC4: sem chave i18n orfa/faltante — todo id do menu tem menu.* nas duas locales e ai-audit-trail sumiu', () => {
+  const ids = [...new Set(matchAll(/id:\s*'([^']+)'/g, menuBlock()))]
+  const pt = menuMessages('pt-BR')
+  const en = menuMessages('en-US')
+
+  for (const id of ids) {
+    assert.ok(Object.prototype.hasOwnProperty.call(pt, id), `pt-BR.json: falta menu.${id}`)
+    assert.ok(Object.prototype.hasOwnProperty.call(en, id), `en-US.json: falta menu.${id}`)
+    assert.ok(String(pt[id]).trim().length > 0, `pt-BR.json: menu.${id} esta vazio`)
+    assert.ok(String(en[id]).trim().length > 0, `en-US.json: menu.${id} esta vazio`)
+  }
+
+  // A chave removida nao pode sobrar em NENHUMA das locales (sem orfa).
+  assert.ok(!Object.prototype.hasOwnProperty.call(pt, 'ai-audit-trail'), 'pt-BR.json: menu.ai-audit-trail deve ter sido removido')
+  assert.ok(!Object.prototype.hasOwnProperty.call(en, 'ai-audit-trail'), 'en-US.json: menu.ai-audit-trail deve ter sido removido')
+
+  // Rotulos das telas remanescentes do ai-ops devem existir e bater com o esperado.
+  assert.equal(pt['morning-brief-owner'], 'Resumo Matinal')
+  assert.equal(en['morning-brief-owner'], 'Morning Brief')
+  assert.equal(pt['ai-agents-dashboard'], 'Painel de Agentes')
+  assert.equal(pt['ai-morning-queue'], 'Fila Matinal')
+})
+
+test('AC5: todo componentKey do MOCK_MENU resolve em registry.ts', () => {
+  const keys = [...new Set(matchAll(/componentKey:\s*'([^']+)'/g, menuBlock()))]
+  assert.ok(keys.length > 0, 'o menu deve referenciar componentKeys de telas')
+  const reg = read('src/portal/renderers/registry.ts')
+  const regKeys = new Set(matchAll(/'([^']+)'\s*:\s*lazy\(/g, reg))
+  const unresolved = keys.filter((k) => !regKeys.has(k))
+  assert.deepEqual(unresolved, [], `componentKeys do menu sem registro em registry.ts: ${unresolved.join(', ')}`)
 })

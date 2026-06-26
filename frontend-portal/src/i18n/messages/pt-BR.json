@@ -240,7 +240,6 @@
     "morning-brief-owner": "Resumo Matinal",
     "ai-agents-dashboard": "Painel de Agentes",
     "ai-morning-queue": "Fila Matinal",
-    "ai-audit-trail": "Trilha de Auditoria",
     "fast-bi": "Fast BI",
     "fast-bi-visao-geral": "Visão Geral",
     "fast-bi-executive": "Painel Executivo",
@@ -362,7 +361,9 @@
       "rejected": "Rejeitado",
       "informational": "Informativo",
       "findingDetailTitle": "Detalhe do achado",
-      "review": "Revisar"
+      "review": "Revisar",
+      "selectFinding": "Selecionar {label}",
+      "selectedCount": "{count} selecionado(s)"
     },
     "diaOverview": {
       "title": "Visão do Dono",
@@ -404,7 +405,10 @@
       "salesOverTime": "Vendas ao longo do tempo — VN × VU",
       "salesByBrand": "Vendas por marca",
       "units": "Unidades",
-      "mixTitle": "Mix Novos × Usados"
+      "mixTitle": "Mix Novos × Usados",
+      "month": "Mês",
+      "prevMonth": "Mês anterior",
+      "nextMonth": "Próximo mês"
     },
     "serviceDashboard": {
       "title": "Oficina — Fast BI",
@@ -714,10 +718,10 @@
       "brandStore": "Marca / Loja",
       "confirmFailed": "Falha ao confirmar",
       "dismissFailed": "Falha ao dispensar",
-      "currentMonth": "Mês atual",
+      "previousDay": "Ontem",
       "byBrandTap": "Por marca · toque para ver lojas",
-      "noMonthData": "Sem dados do mês.",
-      "desktopTitle": "Resultado por marca e loja · mês atual"
+      "noPreviousDayData": "Sem vendas ontem.",
+      "desktopTitle": "Resultado por marca e loja · dia anterior"
     }
   }
 }
