@@ -81,6 +81,16 @@ def test_single_weekday_cron_parts_inventory_monday_only() -> None:
     assert next_cron_run("0 6 * * 1", after) == _utc(2026, 6, 29, 6, 0)  # Monday
 
 
+def test_both_restricted_dom_and_dow_match_with_or_semantics() -> None:
+    # When BOTH day-of-month and day-of-week are restricted, cron uses OR:
+    # "0 0 13 * 5" fires at 00:00 on the 13th OR on any Friday.
+    # 2026-06-26 is a Friday; the next Friday at 00:00 is 2026-07-03 (dow branch).
+    assert next_cron_run("0 0 13 * 5", _utc(2026, 6, 26, 7, 0)) == _utc(2026, 7, 3, 0, 0)
+    # 2026-08-13 is a Thursday (not a Friday): the 13th still fires via the
+    # day-of-month branch, before the next Friday (2026-08-14).
+    assert next_cron_run("0 0 13 * 5", _utc(2026, 8, 12, 12, 0)) == _utc(2026, 8, 13, 0, 0)
+
+
 def test_daily_cron_next_occurrence() -> None:
     # 30 9 * * * = every day at 09:30.
     assert next_cron_run("30 9 * * *", _utc(2026, 6, 26, 8, 0)) == _utc(2026, 6, 26, 9, 30)

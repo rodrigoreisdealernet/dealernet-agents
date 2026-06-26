@@ -102,6 +102,25 @@ async def test_enabled_agent_with_empty_next_action_times_uses_cron(
 
 
 @pytest.mark.asyncio
+async def test_enabled_agent_with_invalid_cron_persists_null(
+    captured_persist: list[tuple],
+) -> None:
+    # AC4/AC5: enabled but Temporal has no next action AND the cron is invalid ->
+    # the cron fallback yields None, so the agent persists null (no stale/invented
+    # time) rather than breaking.
+    handle = AsyncMock()
+    handle.describe = AsyncMock(
+        return_value=SimpleNamespace(info=SimpleNamespace(next_action_times=[]))
+    )
+
+    await worker._persist_schedule_next_run_best_effort(
+        handle, "vehicle-aging-analyst", "tenant-e", "not a valid cron", enabled=True
+    )
+
+    assert captured_persist == [("vehicle-aging-analyst", "tenant-e", None)]
+
+
+@pytest.mark.asyncio
 async def test_persistence_failure_is_swallowed(monkeypatch: pytest.MonkeyPatch) -> None:
     # AC5: a raising persist must not propagate out of reconciliation.
     def _boom(agent_key: str, tenant_id: str, next_run_at: str | None) -> None:
