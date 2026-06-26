@@ -4,9 +4,9 @@
   "slug": "feat-ops-revalidar-agente-collections",
   "branch": "feature/117-feat-ops-revalidar-agente-collections",
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/117",
-  "pr": null,
-  "prUrl": null,
-  "updatedAt": "2026-06-26T10:46:41.032Z",
+  "pr": "121",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/121",
+  "updatedAt": "2026-06-26T10:53:07.129Z",
   "steps": [
     {
       "id": "spec",
@@ -34,8 +34,8 @@
     {
       "id": "code",
       "label": "03 · Code",
-      "status": "running",
-      "summary": "",
+      "status": "done",
+      "summary": "app.py: registered collections-prioritizer in _MANUAL_RUN_WORKFLOWS + documented assist-only",
       "artifacts": [],
       "notes": [],
       "gate": null
@@ -43,8 +43,8 @@
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "pending",
-      "summary": "",
+      "status": "done",
+      "summary": "2 regression tests added; 104 passed in test_ops_api.py",
       "artifacts": [],
       "notes": [],
       "gate": null
@@ -52,7 +52,7 @@
     {
       "id": "test-review",
       "label": "05 · Test review",
-      "status": "pending",
+      "status": "running",
       "summary": "",
       "artifacts": [],
       "notes": [],
