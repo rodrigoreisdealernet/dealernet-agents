@@ -28,6 +28,7 @@ from .activities import (
     ops_account_health,
     ops_billing_update,
     ops_branch_brief,
+    ops_collections,
     ops_contract_ocr,
     ops_credit,
     ops_dispatch_snapshot,
@@ -67,6 +68,10 @@ from .workflows.ops import AssetUpdateWorkflow
 from .workflows.ops.account_health_queue import AccountHealthQueueWorkflow, AccountHealthQueueWorkflowInput
 from .workflows.ops.billing_update import BillingUpdateApprovalWorkflow
 from .workflows.ops.branch_morning_brief import BranchMorningBriefWorkflow, BranchMorningBriefWorkflowInput
+from .workflows.ops.collections_prioritizer import (
+    CollectionsPrioritizerWorkflow,
+    CollectionsPrioritizerWorkflowInput,
+)
 from .workflows.ops.contract_ocr import ContractAnalysisWorkflow, ContractOcrRevalidationWorkflow
 from .workflows.ops.credit import CreditRiskWorkflow, CreditRiskWorkflowInput
 from .workflows.ops.credit_lien_control import CreditLienControlWorkflow
@@ -109,6 +114,20 @@ _PM_DEFAULT_CRON = "0 */6 * * *"
 
 _VEHICLE_AGING_AGENT_KEY = "vehicle-aging-analyst"
 _VEHICLE_AGING_DEFAULT_CRON = "0 6 * * 1-5"
+
+_COLLECTIONS_AGENT_KEY = "collections-prioritizer"
+_COLLECTIONS_DEFAULT_CRON = "0 6 * * 1-5"
+
+_COLLECTIONS_ACTIVITIES = (
+    ops_collections.ops_load_agent_config,
+    ops_collections.ops_scope_collections,
+    ops_collections.ops_collections_assess,
+    ops_collections.ops_list_open_finding_fingerprints,
+    ops_collections.ops_create_workflow_run,
+    ops_collections.ops_finalize_workflow_run,
+    ops_collections.ops_record_finding,
+    ops_collections.ops_record_finding_disposition,
+)
 
 _SERVICE_ESTIMATE_RESCUE_AGENT_KEY = "service-estimate-rescue"
 _SERVICE_ESTIMATE_RESCUE_DEFAULT_CRON = "0 7 * * 1-5"
@@ -447,6 +466,77 @@ async def reconcile_vehicle_aging_schedules(
     rows = list(config_rows) if config_rows is not None else await asyncio.to_thread(_fetch_vehicle_aging_schedule_rows)
     for row in rows:
         await _reconcile_tenant_vehicle_aging_schedule(client, row)
+
+
+# ---------------------------------------------------------------------------
+# Collections prioritizer schedule reconciliation
+# ---------------------------------------------------------------------------
+
+def _fetch_collections_schedule_rows() -> list[dict[str, Any]]:
+    return _fetch_agent_config_rows(_COLLECTIONS_AGENT_KEY)
+
+
+def _build_collections_schedule(tenant_id: str, cron: str) -> Schedule:
+    return Schedule(
+        action=ScheduleActionStartWorkflow(
+            CollectionsPrioritizerWorkflow.run,
+            CollectionsPrioritizerWorkflowInput(tenant_id=tenant_id),
+            id=f"ops-collections-prioritizer-{tenant_id}",
+            task_queue=settings.temporal_task_queue,
+        ),
+        spec=ScheduleSpec(cron_expressions=[cron]),
+    )
+
+
+async def _reconcile_tenant_collections_schedule(client: Client, config_row: Mapping[str, Any]) -> None:
+    tenant_id = str(config_row.get("tenant_id") or "").strip()
+    if not tenant_id:
+        return
+
+    enabled, cron = _extract_schedule_fields(config_row, default_cron=_COLLECTIONS_DEFAULT_CRON)
+    schedule_id = _schedule_id_for_tenant(tenant_id, _COLLECTIONS_AGENT_KEY)
+    schedule_handle = client.get_schedule_handle(schedule_id)
+
+    if not enabled:
+        try:
+            await schedule_handle.delete()
+            logger.info(
+                "Deleted disabled collections-prioritizer schedule",
+                extra={"tenant_id": tenant_id, "schedule_id": schedule_id},
+            )
+        except BaseException as exc:
+            if not _is_not_found_error(exc):
+                raise
+        return
+
+    desired_schedule = _build_collections_schedule(tenant_id, cron)
+    try:
+        await schedule_handle.describe()
+    except BaseException as exc:
+        if not _is_not_found_error(exc):
+            raise
+        await client.create_schedule(schedule_id, desired_schedule)
+        logger.info(
+            "Created collections-prioritizer schedule from config",
+            extra={"tenant_id": tenant_id, "schedule_id": schedule_id, "cron": cron},
+        )
+        return
+
+    await schedule_handle.update(
+        lambda _: ScheduleUpdate(schedule=desired_schedule),
+    )
+    logger.info(
+        "Updated collections-prioritizer schedule from config",
+        extra={"tenant_id": tenant_id, "schedule_id": schedule_id, "cron": cron},
+    )
+
+
+async def reconcile_collections_schedules(
+    client: Client, config_rows: Sequence[Mapping[str, Any]] | None = None
+) -> None:
+    rows = list(config_rows) if config_rows is not None else await asyncio.to_thread(_fetch_collections_schedule_rows)
+    for row in rows:
+        await _reconcile_tenant_collections_schedule(client, row)
 
 
 # ---------------------------------------------------------------------------
@@ -1536,6 +1626,11 @@ async def main() -> None:
         logger.exception("vehicle-aging schedule reconcile failed at startup; continuing to start worker")
 
     try:
+        await reconcile_collections_schedules(client)
+    except Exception:  # noqa: BLE001 - never let collections schedule reconcile crash the worker
+        logger.exception("collections schedule reconcile failed at startup; continuing to start worker")
+
+    try:
         await reconcile_service_estimate_schedules(client)
     except Exception:  # noqa: BLE001 - never let service-estimate schedule reconcile crash the worker
         logger.exception("service-estimate schedule reconcile failed at startup; continuing to start worker")
@@ -1616,6 +1711,7 @@ async def main() -> None:
             DescartesSyncWorkflow,
             RevenueRecognitionWorkflow,
             VehicleAgingWorkflow,
+            CollectionsPrioritizerWorkflow,
             ServiceEstimateRescueWorkflow,
             PartsInventoryWorkflow,
             ContractAnalysisWorkflow,
@@ -1711,6 +1807,7 @@ async def main() -> None:
             ops_vehicle_aging.ops_finalize_workflow_run,
             ops_vehicle_aging.ops_record_finding,
             ops_vehicle_aging.ops_record_finding_disposition,
+            *_COLLECTIONS_ACTIVITIES,
             ops_service_estimate.ops_load_agent_config,
             ops_service_estimate.ops_scope_service_estimates,
             ops_service_estimate.ops_service_estimate_assess,
