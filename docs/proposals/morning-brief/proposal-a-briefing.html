@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DIA · Resumo Matinal — Proposta A: O Briefing</title>
+<style>
+  :root{
+    --bg:#eef1f6; --surface:#ffffff; --surface-2:#f7f9fc;
+    --ink:#16243c; --ink-soft:#5b6b85; --ink-faint:#8a97ad;
+    --line:#e1e7f0; --line-strong:#cdd6e4;
+    --brand:#1f63e8; --brand-strong:#0f47c0; --brand-dim:#eaf0fe;
+    --teal:#0f9d8e; --teal-dim:#e3f6f3;
+    --amber:#c47d12; --amber-dim:#fbf1de;
+    --violet:#6a45d6; --violet-dim:#efeafb;
+    --danger:#d6455b; --danger-dim:#fbe8eb;
+    --green:#2f9e54; --green-dim:#e6f5ec;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --shadow:0 1px 2px rgba(16,24,40,.05),0 10px 30px rgba(16,24,40,.07);
+    --shadow-sm:0 1px 2px rgba(16,24,40,.05),0 4px 12px rgba(16,24,40,.05);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:
+      radial-gradient(1000px 520px at 90% -10%,rgba(31,99,232,.07),transparent 60%),
+      radial-gradient(760px 460px at -8% 110%,rgba(15,157,142,.05),transparent 60%),
+      var(--bg);
+    color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased;
+    line-height:1.5;
+  }
+  .wrap{max-width:980px;margin:0 auto;padding:clamp(20px,4vw,48px) clamp(16px,4vw,40px) 64px}
+
+  /* ---- top bar ---- */
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px}
+  .logo{display:flex;align-items:center;gap:11px;font-weight:800;letter-spacing:-.01em}
+  .logo .mark{
+    width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font-weight:800;
+    background:linear-gradient(135deg,var(--brand),var(--brand-strong));box-shadow:0 4px 14px rgba(31,99,232,.35)}
+  .logo small{display:block;font-size:11px;font-weight:600;color:var(--ink-faint);letter-spacing:.02em}
+  .when{text-align:right;font-size:13px;color:var(--ink-soft)}
+  .when b{display:block;color:var(--ink);font-size:14px}
+
+  /* ---- hero / greeting ---- */
+  .hero{
+    background:linear-gradient(135deg,#13234a,#1f3a6e 60%,#1f63e8);
+    color:#fff;border-radius:22px;padding:clamp(22px,3.4vw,34px);box-shadow:var(--shadow);
+    position:relative;overflow:hidden;margin-bottom:22px;
+  }
+  .hero::after{content:"";position:absolute;right:-60px;top:-60px;width:260px;height:260px;border-radius:50%;
+    background:radial-gradient(circle,rgba(255,255,255,.16),transparent 65%)}
+  .hero .pulse{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.08em;
+    text-transform:uppercase;color:#bcd2ff;margin-bottom:14px}
+  .pulse .dot{width:9px;height:9px;border-radius:50%;background:#7ef0c0;box-shadow:0 0 0 0 rgba(126,240,192,.7);
+    animation:beat 1.8s infinite}
+  @keyframes beat{0%{box-shadow:0 0 0 0 rgba(126,240,192,.6)}70%{box-shadow:0 0 0 10px rgba(126,240,192,0)}100%{box-shadow:0 0 0 0 rgba(126,240,192,0)}}
+  .hero h1{font-size:clamp(24px,3.6vw,34px);line-height:1.12;letter-spacing:-.02em;font-weight:800;max-width:20ch}
+  .hero h1 .hl{color:#9ec3ff}
+  .hero p{margin-top:12px;color:#cfdcf3;font-size:clamp(14px,1.7vw,16px);max-width:52ch}
+  .nightstats{display:flex;flex-wrap:wrap;gap:22px;margin-top:22px;position:relative;z-index:1}
+  .nightstats .ns{display:flex;flex-direction:column}
+  .nightstats .v{font-size:clamp(20px,2.6vw,26px);font-weight:800;font-variant-numeric:tabular-nums}
+  .nightstats .l{font-size:12px;color:#aebfde;margin-top:2px}
+  .nightstats .sep{width:1px;background:rgba(255,255,255,.18)}
+
+  /* ---- section heads ---- */
+  .sec{margin:30px 0 14px;display:flex;align-items:baseline;gap:10px}
+  .sec h2{font-size:18px;font-weight:800;letter-spacing:-.01em}
+  .sec .hint{font-size:13px;color:var(--ink-soft)}
+  .sec .count{margin-left:auto;font-size:12px;font-weight:700;color:var(--brand-strong);
+    background:var(--brand-dim);border-radius:999px;padding:3px 11px}
+
+  /* ---- agent timeline (what happened overnight) ---- */
+  .timeline{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:640px){.timeline{grid-template-columns:1fr}}
+  .tl{display:flex;gap:12px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);
+    border-radius:14px;padding:14px 16px;box-shadow:var(--shadow-sm)}
+  .tl .ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-size:18px;flex:none}
+  .tl .body{min-width:0}
+  .tl .who{font-size:12px;font-weight:800;letter-spacing:.01em}
+  .tl .what{font-size:13.5px;color:var(--ink-soft);margin-top:2px}
+  .tl .meta{font-size:11.5px;color:var(--ink-faint);margin-top:6px;font-variant-numeric:tabular-nums}
+  .ic.aging{background:var(--danger-dim)} .who.aging{color:var(--danger)}
+  .ic.coll{background:var(--amber-dim)} .who.coll{color:var(--amber)}
+  .ic.parts{background:var(--teal-dim)} .who.parts{color:var(--teal)}
+  .ic.svc{background:var(--violet-dim)} .who.svc{color:var(--violet)}
+
+  /* ---- action stack ---- */
+  .stack{display:flex;flex-direction:column;gap:12px}
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--line-strong);
+    border-radius:16px;padding:16px 18px;box-shadow:var(--shadow-sm);transition:.25s;
+  }
+  .card.aging{border-left-color:var(--danger)} .card.coll{border-left-color:var(--amber)}
+  .card.parts{border-left-color:var(--teal)} .card.svc{border-left-color:var(--violet)}
+  .card .row1{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:800;letter-spacing:.01em;
+    border-radius:999px;padding:4px 10px}
+  .chip.aging{background:var(--danger-dim);color:var(--danger)}
+  .chip.coll{background:var(--amber-dim);color:var(--amber)}
+  .chip.parts{background:var(--teal-dim);color:var(--teal)}
+  .chip.svc{background:var(--violet-dim);color:var(--violet)}
+  .sev{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;
+    padding:3px 8px;border-radius:6px}
+  .sev.crit{background:#fbe3e7;color:#b51d36} .sev.high{background:#fdeeda;color:#a25a00}
+  .conf{margin-left:auto;font-size:12px;color:var(--ink-soft);font-weight:600;display:flex;align-items:center;gap:7px}
+  .conf .bar{width:54px;height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+  .conf .bar i{display:block;height:100%;background:var(--brand)}
+  .card h3{font-size:16px;font-weight:780;margin-top:11px;letter-spacing:-.01em}
+  .card .ctx{font-size:13.5px;color:var(--ink-soft);margin-top:4px}
+  .why{display:flex;gap:8px;margin-top:11px;background:var(--surface-2);border:1px solid var(--line);
+    border-radius:10px;padding:10px 12px;font-size:13px;color:var(--ink-soft)}
+  .why b{color:var(--ink);font-weight:700}
+  .money{display:flex;align-items:center;gap:8px;margin-top:13px}
+  .money .big{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+  .money .lbl{font-size:12px;color:var(--ink-faint)}
+  .actions{display:flex;align-items:center;gap:10px;margin-top:14px}
+  .btn{border:0;cursor:pointer;font-family:inherit;font-weight:700;border-radius:11px;transition:.18s}
+  .btn-primary{flex:1;background:var(--ink);color:#fff;padding:12px 16px;font-size:14px;display:flex;
+    align-items:center;justify-content:center;gap:8px}
+  .btn-primary:hover{background:#0c1830}
+  .btn-primary .rec{font-weight:600;opacity:.7}
+  .btn-ghost{background:transparent;color:var(--ink-faint);padding:12px 10px;font-size:13px}
+  .btn-ghost:hover{color:var(--ink)}
+  /* confirmed state */
+  .card.done{border-left-color:var(--green);background:linear-gradient(0deg,var(--green-dim),#fff)}
+  .card.done .actions,.card.done .why,.card.done .conf{display:none}
+  .doneflag{display:none;align-items:center;gap:9px;margin-top:14px;color:var(--green);font-weight:800;font-size:14px}
+  .card.done .doneflag{display:flex}
+  .card.dismissed{opacity:.42;filter:grayscale(.5)}
+
+  /* ---- yesterday result strip ---- */
+  .result{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:6px;box-shadow:var(--shadow-sm);overflow:hidden}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  thead th{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);
+    font-weight:800;text-align:right;padding:12px 12px 8px}
+  thead th:first-child{text-align:left}
+  tbody td{padding:11px 12px;text-align:right;font-variant-numeric:tabular-nums;border-top:1px solid var(--line)}
+  tbody td:first-child{text-align:left;font-weight:700}
+  tbody td.fp-risk{color:var(--danger);font-weight:800}
+  tbody tr.total{background:var(--ink)}
+  tbody tr.total td{color:#fff;font-weight:800;border-top:0}
+  .legend{font-size:12px;color:var(--ink-faint);padding:9px 12px 4px}
+
+  footer{margin-top:34px;text-align:center;font-size:12px;color:var(--ink-faint)}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:var(--ink);
+    color:#fff;padding:12px 20px;border-radius:12px;font-size:13.5px;font-weight:600;box-shadow:var(--shadow);
+    opacity:0;pointer-events:none;transition:.3s;z-index:50}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="logo">
+        <span class="mark">D</span>
+        <span>DIA<small>Inteligência Dealernet · Grupo Bandeirantes</small></span>
+      </div>
+      <div class="when">
+        <b>Quinta, 26 jun</b>
+        07:12 · bom dia, Rodrigo
+      </div>
+    </div>
+
+    <!-- HERO: DIA fala com o dono -->
+    <section class="hero">
+      <div class="pulse"><span class="dot"></span>4 agentes trabalharam enquanto você dormia</div>
+      <h1>Bom dia, Rodrigo. Cuidei da concessionária <span class="hl">durante a madrugada.</span></h1>
+      <p>Varri o movimento de ontem, o estoque, as contas a receber e a oficina.
+         Separei <strong style="color:#fff">4 ações</strong> que valem a sua atenção hoje — o resto está sob controle.</p>
+      <div class="nightstats">
+        <div class="ns"><span class="v">1.247</span><span class="l">registros analisados</span></div>
+        <div class="sep"></div>
+        <div class="ns"><span class="v">R$ 612 mil</span><span class="l">em risco identificado</span></div>
+        <div class="sep"></div>
+        <div class="ns"><span class="v">4</span><span class="l">ações para aprovar</span></div>
+        <div class="sep"></div>
+        <div class="ns"><span class="v">38</span><span class="l">itens já sob controle</span></div>
+      </div>
+    </section>
+
+    <!-- O QUE OS AGENTES FIZERAM -->
+    <div class="sec">
+      <h2>O que cada agente fez</h2>
+      <span class="hint">03:00 – 06:50</span>
+    </div>
+    <div class="timeline">
+      <div class="tl">
+        <div class="ic aging">🚗</div>
+        <div class="body">
+          <div class="who aging">Analista de estoque parado</div>
+          <div class="what">Cruzou 184 veículos com a curva de Floor Plan e a margem por modelo.</div>
+          <div class="meta">3 alertas · 1 carência vencendo em 4 dias</div>
+        </div>
+      </div>
+      <div class="tl">
+        <div class="ic coll">💰</div>
+        <div class="body">
+          <div class="who coll">Priorizador de cobranças</div>
+          <div class="what">Reordenou a régua de cobrança por risco e valor em aberto.</div>
+          <div class="meta">R$ 312 mil vencidos · 1 cliente em deterioração</div>
+        </div>
+      </div>
+      <div class="tl">
+        <div class="ic parts">🔧</div>
+        <div class="body">
+          <div class="who parts">Consultor de estoque de peças</div>
+          <div class="what">Projetou a demanda e detectou rupturas antes de elas acontecerem.</div>
+          <div class="meta">1 peça em risco · 14 OS dependentes</div>
+        </div>
+      </div>
+      <div class="tl">
+        <div class="ic svc">🛠️</div>
+        <div class="body">
+          <div class="who svc">Resgate de orçamentos de serviço</div>
+          <div class="what">Encontrou orçamentos aprovados que esfriaram sem retorno do cliente.</div>
+          <div class="meta">5 orçamentos parados · R$ 18,4 mil</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PILHA DE AÇÕES -->
+    <div class="sec">
+      <h2>DIA preparou estas ações</h2>
+      <span class="hint">Confirme com um toque</span>
+      <span class="count" id="counter">4 pendentes</span>
+    </div>
+    <div class="stack" id="stack">
+
+      <article class="card aging" data-state="pending">
+        <div class="row1">
+          <span class="chip aging">🚗 Estoque parado</span>
+          <span class="sev crit">Crítico</span>
+          <span class="conf"><span class="bar"><i style="width:92%"></i></span>92% confiança</span>
+        </div>
+        <h3>Corolla XEI 2.0 · 2024 · Prata — parado há 96 dias</h3>
+        <div class="ctx">Loja Toyota Morumbi · chassi …8842 · custo de carrego R$ 142/dia</div>
+        <div class="why"><span>🧠</span><div><b>Por quê:</b> a carência de Floor Plan vence em <b>4 dias</b> e a margem do modelo caiu para 3,1%. Transferir para a Toyota Campinas (3 leads ativos) tende a vender em ~9 dias.</div></div>
+        <div class="money"><span class="big">R$ 11.840</span><span class="lbl">de juros de Floor Plan evitáveis</span></div>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="confirmCard(this)">✓ Transferir p/ Campinas <span class="rec">· ação recomendada</span></button>
+          <button class="btn btn-ghost" onclick="dismissCard(this)">Dispensar</button>
+        </div>
+        <div class="doneflag">✓ Transferência confirmada — DIA vai abrir a ordem</div>
+      </article>
+
+      <article class="card coll" data-state="pending">
+        <div class="row1">
+          <span class="chip coll">💰 Cobranças</span>
+          <span class="sev crit">Crítico</span>
+          <span class="conf"><span class="bar"><i style="width:88%"></i></span>88% confiança</span>
+        </div>
+        <h3>Transportes Aurora Ltda — R$ 48.200 vencidos há 12 dias</h3>
+        <div class="ctx">Cliente de frota · 6 títulos em aberto · score interno caindo 18% no mês</div>
+        <div class="why"><span>🧠</span><div><b>Por quê:</b> o atraso passou do padrão histórico do cliente (3 dias) e há novo pedido em análise. Acionar agora, antes de liberar o crédito, reduz a exposição.</div></div>
+        <div class="money"><span class="big">R$ 48.200</span><span class="lbl">a recuperar · prioridade máxima da régua</span></div>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="confirmCard(this)">✓ Priorizar cobrança hoje <span class="rec">· ação recomendada</span></button>
+          <button class="btn btn-ghost" onclick="dismissCard(this)">Dispensar</button>
+        </div>
+        <div class="doneflag">✓ Cliente movido para o topo da régua de cobrança</div>
+      </article>
+
+      <article class="card parts" data-state="pending">
+        <div class="row1">
+          <span class="chip parts">🔧 Peças</span>
+          <span class="sev high">Alto</span>
+          <span class="conf"><span class="bar"><i style="width:84%"></i></span>84% confiança</span>
+        </div>
+        <h3>Pastilha de freio diant. Corolla/Yaris — ruptura em 3 dias</h3>
+        <div class="ctx">Saldo atual 6 un · consumo médio 4,2 un/dia · 14 OS agendadas usam o item</div>
+        <div class="why"><span>🧠</span><div><b>Por quê:</b> no ritmo atual o estoque zera antes do próximo recebimento. Repor 40 un agora mantém a oficina rodando e evita reagendar serviços.</div></div>
+        <div class="money"><span class="big">R$ 22.600</span><span class="lbl">em OS protegidas de atraso</span></div>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="confirmCard(this)">✓ Gerar pedido de 40 un <span class="rec">· ação recomendada</span></button>
+          <button class="btn btn-ghost" onclick="dismissCard(this)">Dispensar</button>
+        </div>
+        <div class="doneflag">✓ Pedido de reposição encaminhado ao comprador</div>
+      </article>
+
+      <article class="card svc" data-state="pending">
+        <div class="row1">
+          <span class="chip svc">🛠️ Oficina</span>
+          <span class="sev high">Alto</span>
+          <span class="conf"><span class="bar"><i style="width:79%"></i></span>79% confiança</span>
+        </div>
+        <h3>Orçamento #4471 — R$ 3.450 parado há 5 dias sem retorno</h3>
+        <div class="ctx">Cliente: M. Andrade · Hyundai Tucson · aprovado parcialmente, peças reservadas</div>
+        <div class="why"><span>🧠</span><div><b>Por quê:</b> orçamentos sem contato após o 4º dia caem para 30% de conversão. Um reengajamento com 8% de cortesia historicamente recupera metade deles.</div></div>
+        <div class="money"><span class="big">R$ 3.450</span><span class="lbl">de serviço prestes a esfriar</span></div>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="confirmCard(this)">✓ Reengajar com cortesia 8% <span class="rec">· ação recomendada</span></button>
+          <button class="btn btn-ghost" onclick="dismissCard(this)">Dispensar</button>
+        </div>
+        <div class="doneflag">✓ Reengajamento agendado — DIA dispara a mensagem</div>
+      </article>
+    </div>
+
+    <!-- RESULTADO DE ONTEM -->
+    <div class="sec">
+      <h2>Resultado de ontem</h2>
+      <span class="hint">Por marca · Grupo Bandeirantes</span>
+    </div>
+    <div class="result">
+      <table>
+        <thead>
+          <tr><th>Marca</th><th>Resultado</th><th>Novos</th><th>Usados</th><th>Peças</th><th>AT</th><th>Floor Plan</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Toyota <small style="color:var(--ink-faint);font-weight:400">· 3 lojas</small></td><td>R$ 214 mil</td><td>9 un</td><td>6 un</td><td>R$ 61 mil</td><td>R$ 48 mil</td><td class="fp-risk">2 em risco &lt;7d</td></tr>
+          <tr><td>Volkswagen <small style="color:var(--ink-faint);font-weight:400">· 2 lojas</small></td><td>R$ 156 mil</td><td>7 un</td><td>5 un</td><td>R$ 39 mil</td><td>R$ 31 mil</td><td>ok</td></tr>
+          <tr><td>Hyundai <small style="color:var(--ink-faint);font-weight:400">· 2 lojas</small></td><td>R$ 132 mil</td><td>6 un</td><td>4 un</td><td>R$ 28 mil</td><td>R$ 22 mil</td><td>ok</td></tr>
+          <tr><td>Chevrolet <small style="color:var(--ink-faint);font-weight:400">· 1 loja</small></td><td>R$ 88 mil</td><td>4 un</td><td>3 un</td><td>R$ 19 mil</td><td>R$ 14 mil</td><td class="fp-risk">1 em risco &lt;7d</td></tr>
+          <tr class="total"><td>Grupo Total</td><td>R$ 590 mil</td><td>26 un</td><td>18 un</td><td>R$ 147 mil</td><td>R$ 115 mil</td><td>3 em risco</td></tr>
+        </tbody>
+      </table>
+      <div class="legend">Valores em R$ · dados do dia anterior · setores sem dado aparecem como "—"</div>
+    </div>
+
+    <footer>DIA — Inteligência Dealernet · protótipo de página (dados ilustrativos) · Proposta A "O Briefing"</footer>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+  function updateCounter(){
+    const pend = document.querySelectorAll('#stack .card[data-state="pending"]').length;
+    document.getElementById('counter').textContent = pend === 0 ? 'tudo resolvido 🎉' : pend + ' pendente' + (pend>1?'s':'');
+  }
+  function toast(msg){
+    const el=document.getElementById('toast');
+    el.textContent=msg; el.classList.add('show');
+    clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),2400);
+  }
+  function confirmCard(btn){
+    const card=btn.closest('.card');
+    card.dataset.state='done'; card.classList.add('done');
+    toast('Ação confirmada — DIA está executando');
+    updateCounter();
+  }
+  function dismissCard(btn){
+    const card=btn.closest('.card');
+    card.dataset.state='dismissed'; card.classList.add('dismissed');
+    setTimeout(()=>{card.style.height=card.offsetHeight+'px';requestAnimationFrame(()=>{card.style.transition='.35s';card.style.height='0';card.style.opacity='0';card.style.margin='0';card.style.padding='0';card.style.overflow='hidden';});},400);
+    toast('Dispensado — não aparecerá novamente');
+    updateCounter();
+  }
+</script>
+</body>
+</html>
