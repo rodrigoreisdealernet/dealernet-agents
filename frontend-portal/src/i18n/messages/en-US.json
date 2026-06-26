@@ -11,7 +11,10 @@
       "service-estimate-rescue": "Service estimate rescue"
     },
     "findingTypes": {
-      "stock_aging_90d": "Vehicle idle 90+ days"
+      "stock_aging_90d": "Vehicle idle 90+ days",
+      "floor_plan_band_escalation": "Floor plan cost about to escalate",
+      "margin_erosion": "Margin erosion",
+      "carryover_model_year": "Carryover model-year vehicle"
     },
     "actions": {
       "markdown": "Mark down price",
@@ -251,6 +254,7 @@
     "fast-bi-service": "Service",
     "fast-bi-parts": "Parts",
     "fast-bi-vehicle-inventory": "Vehicle Inventory",
+    "fast-bi-receivables": "Accounts Receivable",
     "dealership": "Dealership",
     "dealership-veiculos": "Vehicles",
     "dealership-vehicles": "Vehicle Inventory",

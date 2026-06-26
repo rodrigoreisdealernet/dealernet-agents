@@ -1,0 +1,88 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta http-equiv="refresh" content="5">
+<title>ship-issue #130 — feat(portal): Vendas de Veículos + separar estoque/vendidos no menu Veículos</title>
+<style>
+  :root{font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  body{margin:0;background:#0b0e14;color:#e5e7eb;padding:24px}
+  .wrap{max-width:860px;margin:0 auto}
+  h1{font-size:18px;margin:0 0 4px}
+  .sub{color:#9ca3af;font-size:13px;margin-bottom:16px}
+  .sub a{color:#60a5fa;text-decoration:none}
+  .bar{height:8px;background:#1f2937;border-radius:99px;overflow:hidden;margin:12px 0 20px}
+  .bar>i{display:block;height:100%;background:#16a34a;width:86%}
+  .banner{background:#7c2d12;color:#fed7aa;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:14px}
+  table{width:100%;border-collapse:collapse}
+  td{padding:12px 8px;border-top:1px solid #1f2937;vertical-align:top}
+  .ic{font-size:18px;width:28px;text-align:center}
+  .lbl{font-weight:600;width:200px}
+  .st{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
+  .sum{font-size:14px;color:#d1d5db}
+  .arts{margin-top:6px;font-size:13px}
+  .arts a{color:#60a5fa;text-decoration:none}
+  .notes{margin:8px 0 0;padding-left:18px;color:#9ca3af;font-size:12px}
+  tr.running{background:#0f1b33}
+  .foot{color:#6b7280;font-size:12px;margin-top:20px}
+</style></head><body><div class="wrap">
+<h1>ship-issue #130 — feat(portal): Vendas de Veículos + separar estoque/vendidos no menu Veículos</h1>
+<div class="sub"><a href="https://github.com/rodrigoreisdealernet/dealernet-agents/issues/130">issue</a> · branch <code>feature/130-feat-portal-vendas-de-veiculos</code> · <a href="https://github.com/rodrigoreisdealernet/dealernet-agents/pull/135">PR #135</a> · 86% complete</div>
+<div class="bar"><i></i></div>
+<div class="banner">🚧 Waiting on human gate: <b>merge</b></div>
+<table><tbody><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">01 · Spec<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">6 critérios de aceite (spec AI-DLC reaproveitada do corpo da issue)</div>
+          <div class="arts"><a href="docs/specs/130-feat-portal-vendas-de-veiculos.md">Spec</a></div>
+          
+        </td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">02 · Approve (human gate)<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">Spec aprovada pelo humano (--approved)</div>
+          
+          
+        </td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">03 · Code<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">6 arquivos: menu (portalApi), registry, VehiclesInventory (filtro em_estoque), VehicleSales (nova), i18n pt-BR/en-US — commit 496659f</div>
+          
+          <ul class="notes"><li>Iniciando: lendo telas/menu; editando portalApi.ts MOCK_MENU</li><li>criando VehicleSales.tsx (read-only, status=vendido); VehiclesInventory filtrado por em_estoque</li><li>i18n pt-BR/en-US adicionados; revisão estática TS ok; commitando</li></ul>
+        </td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">04 · Tests<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">verify-vehicle-sales-wiring.mjs: 10 passing; suíte completa 200 passing</div>
+          
+          <ul class="notes"><li>tester: reviewed coder diff + spec; authoring verify-vehicle-sales-wiring.mjs</li><li>verify-vehicle-sales-wiring.mjs green (10/10); full npm test list 200/200</li><li>Opened draft PR #135 with verify-vehicle-sales-wiring.mjs (200/200 green)</li></ul>
+        </td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">05 · Test review<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">APPROVE em 1 iteração — cobertura sólida, asserções fortes nos dois sentidos do filtro</div>
+          
+          <ul class="notes"><li>Auditing wiring tests vs impl for 6 ACs</li></ul>
+        </td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">06 · Code review<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">APPROVE — sem bloqueios; split sem vazamento, sem regressão, i18n em paridade</div>
+          <div class="arts"><a href="https://github.com/rodrigoreisdealernet/dealernet-agents/pull/135">PR review</a></div>
+          <ul class="notes"><li>Reviewed diff vs 6 ACs: APPROVE (posted as comment, self-approve blocked). em_estoque/vendido split holds, KPIs derived from filtered rows, i18n parity OK, read-only no write path. 10/10 wiring tests pass. PR marked ready.</li></ul>
+        </td>
+      </tr><tr class="waiting">
+        <td class="ic" style="color:#d97706">⏸</td>
+        <td class="lbl">Merge (human gate)<div class="st" style="color:#d97706">waiting</div></td>
+        <td class="meta">
+          
+          
+          
+        </td>
+      </tr></tbody></table>
+<div class="foot">auto-refreshes every 5s · last update 2026-06-26T12:15:22.497Z</div>
+</div></body></html>

@@ -11,7 +11,10 @@
       "service-estimate-rescue": "Resgate de orçamentos de serviço"
     },
     "findingTypes": {
-      "stock_aging_90d": "Veículo parado há 90+ dias"
+      "stock_aging_90d": "Veículo parado há 90+ dias",
+      "floor_plan_band_escalation": "Custo de floor plan prestes a subir de faixa",
+      "margin_erosion": "Erosão de margem",
+      "carryover_model_year": "Veículo de ano-modelo anterior (carryover)"
     },
     "actions": {
       "markdown": "Baixar preço",
@@ -251,6 +254,7 @@
     "fast-bi-service": "Oficina",
     "fast-bi-parts": "Peças",
     "fast-bi-vehicle-inventory": "Estoque de Veículos",
+    "fast-bi-receivables": "Contas a Receber",
     "dealership": "Concessionária",
     "dealership-veiculos": "Veículos",
     "dealership-vehicles": "Estoque de Veículos",
