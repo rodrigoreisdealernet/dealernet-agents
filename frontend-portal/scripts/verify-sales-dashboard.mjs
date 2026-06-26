@@ -207,19 +207,19 @@ test('AC3: KPI cards de receita VN/VU/total e margem formatados via formatBRLKpi
   }
 })
 
-test('AC3: os KPIs sao escopados ao mes atual (currentMonth), nao all-time', () => {
+test('AC3: os KPIs sao escopados ao mes selecionado (selectedMonth), nao all-time', () => {
   const src = read(SCREEN_PATH)
-  // Deve existir o computo do "mes atual".
+  // Deve existir o seletor de mes (selectedMonth, default no mes mais recente).
   assert.ok(
-    src.includes('currentMonth'),
-    'SalesDashboard.tsx deve computar o mes atual (token currentMonth)',
+    src.includes('selectedMonth'),
+    'SalesDashboard.tsx deve usar o mes selecionado (token selectedMonth)',
   )
-  // E a memo de KPIs deve filtrar pelo mes atual — remover esse filtro (KPIs
-  // all-time) deve quebrar este teste.
+  // E a memo de KPIs deve filtrar pelo mes selecionado — remover esse filtro
+  // (KPIs all-time) deve quebrar este teste.
   assert.match(
     src,
-    /const kpis[\s\S]*?r\.period_month\s*===\s*currentMonth/,
-    'a memo kpis deve filtrar por r.period_month === currentMonth (KPIs do mes, nao all-time)',
+    /const kpis[\s\S]*?r\.period_month\s*===\s*selectedMonth/,
+    'a memo kpis deve filtrar por r.period_month === selectedMonth (KPIs do mes, nao all-time)',
   )
 })
 
