@@ -19,16 +19,31 @@ Every test traces back to an acceptance criterion in
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any
 
 import pytest
+from fastapi.testclient import TestClient
 from temporal.src.ops_api.app import (
+    _BEARER_PREFIX,
     DEFAULT_MARKDOWN_PCT,
     EntityCurrentVersion,
     FindingRecord,
+    Principal,
     SupabaseServiceClient,
+    create_app,
     describe_action_effect,
 )
+
+# Single shared cross-language parity table (issue #126). The SAME fixture pins
+# the Python ``describe_action_effect`` (here) AND the TS ``describeActionEffect``
+# (frontend-portal/scripts/verify-decision-preview.mjs executes it at runtime), so
+# the duplicated rule cannot silently diverge between the two languages.
+_PARITY_FIXTURE = json.loads(
+    (Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "decision_preview_parity.json").read_text()
+)
+_PARITY_CASES: list[dict[str, Any]] = _PARITY_FIXTURE["cases"]
 
 _TENANT = "tenant-a-id"
 _VEHICLE_ID = "vehicle-entity-1"
@@ -170,6 +185,7 @@ def test_assist_only_agents_register_recommendation_without_dms_effect(
 
     approve = preview["on_approve"]
     assert approve["effect_key"] == "assist_only.register"
+    assert approve["is_noop"] is False
     assert approve["assist_only"] is True
     assert approve["audited"] is True
     # No DMS effect: no monetary impact is described and no execution params leak.
@@ -206,6 +222,47 @@ def test_reject_branch_is_always_audited_noop(finding_type: str, action: str) ->
     assert reject["audited"] is True
     # Reject never carries an executable params bag.
     assert reject["params"] == {}
+
+
+# ===========================================================================
+# AC2/AC4 — CROSS-LANGUAGE PARITY: the Python rule output is pinned to the SAME
+#           shared table that pins the TS mirror (executed in the frontend
+#           verify suite). A change to either language's rule must update this
+#           table, which immediately breaks the other language's test.
+# ===========================================================================
+
+
+@pytest.mark.parametrize("case", _PARITY_CASES, ids=[c["name"] for c in _PARITY_CASES])
+def test_describe_action_effect_matches_shared_parity_table(case: dict[str, Any]) -> None:
+    preview = describe_action_effect(
+        _finding(case["proposed_action"], finding_type=case["finding_type"])
+    )
+
+    for branch_name in ("on_approve", "on_reject"):
+        expected = case[branch_name]
+        actual = preview[branch_name]
+        assert actual["effect_key"] == expected["effect_key"], branch_name
+        assert actual["is_noop"] is expected["is_noop"], branch_name
+        assert actual["assist_only"] is expected["assist_only"], branch_name
+        assert actual["audited"] is expected["audited"], branch_name
+        # value_impact: pin the kind, and assert the amount stays None (the pure
+        # rule has no price; the UI shows the finding's delta instead).
+        impact = actual["value_impact"]
+        kind = None if impact is None else impact["kind"]
+        amount = None if impact is None else impact["amount"]
+        assert kind == expected["value_impact_kind"], branch_name
+        assert amount == expected["value_impact_amount"], branch_name
+        assert actual["params"] == expected["params"], branch_name
+
+
+def test_parity_table_covers_every_action_of_all_four_agents() -> None:
+    # Guard against the fixture silently shrinking: all vehicle-aging actions and
+    # all three assist-only agents must be represented (AC4 "all actions covered").
+    pairs = {(c["finding_type"], c["proposed_action"]) for c in _PARITY_CASES}
+    for action in ("markdown", "transfer", "prioritize_sale", "wholesale_auction", "monitor", "frobnicate", ""):
+        assert ("stock_aging_90d", action) in pairs, action
+    assist_only_types = {c["finding_type"] for c in _PARITY_CASES if c["finding_type"] != "stock_aging_90d"}
+    assert {"estimate_rescue", "collections_priority", "replenish_now", "dead_stock"} <= assist_only_types
 
 
 # ===========================================================================
@@ -366,3 +423,100 @@ async def test_parity_assist_only_preview_matches_no_dms_execution(finding_type:
     assert client.appended_versions == []
     assert client.inserted_actions == []
     assert client.audit_events == []
+
+
+@pytest.mark.asyncio
+async def test_parity_unknown_action_preview_matches_recorded_noop() -> None:
+    """AC4 — an unrecognised action on a vehicle-aging finding is an audited
+    no-op, and the recorded finding_action matches the described on_approve."""
+    finding = _finding("frobnicate")
+    approve = describe_action_effect(finding)["on_approve"]
+    client = _FakeClient(current=_vehicle(100000))
+
+    result = await client.execute_finding_action(finding=finding, approver=_APPROVER)
+
+    assert approve["effect_key"] == "generic.monitor_noop"
+    assert approve["is_noop"] is True
+    # No-op: the vehicle entity is never touched.
+    assert client.appended_versions == []
+    assert len(client.inserted_actions) == 1
+    recorded = client.inserted_actions[0]
+    assert recorded["status"] == "executed"
+    assert recorded["action_type"] == "frobnicate"
+    # The recorded payload preserves the unknown action — same value the preview
+    # carries in params, so description and record agree.
+    assert recorded["payload"] == {"note": "unknown_action", "action": "frobnicate"}
+    assert recorded["payload"]["action"] == approve["params"]["action"]
+    assert len(client.audit_events) == 1
+    assert result == {"executed": True, "action": "frobnicate", "status": "executed"}
+
+
+# ===========================================================================
+# AC1/AC5 — GET /api/ops/findings/{finding_id} exposes a well-formed
+#           decision_preview (read-only, no network). Uses a recording-fake
+#           Supabase client and FastAPI's TestClient.
+# ===========================================================================
+
+
+class _FakeFindingApiClient:
+    """Fake Supabase client exposing only what the detail endpoint needs."""
+
+    def __init__(self, finding: FindingRecord | None) -> None:
+        self._finding = finding
+        self.principal = Principal(
+            sub="u-1", name="Ana", role="branch_manager", tenant="tenant-a", can_operate=True
+        )
+
+    async def authenticate_user(self, *, user_jwt: str) -> Principal:
+        return self.principal
+
+    async def get_tenant_id_by_key(self, *, tenant_key: str) -> str | None:
+        return _TENANT if tenant_key == "tenant-a" else None
+
+    async def get_finding(self, *, finding_id: str, tenant_id: str) -> FindingRecord | None:
+        if self._finding is not None and finding_id == self._finding.id and tenant_id == _TENANT:
+            return self._finding
+        return None
+
+
+def _finding_api_client(finding: FindingRecord | None) -> TestClient:
+    app = create_app(supabase_client=_FakeFindingApiClient(finding), connector_registry={})
+    return TestClient(app)
+
+
+def _auth_header() -> dict[str, str]:
+    return {"Authorization": f"{_BEARER_PREFIX} test-token"}
+
+
+def test_get_finding_detail_returns_wellformed_decision_preview() -> None:
+    client = _finding_api_client(_finding("markdown", status="pending_approval"))
+
+    res = client.get(f"/api/ops/findings/{_FINDING_ID}", headers=_auth_header())
+
+    assert res.status_code == 200
+    body = res.json()
+    assert body["id"] == _FINDING_ID
+    assert body["finding_type"] == _VEHICLE_AGING_TYPE
+    assert body["status"] == "pending_approval"
+    assert body["proposed_action"] == "markdown"
+
+    preview = body["decision_preview"]
+    assert set(preview) == {"on_approve", "on_reject"}
+    expected_branch_keys = {"effect_key", "is_noop", "value_impact", "audited", "assist_only", "params"}
+    for branch in preview.values():
+        assert set(branch) == expected_branch_keys
+
+    # Faithful to the markdown rule and the always-no-op reject branch.
+    assert preview["on_approve"]["effect_key"] == "vehicle_aging.markdown"
+    assert preview["on_approve"]["params"]["markdown_pct"] == DEFAULT_MARKDOWN_PCT
+    assert preview["on_approve"]["value_impact"]["kind"] == "recoverable"
+    assert preview["on_reject"]["effect_key"] == "generic.reject_noop"
+    assert preview["on_reject"]["is_noop"] is True
+
+
+def test_get_finding_detail_404_when_finding_missing() -> None:
+    client = _finding_api_client(None)
+
+    res = client.get("/api/ops/findings/does-not-exist", headers=_auth_header())
+
+    assert res.status_code == 404

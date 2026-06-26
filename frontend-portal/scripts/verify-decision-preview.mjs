@@ -9,12 +9,14 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync, existsSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
+import { readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { fileURLToPath, pathToFileURL } from 'node:url'
+import { tmpdir } from 'node:os'
 import { dirname, resolve } from 'node:path'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = resolve(__dirname, '..')
+const REPO_ROOT = resolve(ROOT, '..')
 
 function read(relPath) {
   const full = resolve(ROOT, relPath)
@@ -32,6 +34,39 @@ const PT_BR = 'src/i18n/messages/pt-BR.json'
 const EN_US = 'src/i18n/messages/en-US.json'
 
 const LOCALES = [['pt-BR', PT_BR], ['en-US', EN_US]]
+
+// Tabela compartilhada que fixa as DUAS linguagens (Python + TS) a um unico
+// conjunto de saidas esperadas. O teste de runtime abaixo executa de fato o
+// describeActionEffect do agentsApi.ts e o compara a esta tabela; o pytest
+// (temporal/tests/test_decision_preview.py) compara o describe_action_effect
+// Python a ela. Mudar a regra em uma linguagem quebra a outra.
+const PARITY_FIXTURE = JSON.parse(
+  readFileSync(resolve(REPO_ROOT, 'tests/fixtures/decision_preview_parity.json'), 'utf8'),
+)
+
+// Extrai o codigo-fonte VERBATIM de describeActionEffect (+ suas constantes) do
+// agentsApi.ts e o importa isolado. O modulo completo nao pode ser importado
+// sem node_modules (depende de @supabase/supabase-js e import.meta.env do Vite),
+// mas a funcao e pura — entao executamos o codigo REAL, nao um grep.
+let _describeActionEffect
+async function loadDescribeActionEffect() {
+  if (_describeActionEffect) return _describeActionEffect
+  const src = read(AGENTS_API)
+  const start = src.indexOf('const VEHICLE_AGING_FINDING_TYPE')
+  assert.ok(start > -1, 'nao encontrei as constantes de describeActionEffect em agentsApi.ts')
+  const marker = 'return { on_approve: onApprove, on_reject: onReject }'
+  const mIdx = src.indexOf(marker, start)
+  assert.ok(mIdx > -1, 'nao encontrei o return de describeActionEffect em agentsApi.ts')
+  const end = src.indexOf('}', mIdx + marker.length) + 1
+  const snippet = src.slice(start, end)
+  assert.match(snippet, /export function describeActionEffect\(/, 'o trecho extraido deve conter describeActionEffect')
+  const tmp = resolve(tmpdir(), `describeActionEffect_${process.pid}_${Date.now()}.ts`)
+  writeFileSync(tmp, snippet)
+  const mod = await import(pathToFileURL(tmp).href)
+  _describeActionEffect = mod.describeActionEffect
+  return _describeActionEffect
+}
+
 
 // Cada effect_key descrito por describeActionEffect mapeia para a chave i18n do
 // texto exibido (preview.*). Mantem o teste fiel ao espelho do backend.
@@ -82,13 +117,18 @@ test('AC1 ordem: os dois blocos de previa aparecem ANTES dos botoes Approve/Reje
   const src = read(FINDING_DETAIL)
   const approveBranchIdx = src.search(/renderBranch\(\s*data\.decision_preview\.on_approve/)
   const rejectBranchIdx = src.search(/renderBranch\(\s*data\.decision_preview\.on_reject/)
-  // O bloco de botoes de decisao (ternario pending_approval com <button>).
-  const buttonsIdx = src.search(/data\.status\s*===\s*'pending_approval'\s*\?\s*\(\s*\n?\s*<div className="flex gap-2">/)
+  // Ancora robusta (sem depender de markup/classe): o handler do botao Approve
+  // (openDialog('approve')) e o do Reject (openDialog('reject')).
+  const approveBtnIdx = src.search(/openDialog\(\s*'approve'\s*\)/)
+  const rejectBtnIdx = src.search(/openDialog\(\s*'reject'\s*\)/)
   assert.ok(approveBranchIdx > -1, 'ramo on_approve deve ser renderizado')
   assert.ok(rejectBranchIdx > -1, 'ramo on_reject deve ser renderizado')
-  assert.ok(buttonsIdx > -1, 'o bloco de botoes Approve/Reject deve existir')
-  assert.ok(approveBranchIdx < buttonsIdx, 'o ramo Ao aprovar deve preceder os botoes')
-  assert.ok(rejectBranchIdx < buttonsIdx, 'o ramo Ao recusar deve preceder os botoes')
+  assert.ok(approveBtnIdx > -1, 'o botao Approve (openDialog("approve")) deve existir')
+  assert.ok(rejectBtnIdx > -1, 'o botao Reject (openDialog("reject")) deve existir')
+  // Ambos os blocos de previa precedem ambos os handlers de decisao.
+  const firstButtonIdx = Math.min(approveBtnIdx, rejectBtnIdx)
+  assert.ok(approveBranchIdx < firstButtonIdx, 'o ramo Ao aprovar deve preceder os botoes de decisao')
+  assert.ok(rejectBranchIdx < firstButtonIdx, 'o ramo Ao recusar deve preceder os botoes de decisao')
 })
 
 // ---------------------------------------------------------------------------
@@ -152,6 +192,53 @@ test('AC4 espelho: agentsApi.describeActionEffect produz exatamente os 5 effect_
     /PENDING_EXECUTION_ACTIONS\s*=\s*\[\s*'transfer',\s*'prioritize_sale',\s*'wholesale_auction'\s*\]/,
     'acoes de disposicao fieis ao backend',
   )
+})
+
+// ---------------------------------------------------------------------------
+// AC4 — PARIDADE CROSS-LANGUAGE (runtime): EXECUTA o describeActionEffect real
+//       do agentsApi.ts e compara sua saida, para TODA acao dos 4 agentes, com
+//       a MESMA tabela compartilhada que fixa o describe_action_effect Python.
+//       Fecha a lacuna de divergencia silenciosa entre Python e TS.
+// ---------------------------------------------------------------------------
+test('AC4 paridade runtime: TS describeActionEffect bate com a tabela compartilhada para todas as acoes/agentes', async () => {
+  const describeActionEffect = await loadDescribeActionEffect()
+  assert.equal(typeof describeActionEffect, 'function', 'describeActionEffect deve ser importavel e executavel')
+
+  for (const c of PARITY_FIXTURE.cases) {
+    const preview = describeActionEffect({
+      finding_type: c.finding_type,
+      proposed_action: c.proposed_action,
+    })
+    for (const branchName of ['on_approve', 'on_reject']) {
+      const expected = c[branchName]
+      const actual = preview[branchName]
+      const where = `${c.name} / ${branchName}`
+      assert.equal(actual.effect_key, expected.effect_key, `effect_key (${where})`)
+      assert.equal(actual.is_noop, expected.is_noop, `is_noop (${where})`)
+      assert.equal(actual.assist_only, expected.assist_only, `assist_only (${where})`)
+      assert.equal(actual.audited, expected.audited, `audited (${where})`)
+      const kind = actual.value_impact === null ? null : actual.value_impact.kind
+      const amount = actual.value_impact === null ? null : actual.value_impact.amount
+      assert.equal(kind, expected.value_impact_kind, `value_impact.kind (${where})`)
+      // Contrato fiel: o amount permanece null (a regra e pura; o valor exibido
+      // e o delta do achado). NUNCA inventar um amount aqui.
+      assert.equal(amount, expected.value_impact_amount, `value_impact.amount (${where})`)
+      assert.deepEqual(actual.params, expected.params, `params (${where})`)
+    }
+  }
+})
+
+test('AC4 paridade: a tabela compartilhada cobre todas as acoes dos 4 agentes', () => {
+  const pairs = new Set(PARITY_FIXTURE.cases.map((c) => `${c.finding_type}::${c.proposed_action}`))
+  for (const action of ['markdown', 'transfer', 'prioritize_sale', 'wholesale_auction', 'monitor', 'frobnicate', '']) {
+    assert.ok(pairs.has(`stock_aging_90d::${action}`), `falta caso stock_aging_90d / '${action}'`)
+  }
+  const assistTypes = new Set(
+    PARITY_FIXTURE.cases.filter((c) => c.finding_type !== 'stock_aging_90d').map((c) => c.finding_type),
+  )
+  for (const ft of ['estimate_rescue', 'collections_priority', 'replenish_now', 'dead_stock']) {
+    assert.ok(assistTypes.has(ft), `falta agente assist-only '${ft}' na tabela`)
+  }
 })
 
 // ---------------------------------------------------------------------------

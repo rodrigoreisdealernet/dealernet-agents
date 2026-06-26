@@ -1,0 +1,271 @@
+{
+  "_comment": [
+    "SHARED cross-language parity table for the decision preview rule (issue #126).",
+    "The action->effect rule is duplicated in Python (temporal/src/ops_api/app.py:describe_action_effect)",
+    "and TypeScript (frontend-portal/src/portal/lib/agentsApi.ts:describeActionEffect).",
+    "Both implementations are pinned to THIS table:",
+    "  - temporal/tests/test_decision_preview.py asserts describe_action_effect == cases here.",
+    "  - frontend-portal/scripts/verify-decision-preview.mjs EXECUTES the TS describeActionEffect",
+    "    and asserts its output == cases here.",
+    "If either language's rule changes, this table must change too, which immediately breaks the",
+    "other language's test -- so Python and TS can never silently diverge.",
+    "Note: value_impact.amount is intentionally null in both (describe_*_effect is PURE over a",
+    "FindingRecord that has no price); the monetary figure is the finding's delta, shown in the UI.",
+    "The faithful contract is (kind + markdown_pct in params), which is what is pinned here."
+  ],
+  "cases": [
+    {
+      "name": "vehicle-aging markdown",
+      "finding_type": "stock_aging_90d",
+      "proposed_action": "markdown",
+      "on_approve": {
+        "effect_key": "vehicle_aging.markdown",
+        "is_noop": false,
+        "assist_only": true,
+        "audited": true,
+        "value_impact_kind": "recoverable",
+        "value_impact_amount": null,
+        "params": { "markdown_pct": 0.1 }
+      },
+      "on_reject": {
+        "effect_key": "generic.reject_noop",
+        "is_noop": true,
+        "assist_only": true,
+        "audited": true,
+        "value_impact_kind": "exposure",
+        "value_impact_amount": null,
+        "params": {}
+      }
+    },
+    {
+      "name": "vehicle-aging transfer",
+      "finding_type": "stock_aging_90d",
+      "proposed_action": "transfer",
+      "on_approve": {
+        "effect_key": "vehicle_aging.disposition",
+        "is_noop": false,
+        "assist_only": true,
+        "audited": true,
+        "value_impact_kind": "recoverable",
+        "value_impact_amount": null,
+        "params": { "disposition": "transfer" }
+      },
+      "on_reject": {
+        "effect_key": "generic.reject_noop",
+        "is_noop": true,
+        "assist_only": true,
+        "audited": true,
+        "value_impact_kind": "exposure",
+        "value_impact_amount": null,
+        "params": {}
+      }
+    },
+    {
+      "name": "vehicle-aging prioritize_sale",
+      "finding_type": "stock_aging_90d",
+      "proposed_action": "prioritize_sale",
+      "on_approve": {
+        "effect_key": "vehicle_aging.disposition",
+        "is_noop": false,
+        "assist_only": true,
+        "audited": true,
+        "value_impact_kind": "recoverable",
+        "value_impact_amount": null,
+        "params": { "disposition": "prioritize_sale" }
+      },
+      "on_reject": {
+        "effect_key": "generic.reject_noop",
+        "is_noop": true,
+        "assist_only": true,
+        "audited": true,
+        "value_impact_kind": "exposure",
+        "value_impact_amount": null,
+        "params": {}
+      }
+    },
+    {
+      "name": "vehicle-aging wholesale_auction",
+      "finding_type": "stock_aging_90d",
+      "proposed_action": "wholesale_auction",
+      "on_approve": {
+        "effect_key": "vehicle_aging.disposition",
+        "is_noop": false,
+        "assist_only": true,
+        "audited": true,
+        "value_impact_kind": "recoverable",
+        "value_impact_amount": null,
+        "params": { "disposition": "wholesale_auction" }
+      },
+      "on_reject": {
+        "effect_key": "generic.reject_noop",
+        "is_noop": true,
+        "assist_only": true,
+        "audited": true,
+        "value_impact_kind": "exposure",
+        "value_impact_amount": null,
+        "params": {}
+      }
+    },
+    {
+      "name": "vehicle-aging monitor",
+      "finding_type": "stock_aging_90d",
+      "proposed_action": "monitor",
+      "on_approve": {
+        "effect_key": "generic.monitor_noop",
+        "is_noop": true,
+        "assist_only": true,
+        "audited": true,
+        "value_impact_kind": null,
+        "value_impact_amount": null,
+        "params": {}
+      },
+      "on_reject": {
+        "effect_key": "generic.reject_noop",
+        "is_noop": true,
+        "assist_only": true,
+        "audited": true,
+        "value_impact_kind": null,
+        "value_impact_amount": null,
+        "params": {}
+      }
+    },
+    {
+      "name": "vehicle-aging unknown action",
+      "finding_type": "stock_aging_90d",
+      "proposed_action": "frobnicate",
+      "on_approve": {
+        "effect_key": "generic.monitor_noop",
+        "is_noop": true,
+        "assist_only": true,
+        "audited": true,
+        "value_impact_kind": null,
+        "value_impact_amount": null,
+        "params": { "action": "frobnicate" }
+      },
+      "on_reject": {
+        "effect_key": "generic.reject_noop",
+        "is_noop": true,
+        "assist_only": true,
+        "audited": true,
+        "value_impact_kind": null,
+        "value_impact_amount": null,
+        "params": {}
+      }
+    },
+    {
+      "name": "vehicle-aging empty action",
+      "finding_type": "stock_aging_90d",
+      "proposed_action": "",
+      "on_approve": {
+        "effect_key": "generic.monitor_noop",
+        "is_noop": true,
+        "assist_only": true,
+        "audited": true,
+        "value_impact_kind": null,
+        "value_impact_amount": null,
+        "params": {}
+      },
+      "on_reject": {
+        "effect_key": "generic.reject_noop",
+        "is_noop": true,
+        "assist_only": true,
+        "audited": true,
+        "value_impact_kind": null,
+        "value_impact_amount": null,
+        "params": {}
+      }
+    },
+    {
+      "name": "assist-only service-estimate-rescue",
+      "finding_type": "estimate_rescue",
+      "proposed_action": "prioritize",
+      "on_approve": {
+        "effect_key": "assist_only.register",
+        "is_noop": false,
+        "assist_only": true,
+        "audited": true,
+        "value_impact_kind": null,
+        "value_impact_amount": null,
+        "params": {}
+      },
+      "on_reject": {
+        "effect_key": "generic.reject_noop",
+        "is_noop": true,
+        "assist_only": true,
+        "audited": true,
+        "value_impact_kind": null,
+        "value_impact_amount": null,
+        "params": {}
+      }
+    },
+    {
+      "name": "assist-only collections-prioritizer",
+      "finding_type": "collections_priority",
+      "proposed_action": "prioritize",
+      "on_approve": {
+        "effect_key": "assist_only.register",
+        "is_noop": false,
+        "assist_only": true,
+        "audited": true,
+        "value_impact_kind": null,
+        "value_impact_amount": null,
+        "params": {}
+      },
+      "on_reject": {
+        "effect_key": "generic.reject_noop",
+        "is_noop": true,
+        "assist_only": true,
+        "audited": true,
+        "value_impact_kind": null,
+        "value_impact_amount": null,
+        "params": {}
+      }
+    },
+    {
+      "name": "assist-only parts-inventory-advisor replenish_now",
+      "finding_type": "replenish_now",
+      "proposed_action": "replenish_now",
+      "on_approve": {
+        "effect_key": "assist_only.register",
+        "is_noop": false,
+        "assist_only": true,
+        "audited": true,
+        "value_impact_kind": null,
+        "value_impact_amount": null,
+        "params": {}
+      },
+      "on_reject": {
+        "effect_key": "generic.reject_noop",
+        "is_noop": true,
+        "assist_only": true,
+        "audited": true,
+        "value_impact_kind": null,
+        "value_impact_amount": null,
+        "params": {}
+      }
+    },
+    {
+      "name": "assist-only parts-inventory-advisor dead_stock",
+      "finding_type": "dead_stock",
+      "proposed_action": "dead_stock",
+      "on_approve": {
+        "effect_key": "assist_only.register",
+        "is_noop": false,
+        "assist_only": true,
+        "audited": true,
+        "value_impact_kind": null,
+        "value_impact_amount": null,
+        "params": {}
+      },
+      "on_reject": {
+        "effect_key": "generic.reject_noop",
+        "is_noop": true,
+        "assist_only": true,
+        "audited": true,
+        "value_impact_kind": null,
+        "value_impact_amount": null,
+        "params": {}
+      }
+    }
+  ]
+}

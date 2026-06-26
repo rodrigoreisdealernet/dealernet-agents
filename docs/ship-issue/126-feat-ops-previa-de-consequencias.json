@@ -4,9 +4,9 @@
   "slug": "feat-ops-previa-de-consequencias",
   "branch": "feature/126-feat-ops-previa-de-consequencias",
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/126",
-  "pr": null,
-  "prUrl": null,
-  "updatedAt": "2026-06-26T15:05:38.441Z",
+  "pr": "147",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/147",
+  "updatedAt": "2026-06-26T15:16:09.513Z",
   "steps": [
     {
       "id": "spec",
@@ -47,8 +47,8 @@
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "running",
-      "summary": "",
+      "status": "done",
+      "summary": "pytest 61 pass (45 new decision_preview + parity), frontend 234 pass (8 new verify-decision-preview); fixed dropped AgentScheduleNotProvisioned class",
       "artifacts": [],
       "notes": [
         "Writing pytest describe_action_effect parity tests + node --test verify-decision-preview",
@@ -59,10 +59,14 @@
     {
       "id": "test-review",
       "label": "05 · Test review",
-      "status": "pending",
+      "status": "running",
       "summary": "",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "Reviewer starting tests-mode audit of decision_preview suite (pytest parity + node verify)",
+        "CHANGES REQUESTED: Python parity solid, but TS mirror rule (agentsApi.ts) is grep-only/never executed, no cross-language parity test, and AC2 displayed value (data.delta) not verified vs recorded markdown. Posted to PR #147.",
+        "tester addressing review round 1"
+      ],
       "gate": null
     },
     {
