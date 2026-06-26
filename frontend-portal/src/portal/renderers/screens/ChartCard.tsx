@@ -68,6 +68,9 @@ export interface ChartCardProps {
   valueFormat?: ValueFormat
   emptyMessage?: string
   height?: number
+  /** BAR de série única: pinta cada barra com uma cor distinta (cicla a paleta),
+   *  como o pie faz por fatia. Ignorado em line/pie ou com múltiplas séries. */
+  colorByPoint?: boolean
 }
 
 const DEFAULT_HEIGHT = 280
@@ -112,6 +115,7 @@ export function ChartCard({
   valueFormat = 'number',
   emptyMessage: emptyMessageProp,
   height = DEFAULT_HEIGHT,
+  colorByPoint = false,
 }: ChartCardProps) {
   const common = useTranslations('common')
   const isEmpty = !data || data.length === 0 || series.length === 0
@@ -188,7 +192,13 @@ export function ChartCard({
                 name={s.label ?? s.key}
                 fill={seriesColor(s, index)}
                 radius={[2, 2, 0, 0]}
-              />
+              >
+                {colorByPoint && series.length === 1
+                  ? data.map((_, i) => (
+                      <Cell key={`bar-${i}`} fill={DEFAULT_PALETTE[i % DEFAULT_PALETTE.length]} />
+                    ))
+                  : null}
+              </Bar>
             ))}
           </BarChart>
         ) : (
