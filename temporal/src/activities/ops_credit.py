@@ -383,6 +383,7 @@ async def ops_credit_assess(
     account_payload: dict[str, Any], config: dict[str, Any], run_id: str | None = None
 ) -> dict[str, Any]:
     bounds = config.get("bounds") or {}
+    locale = str(config.get("locale") or "pt-BR")
     max_tool_rounds = int(_coerce_float(bounds.get("max_tool_rounds")) or 5)
     tools = _normalize_tools(list(config.get("tools") or []))
     system_prompt = str(
@@ -436,6 +437,7 @@ async def ops_credit_assess(
             user_prompt_template=rendered_user_prompt,
             tools=tools,
             tool_executor=tool_executor,
+            locale=locale,
             max_tool_rounds=max_tool_rounds,
             on_llm_call=usage_sink,
         )
@@ -924,6 +926,7 @@ async def ops_application_assess(
     human analyst approval.
     """
     bounds = config.get("bounds") or {}
+    locale = str(config.get("locale") or "pt-BR")
     max_tool_rounds = int(_coerce_float(bounds.get("max_tool_rounds")) or 5)
     tools = _normalize_tools(list(config.get("tools") or []))
     system_prompt = str(
@@ -961,6 +964,7 @@ async def ops_application_assess(
         user_prompt_template=user_prompt_template,
         tools=tools,
         tool_executor=tool_executor,
+        locale=locale,
         max_tool_rounds=max_tool_rounds,
     )
     result.setdefault("operating_model_tags", list(_CREDIT_APPLICATION_OPERATING_MODEL_TAGS))

@@ -67,6 +67,56 @@ def test_assistant_chat_returns_reply_and_filters_navigation(monkeypatch: pytest
     assert body["suggestions"] == ["E a margem?"]
 
 
+def test_assistant_chat_forwards_resolved_context_locale(monkeypatch: pytest.MonkeyPatch) -> None:
+    principal = Principal(sub="u-1", name="Dona", role="branch_manager", tenant="tenant-a", can_operate=True)
+    supabase = _FakeSupabaseAuth(principal=principal)
+    seen_contexts: list[dict[str, Any]] = []
+
+    async def _fake_run(history: Any, context: Any, **_kwargs: Any) -> AssistantReplyV1:
+        seen_contexts.append(dict(context))
+        return AssistantReplyV1(reply="Sales are available.", actions=[], suggestions=[])
+
+    monkeypatch.setattr(ops_app, "run_portal_assistant", _fake_run)
+    app = create_app(supabase_client=supabase, temporal_client=object())
+    client = TestClient(app)
+    body = _chat_body()
+    body["context"]["locale"] = "en-US"
+
+    res = client.post(
+        "/api/ops/assistant/chat",
+        json=body,
+        headers={"Authorization": f"{_BEARER_PREFIX} test-token"},
+    )
+
+    assert res.status_code == 200
+    assert seen_contexts[0]["locale"] == "en-US"
+
+
+def test_assistant_chat_falls_back_to_default_locale_for_unknown_context_locale(monkeypatch: pytest.MonkeyPatch) -> None:
+    principal = Principal(sub="u-1", name="Dona", role="branch_manager", tenant="tenant-a", can_operate=True)
+    supabase = _FakeSupabaseAuth(principal=principal)
+    seen_contexts: list[dict[str, Any]] = []
+
+    async def _fake_run(history: Any, context: Any, **_kwargs: Any) -> AssistantReplyV1:
+        seen_contexts.append(dict(context))
+        return AssistantReplyV1(reply="Vendas disponíveis.", actions=[], suggestions=[])
+
+    monkeypatch.setattr(ops_app, "run_portal_assistant", _fake_run)
+    app = create_app(supabase_client=supabase, temporal_client=object())
+    client = TestClient(app)
+    body = _chat_body()
+    body["context"]["locale"] = "fr-FR"
+
+    res = client.post(
+        "/api/ops/assistant/chat",
+        json=body,
+        headers={"Authorization": f"{_BEARER_PREFIX} test-token"},
+    )
+
+    assert res.status_code == 200
+    assert seen_contexts[0]["locale"] == "pt-BR"
+
+
 def test_assistant_chat_requires_bearer_token(monkeypatch: pytest.MonkeyPatch) -> None:
     client = _build_client(monkeypatch)
     res = client.post("/api/ops/assistant/chat", json=_chat_body())

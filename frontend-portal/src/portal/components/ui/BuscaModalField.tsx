@@ -7,6 +7,7 @@
 import { useEffect, useRef, useState } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { Loader2, Search, X } from 'lucide-react'
+import { useTranslations } from 'use-intl'
 
 export interface BuscaItem {
   value: string
@@ -32,11 +33,12 @@ export default function BuscaModalField({
   selectedLabel,
   onChange,
   buscar,
-  titulo = 'Buscar',
-  placeholder = 'Nenhum selecionado',
+  titulo,
+  placeholder,
   invalid,
   disabled,
 }: BuscaModalFieldProps) {
+  const t = useTranslations('common.searchModal')
   const [open, setOpen] = useState(false)
   const [termo, setTermo] = useState('')
   const [itens, setItens] = useState<BuscaItem[]>([])
@@ -72,6 +74,8 @@ export default function BuscaModalField({
   // senão o label do registro (selectedLabel), senão o código.
   const labelLocal = picked && picked.value === value ? picked.label : ''
   const textoCampo = value ? labelLocal || selectedLabel || `#${value}` : ''
+  const dialogTitle = titulo ?? t('search')
+  const fieldPlaceholder = placeholder ?? t('noneSelected')
 
   function selecionar(item: BuscaItem) {
     setPicked({ value: item.value, label: item.label })
@@ -84,12 +88,12 @@ export default function BuscaModalField({
   const inputCls = `w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary ${invalid ? 'border-destructive' : 'border-input'}`
   return (
     <div className="flex items-center gap-2">
-      <input readOnly value={textoCampo} placeholder={placeholder} className={`${inputCls} flex-1 cursor-default`} />
+      <input readOnly value={textoCampo} placeholder={fieldPlaceholder} className={`${inputCls} flex-1 cursor-default`} />
       {value && !disabled && (
         <button
           type="button"
           className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          title="Limpar"
+          title={t('clear')}
           onClick={() => onChange('')}
         >
           <X size={15} />
@@ -102,7 +106,7 @@ export default function BuscaModalField({
             disabled={disabled}
             className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-input px-3 py-2 text-sm font-medium transition-colors hover:bg-muted disabled:opacity-60"
           >
-            <Search size={14} /> Buscar
+            <Search size={14} /> {t('search')}
           </button>
         </Dialog.Trigger>
         <Dialog.Portal>
@@ -115,9 +119,9 @@ export default function BuscaModalField({
             className="fixed left-1/2 top-1/2 z-[1101] w-[min(560px,92vw)] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-card p-4 shadow-xl"
           >
             <div className="mb-3 flex items-center justify-between">
-              <Dialog.Title className="text-sm font-semibold">{titulo}</Dialog.Title>
+              <Dialog.Title className="text-sm font-semibold">{dialogTitle}</Dialog.Title>
               <Dialog.Close asChild>
-                <button type="button" className="rounded-md p-1 text-muted-foreground hover:bg-muted" aria-label="Fechar">
+                <button type="button" className="rounded-md p-1 text-muted-foreground hover:bg-muted" aria-label={t('close')}>
                   <X size={16} />
                 </button>
               </Dialog.Close>
@@ -128,21 +132,21 @@ export default function BuscaModalField({
                 ref={inputRef}
                 value={termo}
                 onChange={(e) => setTermo(e.target.value)}
-                placeholder="Digite nome ou documento…"
+                placeholder={t('queryPlaceholder')}
                 className="w-full rounded-lg border border-input bg-background py-2 pl-8 pr-3 text-sm outline-none focus:border-primary"
               />
             </div>
             <div className="max-h-[50vh] overflow-auto rounded-lg border border-border">
               {loading && (
                 <p className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
-                  <Loader2 size={15} className="animate-spin" /> Buscando…
+                  <Loader2 size={15} className="animate-spin" /> {t('searching')}
                 </p>
               )}
               {!loading && !termo.trim() && (
-                <p className="py-6 text-center text-sm text-muted-foreground">Digite ao menos 1 caractere para buscar.</p>
+                <p className="py-6 text-center text-sm text-muted-foreground">{t('minChars')}</p>
               )}
               {!loading && termo.trim() && itens.length === 0 && (
-                <p className="py-6 text-center text-sm text-muted-foreground">Nenhum resultado.</p>
+                <p className="py-6 text-center text-sm text-muted-foreground">{t('noResults')}</p>
               )}
               {!loading &&
                 itens.map((it) => (

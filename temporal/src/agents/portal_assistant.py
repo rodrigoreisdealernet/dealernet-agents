@@ -12,6 +12,7 @@ import asyncio
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from .i18n import DEFAULT_LOCALE, language_directive, resolve_locale
 from .openai_client import ChatCompletionTransport, chat_with_tools
 from .portal_assistant_schema import AssistantReplyV1
 from .tools.dia_bi import (
@@ -26,10 +27,9 @@ MAX_HISTORY_MESSAGES = 24
 MAX_CHART_POINTS = 30
 MAX_CHARTS = 3
 
-_SYSTEM_PROMPT = """\
+_SYSTEM_PROMPT_TEMPLATE = """\
 Você é a DIA (Dealernet Intelligence Agents), a assistente conversacional do Portal DMS \
-de uma concessionária. Responda SEMPRE em português do Brasil, de forma concisa, factual \
-e cordial.
+de uma concessionária. {language_directive} Seja concisa, factual e cordial.
 
 Você tem três poderes:
 1. RESPONDER com dados reais do negócio. Para isso, use as ferramentas de BI (somente \
@@ -85,7 +85,9 @@ def build_messages(
 ) -> tuple[list[dict[str, str]], set[str]]:
     """Build the [system, *history] message list and the allowed-screen key set."""
     screens_block, allowed_keys = _format_screens(context.get("available_screens") or [])
-    system = _SYSTEM_PROMPT.format(
+    locale = resolve_locale(str(context.get("locale") or DEFAULT_LOCALE))
+    system = _SYSTEM_PROMPT_TEMPLATE.format(
+        language_directive=language_directive(locale),
         empresa_id=str(context.get("empresa_id") or "—"),
         current_screen=str(context.get("current_screen") or "—"),
         screens_block=screens_block,

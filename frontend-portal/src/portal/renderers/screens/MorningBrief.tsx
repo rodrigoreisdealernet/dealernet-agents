@@ -12,6 +12,7 @@
 // fase (só valores absolutos); setores sem dado renderizam "—".
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'use-intl'
+import { useLocale } from '@/i18n/LocaleProvider'
 import {
   decideFinding,
   getFindings,
@@ -448,14 +449,15 @@ function indexStores(stores: OwnerBriefStoreRow[]): Record<string, OwnerBriefSto
   return out
 }
 
-function briefDateLabel(): string {
+function briefDateLabel(locale: string): string {
   // Conceito do painel = MÊS ATUAL (month-to-date); rótulo é o mês corrente.
-  return new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+  return new Date().toLocaleDateString(locale, { month: 'long', year: 'numeric' })
 }
 
 export default function MorningBrief() {
   const t = useTranslations('screens.morningBrief')
   const common = useTranslations('common')
+  const { locale } = useLocale()
   const { compact } = useBreakpoint()
   const [brands, setBrands] = useState<OwnerBriefBrandRow[]>([])
   const [stores, setStores] = useState<OwnerBriefStoreRow[]>([])
@@ -510,7 +512,7 @@ export default function MorningBrief() {
     }
   }, [])
 
-  const dateLabel = briefDateLabel()
+  const dateLabel = briefDateLabel(locale)
 
   if (loading) {
     return (

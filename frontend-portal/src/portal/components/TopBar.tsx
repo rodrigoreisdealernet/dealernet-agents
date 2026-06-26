@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
-import { AppWindow, Check, Columns2, Copy, Menu, Minimize, Moon, Palette, Sun, User, XSquare } from 'lucide-react'
+import { AppWindow, Check, Columns2, Copy, Languages, Menu, Minimize, Moon, Palette, Sun, User, XSquare } from 'lucide-react'
 import { useTranslations } from 'use-intl'
 import { usePortalStore } from '@/portal/store/portalStore'
 import { useTheme, ACCENTS } from '@/hooks/use-theme'
@@ -183,6 +183,7 @@ export function TopBar() {
             title={t('language')}
             className="flex h-8 items-center gap-1.5 rounded-md px-2 text-white/80 outline-none transition-colors hover:bg-white/10 hover:text-white data-[state=open]:bg-white/10"
           >
+            <Languages size={16} />
             <LocaleFlag locale={locale} />
             <span className="hidden text-xs font-medium sm:inline">{locale}</span>
           </DropdownMenu.Trigger>

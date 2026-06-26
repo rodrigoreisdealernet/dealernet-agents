@@ -558,6 +558,7 @@ async def ops_disposition_assess(
     stale-data callouts, and operating-model tags.
     """
     bounds = config.get("bounds") or {}
+    locale = str(config.get("locale") or "pt-BR")
     max_tool_rounds = int(_coerce_float(bounds.get("max_tool_rounds")) or 5)
     tools = _normalize_tools(list(config.get("tools") or []))
     system_prompt = str(
@@ -615,6 +616,7 @@ async def ops_disposition_assess(
             user_prompt_template=rendered_user,
             tools=tools,
             tool_executor=tool_executor,
+            locale=locale,
             max_tool_rounds=max_tool_rounds,
         )
         result.setdefault("asset_id", str(asset_payload.get("asset_id") or ""))
