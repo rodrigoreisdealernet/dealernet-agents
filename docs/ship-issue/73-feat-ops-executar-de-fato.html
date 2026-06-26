@@ -9,7 +9,7 @@
   .sub{color:#9ca3af;font-size:13px;margin-bottom:16px}
   .sub a{color:#60a5fa;text-decoration:none}
   .bar{height:8px;background:#1f2937;border-radius:99px;overflow:hidden;margin:12px 0 20px}
-  .bar>i{display:block;height:100%;background:#16a34a;width:57%}
+  .bar>i{display:block;height:100%;background:#16a34a;width:86%}
   .banner{background:#7c2d12;color:#fed7aa;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:14px}
   table{width:100%;border-collapse:collapse}
   td{padding:12px 8px;border-top:1px solid #1f2937;vertical-align:top}
@@ -24,9 +24,9 @@
   .foot{color:#6b7280;font-size:12px;margin-top:20px}
 </style></head><body><div class="wrap">
 <h1>ship-issue #73 — feat(ops): executar de fato a ação recomendada após aprovação do agente de veículos</h1>
-<div class="sub"><a href="https://github.com/rodrigoreisdealernet/dealernet-agents/issues/73">issue</a> · branch <code>feature/73-feat-ops-executar-de-fato</code> · <a href="https://github.com/rodrigoreisdealernet/dealernet-agents/pull/77">PR #77</a> · 57% complete</div>
+<div class="sub"><a href="https://github.com/rodrigoreisdealernet/dealernet-agents/issues/73">issue</a> · branch <code>feature/73-feat-ops-executar-de-fato</code> · <a href="https://github.com/rodrigoreisdealernet/dealernet-agents/pull/77">PR #77</a> · 86% complete</div>
 <div class="bar"><i></i></div>
-
+<div class="banner">🚧 Waiting on human gate: <b>merge</b></div>
 <table><tbody><tr class="done">
         <td class="ic" style="color:#16a34a">●</td>
         <td class="lbl">01 · Spec<div class="st" style="color:#16a34a">done</div></td>
@@ -59,30 +59,30 @@
           
           <ul class="notes"><li>Reading spec, diff, and existing test harnesses</li><li>SQL contract tests green (7/7): AC1 markdown SCD2+view, AC2 idempotency, AC3 disposition+status check, AC4 monitor no-op, AC6 RLS grants+row-level. Writing pytest.</li><li>All layers green: SQL 7/7 (finding_action.test.mjs), pytest 10/10 (test_finding_action_execution.py), frontend 5/5 (verify-finding-labels.mjs). Committing + opening draft PR.</li></ul>
         </td>
-      </tr><tr class="running">
-        <td class="ic" style="color:#2563eb">◐</td>
-        <td class="lbl">05 · Test review<div class="st" style="color:#2563eb">running</div></td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">05 · Test review<div class="st" style="color:#16a34a">done</div></td>
         <td class="meta">
-          
-          
-          <ul class="notes"><li>Reviewing 3 test suites against app.py handler + migration; auditing AC1-7 coverage</li><li>CHANGES REQUESTED: branch leaves test_ops_api.py RED (8 approve tests fail, AttributeError execute_finding_action on the shared fake); AC5 dismiss has zero coverage; approve-&gt;execute wiring only tested in isolation. New 3 suites (7 SQL + 10 py + 5 fe) pass.</li><li>Posted test review on PR #77 (CHANGES REQUESTED): 3 blockers (red test_ops_api suite / AC5 dismiss uncovered / approve-execute wiring isolation) + 2 weak-assertion notes.</li><li>Fixed CI red: added execute_finding_action + append_audit_event stubs to _FakeSupabaseClient in test_ops_api.py (8 approve tests green again). Added 4 handler tests: approve wires persisted finding to execute_finding_action (AC1-4), reject does not execute, dismiss persists rejected+disposition=dismissed, audits vehicle_finding_dismissed, no signal/no execute (AC5), dismiss-without-contract no-audit. pytest: 90 passed (test_ops_api 80 + execution 10). frontend 5/5. SQL layer env-blocked (shared supabase_db container absent this session).</li></ul>
+          <div class="sum">2 iterations: fixed approve-path regression + added AC5 dismiss &amp; approve-wiring tests; 90 pytest green</div>
+          <div class="arts"><a href="https://github.com/rodrigoreisdealernet/dealernet-agents/pull/77#issuecomment-4805757823">Test review</a></div>
+          <ul class="notes"><li>CHANGES REQUESTED: branch leaves test_ops_api.py RED (8 approve tests fail, AttributeError execute_finding_action on the shared fake); AC5 dismiss has zero coverage; approve-&gt;execute wiring only tested in isolation. New 3 suites (7 SQL + 10 py + 5 fe) pass.</li><li>Posted test review on PR #77 (CHANGES REQUESTED): 3 blockers (red test_ops_api suite / AC5 dismiss uncovered / approve-execute wiring isolation) + 2 weak-assertion notes.</li><li>Fixed CI red: added execute_finding_action + append_audit_event stubs to _FakeSupabaseClient in test_ops_api.py (8 approve tests green again). Added 4 handler tests: approve wires persisted finding to execute_finding_action (AC1-4), reject does not execute, dismiss persists rejected+disposition=dismissed, audits vehicle_finding_dismissed, no signal/no execute (AC5), dismiss-without-contract no-audit. pytest: 90 passed (test_ops_api 80 + execution 10). frontend 5/5. SQL layer env-blocked (shared supabase_db container absent this session).</li><li>Iteration 2: verifying tester fix 3df039f — running pytest + auditing dismiss/wiring assertions</li><li>Iteration 2 APPROVE: pytest 90 passed/0 failed (test_ops_api.py + test_finding_action_execution.py). All 3 prior blockers resolved with behavioural assertions through the real /api/ops/findings/decision endpoint. SQL contract suite fails only against unmigrated CI container (relation tenants missing) — environment-only, passed 7/7 against shared container previously.</li></ul>
         </td>
-      </tr><tr class="pending">
-        <td class="ic" style="color:#9ca3af">○</td>
-        <td class="lbl">06 · Code review<div class="st" style="color:#9ca3af">pending</div></td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">06 · Code review<div class="st" style="color:#16a34a">done</div></td>
         <td class="meta">
-          
-          
-          
+          <div class="sum">APPROVE after 2 fixes: seeded ops_audit_event fact type + markdown price guard; 95 pytest green</div>
+          <div class="arts"><a href="https://github.com/rodrigoreisdealernet/dealernet-agents/pull/77#issuecomment-4805798827">PR review</a></div>
+          <ul class="notes"><li>Reviewer (diff): reading production diff in app.py + migration + frontend</li><li>Reviewer(diff): posted on PR#77 — 2 issues (Medium: ops_audit_event fact type never seeded -&gt; all audit events silently dropped; Low/Med: markdown writes sale_price=0 on missing/non-numeric price). Core markdown+idempotency+RLS+SCD2 sound.</li></ul>
         </td>
-      </tr><tr class="pending">
-        <td class="ic" style="color:#9ca3af">○</td>
-        <td class="lbl">Merge (human gate)<div class="st" style="color:#9ca3af">pending</div></td>
+      </tr><tr class="waiting">
+        <td class="ic" style="color:#d97706">⏸</td>
+        <td class="lbl">Merge (human gate)<div class="st" style="color:#d97706">waiting</div></td>
         <td class="meta">
           
           
           
         </td>
       </tr></tbody></table>
-<div class="foot">auto-refreshes every 5s · last update 2026-06-26T01:56:39.784Z</div>
+<div class="foot">auto-refreshes every 5s · last update 2026-06-26T02:10:32.409Z</div>
 </div></body></html>
