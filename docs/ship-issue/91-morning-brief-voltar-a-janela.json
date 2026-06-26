@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/91",
   "pr": null,
   "prUrl": null,
-  "updatedAt": "2026-06-26T02:51:21.614Z",
+  "updatedAt": "2026-06-26T02:55:49.995Z",
   "steps": [
     {
       "id": "spec",
@@ -36,21 +36,24 @@
     {
       "id": "code",
       "label": "03 · Code",
-      "status": "running",
-      "summary": "",
+      "status": "done",
+      "summary": "migration 20260627140000: janela = dia anterior; Peças/AT/FP/shape preservados; 11 vendas de ontem",
       "artifacts": [],
       "notes": [
-        "Criando migration que reverte janela MTD -> dia anterior (now()::date - 1) preservando fixes Pecas/AT"
+        "Criando migration que reverte janela MTD -> dia anterior (now()::date - 1) preservando fixes Pecas/AT",
+        "Migration 20260627140000_dia_owner_brief_previous_day.sql criada e validada na DB live: janela = dia anterior, resultado>0 em 4 marcas, by_store soma para by_brand, Pecas/AT/FP preservados. Commit d4c71b3."
       ],
       "gate": null
     },
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "pending",
+      "status": "running",
       "summary": "",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "Escrevendo testes de contrato da janela dia-anterior (Peças/AT/FP preservados); rodando contra o Postgres vivo"
+      ],
       "gate": null
     },
     {
