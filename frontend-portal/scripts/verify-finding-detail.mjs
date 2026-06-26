@@ -259,8 +259,57 @@ test('AC5 aprovacao: continua usando decideFinding e recarrega a tela apos decid
   assert.match(src, /decision:\s*mode/, 'deve passar a decisao (approve/reject) para decideFinding')
   // Rejeicao envia reason; aprovacao envia note.
   assert.match(src, /reason:\s*mode\s*===\s*'reject'\s*\?\s*text/, 'rejeicao deve enviar o motivo (reason)')
-  // Apos decidir, recarrega para refletir o novo status/historico.
-  assert.match(src, /load\(\)/, 'deve recarregar a tela apos a decisao (load())')
   // decideFinding existe de fato na API.
   assert.match(read(AGENTS_API), /export\s+async\s+function\s+decideFinding\s*\(/, 'agentsApi deve exportar decideFinding')
+})
+
+// ---------------------------------------------------------------------------
+// AC5 — Guard de "motivo obrigatorio na rejeicao": o handler de confirmacao
+//       bloqueia a rejeicao com motivo vazio (antes mesmo de chamar a API).
+// ---------------------------------------------------------------------------
+test('AC5 guard: rejeicao exige motivo nao-vazio (rejectReasonRequired) e aborta antes de decideFinding', () => {
+  const src = read(FINDING_DETAIL)
+  // A guarda checa mode === 'reject' && !text.trim() (motivo vazio/em branco).
+  assert.match(
+    src,
+    /mode\s*===\s*'reject'\s*&&\s*!text\.trim\(\)/,
+    'deve barrar rejeicao quando o motivo esta vazio/em branco (!text.trim())',
+  )
+  // Sinaliza o erro com a chave estavel rejectReasonRequired.
+  assert.match(src, /setDialogErr\(\s*t\('rejectReasonRequired'\)\s*\)/, 'deve exibir t("rejectReasonRequired") no dialogo')
+  // E retorna cedo (aborta) — a guarda precede a chamada a decideFinding.
+  const guardIdx = src.search(/mode\s*===\s*'reject'\s*&&\s*!text\.trim\(\)/)
+  const reasonRequiredIdx = src.search(/setDialogErr\(\s*t\('rejectReasonRequired'\)\s*\)\s*\n\s*return/)
+  const decideIdx = src.search(/await\s+decideFinding\(/)
+  assert.ok(reasonRequiredIdx > -1, 'a guarda deve retornar cedo (return) apos sinalizar o erro')
+  assert.ok(
+    guardIdx > -1 && decideIdx > -1 && guardIdx < decideIdx,
+    'a guarda de motivo obrigatorio deve preceder a chamada a decideFinding',
+  )
+  // i18n: a chave existe e nao e vazia em ambas as locales.
+  for (const [locale, relPath] of [['pt-BR', PT_BR], ['en-US', EN_US]]) {
+    const fd = readJson(relPath).screens.findingDetail
+    assert.equal(typeof fd.rejectReasonRequired, 'string', `${locale} deve definir screens.findingDetail.rejectReasonRequired`)
+    assert.notEqual(fd.rejectReasonRequired.trim(), '', `${locale} rejectReasonRequired nao pode ser vazio`)
+  }
+})
+
+// ---------------------------------------------------------------------------
+// AC5 — Refresh pos-decisao: o load() de refresh ocorre DENTRO do handler de
+//       confirmacao, DEPOIS do decideFinding (nao basta o load() do useEffect).
+// ---------------------------------------------------------------------------
+test('AC5 refresh: recarrega a tela com load() apos o decideFinding bem-sucedido', () => {
+  const src = read(FINDING_DETAIL)
+  // Pin especifico: do `await decideFinding(...)` ate o `load()` de refresh, sem
+  // que outro return/catch interrompa — prova que e o refresh pos-decisao e nao
+  // o load() do useEffect inicial.
+  assert.match(
+    src,
+    /await\s+decideFinding\([\s\S]*?\)\s*[\s\S]*?\bload\(\)/,
+    'o load() de refresh deve aparecer depois do await decideFinding(...) (no handler de confirmacao)',
+  )
+  // E o refresh nao pode estar antes da chamada a API.
+  const decideIdx = src.search(/await\s+decideFinding\(/)
+  const refreshIdx = src.indexOf('load()', decideIdx)
+  assert.ok(decideIdx > -1 && refreshIdx > decideIdx, 'load() de refresh deve vir apos await decideFinding(...)')
 })
