@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
-import { AppWindow, Check, Columns2, Copy, Languages, Menu, Minimize, Moon, Palette, Sun, User, XSquare } from 'lucide-react'
+import { AppWindow, Check, Columns2, Copy, Menu, Minimize, Moon, Palette, Sun, User, XSquare } from 'lucide-react'
 import { useTranslations } from 'use-intl'
 import { usePortalStore } from '@/portal/store/portalStore'
 import { useTheme, ACCENTS } from '@/hooks/use-theme'
@@ -16,6 +16,7 @@ import { EmpresaSelector } from '@/portal/components/EmpresaSelector'
 import { useTour } from '@/portal/components/tour/useTour'
 import { locales } from '@/i18n/locale'
 import { useLocale } from '@/i18n/LocaleProvider'
+import { LocaleFlag } from '@/i18n/flags'
 
 export function TopBar() {
   const t = useTranslations('shell')
@@ -173,12 +174,16 @@ export function TopBar() {
           </DropdownMenu.Portal>
         </DropdownMenu.Root>
 
+        <IconBtn title={t('toggleTheme')} onClick={toggleTheme}>
+          {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+        </IconBtn>
+
         <DropdownMenu.Root>
           <DropdownMenu.Trigger
             title={t('language')}
             className="flex h-8 items-center gap-1.5 rounded-md px-2 text-white/80 outline-none transition-colors hover:bg-white/10 hover:text-white data-[state=open]:bg-white/10"
           >
-            <Languages size={16} />
+            <LocaleFlag locale={locale} />
             <span className="hidden text-xs font-medium sm:inline">{locale}</span>
           </DropdownMenu.Trigger>
           <DropdownMenu.Portal>
@@ -196,6 +201,7 @@ export function TopBar() {
                   onSelect={() => setLocale(option)}
                   className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm outline-none data-[highlighted]:bg-secondary"
                 >
+                  <LocaleFlag locale={option} />
                   <span className="flex-1">{tLocale(option)}</span>
                   {locale === option && <Check size={14} className="text-primary" />}
                 </DropdownMenu.Item>
@@ -203,10 +209,6 @@ export function TopBar() {
             </DropdownMenu.Content>
           </DropdownMenu.Portal>
         </DropdownMenu.Root>
-
-        <IconBtn title={t('toggleTheme')} onClick={toggleTheme}>
-          {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-        </IconBtn>
 
         <DropdownMenu.Root>
           <DropdownMenu.Trigger data-tour="usuario" className="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm outline-none hover:bg-white/10 data-[state=open]:bg-white/10">
