@@ -361,7 +361,9 @@
       "rejected": "Rejeitado",
       "informational": "Informativo",
       "findingDetailTitle": "Detalhe do achado",
-      "review": "Revisar"
+      "review": "Revisar",
+      "selectFinding": "Selecionar {label}",
+      "selectedCount": "{count} selecionado(s)"
     },
     "diaOverview": {
       "title": "Visão do Dono",

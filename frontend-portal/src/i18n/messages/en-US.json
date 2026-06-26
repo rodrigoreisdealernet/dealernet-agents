@@ -361,7 +361,9 @@
       "rejected": "Rejected",
       "informational": "Informational",
       "findingDetailTitle": "Finding detail",
-      "review": "Review"
+      "review": "Review",
+      "selectFinding": "Select {label}",
+      "selectedCount": "{count} selected"
     },
     "diaOverview": {
       "title": "Owner Overview",
