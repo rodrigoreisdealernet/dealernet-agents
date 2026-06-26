@@ -1,0 +1,92 @@
+{
+  "issue": "66",
+  "title": "Disparo imediato ('Executar agora') para agentes ops existentes",
+  "slug": "disparo-imediato-executar-agora-para",
+  "branch": "feature/66-disparo-imediato-executar-agora-para",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/66",
+  "pr": null,
+  "prUrl": null,
+  "updatedAt": "2026-06-26T00:11:44.439Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "6 critérios de aceite redigidos",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/66-disparo-imediato-executar-agora-para.md"
+        }
+      ],
+      "notes": [
+        "Lendo a issue #66 e redigindo a spec",
+        "Lendo issue #66 e contexto do repositório",
+        "Escrevendo critérios de aceite em linguagem de cliente",
+        "Spec concluída com 6 critérios de aceite e postada no issue"
+      ],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec aprovada por humano (--approved)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "running",
+      "summary": "",
+      "artifacts": [],
+      "notes": [
+        "Briefing coder: endpoint POST /api/ops/agents/{agent_key}/run + botão Executar agora",
+        "reading approved spec and planning implementation",
+        "inspected backend endpoints, worker schedule ids, frontend API and dashboard",
+        "added generic agent schedule registry, Temporal trigger method, and backend endpoint",
+        "wired AgentsDashboard run-now action and frontend ops-api client",
+        "py_compile and i18n JSON validation green; frontend typecheck skipped without node_modules"
+      ],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    }
+  ]
+}
