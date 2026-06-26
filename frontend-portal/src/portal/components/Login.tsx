@@ -46,9 +46,13 @@ export function Login() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.1 }}
-              className="flex items-center justify-center rounded-2xl bg-white px-5 py-3 shadow-md ring-1 ring-black/5"
+              className="flex items-center justify-center rounded-2xl bg-white p-2 shadow-md ring-1 ring-black/5"
             >
-              <img src="/Dealernet_Logo35anos.png" alt="Dealernet — 35 anos" className="h-14 w-auto" />
+              <img
+                src="/Dealernet_Logo35anos.png"
+                alt="Dealernet — 35 anos"
+                className="h-20 w-auto max-w-full sm:h-24"
+              />
             </motion.div>
           </div>
 
