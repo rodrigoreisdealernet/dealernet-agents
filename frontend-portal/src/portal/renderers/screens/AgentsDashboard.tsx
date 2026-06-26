@@ -121,6 +121,14 @@ export default function AgentsDashboard() {
       params: { agentKey },
     })
 
+  const openRunHistory = (agentKey: string) =>
+    openWindow({
+      kind: 'component',
+      componentKey: 'agent-run-history',
+      title: `${t('history')} — ${agentLabel(agentKey)}`,
+      params: { agentKey },
+    })
+
   const handleRunNow = async (agentKey: string) => {
     setRunNowStates((s) => ({ ...s, [agentKey]: { status: 'running' } }))
     try {
@@ -336,6 +344,16 @@ export default function AgentsDashboard() {
                   className="rounded-md border border-border px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-background disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isRunning ? t('running') : t('runNow')}
+                </button>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    openRunHistory(a.agent_key)
+                  }}
+                  className="rounded-md border border-border px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-background"
+                >
+                  {t('history')}
                 </button>
                 {runNowState?.status === 'success' && <Badge tone="success">{t('runSuccess')}</Badge>}
                 {runNowState?.status === 'error' && (

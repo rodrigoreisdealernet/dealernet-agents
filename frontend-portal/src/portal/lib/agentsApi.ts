@@ -1085,6 +1085,39 @@ export async function getAgentCatalog(): Promise<AgentMission[]> {
   return body.agents ?? []
 }
 
+// ── Histórico de execuções (read-only) — GET /api/ops/agents/{key}/runs (issue #128) ──
+// Lê ops_agent_run_history_view via ops-api (tenant-scoped por JWT). Somente leitura:
+// nenhuma ação altera, cria ou apaga execuções a partir daqui.
+export interface AgentRunHistoryRow {
+  run_id: string
+  tenant_id: string
+  agent_key: string
+  started_at: string | null
+  finished_at: string | null
+  duration: string | null
+  status: string
+  findings_emitted: number
+}
+
+export async function getAgentRunHistory(
+  agentKey: string,
+  limit = 10,
+): Promise<AgentRunHistoryRow[]> {
+  const token = await getAccessToken()
+  if (!token) throw new Error('Sem sessão — faça login antes de ver o histórico.')
+
+  const res = await fetch(
+    `${OPS_API_URL}/agents/${encodeURIComponent(agentKey)}/runs?limit=${encodeURIComponent(String(limit))}`,
+    { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } },
+  )
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(`Histórico falhou (HTTP ${res.status}): ${text.slice(0, 200)}`)
+  }
+  const body = (await res.json()) as { runs?: AgentRunHistoryRow[] }
+  return body.runs ?? []
+}
+
 export async function decideFinding(input: DecideInput): Promise<DecideResult> {
   if (input.decision === 'reject' && !input.reason?.trim()) {
     throw new Error('Motivo é obrigatório para rejeitar.')
