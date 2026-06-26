@@ -4,9 +4,9 @@
   "slug": "feat-ops-agente-dia-de",
   "branch": "feature/82-feat-ops-agente-dia-de",
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/82",
-  "pr": null,
-  "prUrl": null,
-  "updatedAt": "2026-06-26T02:55:53.501Z",
+  "pr": "100",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/100",
+  "updatedAt": "2026-06-26T03:31:38.489Z",
   "steps": [
     {
       "id": "spec",
@@ -40,8 +40,8 @@
     {
       "id": "code",
       "label": "03 · Code",
-      "status": "running",
-      "summary": "",
+      "status": "done",
+      "summary": "9 files: 4 migrations + agent triad + worker/run-now wiring + seed (commit 86f6312)",
       "artifacts": [],
       "notes": [
         "Coder implementing Phase A migrations + Phase B triad per PRD",
@@ -58,38 +58,53 @@
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "pending",
-      "summary": "",
+      "status": "done",
+      "summary": "RLS 8/8 pass; pytest 26 passed; draft PR opened",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "Tester writing collections_rls.test.mjs + test_ops_collections.py",
+        "Starting tester pass: reading specs and existing test patterns.",
+        "RLS/CRUD SQL contract test is green: node --test supabase/tests/collections_rls.test.mjs passed.",
+        "Collections pytest suite is green: python -m pytest temporal/tests/test_ops_collections.py temporal/tests/test_worker_registration.py -v passed."
+      ],
       "gate": null
     },
     {
       "id": "test-review",
       "label": "05 · Test review",
-      "status": "pending",
-      "summary": "",
+      "status": "done",
+      "summary": "2 iterations: 5 gaps raised, 1 dropped as over-reach, 4 fixed; RLS 10/10, pytest green",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "Reviewer auditing test coverage, vanity tests, weak assertions",
+        "Iteration 1: reviewer requested 5 coverage hardenings; sending back to tester"
+      ],
       "gate": null
     },
     {
       "id": "code-review",
       "label": "06 · Code review",
-      "status": "pending",
-      "summary": "",
-      "artifacts": [],
-      "notes": [],
+      "status": "done",
+      "summary": "Approved after 1 fix (rationale PII bound); 2 findings dispositioned (pre-existing/contract-faithful)",
+      "artifacts": [
+        {
+          "label": "PR review",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/100"
+        }
+      ],
+      "notes": [
+        "Reviewer auditing full diff for correctness/security/regression"
+      ],
       "gate": null
     },
     {
       "id": "merge",
       "label": "Merge (human gate)",
-      "status": "pending",
+      "status": "waiting",
       "summary": "",
       "artifacts": [],
       "notes": [],
-      "gate": null
+      "gate": "merge"
     }
   ]
 }
