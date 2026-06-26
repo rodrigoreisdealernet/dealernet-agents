@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/102",
   "pr": null,
   "prUrl": null,
-  "updatedAt": "2026-06-26T03:17:59.427Z",
+  "updatedAt": "2026-06-26T03:20:26.885Z",
   "steps": [
     {
       "id": "spec",
@@ -36,8 +36,8 @@
     {
       "id": "code",
       "label": "03 · Code",
-      "status": "running",
-      "summary": "",
+      "status": "done",
+      "summary": "briefDateLabel=ontem; previousDay/noPreviousDayData PT+EN; desktopTitle; build OK",
       "artifacts": [],
       "notes": [
         "Editando briefDateLabel() para dia anterior + chaves i18n previousDay/noPreviousDayData (PT/EN), atualizando ambos layouts"
@@ -47,10 +47,12 @@
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "pending",
+      "status": "running",
       "summary": "",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "Escrevendo verify-issue102-labels.mjs (source-content hermetico) p/ rotulo dia-anterior + i18n"
+      ],
       "gate": null
     },
     {
