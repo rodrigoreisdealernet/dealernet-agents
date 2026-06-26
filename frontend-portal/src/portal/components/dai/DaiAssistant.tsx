@@ -7,6 +7,8 @@
 // (useDaiStore → chatWithAssistant): a DIA responde dados de BI e navega pelas telas.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import {
   Sparkles,
   X,
@@ -21,6 +23,8 @@ import {
 import { useDaiStore } from '@/portal/components/dai/useDaiStore'
 import { usePortalStore } from '@/portal/store/portalStore'
 import { daiSuggestionsFromMenu, type DaiSuggestion } from '@/portal/components/dai/daiSuggestions'
+import { ChartCard } from '@/portal/renderers/screens/ChartCard'
+import type { AssistantChart } from '@/portal/lib/assistantApi'
 
 export function DaiAssistant() {
   const open = useDaiStore((s) => s.open)
@@ -140,7 +144,10 @@ function DaiPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
       <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
         {messages.length === 0 && <DaiWelcome suggestions={suggestions} onPick={pickSuggestion} />}
         {messages.map((m) => (
-          <DaiBubble key={m.id} role={m.role} text={m.text} />
+          <div key={m.id} className="space-y-2">
+            <DaiBubble role={m.role} text={m.text} />
+            {m.charts?.map((c, i) => <DaiChart key={i} chart={c} />)}
+          </div>
         ))}
         {thinking && <DaiTyping />}
       </div>
@@ -272,8 +279,62 @@ function DaiBubble({ role, text }: { role: 'user' | 'assistant'; text: string })
             : 'rounded-tl-sm border bg-background text-foreground',
         ].join(' ')}
       >
-        {text}
+        {isUser ? text : <Markdown text={text} />}
       </div>
+    </div>
+  )
+}
+
+// Renderiza markdown (negrito, listas, tabelas via GFM) com estilos do DS — sem
+// HTML cru (react-markdown não interpreta HTML por padrão). Mapeia os elementos
+// para classes Tailwind (não dependemos do plugin de typography).
+function Markdown({ text }: { text: string }) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+        ul: ({ children }) => <ul className="mb-2 list-disc pl-4 last:mb-0">{children}</ul>,
+        ol: ({ children }) => <ol className="mb-2 list-decimal pl-4 last:mb-0">{children}</ol>,
+        li: ({ children }) => <li className="mb-0.5">{children}</li>,
+        strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+        a: ({ children, href }) => (
+          <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline">
+            {children}
+          </a>
+        ),
+        code: ({ children }) => (
+          <code className="rounded bg-secondary px-1 py-0.5 font-mono text-xs">{children}</code>
+        ),
+        table: ({ children }) => (
+          <div className="mb-2 overflow-x-auto last:mb-0">
+            <table className="w-full border-collapse text-xs">{children}</table>
+          </div>
+        ),
+        th: ({ children }) => (
+          <th className="border border-border bg-secondary px-2 py-1 text-left font-semibold">{children}</th>
+        ),
+        td: ({ children }) => <td className="border border-border px-2 py-1">{children}</td>,
+      }}
+    >
+      {text}
+    </ReactMarkdown>
+  )
+}
+
+// ── Gráfico inline (reusa o ChartCard dos dashboards do Fast BI) ────────────────
+function DaiChart({ chart }: { chart: AssistantChart }) {
+  return (
+    <div className="ml-9">
+      <ChartCard
+        title={chart.title}
+        type={chart.type}
+        data={chart.data}
+        xKey={chart.x_key}
+        series={chart.series.map((s) => ({ key: s.key, label: s.label, format: s.format }))}
+        valueFormat={chart.value_format ?? 'number'}
+        height={200}
+      />
     </div>
   )
 }
