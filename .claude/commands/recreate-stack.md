@@ -35,5 +35,6 @@ bash scripts/recreate-stack.sh $ARGUMENTS
 
 - **Destrutivo por design.** O objetivo é um ambiente limpo e reproduzível; não use se precisar preservar dados locais.
 - **DB Supabase compartilhado:** este comando usa `supabase stop --no-backup` + `supabase start --ignore-health-check` (não `supabase db reset`), recriando o ambiente do zero. O `--ignore-health-check` evita que o container `storage` (não usado pelo app, e lento para vincular a porta em `/mnt/c`) derrube DB/Auth/REST por timeout do health check; esses serviços são validados explicitamente nas fases finais. Não rode em paralelo com outras sessões que dependem do mesmo Supabase local.
-- **Credenciais demo** vêm de `frontend-portal/.env.local` (`VITE_DEMO_EMAIL`, `VITE_DEMO_PASSWORD`, `VITE_SUPABASE_ANON_KEY`) e a `SUPABASE_SERVICE_ROLE_KEY` de `.env` — ambos gitignored.
+- **Credenciais demo** vêm de `frontend-portal/.env.local` (`VITE_DEMO_EMAIL`, `VITE_DEMO_PASSWORD`, `VITE_SUPABASE_ANON_KEY`).
+- **Secrets do dia-ops** vêm de `.env.dia-ops` (preferido) ou `.env` (fallback): `SUPABASE_SERVICE_ROLE_KEY` + Azure OpenAI (`AZURE_OPENAI_ENDPOINT/API_KEY/DEPLOYMENT/API_VERSION`). **As credenciais Azure são obrigatórias** para o "Executar agora" dos agentes — sem elas a activity falha com `AzureOpenAIConfigurationError` e o workflow termina como *Failed*. Todos gitignored.
 - **Endpoints após sucesso:** Portal `:5174` (com `--with-frontend`), Supabase API `:54331`, Studio `:54333`, ops-api `:8000/docs`, Temporal UI `:8088`.

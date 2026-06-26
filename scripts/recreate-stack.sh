@@ -26,7 +26,10 @@ ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${ROOT_DIR}"
 
 DIA_COMPOSE="docker-compose.dia-ops.yml"
-ENV_FILE=".env"
+# Secrets do stack dia-ops: prefere .env.dia-ops (Supabase service-role + Azure
+# OpenAI, exigido pelos agentes no "Executar agora"); cai para .env se ausente.
+ENV_FILE=".env.dia-ops"
+ENV_FALLBACK=".env"
 PORTAL_ENV="frontend-portal/.env.local"
 SUPA_DB_PORT="54332"           # Postgres exposto pela Supabase CLI (config.toml [db].port)
 DEFAULT_SUPA_URL="http://127.0.0.1:54331"
@@ -78,7 +81,8 @@ docker compose version >/dev/null 2>&1 || die "'docker compose' (v2) indisponív
 docker info >/dev/null 2>&1 || die "Docker daemon não está respondendo."
 [ -f "$DIA_COMPOSE" ] || die "ausente: $DIA_COMPOSE (rode na raiz do repo)."
 [ -f "supabase/config.toml" ] || die "ausente: supabase/config.toml."
-[ -f "$ENV_FILE" ] || die "ausente: $ENV_FILE (precisa de SUPABASE_SERVICE_ROLE_KEY)."
+[ -f "$ENV_FILE" ] || ENV_FILE="$ENV_FALLBACK"
+[ -f "$ENV_FILE" ] || die "ausente: $ENV_FILE/$ENV_FALLBACK (precisa de SUPABASE_SERVICE_ROLE_KEY)."
 [ -f "$PORTAL_ENV" ] || die "ausente: $PORTAL_ENV (credenciais demo)."
 
 SUPA_URL="$(read_env "$PORTAL_ENV" VITE_SUPABASE_URL || true)"; SUPA_URL="${SUPA_URL:-$DEFAULT_SUPA_URL}"
@@ -89,16 +93,19 @@ DEMO_PASS="$(read_env "$PORTAL_ENV" VITE_DEMO_PASSWORD || true)"
 [ -n "${DEMO_EMAIL:-}" ] || die "VITE_DEMO_EMAIL ausente em $PORTAL_ENV."
 [ -n "${DEMO_PASS:-}" ]  || die "VITE_DEMO_PASSWORD ausente em $PORTAL_ENV."
 
-# Carrega .env (SUPABASE_SERVICE_ROLE_KEY etc.) para o docker compose interpolar.
+# Carrega os secrets ($ENV_FILE: service-role + Azure OpenAI) p/ o compose interpolar.
 set -a; # shellcheck disable=SC1090
 . "./$ENV_FILE"; set +a
-# Silencia avisos do compose para variáveis Azure opcionais (modo demo).
+# Default vazio só p/ não quebrar a interpolação quando o fallback .env não tem Azure.
 : "${AZURE_OPENAI_ENDPOINT:=}"; : "${AZURE_OPENAI_API_KEY:=}"
 : "${AZURE_OPENAI_DEPLOYMENT:=}"; : "${AZURE_OPENAI_API_VERSION:=}"
 : "${AZURE_OPENAI_INSECURE_SSL:=}"
 export AZURE_OPENAI_ENDPOINT AZURE_OPENAI_API_KEY AZURE_OPENAI_DEPLOYMENT \
        AZURE_OPENAI_API_VERSION AZURE_OPENAI_INSECURE_SSL
-ok "Preflight OK (build=$DO_BUILD frontend=$WITH_FRONTEND, Supabase em $SUPA_URL)"
+if [ -z "${AZURE_OPENAI_ENDPOINT}" ] || [ -z "${AZURE_OPENAI_API_KEY}" ]; then
+  warn "Azure OpenAI ausente em $ENV_FILE — 'Executar agora' dos agentes vai falhar (activity AzureOpenAIConfigurationError)."
+fi
+ok "Preflight OK (build=$DO_BUILD frontend=$WITH_FRONTEND, env=$ENV_FILE, Supabase em $SUPA_URL)"
 
 # ── Fase 1 — Teardown ─────────────────────────────────────────────────────────
 log "Fase 1/8 — Destruindo containers e dados (wipe)"
@@ -186,7 +193,7 @@ ok "Usuários demo criados ($DEMO_USERS) no tenant $DEMO_TENANT"
 
 # ── Fase 5 — Sobe dia-ops ─────────────────────────────────────────────────────
 log "Fase 5/8 — Subindo a stack dia-ops"
-docker compose -f "$DIA_COMPOSE" up -d
+docker compose -f "$DIA_COMPOSE" --env-file "$ENV_FILE" up -d
 ok "Containers dia-ops iniciados"
 
 # ── Fase 6 — Espera ops-api ───────────────────────────────────────────────────
