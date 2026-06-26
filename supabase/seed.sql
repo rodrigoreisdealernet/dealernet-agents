@@ -459,8 +459,9 @@ commit;
 -- DIA dealership domain — demo service orders / Oficina (issue #7)
 -- Idempotent namespace: source_record_id LIKE 'demo-dia-service-%'.
 -- 18 ordens CURADAS cobrindo todos os status (aberta/em_andamento/concluida/
--- cancelada), espalhadas pelo mês corrente e anterior. Pelo menos 2 'concluida'
--- com closed_at p/ popular turnaround_hours. O VOLUME em massa vive no namespace
+-- cancelada), todas abertas DENTRO do mês corrente (conceito MÊS ATUAL do
+-- Morning Brief, #46 — clamp no 1º dia do mês). Pelo menos 2 'concluida' com
+-- closed_at p/ popular turnaround_hours. O VOLUME em massa vive no namespace
 -- separado 'demo-dia-svcvol-%' abaixo (não colide com este LIKE).
 -- Reuses rental_upsert_entity_current_state (the generic SCD2 upsert) under
 -- the service_role write guard.
@@ -510,7 +511,13 @@ BEGIN
 
   FOR v_item IN SELECT * FROM jsonb_array_elements(v_orders)
   LOOP
-    v_opened := v_now - ((v_item ->> 'open_days')::int || ' days')::interval;
+    -- Conceito MÊS ATUAL (#46): toda OS é aberta DENTRO do mês corrente. Mantém
+    -- 'open_days' como dias-atrás, mas trava no 1º dia do mês (clamp) para não
+    -- vazar para o mês anterior.
+    v_opened := greatest(
+      date_trunc('month', now()),
+      v_now - ((v_item ->> 'open_days')::int || ' days')::interval
+    );
 
     v_data := jsonb_build_object(
       'name', concat_ws(' - ', v_item ->> 'order_number', v_item ->> 'customer'),
@@ -705,9 +712,13 @@ BEGIN
       CONTINUE;
     END IF;
 
+    -- Conceito MÊS ATUAL (#46): ignora o offset de mês ('mo') e ancora a venda no
+    -- mês corrente (dia 'day'), travando em hoje para não gerar data futura.
     v_sale_date := to_char(
-      (date_trunc('month', now()) + ((v_item ->> 'mo')::int || ' months')::interval
-        + (((v_item ->> 'day')::int - 1) || ' days')::interval)::date,
+      least(
+        (date_trunc('month', now()) + (((v_item ->> 'day')::int - 1) || ' days')::interval)::date,
+        now()::date
+      ),
       'YYYY-MM-DD'
     );
 
@@ -781,7 +792,11 @@ BEGIN
 
   FOR i IN 1..82 LOOP
     v_status := v_statuses[1 + (i % 4)];
-    v_opened := v_now - (((i * 3) % 90) || ' days')::interval;
+    -- MÊS ATUAL (#46): abre dentro do mês corrente (clamp no 1º dia do mês).
+    v_opened := greatest(
+      date_trunc('month', now()),
+      v_now - (((i * 3) % 28) || ' days')::interval
+    );
 
     v_data := jsonb_build_object(
       'name', format('OS-2026-B%s - %s', lpad(i::text, 3, '0'), v_custs[1 + (i % array_length(v_custs, 1))]),
@@ -886,9 +901,13 @@ BEGIN
     SELECT unit_price INTO v_unit_price
     FROM v_dia_part_current WHERE entity_id = v_part_id;
 
+    -- MÊS ATUAL (#46): todas as vendas no mês corrente (sem recuar meses),
+    -- travadas em hoje para não gerar data futura.
     v_sale_date := to_char(
-      (date_trunc('month', now()) - ((i % 4) || ' months')::interval
-        + (((i * 7) % 27) || ' days')::interval)::date,
+      least(
+        (date_trunc('month', now()) + (((i * 7) % 27) || ' days')::interval)::date,
+        now()::date
+      ),
       'YYYY-MM-DD'
     );
 
