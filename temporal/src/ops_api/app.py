@@ -53,6 +53,10 @@ from ..workflows.ops import (
     RevenueRecognitionWorkflow,
     RevenueRecognitionWorkflowInput,
 )
+from ..workflows.ops.collections_prioritizer import (
+    CollectionsPrioritizerWorkflow,
+    CollectionsPrioritizerWorkflowInput,
+)
 from ..workflows.ops.credit import CreditRiskWorkflow, CreditRiskWorkflowInput
 from ..workflows.ops.disposition_queue import DispositionQueueWorkflow, DispositionQueueWorkflowInput
 from ..workflows.ops.parts_inventory import PartsInventoryWorkflow, PartsInventoryWorkflowInput
@@ -116,13 +120,13 @@ _AGENT_SCHEDULE_ID_BUILDERS: dict[str, Callable[[str], str]] = {
         for agent_key in _INTEGRATION_AGENT_KEYS
     },
 }
-# Issue #115/#116 — agents whose manual "run now" starts the workflow directly
-# (gated on a non-None locale, preserving the schedule-trigger fallback when no
-# payload/locale is provided). Maps agent_key -> (workflow_run, input_factory)
-# where input_factory has a uniform (tenant_id, locale) signature so callers can
-# invoke it the same way regardless of whether the workflow input accepts a
-# locale. ``service-estimate-rescue`` and ``parts-inventory-advisor`` ignore
-# locale (their inputs are tenant-only).
+# Issue #115/#116/#117 — agents whose manual "run now" starts the workflow
+# directly (gated on a non-None locale, preserving the schedule-trigger fallback
+# when no payload/locale is provided). Maps agent_key -> (workflow_run,
+# input_factory) where input_factory has a uniform (tenant_id, locale) signature
+# so callers can invoke it the same way regardless of whether the workflow input
+# accepts a locale. ``service-estimate-rescue``, ``collections-prioritizer`` and
+# ``parts-inventory-advisor`` ignore locale (their inputs are tenant-only).
 _MANUAL_RUN_WORKFLOWS: dict[str, tuple[Any, Callable[[str, str], Any]]] = {
     "revrec-analyst": (
         RevenueRecognitionWorkflow.run,
@@ -143,6 +147,10 @@ _MANUAL_RUN_WORKFLOWS: dict[str, tuple[Any, Callable[[str, str], Any]]] = {
     "service-estimate-rescue": (
         ServiceEstimateRescueWorkflow.run,
         lambda tenant_id, locale: ServiceEstimateRescueWorkflowInput(tenant_id=tenant_id),
+    ),
+    "collections-prioritizer": (
+        CollectionsPrioritizerWorkflow.run,
+        lambda tenant_id, locale: CollectionsPrioritizerWorkflowInput(tenant_id=tenant_id),
     ),
     "parts-inventory-advisor": (
         PartsInventoryWorkflow.run,
@@ -835,7 +843,8 @@ class SupabaseServiceClient:
         decision response is never broken.
 
         Assist-only finding types (e.g. ``service-estimate-rescue``'s
-        ``estimate_rescue`` findings and ``parts-inventory-advisor``'s
+        ``estimate_rescue`` findings, ``collections-prioritizer``'s
+        ``collections_priority`` findings, and ``parts-inventory-advisor``'s
         ``replenish_now`` / ``dead_stock`` findings) have no executable side
         effect here: there is no money movement, SMS/outbound contact, nor any
         purchase-order/requisition write (``auto_apply`` is forced ``False`` for
