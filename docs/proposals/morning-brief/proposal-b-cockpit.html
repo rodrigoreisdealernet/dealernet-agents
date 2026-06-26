@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DIA · Resumo Matinal — Proposta B: O Cockpit</title>
+<style>
+  :root{
+    --bg:#eef1f6; --surface:#ffffff; --surface-2:#f7f9fc;
+    --ink:#16243c; --ink-soft:#5b6b85; --ink-faint:#8a97ad;
+    --line:#e1e7f0; --line-strong:#cdd6e4;
+    --brand:#1f63e8; --brand-strong:#0f47c0; --brand-dim:#eaf0fe;
+    --teal:#0f9d8e; --teal-dim:#e3f6f3;
+    --amber:#c47d12; --amber-dim:#fbf1de;
+    --violet:#6a45d6; --violet-dim:#efeafb;
+    --danger:#d6455b; --danger-dim:#fbe8eb;
+    --green:#2f9e54; --green-dim:#e6f5ec;
+    --shadow:0 1px 2px rgba(16,24,40,.05),0 10px 30px rgba(16,24,40,.07);
+    --shadow-sm:0 1px 2px rgba(16,24,40,.05),0 4px 12px rgba(16,24,40,.05);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased;line-height:1.45}
+
+  /* chrome / topbar like portal */
+  .chrome{background:linear-gradient(90deg,#13234a,#1c356a);color:#fff;padding:12px clamp(16px,3vw,28px);
+    display:flex;align-items:center;gap:14px;box-shadow:0 2px 12px rgba(16,24,40,.15)}
+  .chrome .mark{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-weight:800;
+    background:rgba(255,255,255,.14)}
+  .chrome b{font-weight:800;letter-spacing:-.01em}
+  .chrome .crumb{font-size:13px;color:#aebfde}
+  .chrome .right{margin-left:auto;display:flex;align-items:center;gap:16px;font-size:13px;color:#cfdcf3}
+  .chrome .live{display:inline-flex;align-items:center;gap:7px;font-weight:700;color:#8ff0c4}
+  .chrome .live .dot{width:8px;height:8px;border-radius:50%;background:#7ef0c0;animation:beat 1.8s infinite}
+  @keyframes beat{0%{box-shadow:0 0 0 0 rgba(126,240,192,.6)}70%{box-shadow:0 0 0 8px rgba(126,240,192,0)}100%{box-shadow:0 0 0 0 rgba(126,240,192,0)}}
+
+  .page{max-width:1280px;margin:0 auto;padding:clamp(16px,3vw,26px)}
+  .head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:18px;flex-wrap:wrap}
+  .head h1{font-size:clamp(20px,2.4vw,26px);font-weight:800;letter-spacing:-.02em}
+  .head p{font-size:13.5px;color:var(--ink-soft);margin-top:3px}
+  .head .agentline{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;color:var(--brand-strong);
+    background:var(--brand-dim);border-radius:999px;padding:5px 12px}
+
+  /* KPI strip */
+  .kpis{display:grid;grid-template-columns:1.25fr repeat(5,1fr);gap:12px;margin-bottom:18px}
+  @media (max-width:920px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow-sm)}
+  .kpi.lead{background:var(--ink);color:#fff;border-color:transparent}
+  .kpi .l{font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:var(--ink-faint)}
+  .kpi.lead .l{color:#aebfde}
+  .kpi .v{font-size:clamp(18px,2vw,23px);font-weight:800;font-variant-numeric:tabular-nums;margin-top:5px;letter-spacing:-.01em}
+  .kpi .d{font-size:12px;margin-top:3px;color:var(--ink-soft);font-weight:600}
+  .kpi.lead .d{color:#9ec3ff}
+  .kpi .d.up{color:var(--green)} .kpi .d.down{color:var(--danger)}
+  .kpi .d.risk{color:var(--danger)}
+
+  /* layout: table + rail */
+  .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:18px;align-items:start}
+  @media (max-width:1040px){.grid{grid-template-columns:1fr}}
+
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-sm);overflow:hidden}
+  .panel .ph{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line)}
+  .panel .ph h2{font-size:15px;font-weight:800;letter-spacing:-.01em}
+  .panel .ph .sub{font-size:12px;color:var(--ink-faint)}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead th{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);font-weight:800;
+    text-align:right;padding:11px 14px 9px;background:var(--surface-2)}
+  thead th:first-child{text-align:left}
+  tbody td{padding:11px 14px;text-align:right;font-variant-numeric:tabular-nums;border-top:1px solid var(--line)}
+  tbody td:first-child{text-align:left}
+  tbody tr.brand{cursor:pointer}
+  tbody tr.brand:hover{background:var(--surface-2)}
+  tbody tr.brand td:first-child{font-weight:800}
+  .tw{display:inline-flex;align-items:center;gap:7px}
+  .tw .caret{color:var(--ink-faint);font-size:11px;width:10px;display:inline-block;transition:.2s}
+  tr.brand.open .caret{transform:rotate(90deg)}
+  .stores{display:none}
+  tr.brand.open + .stores{display:table-row}
+  .stores td{padding:0;border-top:0}
+  .stores .inner{background:var(--surface-2)}
+  .stores table{font-size:12.5px}
+  .stores tbody td{border-top:1px solid var(--line);color:var(--ink-soft)}
+  .stores tbody td:first-child{padding-left:34px}
+  td.fp{color:var(--danger);font-weight:800}
+  td.ok{color:var(--ink-faint)}
+  tbody tr.total td{background:var(--ink);color:#fff;font-weight:800;border-top:0}
+  .legend{font-size:11.5px;color:var(--ink-faint);padding:10px 18px}
+
+  /* rail */
+  .rail .ph .badge{font-size:11px;font-weight:800;color:#fff;background:var(--danger);border-radius:999px;padding:3px 9px}
+  .alist{display:flex;flex-direction:column}
+  .act{padding:14px 18px;border-top:1px solid var(--line);transition:.2s}
+  .act:first-child{border-top:0}
+  .act .r1{display:flex;align-items:center;gap:8px}
+  .dotk{width:9px;height:9px;border-radius:50%;flex:none}
+  .dotk.aging{background:var(--danger)} .dotk.coll{background:var(--amber)}
+  .dotk.parts{background:var(--teal)} .dotk.svc{background:var(--violet)}
+  .act .who{font-size:11px;font-weight:800;letter-spacing:.02em;text-transform:uppercase}
+  .who.aging{color:var(--danger)} .who.coll{color:var(--amber)} .who.parts{color:var(--teal)} .who.svc{color:var(--violet)}
+  .act .delta{margin-left:auto;font-size:14px;font-weight:800;font-variant-numeric:tabular-nums}
+  .act h3{font-size:14px;font-weight:740;margin-top:8px;letter-spacing:-.01em;line-height:1.3}
+  .act .ctx{font-size:12.5px;color:var(--ink-soft);margin-top:3px}
+  .act .why{font-size:12px;color:var(--ink-soft);margin-top:8px;padding-left:11px;border-left:2px solid var(--line)}
+  .act .why b{color:var(--ink)}
+  .act .foot{display:flex;align-items:center;gap:10px;margin-top:11px}
+  .act .conf{font-size:11.5px;color:var(--ink-faint);font-weight:700;display:flex;align-items:center;gap:6px}
+  .act .conf .bar{width:42px;height:5px;border-radius:3px;background:var(--line);overflow:hidden}
+  .act .conf .bar i{display:block;height:100%;background:var(--brand)}
+  .btns{margin-left:auto;display:flex;gap:7px}
+  .btn{border:0;cursor:pointer;font-family:inherit;font-weight:800;border-radius:9px;font-size:12.5px;transition:.16s}
+  .btn-ok{background:var(--ink);color:#fff;padding:8px 13px}
+  .btn-ok:hover{background:#0c1830}
+  .btn-no{background:var(--surface-2);color:var(--ink-faint);padding:8px 11px}
+  .btn-no:hover{color:var(--ink)}
+  .act.done{background:var(--green-dim)}
+  .act.done .btns,.act.done .why,.act.done .conf{display:none}
+  .act .done-msg{display:none;align-items:center;gap:7px;margin-top:11px;color:var(--green);font-weight:800;font-size:12.5px}
+  .act.done .done-msg{display:flex}
+  .act.gone{display:none}
+
+  .railcta{padding:14px 18px;border-top:1px solid var(--line);display:flex;gap:9px}
+  .railcta .all{flex:1;background:var(--brand);color:#fff;border:0;border-radius:9px;padding:10px;font-weight:800;
+    font-size:13px;cursor:pointer}
+  .railcta .all:hover{background:var(--brand-strong)}
+  .railcta .queue{background:var(--surface-2);color:var(--ink-soft);border:1px solid var(--line);border-radius:9px;
+    padding:10px 13px;font-weight:700;font-size:13px;cursor:pointer}
+
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(16px);background:var(--ink);color:#fff;
+    padding:11px 18px;border-radius:11px;font-size:13px;font-weight:600;box-shadow:var(--shadow);opacity:0;pointer-events:none;
+    transition:.3s;z-index:60}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+  <div class="chrome">
+    <span class="mark">D</span><b>DIA</b><span class="crumb">› Resumo Matinal</span>
+    <div class="right">
+      <span class="live"><span class="dot"></span>4 agentes ativos</span>
+      <span>Grupo Bandeirantes</span>
+      <span>Rodrigo R.</span>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="head">
+      <div>
+        <h1>Resultado por marca e loja · dia anterior</h1>
+        <p>Quarta, 25 jun · consolidado de 8 lojas e 4 marcas</p>
+      </div>
+      <span class="agentline">🧠 DIA analisou 1.247 registros entre 03:00 e 06:50</span>
+    </div>
+
+    <!-- KPI STRIP -->
+    <div class="kpis">
+      <div class="kpi lead">
+        <div class="l">Grupo Total · resultado</div>
+        <div class="v">R$ 590 mil</div>
+        <div class="d up">▲ 6,2% vs. terça</div>
+      </div>
+      <div class="kpi"><div class="l">Novos</div><div class="v">26 un</div><div class="d">R$ 2,1 mi</div></div>
+      <div class="kpi"><div class="l">Usados</div><div class="v">18 un</div><div class="d">R$ 1,3 mi</div></div>
+      <div class="kpi"><div class="l">Peças</div><div class="v">R$ 147 mil</div><div class="d up">margem 31%</div></div>
+      <div class="kpi"><div class="l">Oficina (AT)</div><div class="v">R$ 115 mil</div><div class="d">142 OS</div></div>
+      <div class="kpi"><div class="l">Floor Plan</div><div class="v">38 un</div><div class="d risk">3 em risco &lt;7d</div></div>
+    </div>
+
+    <!-- TABLE + RAIL -->
+    <div class="grid">
+      <!-- COCKPIT TABLE -->
+      <div class="panel">
+        <div class="ph"><h2>Cockpit por marca</h2><span class="sub">clique para abrir as lojas</span></div>
+        <table>
+          <thead>
+            <tr><th>Marca / Loja</th><th>Resultado</th><th>Novos</th><th>Usados</th><th>Peças</th><th>AT</th><th>FP</th></tr>
+          </thead>
+          <tbody>
+            <tr class="brand" onclick="toggle(this)"><td><span class="tw"><span class="caret">▶</span>Toyota</span></td><td>R$ 214 mil</td><td>9</td><td>6</td><td>R$ 61 mil</td><td>R$ 48 mil</td><td class="fp">2 ⚠</td></tr>
+            <tr class="stores"><td colspan="7"><div class="inner"><table><tbody>
+              <tr><td>📍 Morumbi</td><td>R$ 96 mil</td><td>4</td><td>3</td><td>R$ 28 mil</td><td>R$ 22 mil</td><td class="fp">2 ⚠</td></tr>
+              <tr><td>📍 Campinas</td><td>R$ 71 mil</td><td>3</td><td>2</td><td>R$ 19 mil</td><td>R$ 15 mil</td><td class="ok">ok</td></tr>
+              <tr><td>📍 Ribeirão</td><td>R$ 47 mil</td><td>2</td><td>1</td><td>R$ 14 mil</td><td>R$ 11 mil</td><td class="ok">ok</td></tr>
+            </tbody></table></div></td></tr>
+
+            <tr class="brand" onclick="toggle(this)"><td><span class="tw"><span class="caret">▶</span>Volkswagen</span></td><td>R$ 156 mil</td><td>7</td><td>5</td><td>R$ 39 mil</td><td>R$ 31 mil</td><td class="ok">ok</td></tr>
+            <tr class="stores"><td colspan="7"><div class="inner"><table><tbody>
+              <tr><td>📍 Marginal</td><td>R$ 92 mil</td><td>4</td><td>3</td><td>R$ 23 mil</td><td>R$ 18 mil</td><td class="ok">ok</td></tr>
+              <tr><td>📍 Santo André</td><td>R$ 64 mil</td><td>3</td><td>2</td><td>R$ 16 mil</td><td>R$ 13 mil</td><td class="ok">ok</td></tr>
+            </tbody></table></div></td></tr>
+
+            <tr class="brand" onclick="toggle(this)"><td><span class="tw"><span class="caret">▶</span>Hyundai</span></td><td>R$ 132 mil</td><td>6</td><td>4</td><td>R$ 28 mil</td><td>R$ 22 mil</td><td class="ok">ok</td></tr>
+            <tr class="stores"><td colspan="7"><div class="inner"><table><tbody>
+              <tr><td>📍 Faria Lima</td><td>R$ 78 mil</td><td>4</td><td>2</td><td>R$ 17 mil</td><td>R$ 13 mil</td><td class="ok">ok</td></tr>
+              <tr><td>📍 Tatuapé</td><td>R$ 54 mil</td><td>2</td><td>2</td><td>R$ 11 mil</td><td>R$ 9 mil</td><td class="ok">ok</td></tr>
+            </tbody></table></div></td></tr>
+
+            <tr class="brand" onclick="toggle(this)"><td><span class="tw"><span class="caret">▶</span>Chevrolet</span></td><td>R$ 88 mil</td><td>4</td><td>3</td><td>R$ 19 mil</td><td>R$ 14 mil</td><td class="fp">1 ⚠</td></tr>
+            <tr class="stores"><td colspan="7"><div class="inner"><table><tbody>
+              <tr><td>📍 Anhanguera</td><td>R$ 88 mil</td><td>4</td><td>3</td><td>R$ 19 mil</td><td>R$ 14 mil</td><td class="fp">1 ⚠</td></tr>
+            </tbody></table></div></td></tr>
+
+            <tr class="total"><td>Grupo Total · 8 lojas</td><td>R$ 590 mil</td><td>26</td><td>18</td><td>R$ 147 mil</td><td>R$ 115 mil</td><td>3 ⚠</td></tr>
+          </tbody>
+        </table>
+        <div class="legend">Valores em R$ · dia anterior · ⚠ = carência de Floor Plan vencendo em menos de 7 dias</div>
+      </div>
+
+      <!-- AGENT ACTION RAIL -->
+      <div class="panel rail">
+        <div class="ph"><h2>DIA preparou estas ações</h2><span class="badge" id="badge">4</span></div>
+        <div class="alist" id="alist">
+
+          <div class="act">
+            <div class="r1"><span class="dotk aging"></span><span class="who aging">Estoque parado · crítico</span><span class="delta">R$ 11,8 mil</span></div>
+            <h3>Corolla XEI 2024 parado há 96 dias</h3>
+            <div class="ctx">Toyota Morumbi · Floor Plan vence em 4 dias</div>
+            <div class="why"><b>Por quê:</b> margem caiu a 3,1% e a carência vence; transferir p/ Campinas (3 leads) vende em ~9 dias.</div>
+            <div class="foot">
+              <span class="conf"><span class="bar"><i style="width:92%"></i></span>92%</span>
+              <span class="btns"><button class="btn btn-ok" onclick="ok(this)">✓ Transferir</button><button class="btn btn-no" onclick="no(this)">Dispensar</button></span>
+            </div>
+            <div class="done-msg">✓ Confirmado — DIA abrindo a transferência</div>
+          </div>
+
+          <div class="act">
+            <div class="r1"><span class="dotk coll"></span><span class="who coll">Cobranças · crítico</span><span class="delta">R$ 48,2 mil</span></div>
+            <h3>Transportes Aurora — vencido há 12 dias</h3>
+            <div class="ctx">6 títulos abertos · score caindo 18% no mês</div>
+            <div class="why"><b>Por quê:</b> atraso fora do padrão (3d) e novo pedido em análise; acionar antes de liberar crédito.</div>
+            <div class="foot">
+              <span class="conf"><span class="bar"><i style="width:88%"></i></span>88%</span>
+              <span class="btns"><button class="btn btn-ok" onclick="ok(this)">✓ Priorizar</button><button class="btn btn-no" onclick="no(this)">Dispensar</button></span>
+            </div>
+            <div class="done-msg">✓ Cliente no topo da régua de cobrança</div>
+          </div>
+
+          <div class="act">
+            <div class="r1"><span class="dotk parts"></span><span class="who parts">Peças · alto</span><span class="delta">R$ 22,6 mil</span></div>
+            <h3>Pastilha freio Corolla/Yaris — ruptura em 3 dias</h3>
+            <div class="ctx">Saldo 6 un · consumo 4,2/dia · 14 OS dependem</div>
+            <div class="why"><b>Por quê:</b> estoque zera antes do recebimento; repor 40 un mantém a oficina rodando.</div>
+            <div class="foot">
+              <span class="conf"><span class="bar"><i style="width:84%"></i></span>84%</span>
+              <span class="btns"><button class="btn btn-ok" onclick="ok(this)">✓ Repor 40 un</button><button class="btn btn-no" onclick="no(this)">Dispensar</button></span>
+            </div>
+            <div class="done-msg">✓ Pedido encaminhado ao comprador</div>
+          </div>
+
+          <div class="act">
+            <div class="r1"><span class="dotk svc"></span><span class="who svc">Oficina · alto</span><span class="delta">R$ 3,4 mil</span></div>
+            <h3>Orçamento #4471 parado há 5 dias</h3>
+            <div class="ctx">M. Andrade · Tucson · peças reservadas</div>
+            <div class="why"><b>Por quê:</b> sem contato após 4 dias, conversão cai a 30%; cortesia 8% recupera metade.</div>
+            <div class="foot">
+              <span class="conf"><span class="bar"><i style="width:79%"></i></span>79%</span>
+              <span class="btns"><button class="btn btn-ok" onclick="ok(this)">✓ Reengajar</button><button class="btn btn-no" onclick="no(this)">Dispensar</button></span>
+            </div>
+            <div class="done-msg">✓ Reengajamento agendado</div>
+          </div>
+        </div>
+        <div class="railcta">
+          <button class="all" onclick="okAll()">Aprovar tudo (4)</button>
+          <button class="queue" onclick="toast('Abriria a Fila Matinal completa')">Ver fila</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+  function toggle(tr){ tr.classList.toggle('open'); }
+  function refresh(){
+    const n=document.querySelectorAll('#alist .act:not(.done):not(.gone)').length;
+    const b=document.getElementById('badge');
+    b.textContent=n; b.style.background=n===0?'var(--green)':'var(--danger)';
+    if(n===0) b.textContent='0 ✓';
+  }
+  function toast(m){const e=document.getElementById('toast');e.textContent=m;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),2300);}
+  function ok(btn){const a=btn.closest('.act');a.classList.add('done');toast('Ação confirmada');refresh();}
+  function no(btn){const a=btn.closest('.act');a.classList.add('gone');toast('Dispensado');refresh();}
+  function okAll(){document.querySelectorAll('#alist .act:not(.done):not(.gone)').forEach(a=>a.classList.add('done'));toast('4 ações confirmadas');refresh();}
+</script>
+</body>
+</html>
