@@ -53,7 +53,8 @@ export default function VehiclesInventory() {
     setLoading(true)
     getVehicles()
       .then((r) => {
-        setRows(r)
+        // issue #130 — Estoque mostra apenas veículos em estoque (vendidos vão para Vendas de Veículos).
+        setRows(r.filter((v) => v.status === 'em_estoque'))
         setError(null)
       })
       .catch((e) => setError(String(e)))

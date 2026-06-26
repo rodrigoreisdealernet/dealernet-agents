@@ -182,6 +182,12 @@ const MOCK_MENU: MenuItem[] = applyMenuTranslationKeys([
             icon: 'fa-car',
             spec: { title: 'Estoque de Veículos', kind: 'component', componentKey: 'dia-vehicles', icon: 'fa-car' },
           },
+          {
+            id: 'dealership-vehicle-sales',
+            text: 'Vendas de Veículos',
+            icon: 'fa-shopping-cart',
+            spec: { title: 'Vendas de Veículos', kind: 'component', componentKey: 'dia-vehicle-sales', icon: 'fa-shopping-cart' },
+          },
         ],
       },
       {
