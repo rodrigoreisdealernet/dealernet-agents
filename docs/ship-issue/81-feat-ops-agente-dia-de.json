@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/81",
   "pr": null,
   "prUrl": null,
-  "updatedAt": "2026-06-26T02:55:35.675Z",
+  "updatedAt": "2026-06-26T03:02:52.368Z",
   "steps": [
     {
       "id": "spec",
@@ -34,8 +34,8 @@
     {
       "id": "code",
       "label": "03 · Code",
-      "status": "running",
-      "summary": "Implementing Phase A view + Phase B agent triad",
+      "status": "done",
+      "summary": "Phase A view + Phase B triad; 6 files added, 5 modified; migrations validated via psql (commit 4ef4b1f)",
       "artifacts": [],
       "notes": [
         "reading PRD/spec + cloned vehicle_aging triad; starting Phase A view migration",
@@ -46,10 +46,13 @@
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "pending",
-      "summary": "",
+      "status": "running",
+      "summary": "Generating contract + workflow tests",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "writing scope + workflow + schema-parity tests for service-estimate-rescue",
+        "running pytest for test_ops_service_estimate"
+      ],
       "gate": null
     },
     {
