@@ -985,7 +985,7 @@ const OPS_API_URL = ENV.VITE_OPS_API_URL || '/api/ops'
 
 export interface DecideInput {
   findingId: string
-  decision: 'approve' | 'reject'
+  decision: 'approve' | 'reject' | 'dismiss'
   note?: string
   reason?: string
   workflowId?: string | null
@@ -1033,7 +1033,7 @@ export async function decideFinding(input: DecideInput): Promise<DecideResult> {
   if (input.workflowId) body.workflow_id = input.workflowId
   if (input.runId) body.run_id = input.runId
   if (input.approverId) body.approver_id = input.approverId
-  if (input.decision === 'approve' && input.note) body.note = input.note
+  if (input.decision !== 'reject' && input.note) body.note = input.note
   if (input.decision === 'reject') body.reason = input.reason
 
   const res = await fetch(`${OPS_API_URL}/findings/decision`, {

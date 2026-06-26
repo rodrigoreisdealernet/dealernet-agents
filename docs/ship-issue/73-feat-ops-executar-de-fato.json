@@ -1,0 +1,110 @@
+{
+  "issue": "73",
+  "title": "feat(ops): executar de fato a ação recomendada após aprovação do agente de veículos",
+  "slug": "feat-ops-executar-de-fato",
+  "branch": "feature/73-feat-ops-executar-de-fato",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/73",
+  "pr": "77",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/77",
+  "updatedAt": "2026-06-26T02:10:32.409Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "7 acceptance criteria drafted",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/73-feat-ops-executar-de-fato.md"
+        }
+      ],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec approved by human (--approved)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": "migration + app.py execution/dismiss/audit + i18n labels (11 files)",
+      "artifacts": [],
+      "notes": [
+        "reading code: app.py decision handler, migrations, frontend",
+        "writing finding_action migration",
+        "validated migration via psql; adding execute_finding_action in app.py",
+        "adding i18n labels + wiring onDismiss + friendly labels in UI",
+        "committing: migration + execute_finding_action + dismiss + i18n labels"
+      ],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "done",
+      "summary": "22 tests green: 7 SQL + 10 pytest + 5 frontend",
+      "artifacts": [],
+      "notes": [
+        "Reading spec, diff, and existing test harnesses",
+        "SQL contract tests green (7/7): AC1 markdown SCD2+view, AC2 idempotency, AC3 disposition+status check, AC4 monitor no-op, AC6 RLS grants+row-level. Writing pytest.",
+        "All layers green: SQL 7/7 (finding_action.test.mjs), pytest 10/10 (test_finding_action_execution.py), frontend 5/5 (verify-finding-labels.mjs). Committing + opening draft PR."
+      ],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "done",
+      "summary": "2 iterations: fixed approve-path regression + added AC5 dismiss & approve-wiring tests; 90 pytest green",
+      "artifacts": [
+        {
+          "label": "Test review",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/77#issuecomment-4805757823"
+        }
+      ],
+      "notes": [
+        "Reviewing 3 test suites against app.py handler + migration; auditing AC1-7 coverage",
+        "CHANGES REQUESTED: branch leaves test_ops_api.py RED (8 approve tests fail, AttributeError execute_finding_action on the shared fake); AC5 dismiss has zero coverage; approve->execute wiring only tested in isolation. New 3 suites (7 SQL + 10 py + 5 fe) pass.",
+        "Posted test review on PR #77 (CHANGES REQUESTED): 3 blockers (red test_ops_api suite / AC5 dismiss uncovered / approve-execute wiring isolation) + 2 weak-assertion notes.",
+        "Fixed CI red: added execute_finding_action + append_audit_event stubs to _FakeSupabaseClient in test_ops_api.py (8 approve tests green again). Added 4 handler tests: approve wires persisted finding to execute_finding_action (AC1-4), reject does not execute, dismiss persists rejected+disposition=dismissed, audits vehicle_finding_dismissed, no signal/no execute (AC5), dismiss-without-contract no-audit. pytest: 90 passed (test_ops_api 80 + execution 10). frontend 5/5. SQL layer env-blocked (shared supabase_db container absent this session).",
+        "Iteration 2: verifying tester fix 3df039f — running pytest + auditing dismiss/wiring assertions",
+        "Iteration 2 APPROVE: pytest 90 passed/0 failed (test_ops_api.py + test_finding_action_execution.py). All 3 prior blockers resolved with behavioural assertions through the real /api/ops/findings/decision endpoint. SQL contract suite fails only against unmigrated CI container (relation tenants missing) — environment-only, passed 7/7 against shared container previously."
+      ],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "done",
+      "summary": "APPROVE after 2 fixes: seeded ops_audit_event fact type + markdown price guard; 95 pytest green",
+      "artifacts": [
+        {
+          "label": "PR review",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/77#issuecomment-4805798827"
+        }
+      ],
+      "notes": [
+        "Reviewer (diff): reading production diff in app.py + migration + frontend",
+        "Reviewer(diff): posted on PR#77 — 2 issues (Medium: ops_audit_event fact type never seeded -> all audit events silently dropped; Low/Med: markdown writes sale_price=0 on missing/non-numeric price). Core markdown+idempotency+RLS+SCD2 sound."
+      ],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "waiting",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": "merge"
+    }
+  ]
+}

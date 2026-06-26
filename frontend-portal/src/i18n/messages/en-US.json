@@ -3,6 +3,21 @@
     "pt-BR": "Portuguese (Brazil)",
     "en-US": "English (US)"
   },
+  "labels": {
+    "agents": {
+      "vehicle-aging-analyst": "Stock aging analyst"
+    },
+    "findingTypes": {
+      "stock_aging_90d": "Vehicle idle 90+ days"
+    },
+    "actions": {
+      "markdown": "Mark down price",
+      "transfer": "Transfer",
+      "prioritize_sale": "Prioritize sale",
+      "wholesale_auction": "Wholesale auction",
+      "monitor": "Monitor"
+    }
+  },
   "common": {
     "valuesInBRL": "Values in BRL",
     "error": "Error",
@@ -616,6 +631,7 @@
       "dismiss": "Dismiss",
       "brandStore": "Brand / Store",
       "confirmFailed": "Failed to confirm",
+      "dismissFailed": "Failed to dismiss",
       "currentMonth": "Current month",
       "byBrandTap": "By brand · tap to see stores",
       "noMonthData": "No month data.",
