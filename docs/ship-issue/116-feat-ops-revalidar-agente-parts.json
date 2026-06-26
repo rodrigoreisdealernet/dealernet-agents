@@ -1,0 +1,99 @@
+{
+  "issue": "116",
+  "title": "Revalidar parts-inventory-advisor + corrigir HTTP 409 'Executar agora'",
+  "slug": "feat-ops-revalidar-agente-parts",
+  "branch": "feature/116-feat-ops-revalidar-agente-parts",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/116",
+  "pr": "122",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/122",
+  "updatedAt": "2026-06-26T11:05:57.588Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "6 critérios de aceite redigidos",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/116-feat-ops-revalidar-agente-parts.md"
+        }
+      ],
+      "notes": [
+        "Analisando run_agent_now, _MANUAL_RUN_WORKFLOWS e PRD do parts-inventory-advisor"
+      ],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec aprovada via --approved",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": "app.py: +parts em _MANUAL_RUN_WORKFLOWS, import, docstring assist-only",
+      "artifacts": [],
+      "notes": [
+        "Registrando parts-inventory-advisor em _MANUAL_RUN_WORKFLOWS + import"
+      ],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "done",
+      "summary": "3 testes de regressão #116 + fix de path; 129 passed",
+      "artifacts": [],
+      "notes": [
+        "Espelhando testes de regressão do #115 para parts-inventory-advisor"
+      ],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "done",
+      "summary": "0 iterações — testes aprovados (129 passed)",
+      "artifacts": [],
+      "notes": [
+        "Auditoria de cobertura/asserções dos testes",
+        "Reviewing issue #116 regression tests for parts-inventory-advisor run-now",
+        "Test review complete: PASS. 129 tests green; AC1/AC2/AC3/AC6 strongly covered, AC4 covered via shared skip-branch test. Posted findings on PR #122. No blockers."
+      ],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "done",
+      "summary": "APPROVE — sem problemas bloqueantes",
+      "artifacts": [
+        {
+          "label": "PR review",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/122"
+        }
+      ],
+      "notes": [
+        "Revisão do diff: correção, segurança, regressão",
+        "DIFF mode: starting code review of PR #122 (full diff vs origin/main)",
+        "Review complete: input factory matches PartsInventoryWorkflowInput (tenant-only), locale=None fallback intact, agent_key matches _OPS_AGENT_KEYS+frontend, migration-path fix valid, no scope creep. 3 issue116 tests pass. Verdict: approve."
+      ],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "waiting",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": "merge"
+    }
+  ]
+}

@@ -150,7 +150,7 @@ def test_parts_inventory_schema_matches_db_registry_contract() -> None:
     assert schema["additionalProperties"] is False
     assert sorted(schema["required"]) == ["part_id", "rationale", "recommended_action"]
 
-    migration = (_REPO_ROOT / "supabase/migrations/20260627130000_parts_inventory_agent.sql").read_text()
+    migration = (_REPO_ROOT / "supabase/migrations/20260627130002_parts_inventory_agent.sql").read_text()
     match = re.search(r"'(\{.*?\})'::jsonb", migration, re.S)
     assert match, "expected an embedded jsonb schema literal in the migration"
     registry = json.loads(match.group(1))
