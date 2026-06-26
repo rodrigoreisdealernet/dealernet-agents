@@ -47,6 +47,45 @@ class AssistantAction(BaseModel):
     )
 
 
+class AssistantChartSeries(BaseModel):
+    """One drawn series of a chart (maps to ChartCard's ChartSeries)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    key: str = Field(min_length=1, description="Numeric field present in each data point.")
+    label: str = Field(default="", description="Legend/tooltip name (defaults to key when empty).")
+    format: Literal["currency", "percent", "number"] = Field(
+        default="number",
+        description="Value formatting for this series.",
+    )
+
+
+class AssistantChart(BaseModel):
+    """Inline chart spec rendered by the frontend ChartCard (recharts).
+
+    The assistant fills ``data`` strictly from BI tool results — never invented.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    title: str = Field(min_length=1, description="Chart title.")
+    type: Literal["line", "bar", "pie"] = Field(description="Chart kind.")
+    x_key: str = Field(min_length=1, description="Field used as the category/x axis (and pie slice name).")
+    series: list[AssistantChartSeries] = Field(
+        min_length=1,
+        description="One drawn series per item; pie uses the first series.",
+    )
+    # Mixed value type: x_key is a category/date string, series values are numbers.
+    data: list[dict[str, float | str]] = Field(
+        default_factory=list,
+        description="Already-resolved data points sourced from tools. Keep concise (<= 30 points).",
+    )
+    value_format: Literal["currency", "percent", "number"] = Field(
+        default="number",
+        description="Default axis/tooltip formatting.",
+    )
+
+
 class AssistantReplyV1(BaseModel):
     """Structured turn returned by the conversational assistant."""
 
@@ -54,11 +93,18 @@ class AssistantReplyV1(BaseModel):
 
     reply: str = Field(
         min_length=1,
-        description="Natural-language answer in Brazilian Portuguese (pt-BR), concise and factual.",
+        description=(
+            "Answer in Brazilian Portuguese (pt-BR), concise and factual. May use simple "
+            "Markdown (bold, lists, tables) — the chat renders it."
+        ),
     )
     actions: list[AssistantAction] = Field(
         default_factory=list,
         description="UI actions to run after the reply (navigation). Empty when none apply.",
+    )
+    charts: list[AssistantChart] = Field(
+        default_factory=list,
+        description="Inline charts to render in the chat, built from tool data. Empty when none apply.",
     )
     suggestions: list[str] = Field(
         default_factory=list,
@@ -73,6 +119,8 @@ def assistant_reply_v1_schema() -> dict[str, Any]:
 
 __all__ = [
     "AssistantAction",
+    "AssistantChart",
+    "AssistantChartSeries",
     "AssistantReplyV1",
     "assistant_reply_v1_schema",
 ]
