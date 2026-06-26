@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/126",
   "pr": "147",
   "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/147",
-  "updatedAt": "2026-06-26T15:16:09.513Z",
+  "updatedAt": "2026-06-26T15:33:43.369Z",
   "steps": [
     {
       "id": "spec",
@@ -59,33 +59,43 @@
     {
       "id": "test-review",
       "label": "05 · Test review",
-      "status": "running",
-      "summary": "",
+      "status": "done",
+      "summary": "1 iteration; APPROVE — cross-language parity test added (mutation-verified), 76 pytest + 236 frontend green",
       "artifacts": [],
       "notes": [
         "Reviewer starting tests-mode audit of decision_preview suite (pytest parity + node verify)",
         "CHANGES REQUESTED: Python parity solid, but TS mirror rule (agentsApi.ts) is grep-only/never executed, no cross-language parity test, and AC2 displayed value (data.delta) not verified vs recorded markdown. Posted to PR #147.",
-        "tester addressing review round 1"
+        "tester addressing review round 1",
+        "review r1 addressed: cross-language parity table executes TS+Python rules; pytest 76 green, frontend npm test 236 green; pushed 62f3c4a",
+        "re-review round 1",
+        "re-review round 1: APPROVE"
       ],
       "gate": null
     },
     {
       "id": "code-review",
       "label": "06 · Code review",
-      "status": "pending",
-      "summary": "",
-      "artifacts": [],
-      "notes": [],
+      "status": "done",
+      "summary": "LGTM — shared rule (no divergence), no regression, no security/i18n issues",
+      "artifacts": [
+        {
+          "label": "PR review",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/147"
+        }
+      ],
+      "notes": [
+        "diff review"
+      ],
       "gate": null
     },
     {
       "id": "merge",
       "label": "Merge (human gate)",
-      "status": "pending",
+      "status": "waiting",
       "summary": "",
       "artifacts": [],
       "notes": [],
-      "gate": null
+      "gate": "merge"
     }
   ]
 }
