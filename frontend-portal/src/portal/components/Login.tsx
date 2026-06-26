@@ -113,7 +113,6 @@ function LoginForm({ onForgot }: { onForgot: () => void }) {
       exit={{ opacity: 0 }}
       onSubmit={handleSubmit}
       className="space-y-4"
-      noValidate
     >
       <Field label={t('user')} htmlFor="usuario" icon={<User size={16} />}>
         <input
