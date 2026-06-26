@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/93",
   "pr": null,
   "prUrl": null,
-  "updatedAt": "2026-06-26T03:09:31.086Z",
+  "updatedAt": "2026-06-26T03:15:00.638Z",
   "steps": [
     {
       "id": "spec",
@@ -34,8 +34,8 @@
     {
       "id": "code",
       "label": "03 · Code",
-      "status": "running",
-      "summary": "",
+      "status": "done",
+      "summary": "MOCK_MENU + pt-BR/en-US locales (3 files); audit-trail kept in registry",
       "artifacts": [],
       "notes": [
         "Reading menu/i18n; editing MOCK_MENU to remove ai-audit-trail leaf",
@@ -46,10 +46,13 @@
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "pending",
+      "status": "running",
       "summary": "",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "reading verify-menu.mjs and diff",
+        "node --test green (12/12 menu, 158/158 suite); mutation-checked; opening draft PR"
+      ],
       "gate": null
     },
     {
