@@ -60,7 +60,12 @@ BEGIN
     AND split_part(source_record_id, ':', 3) = ANY(v_wynne_agents);
 
   -- Schemas de saída do legado (mantém apenas o do agente DIA).
-  DELETE FROM ops_output_schema_registry WHERE schema_key <> 'vehicle_aging_finding_v1';
+  DELETE FROM ops_output_schema_registry
+  WHERE schema_key NOT IN (
+    'vehicle_aging_finding_v1',
+    'parts_inventory_finding_v1',
+    'collections_finding_v1'
+  );
 
   -- Câmbio multi-moeda (Wynne); o DIA opera em BRL.
   DELETE FROM fx_rates;
@@ -91,7 +96,10 @@ BEGIN
 
   -- Tipos exclusivos do domínio DIA: apaga tudo (demo e não-demo).
   DELETE FROM entities
-  WHERE entity_type IN ('vehicle', 'brand', 'part', 'part_sale', 'service_order');
+  WHERE entity_type IN (
+    'vehicle', 'brand', 'part', 'part_sale', 'service_order',
+    'receivable', 'collection_contact'
+  );
 
   -- 'company' é compartilhado com rental: remove apenas o namespace DIA.
   DELETE FROM entities
@@ -523,6 +531,237 @@ BEGIN
   END LOOP;
 END
 $$;
+
+-- ===========================================================================
+-- Collections Prioritizer agent config + representative finance demo (#82)
+-- Seeds `collections-prioritizer` for demo-ops-a and demo-ops-b in BOTH the
+-- entity store and the base `ops_agent_config` table. enabled=true but
+-- schedule.enabled=false so the recurring run stays off by default. The finance
+-- mirror fixtures create one demo customer, three open receivables, and two
+-- collection-contact notes for run-now validation.
+-- ===========================================================================
+DO $$
+DECLARE
+  v_agent_key   text  := 'collections-prioritizer';
+  v_schema_key  text  := 'collections_finding_v1';
+  v_model       jsonb := '{"provider":"azure_openai","deployment":"gpt-4.1-mini","api_version":"2024-12-01-preview"}'::jsonb;
+  v_system_prompt text := 'You are the Collections Prioritizer for a vehicle dealership. Rank customers by recoverable overdue exposure, read the recent collection-contact notes, and recommend one human-approved next action (call, renegotiate, send_notice, escalate_legal, hold_credit, monitor). Never send customer communications and never move money.';
+  v_user_prompt text := 'Assess customer {customer_id} ({customer_name}) for tenant {tenant_id}. Total open exposure: {total_exposure}. Max days overdue: {days_overdue}. Severity: {severity}. Open receivables and bounded contact-note evidence are provided inline. Recommend the next human-approved collections action with concise evidence. Evidence:\n{evidence_json}';
+  v_tools       jsonb := '[]'::jsonb;
+  v_thresholds  jsonb := '{"near_due_days":-5}'::jsonb;
+  v_bounds      jsonb := '{"max_findings_per_run":50,"max_customers":200,"max_tool_rounds":2}'::jsonb;
+  v_schedule    jsonb := '{"cron":"0 6 * * 1-5","enabled":false}'::jsonb;
+  v_tenant_keys text[] := ARRAY['demo-ops-a','demo-ops-b'];
+  v_tenant_key  text;
+  v_tenant_id   uuid;
+  v_entity_id   uuid;
+BEGIN
+  PERFORM set_config('request.jwt.claim.role', 'service_role', true);
+
+  FOREACH v_tenant_key IN ARRAY v_tenant_keys
+  LOOP
+    SELECT id INTO v_tenant_id FROM tenants WHERE tenant_key = v_tenant_key;
+    IF v_tenant_id IS NULL THEN
+      RAISE EXCEPTION 'Collections prioritizer seed requires tenant % (run the main ops seed first)', v_tenant_key;
+    END IF;
+
+    DELETE FROM entities
+    WHERE entity_type = 'agent_config'
+      AND source_record_id = format('demo-ops-agent-config:%s:%s', v_tenant_id, v_agent_key);
+
+    INSERT INTO entities (entity_type, source_record_id)
+    VALUES ('agent_config', format('demo-ops-agent-config:%s:%s', v_tenant_id, v_agent_key))
+    ON CONFLICT (entity_type, source_record_id) DO UPDATE
+      SET source_record_id = EXCLUDED.source_record_id
+    RETURNING id INTO v_entity_id;
+
+    INSERT INTO entity_versions (entity_id, version_number, data)
+    VALUES (
+      v_entity_id,
+      1,
+      jsonb_build_object(
+        'tenant_id', v_tenant_id,
+        'agent_key', v_agent_key,
+        'enabled', true,
+        'model', v_model,
+        'system_prompt', v_system_prompt,
+        'user_prompt_template', v_user_prompt,
+        'tools', v_tools,
+        'output_schema_key', v_schema_key,
+        'thresholds', v_thresholds,
+        'bounds', v_bounds,
+        'schedule', v_schedule,
+        'auto_apply', false
+      )
+    )
+    ON CONFLICT (entity_id, version_number) DO UPDATE
+      SET data = EXCLUDED.data,
+          is_current = true,
+          valid_to = NULL;
+
+    INSERT INTO ops_agent_config (
+      tenant_id, agent_key, enabled, model,
+      system_prompt, user_prompt_template,
+      tools, output_schema_key, thresholds, bounds, schedule, auto_apply
+    )
+    VALUES (
+      v_tenant_id, v_agent_key, true, v_model,
+      v_system_prompt, v_user_prompt,
+      v_tools, v_schema_key, v_thresholds, v_bounds, v_schedule, false
+    )
+    ON CONFLICT (tenant_id, agent_key) DO UPDATE
+      SET enabled              = EXCLUDED.enabled,
+          model                = EXCLUDED.model,
+          system_prompt        = EXCLUDED.system_prompt,
+          user_prompt_template = EXCLUDED.user_prompt_template,
+          tools                = EXCLUDED.tools,
+          output_schema_key    = EXCLUDED.output_schema_key,
+          thresholds           = EXCLUDED.thresholds,
+          bounds               = EXCLUDED.bounds,
+          schedule             = EXCLUDED.schedule,
+          auto_apply           = EXCLUDED.auto_apply,
+          updated_at           = now();
+  END LOOP;
+END
+$$;
+
+begin;
+set local request.jwt.claim.role = 'service_role';
+
+DO $$
+DECLARE
+  v_today date := now()::date;
+  v_customer_id uuid;
+  v_receivable_001 uuid;
+  v_receivable_002 uuid;
+BEGIN
+  PERFORM set_config('request.jwt.claim.role', 'service_role', true);
+
+  DELETE FROM entities
+  WHERE entity_type = 'collection_contact'
+    AND source_record_id LIKE 'demo-dia-collection-contact-%';
+
+  DELETE FROM entities
+  WHERE entity_type = 'receivable'
+    AND source_record_id LIKE 'demo-dia-receivable-%';
+
+  PERFORM rental_upsert_entity_current_state(
+    p_entity_type => 'customer',
+    p_source_record_id => 'demo-dia-customer-collections-001',
+    p_data => jsonb_build_object(
+      'name', 'Auto Peças Horizonte Ltda',
+      'customer_name', 'Auto Peças Horizonte Ltda',
+      'document_number', '11.222.333/0001-44',
+      'segment', 'oficina_multimarcas',
+      'status', 'ativo',
+      'source_record_id', 'demo-dia-customer-collections-001'
+    )
+  );
+
+  SELECT id INTO v_customer_id
+  FROM entities
+  WHERE entity_type = 'customer'
+    AND source_record_id = 'demo-dia-customer-collections-001';
+
+  PERFORM rental_upsert_entity_current_state(
+    p_entity_type => 'receivable',
+    p_source_record_id => 'demo-dia-receivable-001',
+    p_data => jsonb_build_object(
+      'name', 'Auto Peças Horizonte NF-9001',
+      'customer_id', v_customer_id::text,
+      'customer_name', 'Auto Peças Horizonte Ltda',
+      'document_number', 'NF-9001',
+      'receivable_type', 'a_receber',
+      'balance', 18000.00,
+      'due_date', to_char(v_today - 120, 'YYYY-MM-DD'),
+      'collector_code', 'COB-01',
+      'collector_name', 'Marina',
+      'status', 'aberto',
+      'source_record_id', 'demo-dia-receivable-001'
+    )
+  );
+
+  PERFORM rental_upsert_entity_current_state(
+    p_entity_type => 'receivable',
+    p_source_record_id => 'demo-dia-receivable-002',
+    p_data => jsonb_build_object(
+      'name', 'Auto Peças Horizonte NF-9018',
+      'customer_id', v_customer_id::text,
+      'customer_name', 'Auto Peças Horizonte Ltda',
+      'document_number', 'NF-9018',
+      'receivable_type', 'a_receber',
+      'balance', 7200.00,
+      'due_date', to_char(v_today - 45, 'YYYY-MM-DD'),
+      'collector_code', 'COB-01',
+      'collector_name', 'Marina',
+      'status', 'aberto',
+      'source_record_id', 'demo-dia-receivable-002'
+    )
+  );
+
+  PERFORM rental_upsert_entity_current_state(
+    p_entity_type => 'receivable',
+    p_source_record_id => 'demo-dia-receivable-003',
+    p_data => jsonb_build_object(
+      'name', 'Auto Peças Horizonte NF-9042',
+      'customer_id', v_customer_id::text,
+      'customer_name', 'Auto Peças Horizonte Ltda',
+      'document_number', 'NF-9042',
+      'receivable_type', 'a_receber',
+      'balance', 3500.00,
+      'due_date', to_char(v_today + 3, 'YYYY-MM-DD'),
+      'collector_code', 'COB-01',
+      'collector_name', 'Marina',
+      'status', 'aberto',
+      'source_record_id', 'demo-dia-receivable-003'
+    )
+  );
+
+  SELECT id INTO v_receivable_001
+  FROM entities
+  WHERE entity_type = 'receivable'
+    AND source_record_id = 'demo-dia-receivable-001';
+
+  SELECT id INTO v_receivable_002
+  FROM entities
+  WHERE entity_type = 'receivable'
+    AND source_record_id = 'demo-dia-receivable-002';
+
+  PERFORM rental_upsert_entity_current_state(
+    p_entity_type => 'collection_contact',
+    p_source_record_id => 'demo-dia-collection-contact-001',
+    p_data => jsonb_build_object(
+      'name', 'Ligação Auto Peças Horizonte',
+      'customer_id', v_customer_id::text,
+      'receivable_id', v_receivable_001::text,
+      'action', 'ligacao',
+      'note', 'Cliente informou queda temporária de fluxo de caixa e prometeu pagar a NF-9001 em duas parcelas até sexta-feira.',
+      'contact_date', to_char(v_today - 4, 'YYYY-MM-DD'),
+      'next_contact_date', to_char(v_today + 1, 'YYYY-MM-DD'),
+      'result', 'promessa_pagamento',
+      'source_record_id', 'demo-dia-collection-contact-001'
+    )
+  );
+
+  PERFORM rental_upsert_entity_current_state(
+    p_entity_type => 'collection_contact',
+    p_source_record_id => 'demo-dia-collection-contact-002',
+    p_data => jsonb_build_object(
+      'name', 'WhatsApp Auto Peças Horizonte',
+      'customer_id', v_customer_id::text,
+      'receivable_id', v_receivable_002::text,
+      'action', 'whatsapp',
+      'note', 'Financeiro pediu segunda via e sinalizou possibilidade de renegociação se houver bloqueio de crédito em novos pedidos.',
+      'contact_date', to_char(v_today - 1, 'YYYY-MM-DD'),
+      'next_contact_date', to_char(v_today + 2, 'YYYY-MM-DD'),
+      'result', 'segunda_via_enviada',
+      'source_record_id', 'demo-dia-collection-contact-002'
+    )
+  );
+END
+$$;
+
+commit;
 
 -- ===========================================================================
 -- DIA dealership domain — demo companies + brands (issue #5)

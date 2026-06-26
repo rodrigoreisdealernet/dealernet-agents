@@ -20,6 +20,10 @@ from .contract_ocr import (
     ContractOcrRevalidationWorkflow,
     ContractOcrRevalidationWorkflowInput,
 )
+from .collections_prioritizer import (
+    CollectionsPrioritizerWorkflow,
+    CollectionsPrioritizerWorkflowInput,
+)
 from .fleet import (
     ApproveFleetFindingSignal,
     FleetUtilizationWorkflow,
@@ -61,6 +65,8 @@ __all__ = [
     "ApproveFindingSignal",
     "BranchMorningBriefWorkflow",
     "BranchMorningBriefWorkflowInput",
+    "CollectionsPrioritizerWorkflow",
+    "CollectionsPrioritizerWorkflowInput",
     "ContractAnalysisWorkflow",
     "ContractAnalysisWorkflowInput",
     "ContractOcrRevalidationWorkflow",
