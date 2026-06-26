@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/128",
   "pr": null,
   "prUrl": null,
-  "updatedAt": "2026-06-26T14:44:01.662Z",
+  "updatedAt": "2026-06-26T14:53:50.427Z",
   "steps": [
     {
       "id": "spec",
@@ -36,8 +36,8 @@
     {
       "id": "code",
       "label": "03 · Code",
-      "status": "running",
-      "summary": "",
+      "status": "done",
+      "summary": "DB view + ops_api endpoint + AgentRunHistory screen (13 files)",
       "artifacts": [],
       "notes": [
         "Spawning coder agent",
@@ -51,10 +51,14 @@
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "pending",
+      "status": "running",
       "summary": "",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "Spawning tester agent",
+        "writing SQL contract test for ops_agent_run_history_view (AC1-4, AC7)",
+        "SQL contract 8/8 green; running frontend verify suite"
+      ],
       "gate": null
     },
     {
