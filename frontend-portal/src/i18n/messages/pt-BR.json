@@ -719,7 +719,22 @@
       "rejectReasonPrompt": "Informe o motivo da rejeição (obrigatório).",
       "noteOptional": "Observação (opcional).",
       "reasonPlaceholder": "Motivo…",
-      "notePlaceholder": "Observação…"
+      "notePlaceholder": "Observação…",
+      "preview": {
+        "title": "O que acontece a seguir",
+        "branchApprove": "Ao aprovar",
+        "branchReject": "Ao recusar",
+        "effectMarkdown": "Aplica um markdown de {pct} e registra o novo preço de venda.",
+        "effectDisposition": "Registra a disposição \"{disposition}\" para execução.",
+        "effectMonitorNoop": "Apenas monitora — nenhuma alteração é aplicada.",
+        "effectAssistOnly": "Registra a recomendação para acompanhamento; nada é executado no DMS.",
+        "effectRejectNoop": "Nenhuma ação é executada — apenas registro monitorado e auditado.",
+        "sealAssistOnly": "Apenas assistência",
+        "sealAudited": "Auditado",
+        "sealNoop": "Sem efeito",
+        "impactRecoverable": "Recuperável: R$ {amount}",
+        "impactExposure": "Exposição: R$ {amount}"
+      }
     },
     "serviceOrders": {
       "title": "Ordens de Serviço",

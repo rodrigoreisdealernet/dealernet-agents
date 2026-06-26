@@ -94,6 +94,29 @@ export interface FindingApprover {
   disposition?: string | null
 }
 
+// Prévia determinística de consequências (issue #126). Espelha o backend
+// describe_action_effect (temporal/src/ops_api/app.py): descreve o que cada
+// decisão (aprovar/recusar) realmente faz — fiel ao execute_finding_action.
+export interface ValueImpact {
+  amount: number | null
+  currency: string | null
+  kind: 'recoverable' | 'exposure'
+}
+
+export interface DecisionBranch {
+  effect_key: string
+  is_noop: boolean
+  value_impact: ValueImpact | null
+  audited: boolean
+  assist_only: boolean
+  params: Record<string, unknown>
+}
+
+export interface DecisionPreview {
+  on_approve: DecisionBranch
+  on_reject: DecisionBranch
+}
+
 export interface FindingHorizon {
   predicted_breach_at: string | null
   days_to_breach: number | null
@@ -116,6 +139,8 @@ export interface FindingDetail extends FindingRow {
   // Histórico de decisão já persistido e exposto por ops_findings_view.
   decided_at: string | null
   approver: FindingApprover | null
+  // Prévia determinística das consequências de aprovar/recusar (issue #126).
+  decision_preview: DecisionPreview | null
 }
 
 export interface HomeKpis {
@@ -200,6 +225,74 @@ export async function getFindings(f: FindingsFilter = {}): Promise<FindingRow[]>
 const FINDING_DETAIL_COLS =
   'id, agent_key, run_id, workflow_id, contract_id, contract_label, line_item_id, line_item_label, customer_name, finding_type, severity, status, expected, expected_amount, billed, billed_amount, delta, evidence, proposed_action, confidence, rationale, created_at, decided_at, approver'
 
+// Espelho determinístico do backend describe_action_effect (issue #126). Só o
+// agente de estoque envelhecido (stock_aging_90d) tem efeito executável; os
+// demais são assist-only. Recusar é sempre um no-op monitorado/auditado. A
+// regra de execução real vive no backend (execute_finding_action o reusa); este
+// espelho apenas descreve as consequências para a UI.
+const VEHICLE_AGING_FINDING_TYPE = 'stock_aging_90d'
+const DEFAULT_MARKDOWN_PCT = 0.1
+const PENDING_EXECUTION_ACTIONS = ['transfer', 'prioritize_sale', 'wholesale_auction']
+
+export function describeActionEffect(
+  finding: Pick<FindingDetail, 'finding_type' | 'proposed_action'>,
+): DecisionPreview {
+  const action = (finding.proposed_action ?? '').trim()
+  const onReject: DecisionBranch = {
+    effect_key: 'generic.reject_noop',
+    is_noop: true,
+    value_impact: null,
+    audited: true,
+    assist_only: true,
+    params: {},
+  }
+
+  let onApprove: DecisionBranch
+  if (finding.finding_type === VEHICLE_AGING_FINDING_TYPE) {
+    if (action === 'markdown') {
+      onApprove = {
+        effect_key: 'vehicle_aging.markdown',
+        is_noop: false,
+        value_impact: { amount: null, currency: null, kind: 'recoverable' },
+        audited: true,
+        assist_only: true,
+        params: { markdown_pct: DEFAULT_MARKDOWN_PCT },
+      }
+      onReject.value_impact = { amount: null, currency: null, kind: 'exposure' }
+    } else if (PENDING_EXECUTION_ACTIONS.includes(action)) {
+      onApprove = {
+        effect_key: 'vehicle_aging.disposition',
+        is_noop: false,
+        value_impact: { amount: null, currency: null, kind: 'recoverable' },
+        audited: true,
+        assist_only: true,
+        params: { disposition: action },
+      }
+      onReject.value_impact = { amount: null, currency: null, kind: 'exposure' }
+    } else {
+      onApprove = {
+        effect_key: 'generic.monitor_noop',
+        is_noop: true,
+        value_impact: null,
+        audited: true,
+        assist_only: true,
+        params: action === '' || action === 'monitor' ? {} : { action },
+      }
+    }
+  } else {
+    onApprove = {
+      effect_key: 'assist_only.register',
+      is_noop: false,
+      value_impact: null,
+      audited: true,
+      assist_only: true,
+      params: {},
+    }
+  }
+
+  return { on_approve: onApprove, on_reject: onReject }
+}
+
 function finiteNumberOrNull(value: unknown): number | null {
   if (typeof value === 'number') return Number.isFinite(value) ? value : null
   if (typeof value !== 'string' || !value.trim()) return null
@@ -222,6 +315,7 @@ export async function getFinding(id: string): Promise<FindingDetail> {
     .eq('id', id)
     .single()) as PgResponse<FindingDetail>
   const finding = unwrap(res)
+  finding.decision_preview = describeActionEffect(finding)
   return { ...finding, ...extractFindingHorizon(finding.expected) }
 }
 

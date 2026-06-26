@@ -1,0 +1,101 @@
+{
+  "issue": "126",
+  "title": "feat(ops): prévia de consequências ao aceitar/recusar finding (decision_preview) [U3]",
+  "slug": "feat-ops-previa-de-consequencias",
+  "branch": "feature/126-feat-ops-previa-de-consequencias",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/126",
+  "pr": "147",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/147",
+  "updatedAt": "2026-06-26T15:33:43.369Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "5 acceptance criteria drafted",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/126-feat-ops-previa-de-consequencias.md"
+        }
+      ],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec approved by human (--approved)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": "6 files: app.py describe_action_effect + GET /finding; agentsApi.ts + FindingDetail.tsx two-branch preview; pt-BR/en-US i18n",
+      "artifacts": [],
+      "notes": [
+        "starting: extract describe_action_effect + decision_preview preview blocks",
+        "extracted describe_action_effect + reused in execute + wired GET /api/ops/findings/{id}",
+        "committed ff6a3a0: describe_action_effect reused in execute, GET /findings/{id} preview, FindingDetail blocks + pt-BR/en-US i18n; tsc/eslint/i18n-parity green, 16 execution tests pass"
+      ],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "done",
+      "summary": "pytest 61 pass (45 new decision_preview + parity), frontend 234 pass (8 new verify-decision-preview); fixed dropped AgentScheduleNotProvisioned class",
+      "artifacts": [],
+      "notes": [
+        "Writing pytest describe_action_effect parity tests + node --test verify-decision-preview",
+        "pytest 45 new tests green; node --test verify-decision-preview 8 green; full frontend suite 234 green"
+      ],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "done",
+      "summary": "1 iteration; APPROVE — cross-language parity test added (mutation-verified), 76 pytest + 236 frontend green",
+      "artifacts": [],
+      "notes": [
+        "Reviewer starting tests-mode audit of decision_preview suite (pytest parity + node verify)",
+        "CHANGES REQUESTED: Python parity solid, but TS mirror rule (agentsApi.ts) is grep-only/never executed, no cross-language parity test, and AC2 displayed value (data.delta) not verified vs recorded markdown. Posted to PR #147.",
+        "tester addressing review round 1",
+        "review r1 addressed: cross-language parity table executes TS+Python rules; pytest 76 green, frontend npm test 236 green; pushed 62f3c4a",
+        "re-review round 1",
+        "re-review round 1: APPROVE"
+      ],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "done",
+      "summary": "LGTM — shared rule (no divergence), no regression, no security/i18n issues",
+      "artifacts": [
+        {
+          "label": "PR review",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/147"
+        }
+      ],
+      "notes": [
+        "diff review"
+      ],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "waiting",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": "merge"
+    }
+  ]
+}
