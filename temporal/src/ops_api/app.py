@@ -67,6 +67,7 @@ from ..workflows.ops.service_estimate_rescue import (
 )
 from ..workflows.ops.vehicle_aging import VehicleAgingWorkflow, VehicleAgingWorkflowInput
 from ..agents.i18n import DEFAULT_LOCALE, resolve_locale
+from .agent_catalog import agent_catalog_payload
 from ..workflows.ops.branch_morning_brief import (
     BranchMorningBriefWorkflow,
     BranchMorningBriefWorkflowInput,
@@ -1612,6 +1613,15 @@ def create_app(
     @app.get("/api/ops/health")
     async def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    @app.get("/api/ops/agents/catalog")
+    async def agents_catalog() -> dict[str, Any]:
+        """Read-only static mission catalog for the four DIA agents (issue #125).
+
+        Returns only i18n keys and structural data (action list, ``assist_only``);
+        the agent ``system_prompt``/``user_prompt_template`` is never exposed.
+        """
+        return {"agents": agent_catalog_payload()}
 
     async def _authorized_tenant_id(*, principal: Principal, client: SupabaseServiceClient) -> str:
         tenant_id = await client.get_tenant_id_by_key(tenant_key=principal.tenant)

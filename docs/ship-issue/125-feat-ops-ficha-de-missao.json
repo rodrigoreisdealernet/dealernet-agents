@@ -1,0 +1,83 @@
+{
+  "issue": "125",
+  "title": "feat(ops): ficha de missão dos agentes DIA (catálogo estático no código) [U2]",
+  "slug": "feat-ops-ficha-de-missao",
+  "branch": "feature/125-feat-ops-ficha-de-missao",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/125",
+  "pr": null,
+  "prUrl": null,
+  "updatedAt": "2026-06-26T14:09:29.208Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "6 critérios de aceite definidos",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/125-feat-ops-ficha-de-missao.md"
+        }
+      ],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec aprovada por humano (--approved)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "running",
+      "summary": "",
+      "artifacts": [],
+      "notes": [
+        "Building static agent mission catalog (Python) + GET /api/ops/agents/catalog + mission cards in AgentsDashboard + i18n",
+        "Catalog + endpoint + mission cards + i18n done; py_compile/ruff clean, TS static-reviewed. Committing."
+      ],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    }
+  ]
+}

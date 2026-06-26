@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 import { useTranslations } from 'use-intl'
 import { useLocale } from '@/i18n/LocaleProvider'
 import { usePortalStore } from '@/portal/store/portalStore'
-import { getAgentStatus, getFindingKpis, runAgentNow, type AgentStatus, type FindingKpis } from '@/portal/lib/agentsApi'
+import { getAgentStatus, getFindingKpis, runAgentNow, getAgentCatalog, type AgentStatus, type FindingKpis, type AgentMission } from '@/portal/lib/agentsApi'
 import { useFindingLabels } from '@/portal/lib/findingLabels'
 import { cadenceForAgent } from '@/portal/lib/cron'
 import { KpiCard, Badge, ProgressBar, ScreenShell, type Tone } from './ui'
@@ -92,11 +92,13 @@ function AgentCardSkeleton() {
 export default function AgentsDashboard() {
   const t = useTranslations('screens.agentsDashboard')
   const common = useTranslations('common')
-  const { agentLabel } = useFindingLabels()
+  const { agentLabel, actionLabel, missionText } = useFindingLabels()
   const { locale } = useLocale()
   const openWindow = usePortalStore((s) => s.openWindow)
   const [agents, setAgents] = useState<AgentStatus[]>([])
   const [kpis, setKpis] = useState<FindingKpis | null>(null)
+  const [missions, setMissions] = useState<Record<string, AgentMission>>({})
+  const [expandedMissions, setExpandedMissions] = useState<Record<string, boolean>>({})
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   // Estado por agente do "Executar agora" — independente do polling, para que o
@@ -154,6 +156,25 @@ export default function AgentsDashboard() {
     }
   }, [])
 
+  // Catálogo de missão é estático (issue #125): busca uma única vez, sem polling.
+  useEffect(() => {
+    let alive = true
+    getAgentCatalog()
+      .then((list) => {
+        if (!alive) return
+        setMissions(Object.fromEntries(list.map((m) => [m.agent_key, m])))
+      })
+      .catch(() => {
+        /* falha do catálogo não deve quebrar a lista de agentes */
+      })
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const toggleMission = (agentKey: string) =>
+    setExpandedMissions((s) => ({ ...s, [agentKey]: !s[agentKey] }))
+
   const orderedAgents = sortAgentsByPriority(agents)
   const showSkeleton = loading && agents.length === 0
   const showEmpty = !loading && !error && agents.length === 0
@@ -196,6 +217,8 @@ export default function AgentsDashboard() {
           const health = agentHealth(a)
           const rate = successRate(a)
           const cadence = cadenceForAgent(a.agent_key, locale)
+          const mission = missions[a.agent_key]
+          const missionOpen = !!expandedMissions[a.agent_key]
           return (
             <div
               key={a.agent_key}
@@ -258,6 +281,50 @@ export default function AgentsDashboard() {
                   )}
                 </div>
               </button>
+              {mission && (
+                <div className="mt-3 border-t border-border pt-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      aria-expanded={missionOpen}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        toggleMission(a.agent_key)
+                      }}
+                      className="text-xs font-semibold text-foreground hover:underline"
+                    >
+                      {missionOpen ? `▾ ${t('mission')}` : `▸ ${t('mission')}`}
+                    </button>
+                    {mission.assist_only && <Badge tone="info">{t('assistOnly')}</Badge>}
+                  </div>
+                  {missionOpen && (
+                    <div className="mt-2 space-y-2 text-xs text-muted-foreground">
+                      <p>
+                        <span className="font-semibold text-foreground">{t('objective')}: </span>
+                        {missionText(mission.objective_key)}
+                      </p>
+                      <p>
+                        <span className="font-semibold text-foreground">{t('dataAnalyzed')}: </span>
+                        {missionText(mission.data_key)}
+                      </p>
+                      <p>
+                        <span className="font-semibold text-foreground">{t('predicts')}: </span>
+                        {missionText(mission.predicts_key)}
+                      </p>
+                      <div>
+                        <span className="font-semibold text-foreground">{t('possibleActions')}: </span>
+                        <span className="mt-1 flex flex-wrap gap-1.5">
+                          {mission.actions.map((code) => (
+                            <Badge key={code} tone="neutral">
+                              {actionLabel(code)}
+                            </Badge>
+                          ))}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <button
                   type="button"
