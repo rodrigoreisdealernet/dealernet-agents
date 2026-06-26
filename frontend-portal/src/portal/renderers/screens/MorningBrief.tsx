@@ -6,12 +6,13 @@
 // Responsiva: mobile = cards empilhados (protótipo v7 mobile); desktop = cockpit
 // tabela + rail de ações (protótipo v7 desktop). Usa useBreakpoint p/ alternar.
 //
-// Dados do MÊS ATUAL (month-to-date) vêm das views v_dia_owner_brief_by_brand / _by_store
+// Dados do DIA ANTERIOR (ontem) vêm das views v_dia_owner_brief_by_brand / _by_store
 // (getOwnerBriefByBrand/Store). Ações vêm da fila de findings existente
 // (getFindings/decideFinding) — não inventamos backend novo. Sem % de meta nesta
 // fase (só valores absolutos); setores sem dado renderizam "—".
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'use-intl'
+import { useLocale } from '@/i18n/LocaleProvider'
 import {
   decideFinding,
   getFindings,
@@ -448,14 +449,17 @@ function indexStores(stores: OwnerBriefStoreRow[]): Record<string, OwnerBriefSto
   return out
 }
 
-function briefDateLabel(): string {
-  // Conceito do painel = MÊS ATUAL (month-to-date); rótulo é o mês corrente.
-  return new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+function briefDateLabel(locale: string): string {
+  // Conceito do painel = DIA ANTERIOR (ontem); rótulo é a data de ontem.
+  const d = new Date()
+  d.setDate(d.getDate() - 1)
+  return d.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' })
 }
 
 export default function MorningBrief() {
   const t = useTranslations('screens.morningBrief')
   const common = useTranslations('common')
+  const { locale } = useLocale()
   const { compact } = useBreakpoint()
   const [brands, setBrands] = useState<OwnerBriefBrandRow[]>([])
   const [stores, setStores] = useState<OwnerBriefStoreRow[]>([])
@@ -510,7 +514,7 @@ export default function MorningBrief() {
     }
   }, [])
 
-  const dateLabel = briefDateLabel()
+  const dateLabel = briefDateLabel(locale)
 
   if (loading) {
     return (
@@ -538,7 +542,7 @@ export default function MorningBrief() {
                 {t('title')}
               </div>
               <div className="mt-0.5 flex items-baseline justify-between">
-                <div className="text-xl font-extrabold capitalize text-foreground">{t('currentMonth')}</div>
+                <div className="text-xl font-extrabold capitalize text-foreground">{t('previousDay')}</div>
                 <div className="text-xs capitalize text-muted-foreground">{dateLabel}</div>
               </div>
               <div className="mt-0.5 text-[11px] font-medium text-muted-foreground">{common('valuesInBRL')}</div>
@@ -548,7 +552,7 @@ export default function MorningBrief() {
             </div>
             <div className="flex flex-col gap-2.5">
               {brands.length === 0 && (
-                <p className="text-sm text-muted-foreground">{t('noMonthData')}</p>
+                <p className="text-sm text-muted-foreground">{t('noPreviousDayData')}</p>
               )}
               {brands.map((b) => (
                 <BrandCard key={b.brand_name} b={b} onOpen={() => setOpenBrand(b.brand_name)} t={t} />
@@ -586,7 +590,7 @@ export default function MorningBrief() {
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <div className="min-w-0 flex-1 overflow-auto p-6">
           {brands.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t('noMonthData')}</p>
+            <p className="text-sm text-muted-foreground">{t('noPreviousDayData')}</p>
           ) : (
             <CockpitTable brands={brands} storesByBrand={storesByBrand} total={total} t={t} />
           )}

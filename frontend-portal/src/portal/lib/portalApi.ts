@@ -104,12 +104,6 @@ const MOCK_MENU: MenuItem[] = applyMenuTranslationKeys([
         icon: 'fa-tasks',
         spec: { title: 'Fila de Findings', kind: 'component', componentKey: 'findings-queue', icon: 'fa-tasks' },
       },
-      {
-        id: 'ai-audit-trail',
-        text: 'Trilha de Auditoria',
-        icon: 'fa-clipboard-check',
-        spec: { title: 'Auditoria', kind: 'component', componentKey: 'audit-trail', icon: 'fa-clipboard-check' },
-      },
     ],
   },
   // 2) Fast BI — indicadores read-only. Grupo ÚNICO (antes duplicado), com subníveis:

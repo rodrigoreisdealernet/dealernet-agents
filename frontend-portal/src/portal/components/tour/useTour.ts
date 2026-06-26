@@ -8,8 +8,7 @@ const SEEN_KEY = 'dealernet-portal-tour-v1'
 export interface TourStep {
   /** seletor do anchor: [data-tour="..."] */
   target: string
-  title: string
-  body: string
+  key: string
   /** lado preferido do balão em relação ao alvo. */
   placement?: 'right' | 'left' | 'top' | 'bottom'
 }
@@ -18,56 +17,47 @@ export interface TourStep {
 export const TOUR_STEPS: TourStep[] = [
   {
     target: '[data-tour="menu"]',
-    title: 'Menu por solução',
-    body: 'Suas telas ficam aqui, organizadas por solução do DMS. Só aparece o que você tem permissão de acessar.',
+    key: 'menu',
     placement: 'right',
   },
   {
     target: '[data-tour="busca"]',
-    title: 'Busca de telas',
-    body: 'Digite para encontrar qualquer tela em todos os níveis do menu — sem precisar navegar a árvore.',
+    key: 'search',
     placement: 'right',
   },
   {
     target: '[data-tour="modo"]',
-    title: 'Abas ou Janelas',
-    body: 'Alterne entre o modo Abas (estilo navegador) e Janelas flutuantes (MDI). Sua preferência fica salva.',
+    key: 'mode',
     placement: 'bottom',
   },
   {
     target: '[data-tour="workspaces"]',
-    title: 'Workspaces',
-    body: 'Salve o conjunto de telas abertas como um workspace e volte a ele depois. Use os botões ao lado para salvar, criar ou excluir.',
+    key: 'workspaces',
     placement: 'top',
   },
   {
     target: '[data-tour="favoritos"]',
-    title: 'Favoritos',
-    body: 'Marque as telas que você mais usa como favoritas e abra-as com um clique aqui embaixo.',
+    key: 'favorites',
     placement: 'top',
   },
   {
     target: '[data-tour="empresa"]',
-    title: 'Empresa e marca',
-    body: 'Troque a empresa em que você está trabalhando — a marca dela aparece ao lado. As telas e as cores do portal passam a refletir o contexto escolhido.',
+    key: 'company',
     placement: 'bottom',
   },
   {
     target: '[data-tour="tema"]',
-    title: 'Tema por marca',
-    body: 'O portal já vem na cor da marca da sua empresa. Aqui você pode escolher outro tema da marca ou alternar entre claro e escuro — sua preferência fica salva.',
+    key: 'theme',
     placement: 'bottom',
   },
   {
     target: '[data-tour="usuario"]',
-    title: 'Sua conta',
-    body: 'Aqui você altera a senha e sai com segurança do portal.',
+    key: 'account',
     placement: 'bottom',
   },
   {
     target: '[data-tour="dai"]',
-    title: 'DAI — Dealernet AI',
-    body: 'Seu assistente: peça para abrir telas e navegar por comando. Em breve, também responde sobre seus dados.',
+    key: 'dai',
     placement: 'left',
   },
 ]

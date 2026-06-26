@@ -1,0 +1,86 @@
+{
+  "issue": "102",
+  "title": "Morning Brief: rotulo do periodo = ONTEM (nao Mes Atual)",
+  "slug": "102-morning-brief-frontend-rotulo-do",
+  "branch": "feature/102-morning-brief-frontend-rotulo-do",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/102",
+  "pr": null,
+  "prUrl": null,
+  "updatedAt": "2026-06-26T03:20:26.885Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "6 criterios",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/102-morning-brief-frontend-rotulo-do.md"
+        }
+      ],
+      "notes": [
+        "Spec created with 6 testable acceptance criteria; frontend labels (mobile & desktop) must show previous day, i18n updated (PT-BR + EN-US)."
+      ],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec aprovada (--approved)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": "briefDateLabel=ontem; previousDay/noPreviousDayData PT+EN; desktopTitle; build OK",
+      "artifacts": [],
+      "notes": [
+        "Editando briefDateLabel() para dia anterior + chaves i18n previousDay/noPreviousDayData (PT/EN), atualizando ambos layouts"
+      ],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "running",
+      "summary": "",
+      "artifacts": [],
+      "notes": [
+        "Escrevendo verify-issue102-labels.mjs (source-content hermetico) p/ rotulo dia-anterior + i18n"
+      ],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    }
+  ]
+}

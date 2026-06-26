@@ -9,6 +9,7 @@
 // a ESCRITA (decisão) NUNCA vai ao PostgREST: passa pela ops-api (fonte da verdade).
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import type { Locale } from '@/i18n/locale'
 
 const ENV = import.meta.env as unknown as Record<string, string | undefined>
 
@@ -1004,13 +1005,14 @@ export interface RunAgentNowResult {
   status: string
 }
 
-export async function runAgentNow(agentKey: string): Promise<RunAgentNowResult> {
+export async function runAgentNow(agentKey: string, locale?: Locale): Promise<RunAgentNowResult> {
   const token = await getAccessToken()
   if (!token) throw new Error('Sem sessão — faça login antes de executar o agente.')
 
   const res = await fetch(`${OPS_API_URL}/agents/${encodeURIComponent(agentKey)}/run`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ locale: locale ?? 'pt-BR' }),
   })
   if (!res.ok) {
     const text = await res.text().catch(() => '')

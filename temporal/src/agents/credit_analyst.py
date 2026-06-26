@@ -5,6 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .i18n import with_language_directive
 from .openai_client import ChatCompletionTransport, chat_with_tools
 
 ToolExecutor = Callable[[str, dict[str, Any]], Awaitable[Any] | Any]
@@ -49,12 +50,13 @@ async def run_credit_analyst(
     user_prompt_template: str,
     tools: Sequence[Mapping[str, Any]],
     tool_executor: ToolExecutor,
+    locale: str | None = None,
     max_tool_rounds: int = 5,
     transport: ChatCompletionTransport | None = None,
     on_llm_call: Callable[[Any], Awaitable[None]] | None = None,
 ) -> dict[str, Any]:
     messages = [
-        {"role": "system", "content": system_prompt},
+        {"role": "system", "content": with_language_directive(system_prompt, locale)},
         {"role": "user", "content": user_prompt_template},
     ]
     result = await chat_with_tools(
@@ -126,6 +128,7 @@ async def run_credit_application_reviewer(
     user_prompt_template: str,
     tools: Sequence[Mapping[str, Any]],
     tool_executor: ToolExecutor,
+    locale: str | None = None,
     max_tool_rounds: int = 5,
     transport: ChatCompletionTransport | None = None,
 ) -> dict[str, Any]:
@@ -136,7 +139,7 @@ async def run_credit_application_reviewer(
     analyst must approve any resulting credit-limit or payment-terms change.
     """
     messages = [
-        {"role": "system", "content": system_prompt},
+        {"role": "system", "content": with_language_directive(system_prompt, locale)},
         {"role": "user", "content": user_prompt_template},
     ]
     result = await chat_with_tools(

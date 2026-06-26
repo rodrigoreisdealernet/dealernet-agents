@@ -39,6 +39,7 @@ from .activities import (
     ops_pm,
     ops_revrec,
     ops_safety_compliance_monitor,
+    ops_service_estimate,
     ops_shop_queue,
     ops_technician_queue,
     ops_territory_brief,
@@ -79,6 +80,10 @@ from .workflows.ops.pm_evaluator import PMEvaluatorWorkflow
 from .workflows.ops.parts_inventory import PartsInventoryWorkflow, PartsInventoryWorkflowInput
 from .workflows.ops.revrec import RevenueRecognitionWorkflow, RevenueRecognitionWorkflowInput
 from .workflows.ops.safety_compliance_monitor import SafetyComplianceMonitorWorkflow
+from .workflows.ops.service_estimate_rescue import (
+    ServiceEstimateRescueWorkflow,
+    ServiceEstimateRescueWorkflowInput,
+)
 from .workflows.ops.shop_morning_queue import ShopMorningQueueWorkflow, ShopMorningQueueWorkflowInput
 from .workflows.ops.technician_morning_queue import TechnicianMorningQueueWorkflow, TechnicianMorningQueueWorkflowInput
 from .workflows.ops.territory_brief import TerritoryAccountBriefWorkflow
@@ -104,6 +109,9 @@ _PM_DEFAULT_CRON = "0 */6 * * *"
 
 _VEHICLE_AGING_AGENT_KEY = "vehicle-aging-analyst"
 _VEHICLE_AGING_DEFAULT_CRON = "0 6 * * 1-5"
+
+_SERVICE_ESTIMATE_RESCUE_AGENT_KEY = "service-estimate-rescue"
+_SERVICE_ESTIMATE_RESCUE_DEFAULT_CRON = "0 7 * * 1-5"
 
 _PARTS_INVENTORY_AGENT_KEY = "parts-inventory-advisor"
 _PARTS_INVENTORY_DEFAULT_CRON = "0 6 * * 1"
@@ -439,6 +447,83 @@ async def reconcile_vehicle_aging_schedules(
     rows = list(config_rows) if config_rows is not None else await asyncio.to_thread(_fetch_vehicle_aging_schedule_rows)
     for row in rows:
         await _reconcile_tenant_vehicle_aging_schedule(client, row)
+
+
+# ---------------------------------------------------------------------------
+# Service-estimate authorization rescue schedule reconciliation
+# ---------------------------------------------------------------------------
+
+def _fetch_service_estimate_schedule_rows() -> list[dict[str, Any]]:
+    return _fetch_agent_config_rows(_SERVICE_ESTIMATE_RESCUE_AGENT_KEY)
+
+
+def _build_service_estimate_schedule(tenant_id: str, cron: str) -> Schedule:
+    return Schedule(
+        action=ScheduleActionStartWorkflow(
+            ServiceEstimateRescueWorkflow.run,
+            ServiceEstimateRescueWorkflowInput(tenant_id=tenant_id),
+            id=f"ops-service-estimate-rescue-{tenant_id}",
+            task_queue=settings.temporal_task_queue,
+        ),
+        spec=ScheduleSpec(cron_expressions=[cron]),
+    )
+
+
+async def _reconcile_tenant_service_estimate_schedule(client: Client, config_row: Mapping[str, Any]) -> None:
+    tenant_id = str(config_row.get("tenant_id") or "").strip()
+    if not tenant_id:
+        return
+
+    enabled, cron = _extract_schedule_fields(config_row, default_cron=_SERVICE_ESTIMATE_RESCUE_DEFAULT_CRON)
+    schedule_id = _schedule_id_for_tenant(tenant_id, _SERVICE_ESTIMATE_RESCUE_AGENT_KEY)
+    schedule_handle = client.get_schedule_handle(schedule_id)
+
+    # service-estimate-rescue ships schedule.enabled=false: reconcile deletes any
+    # stray schedule so the recurring run stays off until explicitly enabled.
+    if not enabled:
+        try:
+            await schedule_handle.delete()
+            logger.info(
+                "Deleted disabled service-estimate-rescue schedule",
+                extra={"tenant_id": tenant_id, "schedule_id": schedule_id},
+            )
+        except BaseException as exc:
+            if not _is_not_found_error(exc):
+                raise
+        return
+
+    desired_schedule = _build_service_estimate_schedule(tenant_id, cron)
+    try:
+        await schedule_handle.describe()
+    except BaseException as exc:
+        if not _is_not_found_error(exc):
+            raise
+        await client.create_schedule(schedule_id, desired_schedule)
+        logger.info(
+            "Created service-estimate-rescue schedule from config",
+            extra={"tenant_id": tenant_id, "schedule_id": schedule_id, "cron": cron},
+        )
+        return
+
+    await schedule_handle.update(
+        lambda _: ScheduleUpdate(schedule=desired_schedule),
+    )
+    logger.info(
+        "Updated service-estimate-rescue schedule from config",
+        extra={"tenant_id": tenant_id, "schedule_id": schedule_id, "cron": cron},
+    )
+
+
+async def reconcile_service_estimate_schedules(
+    client: Client, config_rows: Sequence[Mapping[str, Any]] | None = None
+) -> None:
+    rows = (
+        list(config_rows)
+        if config_rows is not None
+        else await asyncio.to_thread(_fetch_service_estimate_schedule_rows)
+    )
+    for row in rows:
+        await _reconcile_tenant_service_estimate_schedule(client, row)
 
 
 # ---------------------------------------------------------------------------
@@ -1451,6 +1536,11 @@ async def main() -> None:
         logger.exception("vehicle-aging schedule reconcile failed at startup; continuing to start worker")
 
     try:
+        await reconcile_service_estimate_schedules(client)
+    except Exception:  # noqa: BLE001 - never let service-estimate schedule reconcile crash the worker
+        logger.exception("service-estimate schedule reconcile failed at startup; continuing to start worker")
+
+    try:
         await reconcile_parts_inventory_schedules(client)
     except Exception:  # noqa: BLE001 - never let parts-inventory schedule reconcile crash the worker
         logger.exception("parts-inventory schedule reconcile failed at startup; continuing to start worker")
@@ -1526,6 +1616,7 @@ async def main() -> None:
             DescartesSyncWorkflow,
             RevenueRecognitionWorkflow,
             VehicleAgingWorkflow,
+            ServiceEstimateRescueWorkflow,
             PartsInventoryWorkflow,
             ContractAnalysisWorkflow,
             ContractOcrRevalidationWorkflow,
@@ -1620,6 +1711,14 @@ async def main() -> None:
             ops_vehicle_aging.ops_finalize_workflow_run,
             ops_vehicle_aging.ops_record_finding,
             ops_vehicle_aging.ops_record_finding_disposition,
+            ops_service_estimate.ops_load_agent_config,
+            ops_service_estimate.ops_scope_service_estimates,
+            ops_service_estimate.ops_service_estimate_assess,
+            ops_service_estimate.ops_list_open_finding_fingerprints,
+            ops_service_estimate.ops_create_workflow_run,
+            ops_service_estimate.ops_finalize_workflow_run,
+            ops_service_estimate.ops_record_finding,
+            ops_service_estimate.ops_record_finding_disposition,
             *_PARTS_INVENTORY_ACTIVITIES,
             ops_contract_ocr.ops_contract_ocr_revalidate_pages,
             ops_contract_ocr.ops_contract_analyze_contract,

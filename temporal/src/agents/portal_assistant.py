@@ -12,6 +12,7 @@ import asyncio
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from .i18n import DEFAULT_LOCALE, language_directive, resolve_locale
 from .openai_client import ChatCompletionTransport, chat_with_tools
 from .portal_assistant_schema import AssistantReplyV1
 from .tools.dia_bi import (
@@ -26,10 +27,9 @@ MAX_HISTORY_MESSAGES = 24
 MAX_CHART_POINTS = 30
 MAX_CHARTS = 3
 
-_SYSTEM_PROMPT = """\
+_SYSTEM_PROMPT_TEMPLATE = """\
 Você é a DIA (Dealernet Intelligence Agents), a assistente conversacional do Portal DMS \
-de uma concessionária. Responda SEMPRE em português do Brasil, de forma concisa, factual \
-e cordial.
+de uma concessionária. {language_directive} Seja concisa, factual e cordial.
 
 Você tem três poderes:
 1. RESPONDER com dados reais do negócio. Para isso, use as ferramentas de BI (somente \
@@ -47,6 +47,11 @@ sugira abrir o dashboard. `x_key` é o campo de categoria/data; cada `series.key
 numérico de `data`. Sem dados → deixe `charts` vazio.
 
 Regras:
+- PERÍODO (atenção): escolha a ferramenta pelo período pedido e SEMPRE deixe o período \
+explícito na resposta. "hoje"/"no dia" → use a linha mais recente de `get_sales_trend` \
+(vem ordenada por data, a 1ª linha é o dia mais recente). "no mês"/"mês"/"MTD"/"até agora" → \
+use `get_owner_kpis`/`get_sales_summary` (acumulado do mês). NUNCA apresente o número do mês \
+como se fosse de hoje. Se a pergunta for ambígua, responda hoje E mês, rotulados.
 - Você herda a permissão do usuário: só pode abrir as telas listadas. Não execute ações que \
 alterem dados (aprovar/rejeitar/cadastrar) — isso não é suportado nesta versão.
 - Combine resposta + gráfico + navegação quando ajudar: ex. responda o resumo de vendas, \
@@ -85,7 +90,9 @@ def build_messages(
 ) -> tuple[list[dict[str, str]], set[str]]:
     """Build the [system, *history] message list and the allowed-screen key set."""
     screens_block, allowed_keys = _format_screens(context.get("available_screens") or [])
-    system = _SYSTEM_PROMPT.format(
+    locale = resolve_locale(str(context.get("locale") or DEFAULT_LOCALE))
+    system = _SYSTEM_PROMPT_TEMPLATE.format(
+        language_directive=language_directive(locale),
         empresa_id=str(context.get("empresa_id") or "—"),
         current_screen=str(context.get("current_screen") or "—"),
         screens_block=screens_block,

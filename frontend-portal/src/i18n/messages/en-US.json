@@ -42,6 +42,17 @@
     "all": "All",
     "name": "Name",
     "noData": "No data to display",
+    "colorPicker": "Color picker",
+    "searchModal": {
+      "search": "Search",
+      "noneSelected": "None selected",
+      "clear": "Clear",
+      "close": "Close",
+      "queryPlaceholder": "Enter name or document…",
+      "searching": "Searching…",
+      "minChars": "Enter at least 1 character to search.",
+      "noResults": "No results."
+    },
     "grid": {
       "tryAgain": "Try again",
       "noFilterResults": "No results for the applied filters.",
@@ -122,6 +133,8 @@
       "connectError": "Could not connect. Check your connection.",
       "pocMode": "POC mode — any login automatically enters as the demo user (admin).",
       "user": "User",
+      "userPlaceholderUpper": "YOUR.LOGIN",
+      "userPlaceholder": "your.login",
       "password": "Password",
       "hidePassword": "Hide password",
       "showPassword": "Show password",
@@ -160,12 +173,73 @@
       "stayConnected": "Stay signed in"
     }
   },
+  "dai": {
+    "openAssistant": "Open DIA assistant",
+    "beta": "beta",
+    "subtitle": "Dealernet Intelligence Agents · portal assistant",
+    "newConversation": "New conversation",
+    "close": "Close",
+    "placeholder": "Ask DIA a question or request…",
+    "send": "Send message",
+    "disclaimer": "DIA can make mistakes. Check important actions.",
+    "welcomeTitle": "Hi! I'm DIA 👋",
+    "welcomeBody": "I can answer questions about sales, inventory, service, and parts with real data — and open the right screen for you. Just ask.",
+    "quickAccess": "Quick access to your screens:",
+    "openScreenTitle": "Open {screen} ({solution})",
+    "openScreenCommand": "Open {screen}",
+    "openedScreen": "Done — I opened \"{screen}\" for you. ✅",
+    "replyError": "Sorry, I couldn't respond right now. Try again in a moment."
+  },
+  "tour": {
+    "close": "Close tour",
+    "skip": "Skip",
+    "back": "Back",
+    "next": "Next",
+    "finish": "Finish",
+    "steps": {
+      "menu": {
+        "title": "Menu by solution",
+        "body": "Your screens are here, organized by DMS solution. You only see what you are allowed to access."
+      },
+      "search": {
+        "title": "Screen search",
+        "body": "Type to find any screen across all menu levels — no need to browse the tree."
+      },
+      "mode": {
+        "title": "Tabs or Windows",
+        "body": "Switch between Tabs mode (browser-like) and floating Windows (MDI). Your preference is saved."
+      },
+      "workspaces": {
+        "title": "Workspaces",
+        "body": "Save the set of open screens as a workspace and return to it later. Use the buttons nearby to save, create, or delete."
+      },
+      "favorites": {
+        "title": "Favorites",
+        "body": "Mark your most-used screens as favorites and open them with one click down here."
+      },
+      "company": {
+        "title": "Company and brand",
+        "body": "Change the company you are working in — its brand appears next to it. Screens and portal colors reflect the selected context."
+      },
+      "theme": {
+        "title": "Brand theme",
+        "body": "The portal starts with your company's brand color. Here you can choose another brand theme or toggle light/dark — your preference is saved."
+      },
+      "account": {
+        "title": "Your account",
+        "body": "Here you can change your password and securely sign out of the portal."
+      },
+      "dai": {
+        "title": "DAI — Dealernet AI",
+        "body": "Your assistant: ask it to open screens and navigate by command. Soon it will also answer questions about your data."
+      }
+    }
+  },
   "menu": {
     "ai-ops": "AI Operations",
     "morning-brief-owner": "Morning Brief",
     "ai-agents-dashboard": "Agents Dashboard",
     "ai-morning-queue": "Morning Queue",
-    "ai-audit-trail": "Audit Trail",
     "fast-bi": "Fast BI",
     "fast-bi-visao-geral": "Overview",
     "fast-bi-executive": "Executive Dashboard",
@@ -635,10 +709,10 @@
       "brandStore": "Brand / Store",
       "confirmFailed": "Failed to confirm",
       "dismissFailed": "Failed to dismiss",
-      "currentMonth": "Current month",
+      "previousDay": "Yesterday",
       "byBrandTap": "By brand · tap to see stores",
-      "noMonthData": "No month data.",
-      "desktopTitle": "Result by brand and store · current month"
+      "noPreviousDayData": "No sales yesterday.",
+      "desktopTitle": "Result by brand and store · previous day"
     }
   }
 }

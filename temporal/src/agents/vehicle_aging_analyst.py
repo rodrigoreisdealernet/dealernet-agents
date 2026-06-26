@@ -5,6 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .i18n import with_language_directive
 from .openai_client import ChatCompletionTransport, chat_with_tools
 
 # Vehicle Stock-Aging Analyst (issue #32).
@@ -49,11 +50,12 @@ async def run_vehicle_aging_analyst(
     *,
     system_prompt: str,
     user_prompt_template: str,
+    locale: str | None = None,
     max_tool_rounds: int = 0,
     transport: ChatCompletionTransport | None = None,
 ) -> dict[str, Any]:
     messages = [
-        {"role": "system", "content": system_prompt},
+        {"role": "system", "content": with_language_directive(system_prompt, locale)},
         {"role": "user", "content": user_prompt_template},
     ]
     result = await chat_with_tools(
