@@ -44,7 +44,7 @@ export function SessionGuard() {
     onWarn: () => setWarnOpen(true),
     onExpire: () => {
       setWarnOpen(false)
-      setMotivo(t('endedByIdle').replace('{minutes}', String(minutes)))
+      setMotivo(t('endedByIdle', { minutes }))
       setExpired(true)
       // No real: window.location.href = config.endpoints.logout
     },
@@ -65,7 +65,7 @@ export function SessionGuard() {
           <div>
             <h2 className="text-lg font-semibold">{t('expiredTitle')}</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {motivo || t('endedByIdle').replace('{minutes}', String(minutes))}
+              {motivo || t('endedByIdle', { minutes })}
             </p>
           </div>
           <button

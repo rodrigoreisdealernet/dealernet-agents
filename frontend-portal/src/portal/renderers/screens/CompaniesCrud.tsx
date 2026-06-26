@@ -96,7 +96,7 @@ export default function CompaniesCrud() {
   }
 
   const remove = async (row: CompanyRow) => {
-    if (!window.confirm(t('inactivateConfirm').replace('{name}', row.name ?? row.legal_name ?? '—'))) return
+    if (!window.confirm(t('inactivateConfirm', { name: row.name ?? row.legal_name ?? '—' }))) return
     setError(null)
     try {
       await deleteCompany(row.entity_id)

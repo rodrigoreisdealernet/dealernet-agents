@@ -5,7 +5,10 @@
   },
   "labels": {
     "agents": {
-      "vehicle-aging-analyst": "Analista de estoque parado"
+      "vehicle-aging-analyst": "Analista de estoque parado",
+      "collections-prioritizer": "Priorizador de cobranças",
+      "parts-inventory-advisor": "Consultor de estoque de peças",
+      "service-estimate-rescue": "Resgate de orçamentos de serviço"
     },
     "findingTypes": {
       "stock_aging_90d": "Veículo parado há 90+ dias"

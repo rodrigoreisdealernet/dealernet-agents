@@ -116,7 +116,7 @@ export default function ServiceOrders() {
   }
 
   const remove = async (row: ServiceOrderRow) => {
-    if (!window.confirm(t('cancelConfirm').replace('{name}', row.order_number ?? row.name ?? ''))) return
+    if (!window.confirm(t('cancelConfirm', { name: row.order_number ?? row.name ?? '' }))) return
     setError(null)
     try {
       await deleteServiceOrder(row.entity_id)

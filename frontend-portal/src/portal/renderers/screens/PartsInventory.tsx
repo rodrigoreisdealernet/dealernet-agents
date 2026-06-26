@@ -121,7 +121,7 @@ export default function PartsInventory() {
   }
 
   const remove = async (row: PartRow) => {
-    if (!window.confirm(t('inactivateConfirm').replace('{name}', row.part_number ?? row.name ?? '—'))) return
+    if (!window.confirm(t('inactivateConfirm', { name: row.part_number ?? row.name ?? '—' }))) return
     setError(null)
     try {
       await deletePart(row.entity_id)

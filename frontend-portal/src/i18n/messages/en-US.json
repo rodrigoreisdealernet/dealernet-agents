@@ -5,7 +5,10 @@
   },
   "labels": {
     "agents": {
-      "vehicle-aging-analyst": "Stock aging analyst"
+      "vehicle-aging-analyst": "Stock aging analyst",
+      "collections-prioritizer": "Collections prioritizer",
+      "parts-inventory-advisor": "Parts inventory advisor",
+      "service-estimate-rescue": "Service estimate rescue"
     },
     "findingTypes": {
       "stock_aging_90d": "Vehicle idle 90+ days"

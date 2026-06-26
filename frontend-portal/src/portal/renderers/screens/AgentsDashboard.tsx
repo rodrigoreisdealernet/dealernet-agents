@@ -7,6 +7,7 @@ import { useTranslations } from 'use-intl'
 import { useLocale } from '@/i18n/LocaleProvider'
 import { usePortalStore } from '@/portal/store/portalStore'
 import { getAgentStatus, getFindingKpis, runAgentNow, type AgentStatus, type FindingKpis } from '@/portal/lib/agentsApi'
+import { useFindingLabels } from '@/portal/lib/findingLabels'
 import { KpiCard, Badge, ProgressBar, ScreenShell, type Tone } from './ui'
 import { formatBRLKpi, formatDateTime } from './format'
 export const I18N_PT_LEGEND_REFERENCE = 'Valores em R$'
@@ -90,6 +91,7 @@ function AgentCardSkeleton() {
 export default function AgentsDashboard() {
   const t = useTranslations('screens.agentsDashboard')
   const common = useTranslations('common')
+  const { agentLabel } = useFindingLabels()
   const { locale } = useLocale()
   const openWindow = usePortalStore((s) => s.openWindow)
   const [agents, setAgents] = useState<AgentStatus[]>([])
@@ -112,7 +114,7 @@ export default function AgentsDashboard() {
     openWindow({
       kind: 'component',
       componentKey: 'findings-queue',
-      title: `${t('findingsTitle')} — ${agentKey}`,
+      title: `${t('findingsTitle')} — ${agentLabel(agentKey)}`,
       params: { agentKey },
     })
 
@@ -206,7 +208,7 @@ export default function AgentsDashboard() {
                 className="w-full text-left"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium text-foreground">{a.agent_key}</span>
+                  <span className="font-medium text-foreground">{agentLabel(a.agent_key)}</span>
                   <div className="flex items-center gap-2">
                     {!a.enabled && <Badge tone="neutral">{t('healthDisabled')}</Badge>}
                     {a.enabled && <Badge tone={HEALTH_TONE[health]}>{healthLabel[health]}</Badge>}

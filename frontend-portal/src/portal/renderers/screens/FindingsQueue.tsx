@@ -168,7 +168,7 @@ export default function FindingsQueue({ params }: ScreenProps) {
               checked={selected}
               disabled={disabled}
               onChange={(e) => toggleSelected(f, e.target.checked)}
-              aria-label={t('selectFinding').replace('{label}', rowLabel(f))}
+              aria-label={t('selectFinding', { label: rowLabel(f) })}
               className="h-4 w-4 rounded border-input accent-primary disabled:cursor-not-allowed disabled:opacity-50"
             />
           </label>
@@ -299,7 +299,7 @@ export default function FindingsQueue({ params }: ScreenProps) {
         <h1 className="text-lg font-semibold text-foreground">{t('title')}</h1>
         <p className="text-sm text-muted-foreground">
           {t('subtitle')}
-          {agentKey ? ` · ${t('agentLower')} ${agentKey}` : ''}. {t('reviewHint')}
+          {agentKey ? ` · ${t('agentLower')} ${agentLabel(agentKey)}` : ''}. {t('reviewHint')}
         </p>
       </div>
 
@@ -318,7 +318,7 @@ export default function FindingsQueue({ params }: ScreenProps) {
             ))}
           </select>
         </label>
-        <span className="ml-auto text-xs text-muted-foreground">{t('selectedCount').replace('{count}', String(selectedCount))}</span>
+        <span className="ml-auto text-xs text-muted-foreground">{t('selectedCount', { count: selectedCount })}</span>
         <button
           type="button"
           disabled={selectedCount === 0 || processing}
@@ -352,7 +352,7 @@ export default function FindingsQueue({ params }: ScreenProps) {
         </div>
       )}
 
-      <div className="min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 flex-col">
         <DataTable<FindingRowVM>
           colunas={colunas}
           api={api}
@@ -392,7 +392,7 @@ export default function FindingsQueue({ params }: ScreenProps) {
             placeholder={batchMode === 'reject' ? detailT('reasonPlaceholder') : detailT('notePlaceholder')}
           />
           {dialogErr && <p className="text-xs text-destructive">{dialogErr}</p>}
-          <p className="text-xs text-muted-foreground">{t('selectedCount').replace('{count}', String(selectedCount))}</p>
+          <p className="text-xs text-muted-foreground">{t('selectedCount', { count: selectedCount })}</p>
         </div>
       </ConfirmDialog>
     </div>

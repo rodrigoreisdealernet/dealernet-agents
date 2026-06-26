@@ -138,7 +138,7 @@ export default function PartSales() {
   }
 
   const cancel = async (row: PartSaleRow) => {
-    if (!window.confirm(t('cancelConfirm').replace('{part}', row.part_number ?? '—'))) return
+    if (!window.confirm(t('cancelConfirm', { part: row.part_number ?? '—' }))) return
     setError(null)
     try {
       await cancelPartSale(row.entity_id)

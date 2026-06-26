@@ -29,6 +29,11 @@ import { cn } from '@/lib/utils'
 import { formatBRLKpi } from './format'
 export const I18N_PT_LEGEND_REFERENCE = 'Valores em R$'
 
+// Após Confirmar (approve) com sucesso, mostramos o estado "Confirmado" (verde) por
+// um instante e então removemos o card da fila — uma ação tratada não deve continuar
+// aparecendo em "DIA preparou estas ações".
+const CONFIRM_CLEAR_DELAY_MS = 1000
+
 // ── Helpers de formatação dos setores (valores absolutos; "—" quando sem dado) ──
 function fmtUnits(n: number | null | undefined, t: (key: string) => string): string {
   return typeof n === 'number' && Number.isFinite(n) ? `${n} ${t('unitsAbbr')}` : '—'
@@ -490,29 +495,44 @@ export default function MorningBrief() {
   const storesByBrand = useMemo(() => indexStores(stores), [stores])
   const total = useMemo(() => groupTotal(brands), [brands])
 
+  // Remove um finding já decidido da fila (e limpa seu estado de UI), para que a
+  // ação tratada deixe de aparecer na seção "DIA preparou estas ações".
+  const removeFinding = useCallback((id: string) => {
+    setFindings((list) => list.filter((f) => f.id !== id))
+    setFindingStates((s) => {
+      const next = { ...s }
+      delete next[id]
+      return next
+    })
+  }, [])
+
   const onConfirm = useCallback(async (f: FindingRow) => {
     setFindingStates((s) => ({ ...s, [f.id]: 'confirmed' }))
     try {
       await decideFinding({ findingId: f.id, decision: 'approve' })
+      // Sucesso: mantém "Confirmado" por um instante e então tira o item da fila.
+      window.setTimeout(() => removeFinding(f.id), CONFIRM_CLEAR_DELAY_MS)
     } catch (e) {
       // Reverte o estado otimista se a decisão falhar.
       setFindingStates((s) => ({ ...s, [f.id]: 'pending' }))
       setError(`${t('confirmFailed')}: ${String(e)}`)
     }
-  }, [])
+  }, [removeFinding, t])
 
   const onDismiss = useCallback(async (f: FindingRow) => {
-    // Dispensar persiste no backend (sem motivo obrigatório) antes de ocultar,
+    // Dispensar persiste no backend (sem motivo obrigatório) antes de remover,
     // para que o item não reapareça após recarregar.
     setFindingStates((s) => ({ ...s, [f.id]: 'dismissed' }))
     try {
       await decideFinding({ findingId: f.id, decision: 'dismiss' })
+      // Sucesso: remove de vez da fila (não apenas oculta localmente).
+      removeFinding(f.id)
     } catch (e) {
       // Reverte o estado otimista se a dispensa falhar.
       setFindingStates((s) => ({ ...s, [f.id]: 'pending' }))
       setError(`${t('dismissFailed')}: ${String(e)}`)
     }
-  }, [])
+  }, [removeFinding, t])
 
   const dateLabel = briefDateLabel(locale)
 

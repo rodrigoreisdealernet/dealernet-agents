@@ -104,7 +104,7 @@ export default function VehiclesInventory() {
   }
 
   const remove = async (row: VehicleRow) => {
-    if (!window.confirm(t('removeConfirm').replace('{name}', row.name ?? row.brand ?? '—'))) return
+    if (!window.confirm(t('removeConfirm', { name: row.name ?? row.brand ?? '—' }))) return
     setError(null)
     try {
       await deleteVehicle(row.entity_id)

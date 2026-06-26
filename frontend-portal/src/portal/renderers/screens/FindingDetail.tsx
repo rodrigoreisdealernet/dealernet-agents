@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useTranslations } from 'use-intl'
 import ConfirmDialog from '@/portal/components/ui/ConfirmDialog'
 import { decideFinding, getFinding, type FindingDetail as FindingDetailVM } from '@/portal/lib/agentsApi'
+import { useFindingLabels } from '@/portal/lib/findingLabels'
 import type { ScreenProps } from './types'
 import { Badge, severityTone, statusTone } from './ui'
 import { formatBRLKpi, formatDateTime, formatPct } from './format'
@@ -35,6 +36,7 @@ function evidenceLabelKey(ev: Record<string, unknown>): string | undefined {
 export default function FindingDetail({ params }: ScreenProps) {
   const t = useTranslations('screens.findingDetail')
   const common = useTranslations('common')
+  const { agentLabel } = useFindingLabels()
   const findingId = params?.findingId as string | undefined
 
   const [data, setData] = useState<FindingDetailVM | null>(null)
@@ -131,7 +133,7 @@ export default function FindingDetail({ params }: ScreenProps) {
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone={severityTone(data.severity)}>{data.severity}</Badge>
           <Badge tone={statusTone(data.status)}>{data.status}</Badge>
-          <span className="text-sm text-muted-foreground">{t('agent')}: {data.agent_key}</span>
+          <span className="text-sm text-muted-foreground">{t('agent')}: {agentLabel(data.agent_key)}</span>
         </div>
         <p className="text-xs font-medium text-muted-foreground">{common('valuesInBRL')}</p>
       </header>
@@ -266,7 +268,7 @@ export default function FindingDetail({ params }: ScreenProps) {
           </button>
         </div>
       ) : (
-        <div className="text-sm text-muted-foreground">{t('alreadyProcessed').replace('{status}', data.status)}</div>
+        <div className="text-sm text-muted-foreground">{t('alreadyProcessed', { status: data.status })}</div>
       )}
 
       <ConfirmDialog

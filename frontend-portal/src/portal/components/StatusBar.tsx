@@ -43,7 +43,7 @@ export function StatusBar() {
   }
   const onDelete = async () => {
     if (!activeWs) return
-    if (!window.confirm(t('deleteWorkspaceConfirm').replace('{name}', activeWs.name))) return
+    if (!window.confirm(t('deleteWorkspaceConfirm', { name: activeWs.name }))) return
     await deleteCurrentWorkspace()
     showFlash(t('workspaceDeleted'))
   }
@@ -158,7 +158,7 @@ export function StatusBar() {
       {/* Mensagem transitória + contador */}
       <div className="ml-auto flex items-center gap-3">
         {flash && <span className="text-emerald-600 dark:text-emerald-400">{flash}</span>}
-        <span className="text-muted-foreground">{t('openWindows').replace('{count}', String(windows.length))}</span>
+        <span className="text-muted-foreground">{t('openWindows', { count: windows.length })}</span>
       </div>
     </footer>
   )

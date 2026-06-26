@@ -34,6 +34,7 @@ import {
 } from './ui'
 import { ChartCard } from './ChartCard'
 import { formatBRLKpi, formatPct } from './format'
+import { useFindingLabels } from '@/portal/lib/findingLabels'
 export const I18N_PT_LEGEND_REFERENCE = 'Valores em R$'
 
 // Fade + translate-y dos cards na montagem. Respeita prefers-reduced-motion via
@@ -46,6 +47,7 @@ const fadeUp = {
 export default function ExecutivePack() {
   const t = useTranslations('screens.executivePack')
   const common = useTranslations('common')
+  const { agentLabel } = useFindingLabels()
   const openWindow = usePortalStore((s) => s.openWindow)
   const [home, setHome] = useState<HomeKpis | null>(null)
   const [kpis, setKpis] = useState<FindingKpis | null>(null)
@@ -112,7 +114,7 @@ export default function ExecutivePack() {
     openWindow({
       kind: 'component',
       componentKey: 'findings-queue',
-      title: `${t('byAgentTitle')} — ${agentKey}`,
+      title: `${t('byAgentTitle')} — ${agentLabel(agentKey)}`,
       params: { agentKey },
     })
 
@@ -256,7 +258,7 @@ export default function ExecutivePack() {
               className="flex w-full items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2 text-left transition-colors hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               <div className="flex min-w-0 items-center gap-3">
-                <span className="truncate text-sm font-medium text-foreground">{a.agent_key}</span>
+                <span className="truncate text-sm font-medium text-foreground">{agentLabel(a.agent_key)}</span>
                 <span className="shrink-0 text-xs text-muted-foreground">
                   {a.succeeded_runs}✓/{a.failed_runs}✗ {t('runHealth')}
                 </span>

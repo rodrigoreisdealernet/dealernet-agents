@@ -131,7 +131,7 @@ export function TopBar() {
                 /* Há temas configurados p/ a marca → mostra SÓ eles (esconde os defaults). */
                 <>
                   <DropdownMenu.Label className="px-3 py-1.5 text-xs font-semibold text-muted-foreground">
-                    {marcaAtiva ? t('brandThemes').replace('{brand}', marcaAtiva) : t('brandThemesFallback')}
+                    {marcaAtiva ? t('brandThemes', { brand: marcaAtiva }) : t('brandThemesFallback')}
                   </DropdownMenu.Label>
                   {temas.map((t) => (
                     <DropdownMenu.Item
