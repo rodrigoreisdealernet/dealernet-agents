@@ -27,6 +27,7 @@ from .fleet import (
     RejectFleetFindingSignal,
 )
 from .pm_evaluator import PMEvaluatorWorkflow
+from .parts_inventory import PartsInventoryWorkflow, PartsInventoryWorkflowInput
 from .revrec import (
     ApproveFindingSignal,
     RejectFindingSignal,
@@ -69,6 +70,8 @@ __all__ = [
     "FleetUtilizationWorkflow",
     "FleetUtilizationWorkflowInput",
     "PMEvaluatorWorkflow",
+    "PartsInventoryWorkflow",
+    "PartsInventoryWorkflowInput",
     "RejectFindingSignal",
     "RejectFleetFindingSignal",
     "RevenueRecognitionWorkflow",

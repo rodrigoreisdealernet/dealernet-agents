@@ -433,6 +433,98 @@ END
 $$;
 
 -- ===========================================================================
+-- Parts Inventory Advisor agent config (issue #80)
+-- Seeds `parts-inventory-advisor` for demo-ops-a and demo-ops-b in BOTH the
+-- entity store and the base `ops_agent_config` table. enabled=true but
+-- schedule.enabled=false so the recurring run stays off by default. The output
+-- schema registry row is owned by migration 20260627130000_parts_inventory_agent.sql.
+-- ===========================================================================
+DO $$
+DECLARE
+  v_agent_key   text  := 'parts-inventory-advisor';
+  v_schema_key  text  := 'parts_inventory_finding_v1';
+  v_model       jsonb := '{"provider":"azure_openai","deployment":"gpt-4.1-mini","api_version":"2024-12-01-preview"}'::jsonb;
+  v_system_prompt text := 'You are the Parts Inventory Advisor for a vehicle dealership. Recommend a reviewable next action (order_now, expedite, substitute, transfer, liquidate, monitor) for parts inventory findings. Never order, transfer, liquidate, or change inventory automatically; use manufacturer as the sourcing/grouping hint; explain whether replenishment reflects true demand versus a one-off spike using velocity and stock evidence.';
+  v_user_prompt text := 'Assess part {part_id} ({part_number}) from manufacturer {manufacturer} for tenant {tenant_id}. Finding type: {finding_type}. Stock status: {stock_status}. Quantity in stock: {quantity_in_stock}. Reorder point: {reorder_point}. Stock value: {stock_value}. 90-day velocity: {velocity}. Suggested quantity: {quantity_suggested}. Value at risk: {value_at_risk}. Recommend the next human-approved action with supporting evidence. Evidence:\n{evidence_json}';
+  v_tools       jsonb := '[]'::jsonb;
+  v_thresholds  jsonb := '{"velocity_window_days":90,"dead_stock_max_velocity":0,"dead_stock_min_value":0,"dead_stock_high_value":1000}'::jsonb;
+  v_bounds      jsonb := '{"max_findings_per_run":50,"max_parts":200,"max_tool_rounds":2}'::jsonb;
+  v_schedule    jsonb := '{"cron":"0 6 * * 1","enabled":false}'::jsonb;
+  v_tenant_keys text[] := ARRAY['demo-ops-a','demo-ops-b'];
+  v_tenant_key  text;
+  v_tenant_id   uuid;
+  v_entity_id   uuid;
+BEGIN
+  PERFORM set_config('request.jwt.claim.role', 'service_role', true);
+
+  FOREACH v_tenant_key IN ARRAY v_tenant_keys
+  LOOP
+    SELECT id INTO v_tenant_id FROM tenants WHERE tenant_key = v_tenant_key;
+    IF v_tenant_id IS NULL THEN
+      RAISE EXCEPTION 'Parts inventory seed requires tenant % (run the main ops seed first)', v_tenant_key;
+    END IF;
+
+    DELETE FROM entities
+    WHERE entity_type = 'agent_config'
+      AND source_record_id = format('demo-ops-agent-config:%s:%s', v_tenant_id, v_agent_key);
+
+    INSERT INTO entities (entity_type, source_record_id)
+    VALUES ('agent_config', format('demo-ops-agent-config:%s:%s', v_tenant_id, v_agent_key))
+    ON CONFLICT (entity_type, source_record_id) DO UPDATE
+      SET source_record_id = EXCLUDED.source_record_id
+    RETURNING id INTO v_entity_id;
+
+    INSERT INTO entity_versions (entity_id, version_number, data)
+    VALUES (
+      v_entity_id,
+      1,
+      jsonb_build_object(
+        'tenant_id', v_tenant_id,
+        'agent_key', v_agent_key,
+        'enabled', true,
+        'model', v_model,
+        'system_prompt', v_system_prompt,
+        'user_prompt_template', v_user_prompt,
+        'tools', v_tools,
+        'output_schema_key', v_schema_key,
+        'thresholds', v_thresholds,
+        'bounds', v_bounds,
+        'schedule', v_schedule,
+        'auto_apply', false
+      )
+    )
+    ON CONFLICT (entity_id, version_number) DO UPDATE
+      SET data = EXCLUDED.data,
+          is_current = true,
+          valid_to = NULL;
+
+    INSERT INTO ops_agent_config (
+      tenant_id, agent_key, enabled, model,
+      system_prompt, user_prompt_template,
+      tools, output_schema_key, thresholds, bounds, schedule, auto_apply
+    )
+    VALUES (
+      v_tenant_id, v_agent_key, true, v_model,
+      v_system_prompt, v_user_prompt,
+      v_tools, v_schema_key, v_thresholds, v_bounds, v_schedule, false
+    )
+    ON CONFLICT (tenant_id, agent_key) DO UPDATE
+      SET enabled              = EXCLUDED.enabled,
+          model                = EXCLUDED.model,
+          system_prompt        = EXCLUDED.system_prompt,
+          user_prompt_template = EXCLUDED.user_prompt_template,
+          tools                = EXCLUDED.tools,
+          output_schema_key    = EXCLUDED.output_schema_key,
+          thresholds           = EXCLUDED.thresholds,
+          bounds               = EXCLUDED.bounds,
+          schedule             = EXCLUDED.schedule,
+          auto_apply           = EXCLUDED.auto_apply,
+          updated_at           = now();
+  END LOOP;
+END
+$$;
+
+-- ===========================================================================
 -- DIA dealership domain — demo companies + brands (issue #5)
 -- Idempotent namespaces: source_record_id LIKE 'demo-dia-company-%' / '-brand-%'.
 -- Reuses rental_upsert_entity_current_state (the generic SCD2 upsert) under the

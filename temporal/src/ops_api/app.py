@@ -86,6 +86,7 @@ _OPS_AGENT_KEYS = (
     "revrec-analyst",
     "pm-evaluator",
     "vehicle-aging-analyst",
+    "parts-inventory-advisor",
     "fleet-auditor",
     "credit-analyst",
     "shop-morning-queue",
