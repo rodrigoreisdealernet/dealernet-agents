@@ -1,0 +1,77 @@
+{
+  "issue": "72",
+  "title": "Findings órfãos inflam Morning Queue/Brief após reseed (vehicle-aging)",
+  "slug": "findings-orfaos-inflam-morning-queue",
+  "branch": "feature/72-findings-orfaos-inflam-morning-queue",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/72",
+  "pr": null,
+  "prUrl": null,
+  "updatedAt": "2026-06-26T00:57:51.570Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "running",
+      "summary": "",
+      "artifacts": [],
+      "notes": [
+        "Iniciando spec a partir da issue #72"
+      ],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    }
+  ]
+}
