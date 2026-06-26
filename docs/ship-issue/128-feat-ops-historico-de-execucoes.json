@@ -1,0 +1,88 @@
+{
+  "issue": "128",
+  "title": "feat(ops): histórico de execuções por agente DIA (ops_agent_run_history_view) [U5]",
+  "slug": "feat-ops-historico-de-execucoes",
+  "branch": "feature/128-feat-ops-historico-de-execucoes",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/128",
+  "pr": null,
+  "prUrl": null,
+  "updatedAt": "2026-06-26T14:44:01.662Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "7 acceptance criteria drafted",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/128-feat-ops-historico-de-execucoes.md"
+        }
+      ],
+      "notes": [
+        "Spawning spec agent: drafting testable spec from issue #128"
+      ],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec approved by human (--approved)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "running",
+      "summary": "",
+      "artifacts": [],
+      "notes": [
+        "Spawning coder agent",
+        "reading precedent (status view, ops_api agent endpoints, AgentsDashboard wiring)",
+        "migration validated (rolled back); adding ops_api GET /agents/{key}/runs endpoint",
+        "frontend wired (screen + button + i18n); adding verify script",
+        "verify (6/6) + i18n parity pass; ops_api route registered; committing"
+      ],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    }
+  ]
+}

@@ -358,7 +358,24 @@
       "objective": "Objective",
       "dataAnalyzed": "Data analyzed",
       "predicts": "Predicts",
-      "possibleActions": "Possible actions"
+      "possibleActions": "Possible actions",
+      "history": "History"
+    },
+    "agentRunHistory": {
+      "title": "Run history",
+      "subtitle": "Latest runs for {agent}.",
+      "columnStart": "Start",
+      "columnEnd": "End",
+      "columnDuration": "Duration",
+      "columnStatus": "Status",
+      "columnFindings": "Findings",
+      "loading": "Loading run history…",
+      "error": "Could not load the run history.",
+      "empty": "No runs recorded yet.",
+      "inProgress": "Running",
+      "statusSucceeded": "Succeeded",
+      "statusFailed": "Failed",
+      "statusRunning": "Running"
     },
     "executivePack": {
       "title": "Executive Pack — Owner",
