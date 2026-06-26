@@ -7,8 +7,9 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-from temporal.src.activities import ops_credit
+from temporal.src.activities import ops_credit, ops_revrec
 from temporal.src.agents.credit_analyst import run_credit_analyst as _run_credit_analyst
+from temporalio.testing import ActivityEnvironment
 
 
 class _FakeTransport:
@@ -34,11 +35,83 @@ def _assistant_response(
     *,
     content: str | None = None,
     tool_calls: list[dict[str, Any]] | None = None,
+    usage: dict[str, Any] | None = None,
+    response_id: str | None = None,
+    model: str | None = None,
 ) -> dict[str, Any]:
     msg: dict[str, Any] = {"role": "assistant", "content": content}
     if tool_calls is not None:
         msg["tool_calls"] = tool_calls
-    return {"choices": [{"message": msg}]}
+    completion: dict[str, Any] = {"choices": [{"message": msg, "finish_reason": "stop"}]}
+    if usage is not None:
+        completion["usage"] = usage
+    if response_id is not None:
+        completion["id"] = response_id
+    if model is not None:
+        completion["model"] = model
+    return completion
+
+
+def _usage(prompt: int, completion: int) -> dict[str, Any]:
+    return {
+        "prompt_tokens": prompt,
+        "completion_tokens": completion,
+        "total_tokens": prompt + completion,
+    }
+
+
+class _FakeMeteringClient:
+    """In-memory persistence double for the LLM usage sink (T-005/T-007).
+
+    Mirrors the PostgREST client surface the sink uses: ``select`` (rate-card and
+    tenant-plan lookups) and ``upsert`` (idempotent ``ops_llm_usage_event`` writes).
+    """
+
+    def __init__(
+        self,
+        *,
+        rate_cards: list[dict[str, Any]] | None = None,
+        tenant_plans: list[dict[str, Any]] | None = None,
+    ) -> None:
+        self.tables: dict[str, list[dict[str, Any]]] = {
+            "ops_llm_usage_event": [],
+            "ops_llm_rate_card": list(rate_cards or []),
+            "ops_tenant_llm_plan": list(tenant_plans or []),
+        }
+
+    def select(
+        self,
+        resource: str,
+        *,
+        columns: str = "*",
+        filters: Mapping[str, Any] | None = None,
+        order_by: str | None = None,
+        descending: bool = False,
+        limit: int | None = None,
+    ) -> list[dict[str, Any]]:
+        del columns, order_by, descending
+        rows = [dict(row) for row in self.tables.get(resource, [])]
+        for key, value in (filters or {}).items():
+            rows = [row for row in rows if row.get(key) == value]
+        if limit is not None:
+            rows = rows[:limit]
+        return rows
+
+    def upsert(
+        self, resource: str, payload: Mapping[str, Any], *, on_conflict: str
+    ) -> dict[str, Any]:
+        conflict_keys = [part.strip() for part in on_conflict.split(",")]
+        row = dict(payload)
+        table = self.tables.setdefault(resource, [])
+        for idx, existing in enumerate(table):
+            if all(existing.get(key) == row.get(key) for key in conflict_keys):
+                merged = {**existing, **row}
+                merged["id"] = existing.get("id")
+                table[idx] = merged
+                return merged
+        row.setdefault("id", str(uuid4()))
+        table.append(row)
+        return row
 
 
 # ---------------------------------------------------------------------------
@@ -52,6 +125,7 @@ async def test_ops_credit_assess_direct_no_tool_calls(
 ) -> None:
     tenant_id = "tenant-credit"
     account_id = str(uuid4())
+    run_id = "run-credit-001"
     expected_response = {
         "account_id": account_id,
         "risk_level": "low",
@@ -63,7 +137,15 @@ async def test_ops_credit_assess_direct_no_tool_calls(
         "confidence": 0.85,
         "rationale": "Low-risk account.",
     }
-    transport = _FakeTransport([_assistant_response(content=json.dumps(expected_response))])
+    transport = _FakeTransport(
+        [
+            _assistant_response(
+                content=json.dumps(expected_response),
+                usage=_usage(800, 200),
+                response_id="resp-final",
+            )
+        ]
+    )
 
     async def _run_with_fake_transport(
         account_payload: Mapping[str, Any], **kwargs: Any
@@ -71,8 +153,12 @@ async def test_ops_credit_assess_direct_no_tool_calls(
         return await _run_credit_analyst(account_payload, transport=transport, **kwargs)
 
     monkeypatch.setattr(ops_credit, "run_credit_analyst", _run_with_fake_transport)
+    metering = _FakeMeteringClient()
+    monkeypatch.setattr(ops_revrec, "_ops_client", metering)
 
-    result = await ops_credit.ops_credit_assess(
+    env = ActivityEnvironment()
+    result = await env.run(
+        ops_credit.ops_credit_assess,
         {
             "tenant_id": tenant_id,
             "account_id": account_id,
@@ -99,12 +185,28 @@ async def test_ops_credit_assess_direct_no_tool_calls(
             "tools": [],
             "bounds": {"max_tool_rounds": 3},
         },
+        run_id,
     )
 
     assert result["risk_level"] == "low"
     assert result["proposed_action"] == "no_op"
     assert result["confidence"] == 0.85
     assert "payment_history_missing" in result["stale_inputs"]
+
+    # AC-001: exactly one usage event for the single real provider call, attributed
+    # to tenant/run/agent/item with the provider-reported tokens.
+    events = metering.tables["ops_llm_usage_event"]
+    assert len(events) == 1
+    event = events[0]
+    assert event["tenant_id"] == tenant_id
+    assert event["run_id"] == run_id
+    assert event["agent_key"] == "credit-analyst"
+    assert event["item_key"] == account_id
+    assert event["round_index"] == 0
+    assert event["prompt_tokens"] == 800
+    assert event["completion_tokens"] == 200
+    assert event["total_tokens"] == 1000
+    assert event["metering_status"] == "ok"
 
 
 @pytest.mark.asyncio
@@ -113,6 +215,7 @@ async def test_ops_credit_assess_with_rental_data_tool_call(
 ) -> None:
     tenant_id = "tenant-credit"
     account_id = str(uuid4())
+    run_id = "run-credit-002"
     transport = _FakeTransport(
         [
             _assistant_response(
@@ -127,7 +230,9 @@ async def test_ops_credit_assess_with_rental_data_tool_call(
                             ),
                         },
                     }
-                ]
+                ],
+                usage=_usage(1200, 80),
+                response_id="resp-round-0",
             ),
             _assistant_response(
                 content=json.dumps(
@@ -142,7 +247,9 @@ async def test_ops_credit_assess_with_rental_data_tool_call(
                         "confidence": 0.9,
                         "rationale": "Hold recommended.",
                     }
-                )
+                ),
+                usage=_usage(1500, 350),
+                response_id="resp-round-1",
             ),
         ]
     )
@@ -153,8 +260,12 @@ async def test_ops_credit_assess_with_rental_data_tool_call(
         return await _run_credit_analyst(account_payload, transport=transport, **kwargs)
 
     monkeypatch.setattr(ops_credit, "run_credit_analyst", _run_with_fake_transport)
+    metering = _FakeMeteringClient()
+    monkeypatch.setattr(ops_revrec, "_ops_client", metering)
 
-    result = await ops_credit.ops_credit_assess(
+    env = ActivityEnvironment()
+    result = await env.run(
+        ops_credit.ops_credit_assess,
         {
             "tenant_id": tenant_id,
             "account_id": account_id,
@@ -198,12 +309,119 @@ async def test_ops_credit_assess_with_rental_data_tool_call(
             "tools": ["rental_data"],
             "bounds": {"max_tool_rounds": 5},
         },
+        run_id,
     )
 
     assert result["proposed_action"] == "review_lien_preparation"
     assert result["oldest_overdue_days"] >= 60
     assert result["escalation_stage"] == "formal_escalation_review"
     assert result["risk_level"] == "high"
+
+    # AC-001/AC-003: one usage event per real provider call (tool round + final),
+    # written by the sink as the run progresses — same run/tenant/item, sequential
+    # round_index, tokens matching what each completion reported.
+    events = sorted(
+        metering.tables["ops_llm_usage_event"], key=lambda row: row["round_index"]
+    )
+    assert len(events) == 2
+    assert {e["run_id"] for e in events} == {run_id}
+    assert {e["tenant_id"] for e in events} == {tenant_id}
+    assert {e["agent_key"] for e in events} == {"credit-analyst"}
+    assert {e["item_key"] for e in events} == {account_id}
+    assert [e["round_index"] for e in events] == [0, 1]
+    assert [e["prompt_tokens"] for e in events] == [1200, 1500]
+    assert [e["completion_tokens"] for e in events] == [80, 350]
+    assert all(e["metering_status"] == "ok" for e in events)
+
+
+@pytest.mark.asyncio
+async def test_ops_credit_assess_survives_metering_persistence_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Best-effort invariant: a metering outage must NOT break the credit agent.
+
+    The sink's persistence is fire-and-forget — if the usage write raises, the
+    assessment must still return its normal business result (issue #70 non-goal:
+    metering never alters agent behavior).
+    """
+    tenant_id = "tenant-credit"
+    account_id = str(uuid4())
+    expected_response = {
+        "account_id": account_id,
+        "risk_level": "low",
+        "proposed_action": "no_op",
+        "current_exposure": 500.0,
+        "aging_trend": "stable",
+        "payment_behavior_score": 0.9,
+        "evidence": ["all invoices paid"],
+        "confidence": 0.85,
+        "rationale": "Low-risk account.",
+    }
+    transport = _FakeTransport(
+        [
+            _assistant_response(
+                content=json.dumps(expected_response),
+                usage=_usage(800, 200),
+                response_id="resp-final",
+            )
+        ]
+    )
+
+    async def _run_with_fake_transport(
+        account_payload: Mapping[str, Any], **kwargs: Any
+    ) -> dict[str, Any]:
+        return await _run_credit_analyst(account_payload, transport=transport, **kwargs)
+
+    monkeypatch.setattr(ops_credit, "run_credit_analyst", _run_with_fake_transport)
+
+    class _RaisingMeteringClient(_FakeMeteringClient):
+        def upsert(
+            self, resource: str, payload: Mapping[str, Any], *, on_conflict: str
+        ) -> dict[str, Any]:
+            raise RuntimeError("simulated metering persistence outage")
+
+    metering = _RaisingMeteringClient()
+    monkeypatch.setattr(ops_revrec, "_ops_client", metering)
+
+    env = ActivityEnvironment()
+    result = await env.run(
+        ops_credit.ops_credit_assess,
+        {
+            "tenant_id": tenant_id,
+            "account_id": account_id,
+            "credit_limit": 5000.0,
+            "current_exposure": 500.0,
+            "rental_data": {
+                "entities": [
+                    {
+                        "entity_id": account_id,
+                        "entity_type": "billing_account",
+                        "data": {"tenant_id": tenant_id},
+                    }
+                ],
+                "relationships": [],
+                "facts": [],
+                "time_series": [],
+                "invoices": [],
+                "rate_cards": [],
+            },
+        },
+        {
+            "system_prompt": "Assess credit risk.",
+            "user_prompt_template": "Assess {account_id}.",
+            "tools": [],
+            "bounds": {"max_tool_rounds": 3},
+        },
+        "run-credit-metering-down",
+    )
+
+    # The business assessment is unaffected by the metering write failure.
+    assert result["risk_level"] == "low"
+    assert result["proposed_action"] == "no_op"
+    assert result["confidence"] == 0.85
+    # Nothing was persisted (the write raised and was swallowed), and no exception
+    # propagated out of the activity.
+    assert metering.tables["ops_llm_usage_event"] == []
 
 
 # ---------------------------------------------------------------------------
