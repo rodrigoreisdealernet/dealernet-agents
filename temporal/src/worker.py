@@ -51,6 +51,11 @@ from .activities import (
 from .activities import rental as rental_activities
 from .activities import samsara as samsara_activities
 from .config import settings
+from .schedule_next_run import (
+    cron_next_run_iso,
+    persist_schedule_next_run,
+    resolve_next_run_iso,
+)
 from .models.rental import PMEvaluatorInput
 from .workflows.accounting import AccountingPostingWorkflow
 from .workflows.example.approval_workflow import ApprovalWorkflow
@@ -199,6 +204,46 @@ def _build_revrec_schedule(tenant_id: str, cron: str) -> Schedule:
 
 def _is_not_found_error(exc: BaseException) -> bool:
     return isinstance(exc, service.RPCError) and exc.status == service.RPCStatusCode.NOT_FOUND
+
+
+async def _persist_schedule_next_run_best_effort(
+    schedule_handle: Any,
+    agent_key: str,
+    tenant_id: str,
+    cron: str,
+    *,
+    enabled: bool,
+) -> None:
+    """Capture the schedule's real next fire time and persist it (best-effort).
+
+    Enabled agents resolve the next run from Temporal's ``next_action_times``
+    (falling back to a pure-Python cron calculation when Temporal is
+    unavailable). Disabled agents persist ``None`` so the dashboard clears any
+    stale time and shows "no scheduled run". Never raises — a failed write must
+    not break reconciliation or the status view.
+    """
+    next_run_at: str | None = None
+    if enabled:
+        if schedule_handle is not None:
+            try:
+                desc = await schedule_handle.describe()
+            except BaseException as exc:  # noqa: BLE001 - Temporal down: use cron fallback
+                logger.warning(
+                    "describe() unavailable for next_run_at; using cron fallback",
+                    extra={"agent_key": agent_key, "tenant_id": tenant_id, "error": str(exc)},
+                )
+                next_run_at = cron_next_run_iso(cron)
+            else:
+                next_run_at = resolve_next_run_iso(desc, cron)
+        else:
+            next_run_at = cron_next_run_iso(cron)
+    try:
+        await asyncio.to_thread(persist_schedule_next_run, agent_key, tenant_id, next_run_at)
+    except Exception as exc:  # noqa: BLE001 - persistence is best-effort, never fatal
+        logger.warning(
+            "next_run_at persistence raised unexpectedly (ignored)",
+            extra={"agent_key": agent_key, "tenant_id": tenant_id, "error": str(exc)},
+        )
 
 
 def _fetch_agent_config_rows(agent_key: str) -> list[dict[str, Any]]:
@@ -436,6 +481,9 @@ async def _reconcile_tenant_vehicle_aging_schedule(client: Client, config_row: M
         except BaseException as exc:
             if not _is_not_found_error(exc):
                 raise
+        await _persist_schedule_next_run_best_effort(
+            None, _VEHICLE_AGING_AGENT_KEY, tenant_id, cron, enabled=False
+        )
         return
 
     desired_schedule = _build_vehicle_aging_schedule(tenant_id, cron)
@@ -449,6 +497,9 @@ async def _reconcile_tenant_vehicle_aging_schedule(client: Client, config_row: M
             "Created vehicle-aging schedule from config",
             extra={"tenant_id": tenant_id, "schedule_id": schedule_id, "cron": cron},
         )
+        await _persist_schedule_next_run_best_effort(
+            schedule_handle, _VEHICLE_AGING_AGENT_KEY, tenant_id, cron, enabled=True
+        )
         return
 
     await schedule_handle.update(
@@ -457,6 +508,9 @@ async def _reconcile_tenant_vehicle_aging_schedule(client: Client, config_row: M
     logger.info(
         "Updated vehicle-aging schedule from config",
         extra={"tenant_id": tenant_id, "schedule_id": schedule_id, "cron": cron},
+    )
+    await _persist_schedule_next_run_best_effort(
+        schedule_handle, _VEHICLE_AGING_AGENT_KEY, tenant_id, cron, enabled=True
     )
 
 
@@ -507,6 +561,9 @@ async def _reconcile_tenant_collections_schedule(client: Client, config_row: Map
         except BaseException as exc:
             if not _is_not_found_error(exc):
                 raise
+        await _persist_schedule_next_run_best_effort(
+            None, _COLLECTIONS_AGENT_KEY, tenant_id, cron, enabled=False
+        )
         return
 
     desired_schedule = _build_collections_schedule(tenant_id, cron)
@@ -520,6 +577,9 @@ async def _reconcile_tenant_collections_schedule(client: Client, config_row: Map
             "Created collections-prioritizer schedule from config",
             extra={"tenant_id": tenant_id, "schedule_id": schedule_id, "cron": cron},
         )
+        await _persist_schedule_next_run_best_effort(
+            schedule_handle, _COLLECTIONS_AGENT_KEY, tenant_id, cron, enabled=True
+        )
         return
 
     await schedule_handle.update(
@@ -528,6 +588,9 @@ async def _reconcile_tenant_collections_schedule(client: Client, config_row: Map
     logger.info(
         "Updated collections-prioritizer schedule from config",
         extra={"tenant_id": tenant_id, "schedule_id": schedule_id, "cron": cron},
+    )
+    await _persist_schedule_next_run_best_effort(
+        schedule_handle, _COLLECTIONS_AGENT_KEY, tenant_id, cron, enabled=True
     )
 
 
@@ -580,6 +643,9 @@ async def _reconcile_tenant_service_estimate_schedule(client: Client, config_row
         except BaseException as exc:
             if not _is_not_found_error(exc):
                 raise
+        await _persist_schedule_next_run_best_effort(
+            None, _SERVICE_ESTIMATE_RESCUE_AGENT_KEY, tenant_id, cron, enabled=False
+        )
         return
 
     desired_schedule = _build_service_estimate_schedule(tenant_id, cron)
@@ -593,6 +659,9 @@ async def _reconcile_tenant_service_estimate_schedule(client: Client, config_row
             "Created service-estimate-rescue schedule from config",
             extra={"tenant_id": tenant_id, "schedule_id": schedule_id, "cron": cron},
         )
+        await _persist_schedule_next_run_best_effort(
+            schedule_handle, _SERVICE_ESTIMATE_RESCUE_AGENT_KEY, tenant_id, cron, enabled=True
+        )
         return
 
     await schedule_handle.update(
@@ -601,6 +670,9 @@ async def _reconcile_tenant_service_estimate_schedule(client: Client, config_row
     logger.info(
         "Updated service-estimate-rescue schedule from config",
         extra={"tenant_id": tenant_id, "schedule_id": schedule_id, "cron": cron},
+    )
+    await _persist_schedule_next_run_best_effort(
+        schedule_handle, _SERVICE_ESTIMATE_RESCUE_AGENT_KEY, tenant_id, cron, enabled=True
     )
 
 
@@ -655,6 +727,9 @@ async def _reconcile_tenant_parts_inventory_schedule(client: Client, config_row:
         except BaseException as exc:
             if not _is_not_found_error(exc):
                 raise
+        await _persist_schedule_next_run_best_effort(
+            None, _PARTS_INVENTORY_AGENT_KEY, tenant_id, cron, enabled=False
+        )
         return
 
     desired_schedule = _build_parts_inventory_schedule(tenant_id, cron)
@@ -668,6 +743,9 @@ async def _reconcile_tenant_parts_inventory_schedule(client: Client, config_row:
             "Created parts-inventory schedule from config",
             extra={"tenant_id": tenant_id, "schedule_id": schedule_id, "cron": cron},
         )
+        await _persist_schedule_next_run_best_effort(
+            schedule_handle, _PARTS_INVENTORY_AGENT_KEY, tenant_id, cron, enabled=True
+        )
         return
 
     await schedule_handle.update(
@@ -676,6 +754,9 @@ async def _reconcile_tenant_parts_inventory_schedule(client: Client, config_row:
     logger.info(
         "Updated parts-inventory schedule from config",
         extra={"tenant_id": tenant_id, "schedule_id": schedule_id, "cron": cron},
+    )
+    await _persist_schedule_next_run_best_effort(
+        schedule_handle, _PARTS_INVENTORY_AGENT_KEY, tenant_id, cron, enabled=True
     )
 
 

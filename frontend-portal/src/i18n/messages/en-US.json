@@ -301,6 +301,8 @@
       "pendingLower": "pending",
       "identified": "Identified",
       "lastRun": "Last run",
+      "nextRun": "Next run",
+      "noSchedule": "No scheduled run",
       "runNow": "Run now",
       "running": "Running…",
       "runSuccess": "Trigger requested",

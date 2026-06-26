@@ -301,6 +301,8 @@
       "pendingLower": "pendentes",
       "identified": "Identificado",
       "lastRun": "Último run",
+      "nextRun": "Próxima execução",
+      "noSchedule": "Sem execução agendada",
       "runNow": "Executar agora",
       "running": "Executando…",
       "runSuccess": "Disparo solicitado",
