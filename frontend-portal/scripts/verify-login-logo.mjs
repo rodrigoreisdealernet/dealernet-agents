@@ -99,4 +99,9 @@ test('AC6: o asset PNG da logo nao foi trocado (sem rebranding)', () => {
 test('AC5: a animacao de entrada da logo (motion spring) continua presente', () => {
   assert.match(BLOCK, /<motion\.div/, 'a logo deve continuar envolvida por motion.div (animacao)')
   assert.match(BLOCK, /scale:\s*0\.9/, 'a animacao de entrada (scale spring) da logo deve ser preservada')
+  assert.match(
+    BLOCK,
+    /type:\s*'spring'/,
+    'a transicao da logo deve continuar usando type: spring (nao linear/sem animacao)',
+  )
 })
