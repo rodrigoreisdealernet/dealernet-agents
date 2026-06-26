@@ -644,6 +644,13 @@ async def test_workflow_empty_scope_finalizes_and_persists_workflow_key() -> Non
     # The run row is keyed by the agent key so ops_agent_status_view can align.
     assert state["created_workflow_key"] == _WORKFLOW_KEY
     assert state["finalized"] is not None
+    # CRITICAL early-return guard: with an empty scope the in_scope set is empty,
+    # which would make ops_expire_out_of_scope_findings supersede EVERY open
+    # finding for this tenant+agent. The workflow must short-circuit before the
+    # expire activity. Assert it was never invoked (regression guard if the
+    # empty-scope early-return is ever refactored away).
+    assert state["expire_args"] is None
+    assert result["superseded_findings"] == 0
 
 
 @pytest.mark.asyncio
