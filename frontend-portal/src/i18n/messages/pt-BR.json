@@ -249,7 +249,22 @@
       "approvedCycle": "Aprovados no ciclo",
       "activeDeals": "Negócios ativos",
       "capacityUse": "Utilização da capacidade",
-      "overdueActions": "Ações atrasadas"
+      "overdueActions": "Ações atrasadas",
+      "revenueTrendTitle": "Receita (90 dias)",
+      "revenue": "Receita",
+      "units": "Unidades",
+      "resultByBrandTitle": "Resultado por marca",
+      "result": "Resultado",
+      "aiFoundTitle": "O que a IA encontrou",
+      "aiFoundSubtitle": "Maiores achados por Δ R$ — clique para abrir o detalhe.",
+      "noFindings": "Nenhum achado no momento.",
+      "atRiskTitle": "Em risco",
+      "floorPlanAtRisk": "Floor plan em risco",
+      "criticalParts": "Peças críticas",
+      "byAgentTitle": "Por agente",
+      "pending": "pendentes",
+      "identified": "Identificado",
+      "runHealth": "saúde dos runs"
     },
     "findingsQueue": {
       "title": "Fila Matinal — Findings",

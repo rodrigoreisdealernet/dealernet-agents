@@ -51,6 +51,7 @@ async def run_credit_analyst(
     tool_executor: ToolExecutor,
     max_tool_rounds: int = 5,
     transport: ChatCompletionTransport | None = None,
+    on_llm_call: Callable[[Any], Awaitable[None]] | None = None,
 ) -> dict[str, Any]:
     messages = [
         {"role": "system", "content": system_prompt},
@@ -63,6 +64,7 @@ async def run_credit_analyst(
         response_format=CreditProposalV1,
         max_tool_rounds=max_tool_rounds,
         transport=transport,
+        on_llm_call=on_llm_call,
     )
     return result.response.model_dump(mode="json")
 

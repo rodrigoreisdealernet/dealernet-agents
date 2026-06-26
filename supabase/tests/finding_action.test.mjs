@@ -12,7 +12,7 @@
 // COMO RODAR:
 //   node --test --test-concurrency=1 supabase/tests/finding_action.test.mjs
 // Pre-requisito: container Postgres do Supabase no ar e a migration
-//   20260627130000_finding_action.sql aplicada:
+//   20260627130200_finding_action.sql aplicada:
 //   docker exec -i supabase_db_dealernet-agents psql -U postgres -d postgres -c "select to_regclass('public.finding_action')"
 //
 // Trava o contrato de banco que sustenta os criterios de aceite da spec
