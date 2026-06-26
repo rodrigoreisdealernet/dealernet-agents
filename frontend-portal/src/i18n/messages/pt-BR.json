@@ -254,6 +254,7 @@
     "dealership": "Concessionária",
     "dealership-veiculos": "Veículos",
     "dealership-vehicles": "Estoque de Veículos",
+    "dealership-vehicle-sales": "Vendas de Veículos",
     "dealership-oficina": "Oficina",
     "dealership-service-orders": "Ordens de Serviço",
     "dealership-pecas": "Peças",
@@ -517,6 +518,18 @@
       "inStock": "em_estoque",
       "sold": "vendido",
       "store": "Loja"
+    },
+    "vehicleSales": {
+      "title": "Vendas de Veículos",
+      "subtitle": "Veículos vendidos — receita pelo preço de venda.",
+      "unitsSold": "Unidades vendidas",
+      "revenue": "Receita",
+      "soldVehicles": "Veículos vendidos",
+      "vehicle": "Veículo",
+      "condition": "Condição",
+      "salePrice": "Preço de venda",
+      "purchaseDate": "Data de compra",
+      "noSales": "Nenhum veículo vendido."
     },
     "partsInventory": {
       "title": "Estoque de Peças",

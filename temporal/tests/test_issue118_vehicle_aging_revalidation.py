@@ -27,7 +27,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 from temporal.src.activities import ops_revrec, ops_vehicle_aging
-from temporal.src.activities.ops_vehicle_aging import _stock_aging_fingerprint
+from temporal.src.activities.ops_vehicle_aging import _finding_fingerprint
 from temporal.src.agents.vehicle_aging_analyst import _RECOMMENDED_ACTIONS
 from temporal.src.ops_api.app import (
     DEFAULT_MARKDOWN_PCT,
@@ -159,7 +159,7 @@ def test_ac1_manual_run_registry_still_maps_vehicle_aging_to_its_workflow() -> N
 
 # ===========================================================================
 # AC2 — "Pipeline completo": recorded findings carry status='pending_approval'
-#       and finding_type='stock_aging_90d'.
+#       and finding_type is the anticipatory vehicle finding type.
 #
 # Drives the REAL ops_vehicle_aging.ops_record_finding (which shapes the row via
 # _vehicle_finding_for_storage and persists through ops_revrec) against the
@@ -187,14 +187,14 @@ def _surfaced_finding(*, vehicle_id: str, tenant_id: str, action: str) -> dict[s
         "cost": 125000.0,
         "sale_price": 152900.0,
         "days_in_stock": 86,
-        "aging_bucket": "imminent",
+        "signals": [_VEHICLE_AGING_FINDING_TYPE],
         "floor_plan_cost": 3823.42,
         "estimated_exposure": 3823.42,
         "recommended_action": action,
-        "evidence": ["86 days in stock"],
+        "evidence": ["floor plan about to step up a band"],
         "confidence": 0.7,
-        "rationale": "Aged past the 90d floor-plan window.",
-        "fingerprint": _stock_aging_fingerprint(tenant_id, vehicle_id),
+        "rationale": "Floor-plan carrying cost is about to escalate.",
+        "fingerprint": _finding_fingerprint(tenant_id, vehicle_id, _VEHICLE_AGING_FINDING_TYPE),
     }
 
 
@@ -226,7 +226,7 @@ def test_ac2_record_finding_persists_pending_approval_stock_aging_row(
     assert row["line_item_id"] is None
     # Fingerprint is the deterministic stock-aging hash and the proposed action
     # is carried straight through from the LLM recommendation.
-    assert row["fingerprint"] == _stock_aging_fingerprint(tenant_id, vehicle_id)
+    assert row["fingerprint"] == _finding_fingerprint(tenant_id, vehicle_id, _VEHICLE_AGING_FINDING_TYPE)
     assert row["proposed_action"] == "markdown"
     # delta surfaces the floor-plan exposure (recoverable money signal).
     assert row["delta"] == 3823.42
@@ -288,7 +288,9 @@ def test_ac3_rerun_dedupes_by_fingerprint_no_duplicate_finding(
     # Upsert on (tenant_id, fingerprint) keeps exactly one row; no duplicate finding.
     assert len(ops_client.tables["finding"]) == 1
     assert first["finding_id"] == second["finding_id"]
-    assert ops_client.tables["finding"][0]["fingerprint"] == _stock_aging_fingerprint(tenant_id, vehicle_id)
+    assert ops_client.tables["finding"][0]["fingerprint"] == _finding_fingerprint(
+        tenant_id, vehicle_id, _VEHICLE_AGING_FINDING_TYPE
+    )
 
 
 # ===========================================================================
