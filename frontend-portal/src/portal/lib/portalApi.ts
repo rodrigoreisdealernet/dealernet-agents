@@ -92,6 +92,13 @@ const MOCK_MENU: MenuItem[] = applyMenuTranslationKeys([
         icon: 'fa-sun',
         spec: { title: 'Morning Brief', kind: 'component', componentKey: 'morning-brief', icon: 'fa-sun' },
       },
+      // Cockpit Matinal (issue #142) — alternativa visual (Proposta B) com ações reais.
+      {
+        id: 'cockpit-brief-owner',
+        text: 'Cockpit Matinal',
+        icon: 'fa-gauge-high',
+        spec: { title: 'Cockpit Matinal', kind: 'component', componentKey: 'dia-cockpit-brief', icon: 'fa-gauge-high' },
+      },
       {
         id: 'ai-agents-dashboard',
         text: 'Painel de Agentes',
