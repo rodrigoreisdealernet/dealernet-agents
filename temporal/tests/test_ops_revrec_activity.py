@@ -279,6 +279,121 @@ def test_ops_list_open_finding_fingerprints_returns_distinct_pending(fake_ops_cl
     assert ops_revrec.ops_list_open_finding_fingerprints("tenant-a") == ["f-1"]
 
 
+# ===========================================================================
+# ops_expire_out_of_scope_findings — scope reconciliation (issue #72)
+# AC#4: a finding for a vehicle no longer in scope stops being a pending action.
+# AC#5: a finding for a still-in-scope vehicle remains untouched/visible.
+# ===========================================================================
+
+_AGENT = "vehicle-aging-analyst"
+
+
+def _finding_row(
+    *,
+    fingerprint: str,
+    status: str = "pending_approval",
+    agent_key: str = _AGENT,
+    tenant_id: str = "tenant-a",
+) -> dict[str, Any]:
+    return {
+        "id": str(uuid4()),
+        "tenant_id": tenant_id,
+        "agent_key": agent_key,
+        "status": status,
+        "fingerprint": fingerprint,
+    }
+
+
+def test_expire_out_of_scope_supersedes_only_open_findings_not_in_scope(
+    fake_ops_client: _FakeOpsPersistenceClient,
+) -> None:
+    in_scope = _finding_row(fingerprint="fp-in")
+    out_of_scope = _finding_row(fingerprint="fp-out")
+    fake_ops_client.tables["finding"] = [in_scope, out_of_scope]
+
+    superseded = ops_revrec.ops_expire_out_of_scope_findings("tenant-a", _AGENT, ["fp-in"])
+
+    # Only the out-of-scope finding is retired, and the count reflects exactly it.
+    assert superseded == 1
+    rows = {row["id"]: row for row in fake_ops_client.tables["finding"]}
+    assert rows[out_of_scope["id"]]["status"] == "superseded"
+    assert rows[out_of_scope["id"]]["decided_at"]  # audit timestamp stamped
+    # The in-scope finding survives unchanged as a pending action.
+    assert rows[in_scope["id"]]["status"] == "pending_approval"
+    assert "decided_at" not in rows[in_scope["id"]]
+
+
+def test_expire_out_of_scope_leaves_already_decided_findings_untouched(
+    fake_ops_client: _FakeOpsPersistenceClient,
+) -> None:
+    # Approved/rejected findings are human dispositions — never reopened/superseded
+    # even if their fingerprint is no longer produced by this run.
+    approved = _finding_row(fingerprint="fp-approved", status="approved")
+    rejected = _finding_row(fingerprint="fp-rejected", status="rejected")
+    pending_out = _finding_row(fingerprint="fp-pending-out")
+    fake_ops_client.tables["finding"] = [approved, rejected, pending_out]
+
+    superseded = ops_revrec.ops_expire_out_of_scope_findings("tenant-a", _AGENT, [])
+
+    assert superseded == 1
+    rows = {row["id"]: row for row in fake_ops_client.tables["finding"]}
+    assert rows[approved["id"]]["status"] == "approved"
+    assert rows[rejected["id"]]["status"] == "rejected"
+    assert rows[pending_out["id"]]["status"] == "superseded"
+
+
+def test_expire_out_of_scope_is_scoped_by_tenant_and_agent(
+    fake_ops_client: _FakeOpsPersistenceClient,
+) -> None:
+    target = _finding_row(fingerprint="fp-target")
+    other_tenant = _finding_row(fingerprint="fp-other-tenant", tenant_id="tenant-b")
+    other_agent = _finding_row(fingerprint="fp-other-agent", agent_key="revenue-recognition")
+    fake_ops_client.tables["finding"] = [target, other_tenant, other_agent]
+
+    # Nothing is in scope, yet only this tenant+agent's finding is superseded.
+    superseded = ops_revrec.ops_expire_out_of_scope_findings("tenant-a", _AGENT, [])
+
+    assert superseded == 1
+    rows = {row["id"]: row for row in fake_ops_client.tables["finding"]}
+    assert rows[target["id"]]["status"] == "superseded"
+    assert rows[other_tenant["id"]]["status"] == "pending_approval"
+    assert rows[other_agent["id"]]["status"] == "pending_approval"
+
+
+def test_expire_out_of_scope_no_op_when_all_findings_in_scope(
+    fake_ops_client: _FakeOpsPersistenceClient,
+) -> None:
+    a = _finding_row(fingerprint="fp-a")
+    b = _finding_row(fingerprint="fp-b")
+    fake_ops_client.tables["finding"] = [a, b]
+
+    superseded = ops_revrec.ops_expire_out_of_scope_findings("tenant-a", _AGENT, ["fp-a", "fp-b"])
+
+    assert superseded == 0
+    assert {row["status"] for row in fake_ops_client.tables["finding"]} == {"pending_approval"}
+
+
+def test_expire_out_of_scope_delegated_by_vehicle_aging_activity(
+    monkeypatch: pytest.MonkeyPatch,
+    fake_ops_client: _FakeOpsPersistenceClient,
+) -> None:
+    # The vehicle-aging activity wrapper must bind agent_key='vehicle-aging-analyst'
+    # so it never touches another agent's findings.
+    from temporal.src.activities import ops_vehicle_aging
+
+    monkeypatch.setattr(ops_vehicle_aging.ops_revrec, "_ops_client", fake_ops_client)
+    target = _finding_row(fingerprint="fp-stale")
+    revrec = _finding_row(fingerprint="fp-revrec", agent_key="revenue-recognition")
+    fake_ops_client.tables["finding"] = [target, revrec]
+
+    superseded = ops_vehicle_aging.ops_vehicle_aging_expire_out_of_scope_findings("tenant-a", [])
+
+    assert superseded == 1
+    rows = {row["id"]: row for row in fake_ops_client.tables["finding"]}
+    assert rows[target["id"]]["status"] == "superseded"
+    assert rows[revrec["id"]]["status"] == "pending_approval"
+
+
 def test_ops_workflow_run_create_and_finalize_persist_rows(fake_ops_client: _FakeOpsPersistenceClient) -> None:
     run = ops_revrec.ops_create_workflow_run("revenue_recognition", "tenant-a", {"window": "today"})
     assert run["run_id"]

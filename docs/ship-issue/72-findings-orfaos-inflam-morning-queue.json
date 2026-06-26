@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/72",
   "pr": null,
   "prUrl": null,
-  "updatedAt": "2026-06-26T01:09:01.691Z",
+  "updatedAt": "2026-06-26T01:18:00.952Z",
   "steps": [
     {
       "id": "spec",
@@ -36,22 +36,25 @@
     {
       "id": "code",
       "label": "03 · Code",
-      "status": "running",
-      "summary": "",
+      "status": "done",
+      "summary": "seed purge + worker supersede + migration; 6 files",
       "artifacts": [],
       "notes": [
         "Starting coder: reading vehicle-aging activities, workflow, seed.sql",
-        "A: seed.sql orphan purge added. B: superseded migration + ops_revrec helper + vehicle-aging activity wired into workflow/worker. SQL validated on live container; ruff clean."
+        "A: seed.sql orphan purge added. B: superseded migration + ops_revrec helper + vehicle-aging activity wired into workflow/worker. SQL validated on live container; ruff clean.",
+        "Committed 60bca60. A+B implemented; SQL validated on live container; ruff clean. 6 workflow tests now reference the new activity (tester to update mocks)."
       ],
       "gate": null
     },
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "pending",
+      "status": "running",
       "summary": "",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "Fixed 6 workflow harness tests; added activity+workflow unit tests (pytest 39 green) and SQL purge/migration contract test (node --test 3 green)"
+      ],
       "gate": null
     },
     {
