@@ -562,6 +562,39 @@ export async function getServiceOrders(): Promise<ServiceOrderRow[]> {
   return unwrap(res) ?? []
 }
 
+// ── Contas a Receber (DIA finance, agente collections-prioritizer) ──────────
+// Leitura direta da view v_dia_receivable_current (security_invoker → RLS
+// authenticated). É a mesma fonte que o agente de cobrança consome no worker
+// (ops_scope_collections), expondo no portal os títulos que ele prioriza.
+
+export interface ReceivableRow {
+  entity_id: string
+  source_record_id: string | null
+  name: string | null
+  customer_id: string | null
+  customer_name: string | null
+  document_number: string | null
+  receivable_type: string | null
+  balance: number | null
+  due_date: string | null
+  collector_code: string | null
+  collector_name: string | null
+  status: 'aberto' | 'liquidado' | 'inativo' | string
+  days_overdue: number | null
+}
+
+const RECEIVABLE_COLS =
+  'entity_id, source_record_id, name, customer_id, customer_name, document_number, receivable_type, balance, due_date, collector_code, collector_name, status, days_overdue'
+
+export async function getReceivables(): Promise<ReceivableRow[]> {
+  const res = (await supabase
+    .from('v_dia_receivable_current')
+    .select(RECEIVABLE_COLS)
+    .eq('status', 'aberto')
+    .order('days_overdue', { ascending: false })) as PgResponse<ReceivableRow[]>
+  return unwrap(res) ?? []
+}
+
 // ── Peças (DIA dealership domain, issue #8) ─────────────────────────────────
 // Leitura direta da view v_dia_part_current (security_invoker → RLS authenticated).
 // Escrita SEMPRE via RPCs endurecidas (create/update/delete_part): o cliente NÃO

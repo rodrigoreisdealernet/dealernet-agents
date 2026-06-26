@@ -1,13 +1,14 @@
-"""Tests for the Vehicle Stock-Aging Analyst (issue #32).
+"""Tests for the Vehicle Inventory Analyst (anticipatory stock analysis).
 
-Mirrors the revrec test conventions (``test_ops_revrec_activity.py`` /
-``test_revrec_workflow.py``): a ``_FakeTransport`` stands in for the Azure LLM,
-a fake persistence client stands in for Supabase, the deterministic helpers are
-unit-tested directly, and the workflow is driven against a stubbed activity
-layer by patching ``temporalio.workflow.execute_activity``.
+The agent no longer fires on a naive "90 days in stock" threshold. It surfaces a
+finding only when the deterministic signal engine
+(``vehicle_inventory_signals``) detects an anticipatory problem — floor-plan band
+escalation, margin erosion, or model-year carryover. These tests cover the
+activity layer (scope + finding shaping), the agent surface (schema v2, no
+tools) and the workflow (dedupe, supersede, bounding, fire-and-forget).
 
-Every test traces back to an acceptance criterion in
-``docs/specs/32-feat-ops-primeiro-agente-dia.md``.
+The pure signal engine itself is unit-tested in
+``test_vehicle_inventory_signals.py``.
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ import json
 import logging
 import re
 from collections.abc import Mapping
+from datetime import date
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -27,16 +29,20 @@ import temporalio.workflow as tw_mod
 from pydantic import ValidationError
 from temporal.src.activities import ops_revrec, ops_vehicle_aging
 from temporal.src.activities.ops_vehicle_aging import (
-    _severity_for_days,
-    _stock_aging_fingerprint,
+    _finding_fingerprint,
     _vehicle_finding_for_storage,
     ops_scope_vehicle_aging,
 )
 from temporal.src.agents.openai_client import StructuredOutputRetriesExceededError
 from temporal.src.agents.vehicle_aging_analyst import (
-    VehicleAgingFindingV1,
+    VehicleAgingFindingV2,
     run_vehicle_aging_analyst,
-    vehicle_aging_finding_v1_schema,
+    vehicle_aging_finding_v2_schema,
+)
+from temporal.src.agents.vehicle_inventory_signals import (
+    FINDING_CARRYOVER_MODEL_YEAR,
+    FINDING_FLOOR_PLAN_ESCALATION,
+    FINDING_MARGIN_EROSION,
 )
 from temporal.src.workflows.ops.vehicle_aging import (
     VehicleAgingWorkflow,
@@ -47,6 +53,7 @@ _TENANT = "tenant-a"
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _NEW_SOURCE_FILES = (
     "temporal/src/agents/vehicle_aging_analyst.py",
+    "temporal/src/agents/vehicle_inventory_signals.py",
     "temporal/src/activities/ops_vehicle_aging.py",
     "temporal/src/workflows/ops/vehicle_aging.py",
     "temporal/scripts/run_vehicle_aging.py",
@@ -54,55 +61,31 @@ _NEW_SOURCE_FILES = (
 
 
 # ===========================================================================
-# Deterministic helpers — severity, fingerprint, finding row shaping
-# AC: "Severity buckets ... 75-84 -> medium/approaching; 85-90 -> high/imminent;
-#      >90 -> critical/breached."
+# Deterministic helpers — fingerprint + finding row shaping
 # ===========================================================================
 
 
-def test_severity_for_days_bucket_boundaries() -> None:
-    # 74 is below the scope threshold but the pure function still classifies it
-    # as the medium/approaching band (warning_floor 75, imminent_floor 85).
-    assert _severity_for_days(74) == ("medium", "approaching")
-    assert _severity_for_days(75) == ("medium", "approaching")
-    assert _severity_for_days(80) == ("medium", "approaching")
-    assert _severity_for_days(84) == ("medium", "approaching")
-    # 85..90 is the imminent (high) band.
-    assert _severity_for_days(85) == ("high", "imminent")
-    assert _severity_for_days(86) == ("high", "imminent")
-    assert _severity_for_days(89) == ("high", "imminent")
-    assert _severity_for_days(90) == ("high", "imminent")
-    # > 90 is breached (critical).
-    assert _severity_for_days(91) == ("critical", "breached")
-    assert _severity_for_days(120) == ("critical", "breached")
-    assert _severity_for_days(240) == ("critical", "breached")
-
-
-def test_severity_for_days_honours_custom_thresholds() -> None:
-    # Raising the warning/breach lines shifts every band accordingly.
-    assert _severity_for_days(70, warning_days=60, breach_days=80) == ("medium", "approaching")
-    assert _severity_for_days(76, warning_days=60, breach_days=80) == ("high", "imminent")
-    assert _severity_for_days(81, warning_days=60, breach_days=80) == ("critical", "breached")
-
-
-def test_stock_aging_fingerprint_is_exact_sha256() -> None:
-    # AC: fingerprint = sha256(f"{tenant_id}:{vehicle_id}:stock_aging_90d").
-    expected = hashlib.sha256(f"{_TENANT}:veh-1:stock_aging_90d".encode()).hexdigest()
-    assert _stock_aging_fingerprint(_TENANT, "veh-1") == expected
-    # Deterministic and vehicle-scoped: same inputs -> same hash, different
-    # vehicle -> different hash, different tenant -> different hash.
-    assert _stock_aging_fingerprint(_TENANT, "veh-1") == _stock_aging_fingerprint(_TENANT, "veh-1")
-    assert _stock_aging_fingerprint(_TENANT, "veh-1") != _stock_aging_fingerprint(_TENANT, "veh-2")
-    assert _stock_aging_fingerprint(_TENANT, "veh-1") != _stock_aging_fingerprint("tenant-b", "veh-1")
+def test_finding_fingerprint_is_exact_sha256_per_type() -> None:
+    # fingerprint = sha256(f"{tenant}:{vehicle}:{finding_type}"): vehicle-scoped
+    # AND type-scoped so a unit can move between problems without colliding.
+    ft = FINDING_FLOOR_PLAN_ESCALATION
+    expected = hashlib.sha256(f"{_TENANT}:veh-1:{ft}".encode()).hexdigest()
+    assert _finding_fingerprint(_TENANT, "veh-1", ft) == expected
+    assert _finding_fingerprint(_TENANT, "veh-1", ft) != _finding_fingerprint(_TENANT, "veh-2", ft)
+    assert _finding_fingerprint(_TENANT, "veh-1", ft) != _finding_fingerprint("tenant-b", "veh-1", ft)
+    # Different finding type for the same vehicle -> different fingerprint.
+    assert _finding_fingerprint(_TENANT, "veh-1", ft) != _finding_fingerprint(
+        _TENANT, "veh-1", FINDING_MARGIN_EROSION
+    )
 
 
 def test_vehicle_finding_for_storage_maps_canonical_finding_row() -> None:
-    # AC: contract_id = vehicle entity_id; line_item_id = NULL; delta ~ floor_plan_cost;
+    # contract_id = vehicle entity_id; line_item_id = NULL; delta = exposure;
     # proposed_action = recommended_action; expected JSON carries the vehicle facts.
     finding = {
         "vehicle_id": "veh-uuid-123",
         "tenant_id": _TENANT,
-        "finding_type": "stock_aging_90d",
+        "finding_type": FINDING_FLOOR_PLAN_ESCALATION,
         "severity": "high",
         "brand": "Nissan",
         "model": "Kicks",
@@ -112,24 +95,26 @@ def test_vehicle_finding_for_storage_maps_canonical_finding_row() -> None:
         "cost": 125000.0,
         "sale_price": 152900.0,
         "days_in_stock": 86,
-        "aging_bucket": "imminent",
+        "signals": [FINDING_FLOOR_PLAN_ESCALATION],
+        "monthly_carry": 1875.0,
+        "accrued_floor_plan": 4200.0,
+        "gross_margin": 27900.0,
         "floor_plan_cost": 3823.42,
-        "estimated_exposure": 3823.42,
+        "estimated_exposure": 625.0,
         "recommended_action": "markdown",
-        "evidence": ["86 days in stock"],
+        "evidence": ["floor plan about to step up a band"],
         "confidence": 0.7,
-        "rationale": "approaching the 90-day floor-plan line",
+        "rationale": "escalation imminent",
     }
     row = _vehicle_finding_for_storage(finding)
 
     assert row["contract_id"] == "veh-uuid-123"
     assert row["line_item_id"] is None
-    assert row["delta"] == 3823.42
+    assert row["delta"] == 625.0
     assert row["proposed_action"] == "markdown"
-    assert row["finding_type"] == "stock_aging_90d"
+    assert row["finding_type"] == FINDING_FLOOR_PLAN_ESCALATION
     assert row["severity"] == "high"
     assert row["billed"] == {}
-    # The fingerprint / tenant carry through the spread so the upsert key survives.
     assert row["tenant_id"] == _TENANT
     assert row["expected"] == {
         "brand": "Nissan",
@@ -137,8 +122,11 @@ def test_vehicle_finding_for_storage_maps_canonical_finding_row() -> None:
         "model_year": 2026,
         "store": "Filial Sul",
         "days_in_stock": 86,
-        "aging_bucket": "imminent",
+        "signals": [FINDING_FLOOR_PLAN_ESCALATION],
         "recommended_action": "markdown",
+        "monthly_carry": 1875.0,
+        "accrued_floor_plan": 4200.0,
+        "gross_margin": 27900.0,
         "floor_plan_cost": 3823.42,
         "sale_price": 152900.0,
         "cost": 125000.0,
@@ -149,47 +137,45 @@ def test_vehicle_finding_for_storage_defaults_type_and_severity() -> None:
     row = _vehicle_finding_for_storage({"vehicle_id": "veh-9", "estimated_exposure": 10.0})
     assert row["contract_id"] == "veh-9"
     assert row["line_item_id"] is None
-    assert row["finding_type"] == "stock_aging_90d"
+    assert row["finding_type"] == FINDING_FLOOR_PLAN_ESCALATION
     assert row["severity"] == "medium"
     assert row["delta"] == 10.0
 
 
 # ===========================================================================
-# Agent surface — pydantic schema + run_vehicle_aging_analyst (no tools)
-# AC: "strict:false, pydantic validation, NO tools => no tool_choice sent;
-#      VehicleAgingFindingV1 rejects extra fields (extra=forbid)."
+# Agent surface — pydantic schema v2 + run_vehicle_aging_analyst (no tools)
 # ===========================================================================
 
 
-def test_finding_v1_rejects_extra_fields() -> None:
-    valid = VehicleAgingFindingV1(vehicle_id="veh-1", recommended_action="markdown", rationale="aged")
-    assert valid.finding_type == "stock_aging_90d"
+def test_finding_v2_rejects_extra_fields() -> None:
+    valid = VehicleAgingFindingV2(vehicle_id="veh-1", recommended_action="markdown", rationale="risk")
+    assert valid.finding_type == FINDING_FLOOR_PLAN_ESCALATION
     assert valid.severity == "medium"
-    assert valid.aging_bucket == "approaching"
+    assert valid.signals == []
 
     with pytest.raises(ValidationError):
-        VehicleAgingFindingV1(
+        VehicleAgingFindingV2(
             vehicle_id="veh-1",
             recommended_action="markdown",
-            rationale="aged",
+            rationale="risk",
             surprise="not allowed",  # type: ignore[call-arg]
         )
 
 
-def test_finding_v1_schema_matches_db_registry_contract() -> None:
+def test_finding_v2_schema_matches_db_registry_contract() -> None:
     # The Python output model and the migration's ops_output_schema_registry row
     # must agree, or the worker would validate against a different contract than
     # the DB advertises.
-    schema = vehicle_aging_finding_v1_schema()
-    assert schema["title"] == "VehicleAgingFindingV1"
+    schema = vehicle_aging_finding_v2_schema()
+    assert schema["title"] == "VehicleAgingFindingV2"
     assert schema["additionalProperties"] is False
     assert sorted(schema["required"]) == ["rationale", "recommended_action", "vehicle_id"]
 
-    migration = (_REPO_ROOT / "supabase/migrations/20260626140001_vehicle_aging_agent.sql").read_text()
+    migration = (_REPO_ROOT / "supabase/migrations/20260628120000_vehicle_aging_agent_v2.sql").read_text()
     match = re.search(r"'(\{.*?\})'::jsonb", migration, re.S)
     assert match, "expected an embedded jsonb schema literal in the migration"
     registry = json.loads(match.group(1))
-    assert registry["title"] == "VehicleAgingFindingV1"
+    assert registry["title"] == "VehicleAgingFindingV2"
     assert registry["additionalProperties"] is False
     assert sorted(registry["required"]) == sorted(schema["required"])
     assert set(registry["properties"]) == set(schema["properties"])
@@ -230,33 +216,32 @@ async def test_run_vehicle_aging_analyst_sends_no_tools_and_returns_validated_fi
                 {
                     "vehicle_id": "veh-1",
                     "recommended_action": "wholesale_auction",
-                    "rationale": "200 days in stock; floor-plan exposure rising",
+                    "rationale": "floor-plan carry escalating; move it",
                 }
             )
         ]
     )
     result = await run_vehicle_aging_analyst(
         {"vehicle_id": "veh-1", "tenant_id": _TENANT},
-        system_prompt="You are a vehicle stock-aging analyst.",
+        system_prompt="You are a vehicle inventory analyst.",
         user_prompt_template="Assess veh-1.",
         transport=transport,
     )
 
-    # No tools were offered, so the closed-loop never sends a tool_choice (the
-    # Azure transport only sets tool_choice when the tools list is non-empty).
+    # No tools were offered, so the closed-loop never sends a tool_choice.
     assert transport.tools_seen == [[]]
     assert len(transport.calls) == 1  # single round, no tool turn
     assert result == {
         "vehicle_id": "veh-1",
-        "finding_type": "stock_aging_90d",
+        "finding_type": FINDING_FLOOR_PLAN_ESCALATION,
         "severity": "medium",
         "days_in_stock": 0,
-        "aging_bucket": "approaching",
+        "signals": [],
         "recommended_action": "wholesale_auction",
         "estimated_exposure": 0.0,
         "evidence": [],
         "confidence": 0.0,
-        "rationale": "200 days in stock; floor-plan exposure rising",
+        "rationale": "floor-plan carry escalating; move it",
     }
 
 
@@ -267,7 +252,7 @@ async def test_run_vehicle_aging_analyst_rejects_extra_field_from_model() -> Non
     bad = {
         "vehicle_id": "veh-1",
         "recommended_action": "markdown",
-        "rationale": "aged",
+        "rationale": "risk",
         "ai_hallucinated_field": 1,
     }
     transport = _FakeTransport([_assistant_json(bad), _assistant_json(bad)])
@@ -282,8 +267,11 @@ async def test_run_vehicle_aging_analyst_rejects_extra_field_from_model() -> Non
 
 # ===========================================================================
 # Scope activity — ops_scope_vehicle_aging against a faked v_dia_vehicle_current
-# AC: scope = em_estoque AND days_in_stock >= 75, ordered desc; sold + <75d excluded.
+# AC: only vehicles with a fired anticipatory signal are scoped; an old-but-
+#     healthy vehicle (240 days, wide margin, current model year) is NOT scoped.
 # ===========================================================================
+
+_CURRENT_YEAR = date.today().year
 
 
 class _FakeSelectClient:
@@ -311,93 +299,112 @@ class _FakeSelectClient:
         return rows
 
 
-def _vehicle_row(vehicle_id: str, *, days: int, status: str = "em_estoque", floor: float = 0.0) -> dict[str, Any]:
+def _vehicle_row(
+    vehicle_id: str,
+    *,
+    days: int,
+    condition: str,
+    cost: float,
+    sale_price: float,
+    model_year: int,
+    status: str = "em_estoque",
+) -> dict[str, Any]:
     return {
         "entity_id": vehicle_id,
         "source_record_id": f"demo-dia-{vehicle_id}",
         "name": f"Car {vehicle_id}",
-        "condition": "usado",
+        "condition": condition,
         "brand": "Brand",
         "model": "Model",
-        "model_year": 2022,
-        "cost": 100000.0,
-        "sale_price": 130000.0,
+        "model_year": model_year,
+        "cost": cost,
+        "sale_price": sale_price,
         "store": "Matriz",
         "status": status,
         "days_in_stock": days,
-        "floor_plan_cost": floor,
+        # Linear view number; the engine computes its own accrued curve.
+        "floor_plan_cost": round(cost * 0.13 / 365 * days, 2),
     }
 
 
 @pytest.fixture()
 def fake_vehicle_view(monkeypatch: pytest.MonkeyPatch) -> _FakeSelectClient:
-    # Mirror of the seed dataset: six in-stock vehicles >= 75d, two controls
-    # below the threshold, and one sold vehicle (300d) that must be filtered out
-    # by the em_estoque predicate even though it is the oldest.
     rows = [
-        _vehicle_row("veh-120", days=120, floor=4273.97),
-        _vehicle_row("veh-90", days=90, floor=3205.48),
-        _vehicle_row("veh-89", days=89, floor=3169.86),
-        _vehicle_row("veh-86", days=86, floor=3063.01),
-        _vehicle_row("veh-80", days=80, floor=2849.32),
-        _vehicle_row("veh-75", days=75, floor=2671.23),
-        _vehicle_row("veh-74", days=74, floor=2635.62),  # below threshold -> excluded
-        _vehicle_row("veh-45", days=45, floor=1602.74),  # below threshold -> excluded
-        _vehicle_row("veh-sold", days=300, status="vendido", floor=10684.93),  # sold -> excluded
+        # margin erosion (critical): thin margin + deep accrued at 200 days.
+        _vehicle_row("veh-margin", days=200, condition="usado", cost=90000, sale_price=95000, model_year=2020),
+        # floor-plan band escalation (medium): 88d is within 7 of the 90d band.
+        _vehicle_row("veh-esc", days=88, condition="novo", cost=90000, sale_price=112000, model_year=_CURRENT_YEAR),
+        # carryover (high): new unit one model year behind, > 45 days, off-boundary.
+        _vehicle_row("veh-carry", days=52, condition="novo", cost=22000, sale_price=26000, model_year=_CURRENT_YEAR - 1),
+        # CONTROL old-but-healthy: 240 days yet wide margin, stable top band,
+        # current model year -> NO signal, must NOT be scoped.
+        _vehicle_row("veh-healthy", days=240, condition="usado", cost=99000, sale_price=130000, model_year=2020),
+        # CONTROL fresh: still within grace, healthy -> NO signal.
+        _vehicle_row("veh-fresh", days=20, condition="novo", cost=98000, sale_price=121000, model_year=_CURRENT_YEAR),
+        # Sold: filtered by the em_estoque predicate even though it is the oldest.
+        _vehicle_row("veh-sold", days=300, condition="usado", cost=90000, sale_price=95000, model_year=2020, status="vendido"),
     ]
     client = _FakeSelectClient({"v_dia_vehicle_current": rows})
     monkeypatch.setattr(ops_revrec, "_ops_client", client)
     return client
 
 
-def test_scope_filters_status_threshold_and_orders_desc(fake_vehicle_view: _FakeSelectClient) -> None:
+def test_scope_surfaces_only_signalled_vehicles_ordered_by_severity(fake_vehicle_view: _FakeSelectClient) -> None:
     scoped = ops_scope_vehicle_aging(_TENANT, {})
-
-    ids = [item["vehicle_id"] for item in scoped]
-    # Exactly the six em_estoque vehicles >= 75d, sorted by days_in_stock desc.
-    assert ids == ["veh-120", "veh-90", "veh-89", "veh-86", "veh-80", "veh-75"]
-    # The sold (300d) and the < 75d controls are gone.
-    assert "veh-sold" not in ids
-    assert "veh-74" not in ids
-    assert "veh-45" not in ids
-
     by_id = {item["vehicle_id"]: item for item in scoped}
-    assert by_id["veh-120"]["severity"] == "critical"
-    assert by_id["veh-120"]["aging_bucket"] == "breached"
-    assert by_id["veh-90"]["severity"] == "high"
-    assert by_id["veh-89"]["severity"] == "high"
-    assert by_id["veh-86"]["severity"] == "high"
-    assert by_id["veh-80"]["severity"] == "medium"
-    assert by_id["veh-75"]["severity"] == "medium"
-    assert by_id["veh-75"]["aging_bucket"] == "approaching"
+    ids = [item["vehicle_id"] for item in scoped]
 
-    # At least one of each severity is present (spec: medium/high/critical).
-    assert {item["severity"] for item in scoped} == {"medium", "high", "critical"}
+    # Only the three problem vehicles; healthy/fresh/sold are excluded.
+    assert set(ids) == {"veh-margin", "veh-esc", "veh-carry"}
+    assert "veh-healthy" not in ids  # 240 days but no problem -> the key proof
+    assert "veh-fresh" not in ids
+    assert "veh-sold" not in ids
 
-    # Deterministic dedupe fields + exposure derived from the view.
-    sample = by_id["veh-86"]
-    assert sample["fingerprint"] == _stock_aging_fingerprint(_TENANT, "veh-86")
-    assert sample["finding_type"] == "stock_aging_90d"
-    assert sample["estimated_exposure"] == 3063.01
-    assert sample["floor_plan_cost"] == 3063.01
+    # Ordered by severity desc, then exposure desc: critical margin first,
+    # then high carryover, then medium escalation.
+    assert ids == ["veh-margin", "veh-carry", "veh-esc"]
+
+    assert by_id["veh-margin"]["finding_type"] == FINDING_MARGIN_EROSION
+    assert by_id["veh-margin"]["severity"] == "critical"
+    assert by_id["veh-esc"]["finding_type"] == FINDING_FLOOR_PLAN_ESCALATION
+    assert by_id["veh-esc"]["severity"] == "medium"
+    assert by_id["veh-carry"]["finding_type"] == FINDING_CARRYOVER_MODEL_YEAR
+    assert by_id["veh-carry"]["severity"] == "high"
+
+    # Deterministic dedupe fields keyed per (tenant, vehicle, finding_type).
+    sample = by_id["veh-esc"]
+    assert sample["fingerprint"] == _finding_fingerprint(_TENANT, "veh-esc", FINDING_FLOOR_PLAN_ESCALATION)
+    assert sample["signals"] == [FINDING_FLOOR_PLAN_ESCALATION]
+    assert sample["estimated_exposure"] > 0
     assert sample["tenant_id"] == _TENANT
+    assert sample["signal_evidence"], "deterministic evidence should be attached"
+
+
+def test_scope_never_fires_on_days_alone(fake_vehicle_view: _FakeSelectClient) -> None:
+    # The legacy "90+ days" warning is gone: a 240-day unit with a healthy margin
+    # produces no finding. Removing the problem vehicles would leave scope empty
+    # despite multiple aged units in the view.
+    scoped = ops_scope_vehicle_aging(_TENANT, {})
+    aged_but_unscoped = [v for v in ("veh-healthy",) if v in {i["vehicle_id"] for i in scoped}]
+    assert aged_but_unscoped == []
 
 
 def test_scope_respects_max_vehicles_bound(fake_vehicle_view: _FakeSelectClient) -> None:
     scoped = ops_scope_vehicle_aging(_TENANT, {"max_vehicles": 2})
-    assert [item["vehicle_id"] for item in scoped] == ["veh-120", "veh-90"]
+    assert [item["vehicle_id"] for item in scoped] == ["veh-margin", "veh-carry"]
 
 
-def test_scope_threshold_override_excludes_below_new_warning(fake_vehicle_view: _FakeSelectClient) -> None:
-    # Raise the warning line to 85: only 85..90 + breached survive.
-    scoped = ops_scope_vehicle_aging(_TENANT, {"thresholds": {"aging_warning_days": 85}})
-    assert [item["vehicle_id"] for item in scoped] == ["veh-120", "veh-90", "veh-89", "veh-86"]
+def test_scope_threshold_override_suppresses_carryover(fake_vehicle_view: _FakeSelectClient) -> None:
+    # Raising carryover_min_days above the unit's age suppresses that signal; the
+    # carryover vehicle then has no other signal and drops out of scope.
+    scoped = ops_scope_vehicle_aging(_TENANT, {"thresholds": {"carryover_min_days": 999}})
+    assert "veh-carry" not in {item["vehicle_id"] for item in scoped}
+    assert {"veh-margin", "veh-esc"} <= {item["vehicle_id"] for item in scoped}
 
 
 # ===========================================================================
 # Workflow — VehicleAgingWorkflow against a stubbed activity layer
-# AC: dedup (recorded=0/deduped=N on re-run), auto_apply stays false, bounding,
-#     summary keys, and fire-and-forget (no approval blocking).
+# AC: dedup, auto_apply stays false, bounding, summary keys, fire-and-forget.
 # ===========================================================================
 
 _WORKFLOW_KEY = "vehicle-aging-analyst"
@@ -407,7 +414,7 @@ def _default_config(**overrides: Any) -> dict[str, Any]:
     base: dict[str, Any] = {
         "auto_apply": False,
         "bounds": {"max_findings_per_run": 50, "max_tool_rounds": 0},
-        "thresholds": {"aging_warning_days": 75, "aging_breach_days": 90},
+        "thresholds": {},
         "system_prompt": "s",
         "user_prompt_template": "u",
         "tools": [],
@@ -416,13 +423,21 @@ def _default_config(**overrides: Any) -> dict[str, Any]:
     return base
 
 
-def _scoped_vehicle(vehicle_id: str, *, days: int, severity: str, bucket: str, floor: float) -> dict[str, Any]:
+def _scoped_vehicle(
+    vehicle_id: str,
+    *,
+    severity: str,
+    exposure: float,
+    finding_type: str = FINDING_FLOOR_PLAN_ESCALATION,
+    days: int = 90,
+) -> dict[str, Any]:
     return {
         "vehicle_id": vehicle_id,
         "tenant_id": _TENANT,
         "days_in_stock": days,
+        "finding_type": finding_type,
         "severity": severity,
-        "aging_bucket": bucket,
+        "signals": [finding_type],
         "brand": "Brand",
         "model": "Model",
         "model_year": 2022,
@@ -430,9 +445,12 @@ def _scoped_vehicle(vehicle_id: str, *, days: int, severity: str, bucket: str, f
         "condition": "usado",
         "cost": 100000.0,
         "sale_price": 130000.0,
-        "floor_plan_cost": floor,
-        "estimated_exposure": floor,
-        "fingerprint": _stock_aging_fingerprint(_TENANT, vehicle_id),
+        "monthly_carry": 1500.0,
+        "accrued_floor_plan": 4000.0,
+        "gross_margin": 30000.0,
+        "floor_plan_cost": exposure,
+        "estimated_exposure": exposure,
+        "fingerprint": _finding_fingerprint(_TENANT, vehicle_id, finding_type),
     }
 
 
@@ -471,8 +489,6 @@ def _build_harness(
             state["assess_kwargs"].append(kw)
             return assessment_by_vehicle[str(args[0]["vehicle_id"])]
         if fn_name == "ops_vehicle_aging_expire_out_of_scope_findings":
-            # Capture the in-scope fingerprint set the workflow computed so the
-            # test can assert scope reconciliation; return the superseded count.
             state["expire_args"] = args
             state["expire_kwargs"] = kw
             return superseded_count
@@ -486,7 +502,7 @@ def _build_harness(
     return state, fake_execute_activity
 
 
-def _assessment(recommended_action: str = "markdown", rationale: str = "aged") -> dict[str, Any]:
+def _assessment(recommended_action: str = "markdown", rationale: str = "risk") -> dict[str, Any]:
     return {
         "vehicle_id": "ignored",
         "recommended_action": recommended_action,
@@ -506,13 +522,17 @@ async def _run_workflow(state_execute) -> dict[str, Any]:  # noqa: ANN001
         return await wf.run(VehicleAgingWorkflowInput(tenant_id=_TENANT))
 
 
+def _default_scope() -> list[dict[str, Any]]:
+    return [
+        _scoped_vehicle("veh-crit", severity="critical", exposure=4273.97, finding_type=FINDING_MARGIN_EROSION),
+        _scoped_vehicle("veh-high", severity="high", exposure=3063.01),
+        _scoped_vehicle("veh-med", severity="medium", exposure=2849.32),
+    ]
+
+
 @pytest.mark.asyncio
 async def test_workflow_records_all_findings_when_none_open() -> None:
-    scoped = [
-        _scoped_vehicle("veh-120", days=120, severity="critical", bucket="breached", floor=4273.97),
-        _scoped_vehicle("veh-86", days=86, severity="high", bucket="imminent", floor=3063.01),
-        _scoped_vehicle("veh-80", days=80, severity="medium", bucket="approaching", floor=2849.32),
-    ]
+    scoped = _default_scope()
     assessment = {v["vehicle_id"]: _assessment(recommended_action="markdown") for v in scoped}
     harness = _build_harness(config=_default_config(), scoped=scoped, assessment_by_vehicle=assessment)
     state, _ = harness
@@ -529,27 +549,22 @@ async def test_workflow_records_all_findings_when_none_open() -> None:
     assert result["auto_apply"] is False
     assert len(state["recorded_findings"]) == 3
 
-    # Recorded in days_in_stock-desc order, carrying severity + the LLM action.
+    # Recorded in severity-desc / exposure-desc order, carrying the LLM action.
     recorded_ids = [f["vehicle_id"] for f in state["recorded_findings"]]
-    assert recorded_ids == ["veh-120", "veh-86", "veh-80"]
+    assert recorded_ids == ["veh-crit", "veh-high", "veh-med"]
     first = state["recorded_findings"][0]
     assert first["severity"] == "critical"
     assert first["recommended_action"] == "markdown"
-    assert first["finding_type"] == "stock_aging_90d"
-    assert first["fingerprint"] == _stock_aging_fingerprint(_TENANT, "veh-120")
-    # Fire-and-forget: the run finalised without ever blocking on approval.
+    assert first["finding_type"] == FINDING_MARGIN_EROSION
+    assert first["fingerprint"] == _finding_fingerprint(_TENANT, "veh-crit", FINDING_MARGIN_EROSION)
     assert state["finalized"]["status"] == "succeeded"
 
 
 @pytest.mark.asyncio
 async def test_workflow_dedupes_when_all_fingerprints_already_open() -> None:
-    scoped = [
-        _scoped_vehicle("veh-120", days=120, severity="critical", bucket="breached", floor=4273.97),
-        _scoped_vehicle("veh-86", days=86, severity="high", bucket="imminent", floor=3063.01),
-        _scoped_vehicle("veh-80", days=80, severity="medium", bucket="approaching", floor=2849.32),
-    ]
+    scoped = _default_scope()
     assessment = {v["vehicle_id"]: _assessment() for v in scoped}
-    existing = [_stock_aging_fingerprint(_TENANT, v["vehicle_id"]) for v in scoped]
+    existing = [v["fingerprint"] for v in scoped]
     harness = _build_harness(
         config=_default_config(),
         scoped=scoped,
@@ -560,7 +575,6 @@ async def test_workflow_dedupes_when_all_fingerprints_already_open() -> None:
 
     result = await _run_workflow(harness)
 
-    # Re-run dedupe: nothing recorded, every scoped vehicle deduped.
     assert result["total_vehicles_scoped"] == 3
     assert result["recorded_findings"] == 0
     assert result["deduped_findings"] == 3
@@ -570,17 +584,13 @@ async def test_workflow_dedupes_when_all_fingerprints_already_open() -> None:
 
 @pytest.mark.asyncio
 async def test_workflow_dedupes_only_already_open_fingerprints() -> None:
-    scoped = [
-        _scoped_vehicle("veh-120", days=120, severity="critical", bucket="breached", floor=4273.97),
-        _scoped_vehicle("veh-86", days=86, severity="high", bucket="imminent", floor=3063.01),
-        _scoped_vehicle("veh-80", days=80, severity="medium", bucket="approaching", floor=2849.32),
-    ]
+    scoped = _default_scope()
     assessment = {v["vehicle_id"]: _assessment() for v in scoped}
     harness = _build_harness(
         config=_default_config(),
         scoped=scoped,
         assessment_by_vehicle=assessment,
-        existing_fingerprints=[_stock_aging_fingerprint(_TENANT, "veh-86")],
+        existing_fingerprints=[_finding_fingerprint(_TENANT, "veh-high", FINDING_FLOOR_PLAN_ESCALATION)],
     )
     state, _ = harness
 
@@ -589,13 +599,13 @@ async def test_workflow_dedupes_only_already_open_fingerprints() -> None:
     assert result["recorded_findings"] == 2
     assert result["deduped_findings"] == 1
     recorded_ids = [f["vehicle_id"] for f in state["recorded_findings"]]
-    assert recorded_ids == ["veh-120", "veh-80"]
+    assert recorded_ids == ["veh-crit", "veh-med"]
 
 
 @pytest.mark.asyncio
 async def test_workflow_forces_auto_apply_false_even_if_config_enables_it() -> None:
-    scoped = [_scoped_vehicle("veh-120", days=120, severity="critical", bucket="breached", floor=4273.97)]
-    assessment = {"veh-120": _assessment()}
+    scoped = [_scoped_vehicle("veh-crit", severity="critical", exposure=4273.97)]
+    assessment = {"veh-crit": _assessment()}
     harness = _build_harness(
         config=_default_config(auto_apply=True),
         scoped=scoped,
@@ -607,11 +617,7 @@ async def test_workflow_forces_auto_apply_false_even_if_config_enables_it() -> N
 
 @pytest.mark.asyncio
 async def test_workflow_bounds_processed_findings_and_reports_remainder() -> None:
-    scoped = [
-        _scoped_vehicle("veh-120", days=120, severity="critical", bucket="breached", floor=4273.97),
-        _scoped_vehicle("veh-86", days=86, severity="high", bucket="imminent", floor=3063.01),
-        _scoped_vehicle("veh-80", days=80, severity="medium", bucket="approaching", floor=2849.32),
-    ]
+    scoped = _default_scope()
     assessment = {v["vehicle_id"]: _assessment() for v in scoped}
     harness = _build_harness(
         config=_default_config(bounds={"max_findings_per_run": 1, "max_tool_rounds": 0}),
@@ -626,8 +632,8 @@ async def test_workflow_bounds_processed_findings_and_reports_remainder() -> Non
     assert result["remaining_findings_count"] == 2
     assert result["recorded_findings"] == 1
     assert len(state["recorded_findings"]) == 1
-    # The single processed finding is the most-aged one (days desc ordering).
-    assert state["recorded_findings"][0]["vehicle_id"] == "veh-120"
+    # The single processed finding is the most severe / highest-exposure one.
+    assert state["recorded_findings"][0]["vehicle_id"] == "veh-crit"
 
 
 @pytest.mark.asyncio
@@ -641,14 +647,11 @@ async def test_workflow_empty_scope_finalizes_and_persists_workflow_key() -> Non
     assert result["recorded_findings"] == 0
     assert result["deduped_findings"] == 0
     assert result["run_id"] == "run-1"
-    # The run row is keyed by the agent key so ops_agent_status_view can align.
     assert state["created_workflow_key"] == _WORKFLOW_KEY
     assert state["finalized"] is not None
-    # CRITICAL early-return guard: with an empty scope the in_scope set is empty,
-    # which would make ops_expire_out_of_scope_findings supersede EVERY open
-    # finding for this tenant+agent. The workflow must short-circuit before the
-    # expire activity. Assert it was never invoked (regression guard if the
-    # empty-scope early-return is ever refactored away).
+    # CRITICAL early-return guard: an empty scope must short-circuit BEFORE the
+    # expire activity, otherwise an empty in_scope set would supersede EVERY open
+    # finding for this tenant+agent.
     assert state["expire_args"] is None
     assert result["superseded_findings"] == 0
 
@@ -656,9 +659,9 @@ async def test_workflow_empty_scope_finalizes_and_persists_workflow_key() -> Non
 @pytest.mark.asyncio
 async def test_workflow_assess_activity_has_heartbeat_timeout_and_retry_cap() -> None:
     # ADR-0003 wiring: the LLM activity runs with a 45 s heartbeat timeout and a
-    # retry cap of 2 attempts. This fails if either is reverted.
-    scoped = [_scoped_vehicle("veh-120", days=120, severity="critical", bucket="breached", floor=4273.97)]
-    assessment = {"veh-120": _assessment()}
+    # retry cap of 2 attempts.
+    scoped = [_scoped_vehicle("veh-crit", severity="critical", exposure=4273.97)]
+    assessment = {"veh-crit": _assessment()}
     harness = _build_harness(config=_default_config(), scoped=scoped, assessment_by_vehicle=assessment)
     state, _ = harness
 
@@ -676,18 +679,14 @@ async def test_workflow_assess_activity_has_heartbeat_timeout_and_retry_cap() ->
 
 # ===========================================================================
 # Workflow scope reconciliation — supersede out-of-scope findings (issue #72)
-# AC#4: a vehicle no longer in scope stops being a pending action.
-# AC#5: a still-in-scope vehicle's finding remains untouched.
 # ===========================================================================
 
 
 @pytest.mark.asyncio
 async def test_workflow_computes_in_scope_fingerprints_and_reports_superseded() -> None:
-    # The workflow must derive the in-scope set from THIS run's surfaced
-    # vehicles and report the activity's superseded count in the summary.
     scoped = [
-        _scoped_vehicle("veh-120", days=120, severity="critical", bucket="breached", floor=4273.97),
-        _scoped_vehicle("veh-86", days=86, severity="high", bucket="imminent", floor=3063.01),
+        _scoped_vehicle("veh-crit", severity="critical", exposure=4273.97, finding_type=FINDING_MARGIN_EROSION),
+        _scoped_vehicle("veh-high", severity="high", exposure=3063.01),
     ]
     assessment = {v["vehicle_id"]: _assessment() for v in scoped}
     harness = _build_harness(
@@ -700,16 +699,15 @@ async def test_workflow_computes_in_scope_fingerprints_and_reports_superseded() 
 
     result = await _run_workflow(harness)
 
-    # Summary surfaces exactly what the expire activity returned.
     assert result["superseded_findings"] == 3
-
-    # The expire activity was invoked with the tenant + the sorted, de-duped set
-    # of fingerprints produced by this run's scoped vehicles.
     assert state["expire_args"] is not None, "expire activity was never called"
     tenant_arg, in_scope_arg = state["expire_args"]
     assert tenant_arg == _TENANT
     expected_in_scope = sorted(
-        {_stock_aging_fingerprint(_TENANT, "veh-120"), _stock_aging_fingerprint(_TENANT, "veh-86")}
+        {
+            _finding_fingerprint(_TENANT, "veh-crit", FINDING_MARGIN_EROSION),
+            _finding_fingerprint(_TENANT, "veh-high", FINDING_FLOOR_PLAN_ESCALATION),
+        }
     )
     assert in_scope_arg == expected_in_scope
 
@@ -717,13 +715,12 @@ async def test_workflow_computes_in_scope_fingerprints_and_reports_superseded() 
 @pytest.mark.asyncio
 async def test_workflow_supersedes_out_of_scope_finding_keeps_in_scope() -> None:
     # End-to-end at the workflow level: drive the REAL expire helper against a
-    # fake persistence client. A previously-open finding for a vehicle no longer
-    # in scope must end up superseded; the in-scope one must survive as pending.
+    # fake persistence client.
     from temporal.tests.test_ops_revrec_activity import _FakeOpsPersistenceClient
 
     ops_client = _FakeOpsPersistenceClient()
-    in_scope_fp = _stock_aging_fingerprint(_TENANT, "veh-120")
-    stale_fp = _stock_aging_fingerprint(_TENANT, "veh-OLD")
+    in_scope_fp = _finding_fingerprint(_TENANT, "veh-crit", FINDING_MARGIN_EROSION)
+    stale_fp = _finding_fingerprint(_TENANT, "veh-OLD", FINDING_FLOOR_PLAN_ESCALATION)
     ops_client.tables["finding"] = [
         {
             "id": "finding-in-scope",
@@ -741,8 +738,8 @@ async def test_workflow_supersedes_out_of_scope_finding_keeps_in_scope() -> None
         },
     ]
 
-    scoped = [_scoped_vehicle("veh-120", days=120, severity="critical", bucket="breached", floor=4273.97)]
-    assessment = {"veh-120": _assessment()}
+    scoped = [_scoped_vehicle("veh-crit", severity="critical", exposure=4273.97, finding_type=FINDING_MARGIN_EROSION)]
+    assessment = {"veh-crit": _assessment()}
 
     state: dict[str, Any] = {"recorded_findings": []}
 
@@ -760,7 +757,6 @@ async def test_workflow_supersedes_out_of_scope_finding_keeps_in_scope() -> None
         if fn_name == "ops_vehicle_aging_assess":
             return assessment[str(args[0]["vehicle_id"])]
         if fn_name == "ops_vehicle_aging_expire_out_of_scope_findings":
-            # Real reconciliation against the in-memory finding table.
             return ops_revrec.ops_expire_out_of_scope_findings(args[0], _WORKFLOW_KEY, args[1])
         if fn_name == "ops_list_open_finding_fingerprints":
             return [in_scope_fp]  # the in-scope finding already exists -> deduped
@@ -779,15 +775,12 @@ async def test_workflow_supersedes_out_of_scope_finding_keeps_in_scope() -> None
 
     assert result["superseded_findings"] == 1
     rows = {row["id"]: row for row in ops_client.tables["finding"]}
-    # The stale, out-of-scope finding is retired...
     assert rows["finding-stale"]["status"] == "superseded"
-    # ...while the in-scope finding stays a pending action (no false removal).
     assert rows["finding-in-scope"]["status"] == "pending_approval"
 
 
 # ===========================================================================
 # Worker registration + import hygiene
-# AC: worker registers VehicleAgingWorkflow + activities; no rental_* imports.
 # ===========================================================================
 
 
@@ -797,11 +790,9 @@ def test_vehicle_aging_workflow_and_activities_are_registered_in_worker() -> Non
         _extract_worker_workflow_references,
     )
 
-    # The workflow class is decorated and registered.
     assert hasattr(VehicleAgingWorkflow, "__temporal_workflow_definition")
     assert "VehicleAgingWorkflow" in _extract_worker_workflow_references()
 
-    # Every @activity.defn in ops_vehicle_aging is wired into Worker(activities=[...]).
     import inspect
 
     decorated = {
