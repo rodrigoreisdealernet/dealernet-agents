@@ -706,10 +706,10 @@
       "brandStore": "Marca / Loja",
       "confirmFailed": "Falha ao confirmar",
       "dismissFailed": "Falha ao dispensar",
-      "currentMonth": "Mês atual",
+      "previousDay": "Ontem",
       "byBrandTap": "Por marca · toque para ver lojas",
-      "noMonthData": "Sem dados do mês.",
-      "desktopTitle": "Resultado por marca e loja · mês atual"
+      "noPreviousDayData": "Sem vendas ontem.",
+      "desktopTitle": "Resultado por marca e loja · dia anterior"
     }
   }
 }
