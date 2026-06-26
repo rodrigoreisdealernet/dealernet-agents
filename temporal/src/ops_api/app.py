@@ -809,6 +809,8 @@ class SupabaseServiceClient:
                 if current is None or current.entity_type != "vehicle":
                     raise ValueError("vehicle entity not found for markdown")
                 old_price = _coerce_float(current.data.get("sale_price"))
+                if old_price <= 0:
+                    raise ValueError("vehicle has missing or non-positive sale_price; markdown not applied")
                 pct = DEFAULT_MARKDOWN_PCT
                 new_price = round(old_price * (1 - pct), 2)
                 await self.append_entity_version(

@@ -313,3 +313,25 @@ async def test_markdown_failure_records_failed_action_and_does_not_raise() -> No
     assert client.appended_versions == []
     assert len(client.inserted_actions) == 1
     assert client.inserted_actions[0]["status"] == "failed"
+
+
+# ===========================================================================
+# Data-integrity guard: a vehicle with a missing or non-positive sale_price must
+# NOT be silently marked down to 0.00 and reported as executed. The markdown
+# branch raises -> recorded as a 'failed' finding_action, no price written.
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("bad_price", [None, 0, "0", "", "abc"])
+async def test_markdown_with_missing_or_nonpositive_price_records_failed(bad_price: Any) -> None:
+    client = _FakeClient(current=_vehicle(bad_price))
+
+    result = await client.execute_finding_action(finding=_finding("markdown"), approver=_APPROVER)
+
+    assert result == {"executed": False, "failed": True}
+    # No new entity_version -> the (bogus) price is never written as current.
+    assert client.appended_versions == []
+    assert len(client.inserted_actions) == 1
+    assert client.inserted_actions[0]["status"] == "failed"
+

@@ -51,3 +51,11 @@ create policy ops_finding_action_service_role_all
   to service_role
   using (true)
   with check (true);
+
+-- Audit fact type used by the ops decision API when it records action
+-- execution / disposition events into time_series_points. Without this row the
+-- async audit writer (app.py append_audit_event) silently skips, so the
+-- "audited no-op" (monitor) and "audited dismiss" requirements would be unmet.
+insert into public.fact_types (key, label, description, unit)
+values ('ops_audit_event', 'Ops Audit Event', 'Audit trail for ops agent action execution and finding dispositions', 'event')
+on conflict (key) do nothing;
