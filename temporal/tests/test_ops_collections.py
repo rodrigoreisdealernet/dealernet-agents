@@ -101,6 +101,8 @@ def test_collections_finding_for_storage_maps_and_bounds_pii_summary() -> None:
         "customer_id": "cust-1",
         "total_exposure": 9876.54,
         "days_overdue": 120,
+        "predicted_breach_at": None,
+        "days_to_breach": None,
         "recommended_action": "renegotiate",
         "next_step_note": row["expected"]["next_step_note"],
         "evidence_summary": row["evidence"],
@@ -362,6 +364,11 @@ def test_scope_orders_by_exposure_sets_severity_fingerprint_and_bounded_notes(
     assert len(by_customer["cust-a"]["recent_collection_contacts"][0]["note"]) <= 240
     assert by_customer["cust-a"]["recent_collection_contacts"][0]["note"].endswith("…")
     assert by_customer["cust-b"]["severity"] == "high"
+    assert by_customer["cust-b"]["finding_type"] == "collections_priority"
+    assert by_customer["cust-b"]["days_to_breach"] == 20
+    assert by_customer["cust-b"]["predicted_breach_at"] == (
+        date.today() + timedelta(days=20)
+    ).isoformat() + "T00:00:00Z"
     assert by_customer["cust-near"]["max_days_overdue"] == 0
     assert by_customer["cust-near"]["severity"] == "low"
 

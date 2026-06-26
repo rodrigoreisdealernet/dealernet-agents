@@ -19,6 +19,7 @@ import json
 import logging
 import re
 from collections.abc import Mapping
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -29,7 +30,9 @@ from pydantic import ValidationError
 from temporal.src.activities import ops_revrec, ops_service_estimate
 from temporal.src.activities.ops_service_estimate import (
     _estimate_fingerprint,
+    _service_estimate_days_to_breach,
     _service_estimate_finding_for_storage,
+    _service_estimate_predicted_breach_at,
     _severity_for,
     ops_scope_service_estimates,
 )
@@ -93,6 +96,25 @@ def test_estimate_fingerprint_is_exact_sha256() -> None:
     assert _estimate_fingerprint(_TENANT, "est-1") == _estimate_fingerprint(_TENANT, "est-1")
     assert _estimate_fingerprint(_TENANT, "est-1") != _estimate_fingerprint(_TENANT, "est-2")
     assert _estimate_fingerprint(_TENANT, "est-1") != _estimate_fingerprint("tenant-b", "est-1")
+
+
+def test_service_estimate_horizon_prefers_explicit_expiry_then_valid_from_window() -> None:
+    assert (
+        _service_estimate_predicted_breach_at(
+            {"valid_until": "2026-07-03", "valid_from": "2026-07-01"}
+        )
+        == "2026-07-03T00:00:00Z"
+    )
+    assert (
+        _service_estimate_predicted_breach_at({"valid_from": "2026-07-01T12:30:00Z"})
+        == "2026-07-08T12:30:00Z"
+    )
+    override = _service_estimate_predicted_breach_at(
+        {"valid_from": "2026-07-01"}, auth_window_days=3
+    )
+    assert override == "2026-07-04T00:00:00Z"
+    assert _service_estimate_days_to_breach(override, today=date(2026, 6, 30)) == 4
+    assert _service_estimate_predicted_breach_at({}) is None
 
 
 def test_service_estimate_finding_for_storage_maps_canonical_finding_row() -> None:
@@ -340,6 +362,7 @@ def _raw_estimate_row(
     os_id: str | None = None,
     os_cancelled: bool = False,
     lost_sale_reason: str | None = None,
+    valid_from: str | None = None,
 ) -> dict[str, Any]:
     return {
         "estimate_id": estimate_id,
@@ -352,6 +375,7 @@ def _raw_estimate_row(
         "estimate_status": status,
         "line_value": line_value,
         "lost_sale_reason": lost_sale_reason,
+        "valid_from": valid_from if valid_from is not None else date.today().isoformat(),
         "estimate_description": f"Servico {estimate_id}",
         "recovery_rank": rank,
         "_os_cancelled": os_cancelled,
@@ -400,11 +424,39 @@ def test_scope_filters_status_orders_and_scores(fake_estimate_view: _FakeService
     sample = by_id["est-decl-8000"]
     assert sample["fingerprint"] == _estimate_fingerprint(_TENANT, "est-decl-8000")
     assert sample["finding_type"] == "estimate_rescue"
+    assert sample["valid_from"] == date.today().isoformat()
+    assert sample["days_to_breach"] == 7
+    assert sample["predicted_breach_at"] == (
+        date.today() + timedelta(days=7)
+    ).isoformat() + "T00:00:00Z"
     assert sample["recoverable_value"] == 8000.0
     assert sample["line_value"] == 8000.0
     assert sample["os_id"] == "os-est-decl-8000"
     assert sample["tenant_id"] == _TENANT
     assert sample["lost_sale_reason"] == "preco"
+
+
+def test_scope_sets_null_horizon_when_valid_from_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = _FakeServiceEstimateView(
+        [
+            _raw_estimate_row(
+                "est-no-valid-from",
+                status="pending",
+                line_value=1200.0,
+                rank=1,
+                valid_from="",
+            )
+        ]
+    )
+    monkeypatch.setattr(ops_revrec, "_ops_client", client)
+
+    scoped = ops_scope_service_estimates(_TENANT, {})
+
+    assert [item["estimate_id"] for item in scoped] == ["est-no-valid-from"]
+    assert scoped[0]["finding_type"] == "estimate_rescue"
+    assert scoped[0]["valid_from"] == ""
+    assert scoped[0]["predicted_breach_at"] is None
+    assert scoped[0]["days_to_breach"] is None
 
 
 def test_scope_respects_max_estimates_bound(fake_estimate_view: _FakeServiceEstimateView) -> None:

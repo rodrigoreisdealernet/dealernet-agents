@@ -94,12 +94,19 @@ export interface FindingApprover {
   disposition?: string | null
 }
 
+export interface FindingHorizon {
+  predicted_breach_at: string | null
+  days_to_breach: number | null
+}
+
 export interface FindingDetail extends FindingRow {
   run_id: string | null
   workflow_id: string | null
   contract_id: string | null
   line_item_id: string | null
   expected: Record<string, unknown> | null
+  predicted_breach_at: string | null
+  days_to_breach: number | null
   expected_amount: number | null
   billed: Record<string, unknown> | null
   billed_amount: number | null
@@ -193,13 +200,29 @@ export async function getFindings(f: FindingsFilter = {}): Promise<FindingRow[]>
 const FINDING_DETAIL_COLS =
   'id, agent_key, run_id, workflow_id, contract_id, contract_label, line_item_id, line_item_label, customer_name, finding_type, severity, status, expected, expected_amount, billed, billed_amount, delta, evidence, proposed_action, confidence, rationale, created_at, decided_at, approver'
 
+function finiteNumberOrNull(value: unknown): number | null {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null
+  if (typeof value !== 'string' || !value.trim()) return null
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : null
+}
+
+export function extractFindingHorizon(expected: Record<string, unknown> | null): FindingHorizon {
+  const predicted = expected?.predicted_breach_at
+  return {
+    predicted_breach_at: typeof predicted === 'string' && predicted.trim() ? predicted : null,
+    days_to_breach: finiteNumberOrNull(expected?.days_to_breach),
+  }
+}
+
 export async function getFinding(id: string): Promise<FindingDetail> {
   const res = (await supabase
     .from('ops_findings_view')
     .select(FINDING_DETAIL_COLS)
     .eq('id', id)
     .single()) as PgResponse<FindingDetail>
-  return unwrap(res)
+  const finding = unwrap(res)
+  return { ...finding, ...extractFindingHorizon(finding.expected) }
 }
 
 const HOME_KPI_COLS =
