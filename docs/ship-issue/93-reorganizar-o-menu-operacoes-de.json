@@ -1,0 +1,86 @@
+{
+  "issue": "93",
+  "title": "Reorganizar o menu Operações de IA e aposentar Trilha de Auditoria como item de topo",
+  "slug": "reorganizar-o-menu-operacoes-de",
+  "branch": "feature/93-reorganizar-o-menu-operacoes-de",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/93",
+  "pr": null,
+  "prUrl": null,
+  "updatedAt": "2026-06-26T03:15:00.638Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "6 acceptance criteria drafted",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/93-reorganizar-o-menu-operacoes-de.md"
+        }
+      ],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec approved by human",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": "MOCK_MENU + pt-BR/en-US locales (3 files); audit-trail kept in registry",
+      "artifacts": [],
+      "notes": [
+        "Reading menu/i18n; editing MOCK_MENU to remove ai-audit-trail leaf",
+        "Committing menu + i18n change (removed ai-audit-trail leaf and locale keys)"
+      ],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "running",
+      "summary": "",
+      "artifacts": [],
+      "notes": [
+        "reading verify-menu.mjs and diff",
+        "node --test green (12/12 menu, 158/158 suite); mutation-checked; opening draft PR"
+      ],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    }
+  ]
+}

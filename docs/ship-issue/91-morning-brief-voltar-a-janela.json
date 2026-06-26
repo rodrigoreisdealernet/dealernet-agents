@@ -1,0 +1,90 @@
+{
+  "issue": "91",
+  "title": "Morning Brief: voltar janela MTD -> dia anterior (preservando fixes Pecas/AT)",
+  "slug": "91-morning-brief-voltar-a-janela",
+  "branch": "feature/91-morning-brief-voltar-a-janela",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/91",
+  "pr": "94",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/94",
+  "updatedAt": "2026-06-26T02:59:57.645Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "6 criterios de aceite",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/91-morning-brief-voltar-a-janela.md"
+        }
+      ],
+      "notes": [
+        "Spec written: revert MTD window to previous-day, preserve Peças/AT fixes. 6 acceptance criteria covering time window, fixes preservation, column shape, and consistency. Awaiting human approval."
+      ],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec aprovada (--approved)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": "migration 20260627140000: janela = dia anterior; Peças/AT/FP/shape preservados; 11 vendas de ontem",
+      "artifacts": [],
+      "notes": [
+        "Criando migration que reverte janela MTD -> dia anterior (now()::date - 1) preservando fixes Pecas/AT",
+        "Migration 20260627140000_dia_owner_brief_previous_day.sql criada e validada na DB live: janela = dia anterior, resultado>0 em 4 marcas, by_store soma para by_brand, Pecas/AT/FP preservados. Commit d4c71b3."
+      ],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "done",
+      "summary": "7 testes (inclui prova da reversao + Peças/AT/FP preservados)",
+      "artifacts": [],
+      "notes": [
+        "Escrevendo testes de contrato da janela dia-anterior (Peças/AT/FP preservados); rodando contra o Postgres vivo"
+      ],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "running",
+      "summary": "",
+      "artifacts": [],
+      "notes": [
+        "2 blocking gaps: AC3 missing cancelada test + weak discount assertion",
+        "tester: Peças agora cobre cancelada + valor exato com desconto (iter 1)"
+      ],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    }
+  ]
+}

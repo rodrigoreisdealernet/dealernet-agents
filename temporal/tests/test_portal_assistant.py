@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import inspect
 import json
 from collections.abc import Mapping
 from typing import Any
 
 import pytest
+from temporal.src.agents import portal_assistant
+from temporal.src.agents.i18n import language_directive
 from temporal.src.agents.portal_assistant import (
     MAX_CHART_POINTS,
     allowed_screen_keys,
@@ -214,5 +217,39 @@ def test_build_messages_injects_allowlist_into_system_prompt() -> None:
     )
     assert messages[0]["role"] == "system"
     assert "dia-sales" in messages[0]["content"]
+    # Period-disambiguation guidance must be present (issue #104).
+    assert "PERÍODO" in messages[0]["content"]
     assert messages[-1] == {"role": "user", "content": "oi"}
     assert allowed == {"dia-sales", "dia-overview"}
+
+
+def test_build_messages_uses_english_directive_when_context_locale_is_en_us() -> None:
+    messages, _allowed = build_messages(
+        [{"role": "user", "content": "how are sales?"}],
+        {**_CONTEXT, "locale": "en-US"},
+    )
+
+    system_prompt = messages[0]["content"]
+    assert language_directive("en-US") in system_prompt
+    assert "Reply in English (en-US)" in system_prompt
+    assert language_directive("pt-BR") not in system_prompt
+
+
+@pytest.mark.parametrize("context", [_CONTEXT, {**_CONTEXT, "locale": ""}, {**_CONTEXT, "locale": "fr-FR"}])
+def test_build_messages_defaults_to_portuguese_directive_for_missing_or_unknown_locale(context: Mapping[str, Any]) -> None:
+    messages, _allowed = build_messages(
+        [{"role": "user", "content": "oi"}],
+        context,
+    )
+
+    system_prompt = messages[0]["content"]
+    assert language_directive("pt-BR") in system_prompt
+    assert "Responda em português do Brasil (pt-BR)" in system_prompt
+    assert "Reply in English" not in system_prompt
+
+
+def test_portal_assistant_module_no_longer_hardcodes_portuguese_only_instruction() -> None:
+    source = inspect.getsource(portal_assistant)
+
+    assert "SEMPRE em português" not in source
+    assert "sempre em português" not in source.lower()

@@ -12,7 +12,7 @@ from datetime import UTC, datetime
 from typing import Any, Callable, Literal, NoReturn
 from urllib import error, parse, request
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response, status
+from fastapi import Body, Depends, FastAPI, Header, HTTPException, Request, Response, status
 from prometheus_client import (
     CONTENT_TYPE_LATEST,
     REGISTRY,
@@ -51,7 +51,12 @@ from ..workflows.ops import (
     RejectFleetFindingSignal,
     RejectFindingSignal,
     RevenueRecognitionWorkflow,
+    RevenueRecognitionWorkflowInput,
 )
+from ..workflows.ops.credit import CreditRiskWorkflow, CreditRiskWorkflowInput
+from ..workflows.ops.disposition_queue import DispositionQueueWorkflow, DispositionQueueWorkflowInput
+from ..workflows.ops.vehicle_aging import VehicleAgingWorkflow, VehicleAgingWorkflowInput
+from ..agents.i18n import DEFAULT_LOCALE, resolve_locale
 from ..workflows.ops.branch_morning_brief import (
     BranchMorningBriefWorkflow,
     BranchMorningBriefWorkflowInput,
@@ -87,6 +92,7 @@ _OPS_AGENT_KEYS = (
     "pm-evaluator",
     "vehicle-aging-analyst",
     "collections-prioritizer",
+    "service-estimate-rescue",
     "parts-inventory-advisor",
     "fleet-auditor",
     "credit-analyst",
@@ -368,11 +374,16 @@ class AssistantChatContext(BaseModel):
     current_screen: str | None = None
     available_screens: list[AssistantScreen] = Field(default_factory=list)
     empresa_id: str | None = None
+    locale: str = DEFAULT_LOCALE
 
 
 class AssistantChatRequest(BaseModel):
     messages: list[AssistantChatMessage] = Field(min_length=1)
     context: AssistantChatContext = Field(default_factory=AssistantChatContext)
+
+
+class AgentRunRequest(BaseModel):
+    locale: str = DEFAULT_LOCALE
 
 
 @dataclass(frozen=True)
@@ -931,8 +942,45 @@ class TemporalSignalClient:
         self._client: Client | None = None
         self._lock = asyncio.Lock()
 
-    async def run_agent_now(self, *, agent_key: str, tenant_id: str) -> dict[str, Any]:
+    async def run_agent_now(self, *, agent_key: str, tenant_id: str, locale: str | None = None) -> dict[str, Any]:
         schedule_id = _agent_schedule_id(agent_key=agent_key, tenant_id=tenant_id)
+        resolved_locale = resolve_locale(locale)
+        if locale is not None:
+            workflow_id = f"{schedule_id}:manual:{int(time.time() * 1000)}"
+            start = {
+                "revrec-analyst": (
+                    RevenueRecognitionWorkflow.run,
+                    RevenueRecognitionWorkflowInput(tenant_id=tenant_id, locale=resolved_locale),
+                ),
+                "vehicle-aging-analyst": (
+                    VehicleAgingWorkflow.run,
+                    VehicleAgingWorkflowInput(tenant_id=tenant_id, locale=resolved_locale),
+                ),
+                "credit-analyst": (
+                    CreditRiskWorkflow.run,
+                    CreditRiskWorkflowInput(tenant_id=tenant_id, locale=resolved_locale),
+                ),
+                "disposition-queue": (
+                    DispositionQueueWorkflow.run,
+                    DispositionQueueWorkflowInput(tenant_id=tenant_id, locale=resolved_locale),
+                ),
+            }.get(agent_key)
+            if start is not None:
+                workflow_run, workflow_input = start
+                await (await self._client_instance()).start_workflow(
+                    workflow_run,
+                    workflow_input,
+                    id=workflow_id,
+                    task_queue=settings.temporal_task_queue,
+                )
+                return {
+                    "agent_key": agent_key,
+                    "schedule_id": schedule_id,
+                    "workflow_id": workflow_id,
+                    "status": "started",
+                    "locale": resolved_locale,
+                }
+
         handle = (await self._client_instance()).get_schedule_handle(schedule_id)
         try:
             await handle.trigger(overlap=ScheduleOverlapPolicy.SKIP)
@@ -2546,6 +2594,7 @@ def create_app(
     @app.post("/api/ops/agents/{agent_key}/run", status_code=status.HTTP_202_ACCEPTED)
     async def trigger_agent_now(
         agent_key: str,
+        payload: AgentRunRequest | None = Body(default=None),
         principal: Principal = Depends(_principal),
         client: SupabaseServiceClient = Depends(_supabase_client),
         temporal_client: TemporalSignalClient = Depends(_temporal_client),
@@ -2556,7 +2605,14 @@ def create_app(
         _require_operate_permission(principal)
         tenant_id = await _authorized_tenant_id(principal=principal, client=client)
         try:
-            result = await temporal_client.run_agent_now(agent_key=agent_key, tenant_id=tenant_id)
+            if payload is None:
+                result = await temporal_client.run_agent_now(agent_key=agent_key, tenant_id=tenant_id)
+            else:
+                result = await temporal_client.run_agent_now(
+                    agent_key=agent_key,
+                    tenant_id=tenant_id,
+                    locale=resolve_locale(payload.locale),
+                )
         except AgentScheduleNotProvisioned as exc:
             logger.warning(
                 "manual ops agent trigger not provisioned",
@@ -2582,6 +2638,7 @@ def create_app(
                 "principal_name": principal.name,
                 "agent_key": agent_key,
                 "tenant_id": tenant_id,
+                "locale": resolve_locale(payload.locale) if payload else DEFAULT_LOCALE,
                 "schedule_id": result["schedule_id"],
                 "status": result["status"],
             },
@@ -2854,6 +2911,7 @@ def create_app(
         context = {
             "current_screen": payload.context.current_screen,
             "empresa_id": payload.context.empresa_id,
+            "locale": resolve_locale(payload.context.locale),
             "available_screens": [s.model_dump() for s in payload.context.available_screens],
         }
         history = [m.model_dump() for m in payload.messages]

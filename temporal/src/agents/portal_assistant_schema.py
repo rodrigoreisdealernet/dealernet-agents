@@ -94,8 +94,8 @@ class AssistantReplyV1(BaseModel):
     reply: str = Field(
         min_length=1,
         description=(
-            "Answer in Brazilian Portuguese (pt-BR), concise and factual. May use simple "
-            "Markdown (bold, lists, tables) — the chat renders it."
+            "Natural-language answer in the requested portal locale, concise and factual. "
+            "May use simple Markdown (bold, lists, tables) — the chat renders it."
         ),
     )
     actions: list[AssistantAction] = Field(

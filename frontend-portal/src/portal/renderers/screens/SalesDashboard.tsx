@@ -4,6 +4,7 @@
 // (a trend não tem coluna condition). Sem escrita: dashboard read-only.
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'use-intl'
+import { useLocale } from '@/i18n/LocaleProvider'
 import {
   getSalesSummary,
   getSalesTrend,
@@ -12,7 +13,7 @@ import {
 } from '@/portal/lib/agentsApi'
 import { ChartCard } from './ChartCard'
 import { KpiCard, ScreenShell } from './ui'
-import { formatBRLKpi } from './format'
+import { formatBRLKpi, formatMonthLabel } from './format'
 export const I18N_PT_LEGEND_REFERENCE = 'Valores em R$'
 export const I18N_PT_SALES_DASHBOARD_REFERENCE = ['Unidades VN', 'Unidades VU', 'Unidades total', 'Dias p/ vender', 'Receita VN', 'Receita VU', 'Receita total', 'Margem média', 'Novos (VN)', 'Usados (VU)']
 
@@ -31,10 +32,12 @@ function distinct(values: Array<string | null>): string[] {
 export default function SalesDashboard() {
   const t = useTranslations('screens.salesDashboard')
   const common = useTranslations('common')
+  const { locale } = useLocale()
   const [summary, setSummary] = useState<SalesSummaryRow[]>([])
   const [, setTrend] = useState<SalesTrendRow[]>([])
   const [brand, setBrand] = useState<string>(ALL)
   const [store, setStore] = useState<string>(ALL)
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -60,16 +63,34 @@ export default function SalesDashboard() {
     [summary, brand, store],
   )
 
-  // "Mês atual" = último period_month presente nos dados filtrados (seeds-friendly).
-  const currentMonth = useMemo(() => {
-    let max: string | null = null
-    for (const r of filtered) if (!max || r.period_month > max) max = r.period_month
-    return max
-  }, [filtered])
+  // Meses disponíveis no recorte (period_month distintos, ordenados asc).
+  const months = useMemo(() => distinct(filtered.map((r) => r.period_month)), [filtered])
 
-  // KPIs do mês atual (VN/VU/total): unidades, receita, margem média e dias p/ vender.
+  // Mês selecionado: navegável por setas. Default = último mês; se o recorte muda
+  // (troca de marca/loja) e o mês some da lista, reposiciona para o último.
+  useEffect(() => {
+    if (months.length === 0) {
+      if (selectedMonth !== null) setSelectedMonth(null)
+      return
+    }
+    if (!selectedMonth || !months.includes(selectedMonth)) {
+      setSelectedMonth(months[months.length - 1])
+    }
+  }, [months, selectedMonth])
+
+  const monthIndex = selectedMonth ? months.indexOf(selectedMonth) : -1
+  const hasPrevMonth = monthIndex > 0
+  const hasNextMonth = monthIndex >= 0 && monthIndex < months.length - 1
+  const goPrevMonth = () => {
+    if (hasPrevMonth) setSelectedMonth(months[monthIndex - 1])
+  }
+  const goNextMonth = () => {
+    if (hasNextMonth) setSelectedMonth(months[monthIndex + 1])
+  }
+
+  // KPIs do mês selecionado (VN/VU/total): unidades, receita, margem média e dias p/ vender.
   const kpis = useMemo(() => {
-    const rows = filtered.filter((r) => r.period_month === currentMonth)
+    const rows = filtered.filter((r) => r.period_month === selectedMonth)
     let vnUnits = 0
     let vuUnits = 0
     let vnRevenue = 0
@@ -98,7 +119,7 @@ export default function SalesDashboard() {
       avgMargin: totalUnits > 0 ? totalMargin / totalUnits : 0,
       avgDaysToSell: totalUnits > 0 ? daysWeighted / totalUnits : 0,
     }
-  }, [filtered, currentMonth])
+  }, [filtered, selectedMonth])
 
   // Linha VN×VU ao longo do tempo: agrega o summary por period_month × condition.
   const trendData = useMemo<Array<Record<string, unknown>>>(() => {
@@ -114,23 +135,25 @@ export default function SalesDashboard() {
       .map(([period, v]) => ({ period, novo: v.novo, usado: v.usado }))
   }, [filtered])
 
-  // Barras por marca (unidades vendidas, todos os meses do recorte).
+  // Barras por marca (unidades vendidas no mês selecionado).
   const byBrandData = useMemo<Array<Record<string, unknown>>>(() => {
     const byBrand = new Map<string, number>()
     for (const r of filtered) {
+      if (r.period_month !== selectedMonth) continue
       const key = r.brand ?? 'Sem marca'
       byBrand.set(key, (byBrand.get(key) ?? 0) + r.units_sold)
     }
     return Array.from(byBrand.entries())
       .sort(([, a], [, b]) => b - a)
       .map(([brandName, units]) => ({ brand: brandName, units }))
-  }, [filtered])
+  }, [filtered, selectedMonth])
 
-  // Pizza do mix novos × usados (unidades, todos os meses do recorte).
+  // Pizza do mix novos × usados (unidades no mês selecionado).
   const mixData = useMemo<Array<Record<string, unknown>>>(() => {
     let novo = 0
     let usado = 0
     for (const r of filtered) {
+      if (r.period_month !== selectedMonth) continue
       if (isVN(r.condition)) novo += r.units_sold
       else usado += r.units_sold
     }
@@ -138,9 +161,11 @@ export default function SalesDashboard() {
       { label: t('newVehicles'), units: novo },
       { label: t('usedVehicles'), units: usado },
     ]
-  }, [filtered])
+  }, [filtered, selectedMonth, t])
 
   const selectClass = 'rounded-md border border-border bg-card px-3 py-1.5 text-sm'
+  const monthNavBtn =
+    'inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-foreground transition-colors hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent'
 
   return (
     <ScreenShell
@@ -181,17 +206,47 @@ export default function SalesDashboard() {
             ))}
           </select>
         </label>
+
+        <div className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
+          {t('month')}
+          <div className="flex items-center gap-2 rounded-md border border-border bg-card px-2 py-1">
+            <button
+              type="button"
+              className={monthNavBtn}
+              onClick={goPrevMonth}
+              disabled={!hasPrevMonth}
+              aria-label={t('prevMonth')}
+            >
+              ◄
+            </button>
+            <span
+              className="min-w-[8.5rem] text-center text-sm font-medium text-foreground"
+              aria-live="polite"
+            >
+              {selectedMonth ? formatMonthLabel(selectedMonth, locale) : '—'}
+            </span>
+            <button
+              type="button"
+              className={monthNavBtn}
+              onClick={goNextMonth}
+              disabled={!hasNextMonth}
+              aria-label={t('nextMonth')}
+            >
+              ►
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <KpiCard label={t('vnUnits')} value={kpis.vnUnits} />
-        <KpiCard label={t('vuUnits')} value={kpis.vuUnits} />
-        <KpiCard label={t('totalUnits')} value={kpis.totalUnits} />
-        <KpiCard label={t('daysToSell')} value={Math.round(kpis.avgDaysToSell)} />
-        <KpiCard label={t('vnRevenue')} value={formatBRLKpi(kpis.vnRevenue)} />
-        <KpiCard label={t('vuRevenue')} value={formatBRLKpi(kpis.vuRevenue)} />
-        <KpiCard label={t('totalRevenue')} value={formatBRLKpi(kpis.totalRevenue)} />
-        <KpiCard label={t('avgMargin')} value={formatBRLKpi(kpis.avgMargin)} />
+        <KpiCard label={t('vnUnits')} value={kpis.vnUnits} accent="info" />
+        <KpiCard label={t('vuUnits')} value={kpis.vuUnits} accent="success" />
+        <KpiCard label={t('totalUnits')} value={kpis.totalUnits} accent="neutral" />
+        <KpiCard label={t('daysToSell')} value={Math.round(kpis.avgDaysToSell)} accent="warning" />
+        <KpiCard label={t('vnRevenue')} value={formatBRLKpi(kpis.vnRevenue)} accent="info" />
+        <KpiCard label={t('vuRevenue')} value={formatBRLKpi(kpis.vuRevenue)} accent="success" />
+        <KpiCard label={t('totalRevenue')} value={formatBRLKpi(kpis.totalRevenue)} accent="neutral" />
+        <KpiCard label={t('avgMargin')} value={formatBRLKpi(kpis.avgMargin)} accent="warning" />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -213,6 +268,7 @@ export default function SalesDashboard() {
           xKey="brand"
           series={[{ key: 'units', label: t('units') }]}
           valueFormat="number"
+          colorByPoint
         />
         <ChartCard
           title={t('mixTitle')}
