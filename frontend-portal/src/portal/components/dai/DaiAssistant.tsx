@@ -1,10 +1,10 @@
-// DAI — Dealernet AI · Assistente do Portal (ESBOÇO VISUAL / mock, sem backend ainda).
+// DIA — Dealernet Intelligence Agents · Assistente do Portal.
 // Botão flutuante (launcher) + painel lateral de conversa. Segue o Design System do portal
 // (tokens OKLCH, navy, accent --primary). Ver docs/assistente-ia-arquitetura.md.
 //
-// O que JÁ é visual aqui: launcher animado, painel deslizante, mensagens (user/assistente),
-// chips de sugestão, estado "pensando" (typing), input com envio. As respostas são SIMULADAS
-// — quando o BFF/GEAI entrar, troca-se `fakeReply()` pela chamada real.
+// Launcher animado, painel deslizante, mensagens (user/assistente), chips de sugestão,
+// estado "pensando" (typing), input com envio. As respostas vêm da ops-api ao vivo
+// (useDaiStore → chatWithAssistant): a DIA responde dados de BI e navega pelas telas.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
@@ -40,8 +40,8 @@ function DaiLauncher({ open, onClick }: { open: boolean; onClick: () => void }) 
     <button
       type="button"
       onClick={onClick}
-      title="DAI — Dealernet AI"
-      aria-label="Abrir assistente DAI"
+      title="DIA — Dealernet Intelligence Agents"
+      aria-label="Abrir assistente DIA"
       data-tour="dai"
       className={[
         // bottom-16: acima do rodapé/paginação das janelas MDI (botão não cobre os
@@ -86,7 +86,7 @@ function DaiPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
     const t = draft.trim()
     if (!t || thinking) return
     setDraft('')
-    send(t)
+    void send(t)
   }
 
   // Clicar numa sugestão ABRE a tela na hora + registra no chat (ação de navegação).
@@ -111,12 +111,12 @@ function DaiPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-1.5 font-semibold leading-tight">
-            DAI
+            DIA
             <span className="rounded bg-white/20 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide">
               beta
             </span>
           </div>
-          <div className="text-xs text-white/75">Dealernet AI · assistente do portal</div>
+          <div className="text-xs text-white/75">Dealernet Intelligence Agents · assistente do portal</div>
         </div>
         <button
           type="button"
@@ -177,7 +177,7 @@ function DaiPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
               }
             }}
             rows={1}
-            placeholder="Pergunte ou peça algo ao DAI…"
+            placeholder="Pergunte ou peça algo à DIA…"
             className="max-h-28 flex-1 resize-none bg-transparent px-1 text-sm outline-none placeholder:text-muted-foreground"
           />
           <button
@@ -190,7 +190,7 @@ function DaiPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
           </button>
         </div>
         <p className="mt-1.5 px-1 text-[11px] text-muted-foreground">
-          DAI pode cometer erros. Confira ações importantes. <span className="opacity-60">(esboço — sem IA real ainda)</span>
+          DIA pode cometer erros. Confira ações importantes.
         </p>
       </div>
     </aside>
@@ -211,9 +211,10 @@ function DaiWelcome({
         <Sparkles size={28} />
       </div>
       <div>
-        <h3 className="text-base font-semibold text-foreground">Olá! Sou o DAI 👋</h3>
+        <h3 className="text-base font-semibold text-foreground">Olá! Sou a DIA 👋</h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          Posso abrir telas, navegar pelos módulos e ajudar você a achar o que precisa no portal.
+          Posso responder sobre vendas, estoque, oficina e peças com dados reais — e abrir a tela
+          certa pra você. É só perguntar.
         </p>
       </div>
       {suggestions.length > 0 && (
