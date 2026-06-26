@@ -6,6 +6,8 @@ from urllib import error
 
 import pytest
 from fastapi.testclient import TestClient
+from temporalio.client import ScheduleOverlapPolicy
+from temporalio.service import RPCError, RPCStatusCode
 from temporal.src.integrations.billtrust import BilltrustHealthcheckResult, run_billtrust_healthcheck
 from temporal.src.integrations.coupa import CoupaHealthcheckResult
 from temporal.src.integrations.descartes import DescartesHealthcheckResult
@@ -14,6 +16,7 @@ from temporal.src.integrations.sage import SageHealthcheckResult
 from temporal.src.integrations.samsara import SamsaraHealthcheckResult
 from temporal.src.ops_api.app import (
     _BEARER_PREFIX,
+    AgentScheduleNotProvisioned,
     EntityCurrentVersion,
     FindingRecord,
     Principal,
@@ -152,11 +155,19 @@ class _FakeSupabaseClient:
 
 
 class _FakeTemporalClient:
-    def __init__(self, *, calls: list[str], signal_raises: Exception | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        calls: list[str],
+        signal_raises: Exception | None = None,
+        run_agent_now_raises: Exception | None = None,
+    ) -> None:
         self.calls = calls
         self.signal_calls: list[tuple[Any, Any]] = []
         self.asset_update_calls: list[dict[str, Any]] = []
+        self.run_agent_now_calls: list[dict[str, str]] = []
         self._signal_raises = signal_raises
+        self._run_agent_now_raises = run_agent_now_raises
 
     async def signal_approve(self, *, finding: FindingRecord, approver: Principal, note: str | None) -> None:
         if self._signal_raises is not None:
@@ -261,6 +272,13 @@ class _FakeTemporalClient:
             },
         }
 
+    async def run_agent_now(self, *, agent_key: str, tenant_id: str) -> dict[str, Any]:
+        self.calls.append("run_agent_now")
+        self.run_agent_now_calls.append({"agent_key": agent_key, "tenant_id": tenant_id})
+        if self._run_agent_now_raises is not None:
+            raise self._run_agent_now_raises
+        return {"agent_key": agent_key, "schedule_id": f"fake:{tenant_id}:{agent_key}", "status": "triggered"}
+
     async def run_territory_brief(
         self,
         *,
@@ -296,6 +314,27 @@ class _FakeSignalTemporalClient:
         return self.handle
 
 
+class _FakeScheduleHandle:
+    def __init__(self, *, trigger_raises: Exception | None = None) -> None:
+        self.trigger_calls: list[dict[str, Any]] = []
+        self._trigger_raises = trigger_raises
+
+    async def trigger(self, **kwargs: Any) -> None:
+        self.trigger_calls.append(kwargs)
+        if self._trigger_raises is not None:
+            raise self._trigger_raises
+
+
+class _FakeScheduleTemporalClient:
+    def __init__(self, handle: _FakeScheduleHandle) -> None:
+        self.handle = handle
+        self.schedule_ids: list[str] = []
+
+    def get_schedule_handle(self, schedule_id: str) -> _FakeScheduleHandle:
+        self.schedule_ids.append(schedule_id)
+        return self.handle
+
+
 def _make_finding(
     status: str = "pending_approval",
     tenant_id: str = "tenant-a-id",
@@ -323,6 +362,7 @@ def _make_client(
     role: str = "branch_manager",
     finding_status: str = "pending_approval",
     principal_tenant: str = "tenant-a",
+    resolved_tenant_id: str = "tenant-a-id",
     finding_tenant_id: str = "tenant-a-id",
     can_operate: bool | None = None,
     finding_workflow_id: str | None = "wf-123",
@@ -330,6 +370,7 @@ def _make_client(
     finding_type: str = "unbilled_on_rent",
     finding_fingerprint: str = "finding-fingerprint-1",
     signal_raises: Exception | None = None,
+    run_agent_now_raises: Exception | None = None,
     connector_registry: dict[str, ConnectorProvider] | None = None,
 ) -> tuple[TestClient, _FakeSupabaseClient, _FakeTemporalClient, list[str]]:
     principal = Principal(sub="user-1", name="Casey", role=role, tenant=principal_tenant, can_operate=can_operate)
@@ -345,8 +386,13 @@ def _make_client(
             fingerprint=finding_fingerprint,
         ),
         call_order=call_order,
+        tenant_id=resolved_tenant_id,
     )
-    temporal = _FakeTemporalClient(calls=call_order, signal_raises=signal_raises)
+    temporal = _FakeTemporalClient(
+        calls=call_order,
+        signal_raises=signal_raises,
+        run_agent_now_raises=run_agent_now_raises,
+    )
     app = create_app(supabase_client=supabase, temporal_client=temporal, connector_registry=connector_registry)
     return TestClient(app), supabase, temporal, call_order
 
@@ -473,6 +519,146 @@ async def test_temporal_signal_client_routes_fleet_approval_to_fleet_workflow() 
             ),
         )
     ]
+
+
+def test_ac1_ac2_run_agent_now_accepts_valid_ops_keys_and_uses_resolved_tenant() -> None:
+    client, supabase, temporal, _ = _make_client(
+        role="field_operator",
+        principal_tenant="tenant-ops",
+        resolved_tenant_id="resolved-tenant-id",
+    )
+
+    first = client.post("/api/ops/agents/revrec-analyst/run", headers=_auth_header())
+    second = client.post("/api/ops/agents/vehicle-aging-analyst/run", headers=_auth_header())
+
+    assert first.status_code == 202
+    assert first.json() == {
+        "agent_key": "revrec-analyst",
+        "schedule_id": "fake:resolved-tenant-id:revrec-analyst",
+        "status": "triggered",
+    }
+    assert second.status_code == 202
+    assert second.json()["agent_key"] == "vehicle-aging-analyst"
+    assert second.json()["status"] == "triggered"
+    assert temporal.run_agent_now_calls == [
+        {"agent_key": "revrec-analyst", "tenant_id": "resolved-tenant-id"},
+        {"agent_key": "vehicle-aging-analyst", "tenant_id": "resolved-tenant-id"},
+    ]
+    assert supabase.tenant_lookups == ["tenant-ops", "tenant-ops"]
+
+
+def test_ac3_run_agent_now_unknown_key_returns_404_without_temporal_interaction() -> None:
+    client, supabase, temporal, _ = _make_client()
+
+    response = client.post("/api/ops/agents/does-not-exist/run", headers=_auth_header())
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Unknown agent_key: does-not-exist"}
+    assert temporal.run_agent_now_calls == []
+    assert "run_agent_now" not in temporal.calls
+    assert supabase.tenant_lookups == []
+
+
+def test_ac3_run_agent_now_not_provisioned_returns_409_without_500() -> None:
+    client, _, temporal, _ = _make_client(
+        run_agent_now_raises=AgentScheduleNotProvisioned("revrec-analyst"),
+    )
+
+    response = client.post("/api/ops/agents/revrec-analyst/run", headers=_auth_header())
+
+    assert response.status_code == 409
+    assert response.json() == {"detail": "Agent revrec-analyst is disabled or schedule not provisioned"}
+    assert temporal.run_agent_now_calls == [{"agent_key": "revrec-analyst", "tenant_id": "tenant-a-id"}]
+
+
+def test_ac4_run_agent_now_requires_operating_role() -> None:
+    client, supabase, temporal, _ = _make_client(role="viewer")
+
+    response = client.post("/api/ops/agents/revrec-analyst/run", headers=_auth_header())
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Insufficient role for operation"}
+    assert temporal.run_agent_now_calls == []
+    assert supabase.tenant_lookups == []
+
+
+def test_ac4_run_agent_now_rejects_can_operate_false() -> None:
+    client, supabase, temporal, _ = _make_client(role="branch_manager", can_operate=False)
+
+    response = client.post("/api/ops/agents/revrec-analyst/run", headers=_auth_header())
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Operate permission denied"}
+    assert temporal.run_agent_now_calls == []
+    assert supabase.tenant_lookups == []
+
+
+def test_ac4_run_agent_now_scopes_to_authenticated_principal_tenant() -> None:
+    client, supabase, temporal, _ = _make_client(
+        role="admin",
+        principal_tenant="dealer-east",
+        resolved_tenant_id="tenant-east-id",
+    )
+
+    response = client.post("/api/ops/agents/fleet-auditor/run", headers=_auth_header())
+
+    assert response.status_code == 202
+    assert response.json()["schedule_id"] == "fake:tenant-east-id:fleet-auditor"
+    assert supabase.tenant_lookups == ["dealer-east"]
+    assert temporal.run_agent_now_calls == [{"agent_key": "fleet-auditor", "tenant_id": "tenant-east-id"}]
+
+
+@pytest.mark.asyncio
+async def test_ac5_temporal_signal_client_triggers_schedule_with_skip_overlap() -> None:
+    signal_client = TemporalSignalClient(temporal_address="temporal.example:7233", temporal_namespace="default")
+    handle = _FakeScheduleHandle()
+    fake_temporal_client = _FakeScheduleTemporalClient(handle)
+
+    async def fake_client_instance() -> _FakeScheduleTemporalClient:
+        return fake_temporal_client
+
+    signal_client._client_instance = fake_client_instance  # type: ignore[method-assign]
+
+    result = await signal_client.run_agent_now(agent_key="revrec-analyst", tenant_id="tenant-a-id")
+
+    assert result == {
+        "agent_key": "revrec-analyst",
+        "schedule_id": "ops:tenant-a-id:revrec-analyst",
+        "status": "triggered",
+    }
+    assert fake_temporal_client.schedule_ids == ["ops:tenant-a-id:revrec-analyst"]
+    assert handle.trigger_calls == [{"overlap": ScheduleOverlapPolicy.SKIP}]
+
+
+@pytest.mark.asyncio
+async def test_ac5_temporal_signal_client_maps_missing_schedule_and_propagates_other_rpc_errors() -> None:
+    missing_schedule_error = RPCError("missing schedule", RPCStatusCode.NOT_FOUND, b"")
+    signal_client = TemporalSignalClient(temporal_address="temporal.example:7233", temporal_namespace="default")
+    missing_handle = _FakeScheduleHandle(trigger_raises=missing_schedule_error)
+    missing_temporal_client = _FakeScheduleTemporalClient(missing_handle)
+
+    async def missing_client_instance() -> _FakeScheduleTemporalClient:
+        return missing_temporal_client
+
+    signal_client._client_instance = missing_client_instance  # type: ignore[method-assign]
+
+    with pytest.raises(AgentScheduleNotProvisioned):
+        await signal_client.run_agent_now(agent_key="revrec-analyst", tenant_id="tenant-a-id")
+
+    internal_error = RPCError("temporal unavailable", RPCStatusCode.INTERNAL, b"")
+    signal_client = TemporalSignalClient(temporal_address="temporal.example:7233", temporal_namespace="default")
+    failing_handle = _FakeScheduleHandle(trigger_raises=internal_error)
+    failing_temporal_client = _FakeScheduleTemporalClient(failing_handle)
+
+    async def failing_client_instance() -> _FakeScheduleTemporalClient:
+        return failing_temporal_client
+
+    signal_client._client_instance = failing_client_instance  # type: ignore[method-assign]
+
+    with pytest.raises(RPCError) as excinfo:
+        await signal_client.run_agent_now(agent_key="revrec-analyst", tenant_id="tenant-a-id")
+
+    assert excinfo.value is internal_error
 
 
 def test_reject_requires_reason() -> None:
