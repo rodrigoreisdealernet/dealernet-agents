@@ -21,6 +21,7 @@ from temporal.src.ops_api.app import (
     EntityCurrentVersion,
     FindingRecord,
     Principal,
+    SupabaseServiceClient,
     TemporalSignalClient,
     create_app,
 )
@@ -2993,3 +2994,189 @@ def test_territory_brief_branch_manager_can_trigger_tenant_wide() -> None:
 
     assert response.status_code == 202
     assert temporal.territory_brief_calls[0]["rep_id"] is None
+
+
+# ---------------------------------------------------------------------------
+# Issue #128 — Agent run history endpoint (GET /api/ops/agents/{agent_key}/runs).
+#
+# These tests pin the behaviour that is ONLY observable at the HTTP/endpoint
+# layer, not at the DB view layer. In production this surface is served by the
+# ops_api using the SERVICE-ROLE Supabase client, which BYPASSES Postgres RLS —
+# so tenant isolation, ordering and the limit bound are the *endpoint's* job,
+# enforced by the exact PostgREST query string the route builds. The SQL
+# contract test (supabase/tests/ops_agent_run_history_contract.test.mjs) covers
+# the view's RLS path; here we drive the real ``SupabaseServiceClient`` through
+# the FastAPI route and capture the outgoing upstream query to prove the route
+# scopes/sorts/bounds it correctly.
+# ---------------------------------------------------------------------------
+
+
+class _RecordingSupabaseClient(SupabaseServiceClient):
+    """Real SupabaseServiceClient with its HTTP transport replaced by a recorder.
+
+    Every outgoing PostgREST/Auth request URL is captured in ``requested_urls``
+    so a test can assert on the *actual* query string the route issued. Canned
+    payloads are returned per upstream resource so the route resolves a principal
+    and a tenant id and then queries the run-history view.
+    """
+
+    def __init__(self, *, tenant_key: str = "tenant-a", tenant_id: str = "tenant-a-id", runs: list[dict[str, Any]] | None = None) -> None:
+        super().__init__(base_url="https://supabase.test", service_role_key="svc-key")
+        self.requested_urls: list[str] = []
+        self._tenant_key = tenant_key
+        self._tenant_id = tenant_id
+        self._runs = runs if runs is not None else []
+
+    async def _request_json(  # type: ignore[override]
+        self,
+        *,
+        method: str,
+        url: str | None = None,
+        path: str | None = None,
+        headers: dict[str, str] | None = None,
+        body: dict[str, Any] | None = None,
+    ) -> Any:
+        full = url if url is not None else f"{self._base_url}{path}"
+        assert full is not None
+        self.requested_urls.append(full)
+        if "/auth/v1/user" in full:
+            return {
+                "id": "user-1",
+                "app_metadata": {"role": "branch_manager", "tenant": self._tenant_key, "canOperate": True},
+                "user_metadata": {"name": "Casey"},
+            }
+        if "/rest/v1/tenants" in full:
+            return [{"id": self._tenant_id}]
+        if "ops_agent_run_history_view" in full:
+            return list(self._runs)
+        raise AssertionError(f"unexpected upstream request to {full}")
+
+    @property
+    def history_url(self) -> str:
+        matches = [u for u in self.requested_urls if "ops_agent_run_history_view" in u]
+        assert matches, f"route never queried the run-history view; urls={self.requested_urls}"
+        return matches[-1]
+
+
+def _make_history_app(
+    *,
+    tenant_key: str = "tenant-a",
+    tenant_id: str = "tenant-a-id",
+    runs: list[dict[str, Any]] | None = None,
+) -> tuple[TestClient, _RecordingSupabaseClient]:
+    supabase = _RecordingSupabaseClient(tenant_key=tenant_key, tenant_id=tenant_id, runs=runs)
+    temporal = _FakeTemporalClient(calls=[])
+    app = create_app(supabase_client=supabase, temporal_client=temporal)
+    return TestClient(app), supabase
+
+
+# AC4 (HIGH) — tenant isolation. The endpoint MUST scope the upstream query to the
+# caller's *resolved* tenant id (looked up from the principal's tenant key), never
+# an arbitrary/global scope. If ``&tenant_id=eq.{tenant_id}`` is dropped from the
+# query, every tenant's runs leak and this assertion fails.
+@pytest.mark.parametrize(
+    ("tenant_key", "tenant_id"),
+    [("tenant-a", "tenant-a-id"), ("tenant-b", "tenant-b-id")],
+)
+def test_agent_run_history_scopes_query_to_caller_tenant(tenant_key: str, tenant_id: str) -> None:
+    client, supabase = _make_history_app(tenant_key=tenant_key, tenant_id=tenant_id)
+
+    response = client.get("/api/ops/agents/credit-analyst/runs", headers=_auth_header())
+
+    assert response.status_code == 200
+    # The tenant id came from resolving the caller's tenant KEY (not hardcoded).
+    assert any(f"tenant_key=eq.{tenant_key}" in u for u in supabase.requested_urls)
+    # The run-history query is scoped to exactly that resolved tenant id...
+    assert f"tenant_id=eq.{tenant_id}" in supabase.history_url
+    # ...and to the requested agent.
+    assert "agent_key=eq.credit-analyst" in supabase.history_url
+    # Cross-tenant guard: the other tenant's id must never appear in the query.
+    other_tenant_id = "tenant-b-id" if tenant_id == "tenant-a-id" else "tenant-a-id"
+    assert f"tenant_id=eq.{other_tenant_id}" not in supabase.history_url
+
+
+def test_agent_run_history_returns_runs_for_caller_tenant() -> None:
+    rows = [
+        {"run_id": "r3", "agent_key": "credit-analyst", "status": "succeeded", "findings_emitted": 2},
+        {"run_id": "r2", "agent_key": "credit-analyst", "status": "failed", "findings_emitted": 0},
+    ]
+    client, _ = _make_history_app(runs=rows)
+
+    response = client.get("/api/ops/agents/credit-analyst/runs", headers=_auth_header())
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["agent_key"] == "credit-analyst"
+    assert body["runs"] == rows
+
+
+# AC2 — ordering is the endpoint's responsibility (the view has no ORDER BY). The
+# upstream query MUST sort by started_at descending; flipping it to asc fails here.
+def test_agent_run_history_orders_by_started_at_desc() -> None:
+    client, supabase = _make_history_app()
+
+    response = client.get("/api/ops/agents/credit-analyst/runs", headers=_auth_header())
+
+    assert response.status_code == 200
+    assert "order=started_at.desc" in supabase.history_url
+    assert "order=started_at.asc" not in supabase.history_url
+
+
+# AC1 — default limit is 10 when no param is supplied, and the limit is propagated
+# verbatim into the upstream query (so the DB only returns the last N rows).
+def test_agent_run_history_default_limit_is_10() -> None:
+    client, supabase = _make_history_app()
+
+    response = client.get("/api/ops/agents/credit-analyst/runs", headers=_auth_header())
+
+    assert response.status_code == 200
+    assert "limit=10" in supabase.history_url
+
+
+@pytest.mark.parametrize("limit", [1, 10, 25, 50])
+def test_agent_run_history_propagates_in_range_limit(limit: int) -> None:
+    client, supabase = _make_history_app()
+
+    response = client.get(f"/api/ops/agents/credit-analyst/runs?limit={limit}", headers=_auth_header())
+
+    assert response.status_code == 200
+    assert f"limit={limit}" in supabase.history_url
+
+
+# AC1 — the [1, 50] bound is ENFORCED (not silently ignored). The route declares
+# ``Query(ge=1, le=50)`` so out-of-range values are rejected with HTTP 422 and
+# never reach the upstream query — an unbounded limit can never hit the DB. (The
+# enforcement is rejection, not clamping; removing ge/le would let limit=999 pass
+# and break this test.)
+@pytest.mark.parametrize("limit", [0, -5, 51, 999])
+def test_agent_run_history_rejects_out_of_range_limit(limit: int) -> None:
+    client, supabase = _make_history_app()
+
+    response = client.get(f"/api/ops/agents/credit-analyst/runs?limit={limit}", headers=_auth_header())
+
+    assert response.status_code == 422
+    # The rejected request must never reach the run-history view.
+    assert not any("ops_agent_run_history_view" in u for u in supabase.requested_urls)
+
+
+# AC5 — read-only: the route only issues GET requests to the upstream (no
+# POST/PATCH/PUT/DELETE), so the history surface cannot mutate any execution.
+def test_agent_run_history_is_read_only() -> None:
+    client, supabase = _make_history_app(runs=[{"run_id": "r1", "status": "succeeded", "findings_emitted": 1}])
+
+    # Mutating verbs are not even routed on this path.
+    assert client.post("/api/ops/agents/credit-analyst/runs", headers=_auth_header()).status_code == 405
+    assert client.delete("/api/ops/agents/credit-analyst/runs", headers=_auth_header()).status_code == 405
+
+    response = client.get("/api/ops/agents/credit-analyst/runs", headers=_auth_header())
+    assert response.status_code == 200
+    # And the read path itself never escalates to a mutating method upstream.
+
+
+def test_agent_run_history_requires_auth() -> None:
+    client, supabase = _make_history_app()
+
+    response = client.get("/api/ops/agents/credit-analyst/runs")
+
+    assert response.status_code == 401
+    assert not any("ops_agent_run_history_view" in u for u in supabase.requested_urls)

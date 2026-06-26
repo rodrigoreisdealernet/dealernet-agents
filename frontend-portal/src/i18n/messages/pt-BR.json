@@ -359,7 +359,24 @@
       "objective": "Objetivo",
       "dataAnalyzed": "Dados analisados",
       "predicts": "Prevê",
-      "possibleActions": "Ações possíveis"
+      "possibleActions": "Ações possíveis",
+      "history": "Histórico"
+    },
+    "agentRunHistory": {
+      "title": "Histórico de execuções",
+      "subtitle": "Últimas execuções de {agent}.",
+      "columnStart": "Início",
+      "columnEnd": "Fim",
+      "columnDuration": "Duração",
+      "columnStatus": "Status",
+      "columnFindings": "Achados",
+      "loading": "Carregando histórico…",
+      "error": "Não foi possível carregar o histórico.",
+      "empty": "Nenhuma execução registrada ainda.",
+      "inProgress": "Em execução",
+      "statusSucceeded": "Concluído",
+      "statusFailed": "Falhou",
+      "statusRunning": "Em execução"
     },
     "executivePack": {
       "title": "Painel Executivo — Dono",

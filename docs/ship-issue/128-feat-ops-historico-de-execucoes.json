@@ -1,0 +1,102 @@
+{
+  "issue": "128",
+  "title": "feat(ops): histórico de execuções por agente DIA (ops_agent_run_history_view) [U5]",
+  "slug": "feat-ops-historico-de-execucoes",
+  "branch": "feature/128-feat-ops-historico-de-execucoes",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/128",
+  "pr": "144",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/144",
+  "updatedAt": "2026-06-26T15:09:47.660Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "7 acceptance criteria drafted",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/128-feat-ops-historico-de-execucoes.md"
+        }
+      ],
+      "notes": [
+        "Spawning spec agent: drafting testable spec from issue #128"
+      ],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec approved by human (--approved)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": "DB view + ops_api endpoint + AgentRunHistory screen (13 files)",
+      "artifacts": [],
+      "notes": [
+        "Spawning coder agent",
+        "reading precedent (status view, ops_api agent endpoints, AgentsDashboard wiring)",
+        "migration validated (rolled back); adding ops_api GET /agents/{key}/runs endpoint",
+        "frontend wired (screen + button + i18n); adding verify script",
+        "verify (6/6) + i18n parity pass; ops_api route registered; committing"
+      ],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "running",
+      "summary": "SQL contract 8/8, frontend verify 232/232",
+      "artifacts": [],
+      "notes": [
+        "Spawning tester agent",
+        "writing SQL contract test for ops_agent_run_history_view (AC1-4, AC7)",
+        "SQL contract 8/8 green; running frontend verify suite",
+        "opening draft PR",
+        "draft PR #144 opened; SQL 8/8 + frontend 232/232 green",
+        "added 15 ops_api endpoint tests (AC4/AC2/AC1); running full suites",
+        "loop-1: +15 ops_api endpoint tests green (AC4/AC2/AC1 mutation-verified); pushed to PR #144"
+      ],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "running",
+      "summary": "",
+      "artifacts": [],
+      "notes": [
+        "Spawning reviewer (mode tests)",
+        "Reading test files and code under test (migration, ops_api, frontend)",
+        "Findings ready: AC4 prod isolation + AC2 ordering + AC1 limit untested at endpoint level; posting review to PR #144",
+        "Review posted on PR #144: changes recommended — AC4 isolation tested on wrong path (service_role bypasses RLS), AC2 ordering tautological, AC1 limit untested; ops_api endpoint has 0 coverage despite existing TestClient harness",
+        "Iteration 1: looping endpoint-coverage gaps back to tester (AC4 RLS-bypass path, AC2 ordering, limit clamp)"
+      ],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    }
+  ]
+}
