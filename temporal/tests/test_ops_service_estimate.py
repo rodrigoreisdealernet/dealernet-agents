@@ -19,6 +19,7 @@ import json
 import logging
 import re
 from collections.abc import Mapping
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -340,6 +341,7 @@ def _raw_estimate_row(
     os_id: str | None = None,
     os_cancelled: bool = False,
     lost_sale_reason: str | None = None,
+    valid_until: str | None = None,
 ) -> dict[str, Any]:
     return {
         "estimate_id": estimate_id,
@@ -352,6 +354,7 @@ def _raw_estimate_row(
         "estimate_status": status,
         "line_value": line_value,
         "lost_sale_reason": lost_sale_reason,
+        "valid_until": valid_until or (date.today() + timedelta(days=5)).isoformat(),
         "estimate_description": f"Servico {estimate_id}",
         "recovery_rank": rank,
         "_os_cancelled": os_cancelled,
@@ -400,6 +403,10 @@ def test_scope_filters_status_orders_and_scores(fake_estimate_view: _FakeService
     sample = by_id["est-decl-8000"]
     assert sample["fingerprint"] == _estimate_fingerprint(_TENANT, "est-decl-8000")
     assert sample["finding_type"] == "estimate_rescue"
+    assert sample["days_to_breach"] == 5
+    assert sample["predicted_breach_at"] == (
+        date.today() + timedelta(days=5)
+    ).isoformat() + "T00:00:00Z"
     assert sample["recoverable_value"] == 8000.0
     assert sample["line_value"] == 8000.0
     assert sample["os_id"] == "os-est-decl-8000"

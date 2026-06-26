@@ -363,6 +363,11 @@ def test_scope_replenish_severity_quantity_priority_and_fingerprint(fake_parts_v
     assert by_id["part-zero"]["velocity"] == 1
     assert by_id["part-critical"]["velocity"] == 20
     assert by_id["part-low"]["velocity"] == 5
+    assert by_id["part-critical"]["finding_type"] == "replenish_now"
+    assert by_id["part-critical"]["days_to_breach"] == 5
+    assert by_id["part-critical"]["predicted_breach_at"] == (
+        dt.date.today() + dt.timedelta(days=5)
+    ).isoformat() + "T00:00:00Z"
     assert by_id["part-zero"]["priority"] == 3010.0
     assert by_id["part-critical"]["priority"] == 2200.1
     assert by_id["part-low"]["priority"] == 1052.0
@@ -380,6 +385,8 @@ def test_scope_dead_stock_returns_only_zero_velocity_in_stock_part(fake_parts_vi
     assert dead["finding_type"] == "dead_stock"
     assert dead["value_at_risk"] == 1500.0
     assert dead["velocity"] == 0.0
+    assert dead["days_to_breach"] is None
+    assert dead["predicted_breach_at"] is None
     assert dead["severity"] == "high"
     assert dead["fingerprint"] == _parts_fingerprint(_TENANT, "part-dead", "dead_stock")
 
@@ -418,6 +425,11 @@ def test_scope_dead_stock_threshold_overrides_and_medium_severity(monkeypatch: p
     assert by_id["part-high"]["severity"] == "high"
     assert by_id["part-slow"]["severity"] == "medium"
     assert by_id["part-slow"]["velocity"] == 1.0
+    assert by_id["part-slow"]["finding_type"] == "dead_stock"
+    assert by_id["part-slow"]["days_to_breach"] == 270
+    assert by_id["part-slow"]["predicted_breach_at"] == (
+        dt.date.today() + dt.timedelta(days=270)
+    ).isoformat() + "T00:00:00Z"
     assert by_id["part-slow"]["value_at_risk"] == 600.0
 
 

@@ -337,8 +337,9 @@ def fake_vehicle_view(monkeypatch: pytest.MonkeyPatch) -> _FakeSelectClient:
         _vehicle_row("veh-margin", days=200, condition="usado", cost=90000, sale_price=95000, model_year=2020),
         # floor-plan band escalation (medium): 88d is within 7 of the 90d band.
         _vehicle_row("veh-esc", days=88, condition="novo", cost=90000, sale_price=112000, model_year=_CURRENT_YEAR),
-        # carryover (high): new unit one model year behind, > 45 days, off-boundary.
-        _vehicle_row("veh-carry", days=52, condition="novo", cost=22000, sale_price=26000, model_year=_CURRENT_YEAR - 1),
+        # carryover (high): new unit one model year behind, > 45 days,
+        # with AC2-style 75-day horizon.
+        _vehicle_row("veh-carry", days=75, condition="novo", cost=22000, sale_price=26000, model_year=_CURRENT_YEAR - 1),
         # CONTROL old-but-healthy: 240 days yet wide margin, stable top band,
         # current model year -> NO signal, must NOT be scoped.
         _vehicle_row("veh-healthy", days=240, condition="usado", cost=99000, sale_price=130000, model_year=2020),
@@ -373,12 +374,16 @@ def test_scope_surfaces_only_signalled_vehicles_ordered_by_severity(fake_vehicle
     assert by_id["veh-esc"]["severity"] == "high"
     assert by_id["veh-carry"]["finding_type"] == FINDING_CARRYOVER_MODEL_YEAR
     assert by_id["veh-carry"]["severity"] == "high"
+    assert by_id["veh-carry"]["days_to_breach"] == 15
+    assert by_id["veh-carry"]["predicted_breach_at"] is not None
 
     # Deterministic dedupe fields keyed per (tenant, vehicle, finding_type).
     sample = by_id["veh-esc"]
     assert sample["fingerprint"] == _finding_fingerprint(_TENANT, "veh-esc", FINDING_FLOOR_PLAN_ESCALATION)
     assert sample["signals"] == [FINDING_FLOOR_PLAN_ESCALATION]
     assert sample["estimated_exposure"] > 0
+    assert sample["days_to_breach"] == 2
+    assert sample["predicted_breach_at"] is not None
     assert sample["tenant_id"] == _TENANT
     assert sample["signal_evidence"], "deterministic evidence should be attached"
 
