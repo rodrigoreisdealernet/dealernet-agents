@@ -40,6 +40,8 @@ export const componentRegistry: Record<string, LazyExoticComponent<ComponentType
   'dia-service-dashboard': lazy(() => import('@/portal/renderers/screens/ServiceDashboard')),
   // Morning Brief do Dono (issue #43) — visão por marca → lojas → ações do agente.
   'morning-brief': lazy(() => import('@/portal/renderers/screens/MorningBrief')),
+  // Cockpit Matinal (issue #142) — segunda experiência visual (Proposta B) com ações reais.
+  'dia-cockpit-brief': lazy(() => import('@/portal/renderers/screens/CockpitBrief')),
   // Contas a Receber (Fast BI) — fonte do agente collections-prioritizer.
   'dia-receivables': lazy(() => import('@/portal/renderers/screens/ReceivablesBI')),
 }
