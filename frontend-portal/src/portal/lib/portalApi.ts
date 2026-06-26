@@ -85,14 +85,16 @@ const MOCK_MENU: MenuItem[] = applyMenuTranslationKeys([
     text: 'AI Operations',
     icon: 'fa-bolt',
     children: [
-      // Morning Brief do Dono (issue #43) — a tela que o DIA abre na mensagem matinal.
+      // Morning Brief do Dono (issue #43) — substituído pelo Cockpit Matinal como
+      // tela matinal oficial; mantido oculto (acessível só por componentKey).
       {
         id: 'morning-brief-owner',
         text: 'Morning Brief',
         icon: 'fa-sun',
+        hidden: true,
         spec: { title: 'Morning Brief', kind: 'component', componentKey: 'morning-brief', icon: 'fa-sun' },
       },
-      // Cockpit Matinal (issue #142) — alternativa visual (Proposta B) com ações reais.
+      // Cockpit Matinal (issue #142) — tela matinal OFICIAL (ações reais).
       {
         id: 'cockpit-brief-owner',
         text: 'Cockpit Matinal',

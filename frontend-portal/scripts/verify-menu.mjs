@@ -225,3 +225,26 @@ test('AC5: todo componentKey do MOCK_MENU resolve em registry.ts', () => {
   const unresolved = keys.filter((k) => !regKeys.has(k))
   assert.deepEqual(unresolved, [], `componentKeys do menu sem registro em registry.ts: ${unresolved.join(', ')}`)
 })
+
+test('AC6: Cockpit Matinal e a tela matinal oficial; Morning Brief fica invisivel (hidden)', () => {
+  const block = menuBlock()
+
+  // Morning Brief continua no menu-fonte, porem marcado como hidden (some da UI).
+  const mbStart = block.indexOf("id: 'morning-brief-owner'")
+  assert.ok(mbStart !== -1, 'MOCK_MENU deve conter morning-brief-owner')
+  const mbEnd = block.indexOf("id: 'cockpit-brief-owner'", mbStart)
+  assert.ok(mbEnd !== -1 && mbEnd > mbStart, 'cockpit-brief-owner deve vir depois de morning-brief-owner')
+  const mbNode = block.slice(mbStart, mbEnd)
+  assert.match(mbNode, /hidden:\s*true/, 'morning-brief-owner deve estar oculto (hidden: true)')
+
+  // Cockpit Matinal segue oficial e VISIVEL (sem hidden) e aponta para dia-cockpit-brief.
+  const ckStart = block.indexOf("id: 'cockpit-brief-owner'")
+  const ckEnd = block.indexOf("id: 'ai-agents-dashboard'", ckStart)
+  const ckNode = block.slice(ckStart, ckEnd)
+  assert.ok(!/hidden:\s*true/.test(ckNode), 'cockpit-brief-owner NAO pode estar oculto (e a tela matinal oficial)')
+  assert.match(ckNode, /componentKey:\s*'dia-cockpit-brief'/, 'cockpit-brief-owner deve abrir dia-cockpit-brief')
+
+  // O filtro de visibilidade do menu descarta itens hidden.
+  const filterSrc = read('src/portal/lib/menuFilter.ts')
+  assert.match(filterSrc, /!node\.hidden/, 'filterMenuByRole deve descartar itens hidden')
+})

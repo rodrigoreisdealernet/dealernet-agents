@@ -52,13 +52,15 @@ function filterNodes(nodes: MenuItem[], q: string): MenuItem[] {
 }
 
 /**
- * Remove (em profundidade) itens cujo `requiredRole` o usuário corrente não atende.
- * Regra simples da POC: só `admin` satisfaz `requiredRole === 'admin'`; itens sem
- * requiredRole são visíveis a todos. Grupos que ficam sem filhos são descartados.
+ * Remove (em profundidade) itens cujo `requiredRole` o usuário corrente não atende
+ * ou que estejam marcados como `hidden`. Regra simples da POC: só `admin` satisfaz
+ * `requiredRole === 'admin'`; itens sem requiredRole são visíveis a todos. Itens
+ * `hidden` nunca aparecem (a tela segue acessível por componentKey). Grupos que
+ * ficam sem filhos são descartados.
  */
 export function filterMenuByRole(menu: MenuItem[], role: string | null): MenuItem[] {
   return menu
-    .filter((node) => !node.requiredRole || node.requiredRole === role)
+    .filter((node) => !node.hidden && (!node.requiredRole || node.requiredRole === role))
     .map((node) =>
       node.children ? { ...node, children: filterMenuByRole(node.children, role) } : node,
     )

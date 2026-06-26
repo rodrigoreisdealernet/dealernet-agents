@@ -57,6 +57,8 @@ export interface MenuItem {
   children?: MenuItem[]
   /** Role mínima (app_role) exigida para ver o item; ausente = visível a todos. */
   requiredRole?: string
+  /** Oculta o item do menu (a tela continua acessível por componentKey). */
+  hidden?: boolean
 }
 
 export interface WorkspaceMeta {
