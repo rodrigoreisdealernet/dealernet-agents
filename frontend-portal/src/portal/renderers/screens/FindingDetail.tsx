@@ -3,18 +3,39 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslations } from 'use-intl'
 import ConfirmDialog from '@/portal/components/ui/ConfirmDialog'
-import { usePortalStore } from '@/portal/store/portalStore'
 import { decideFinding, getFinding, type FindingDetail as FindingDetailVM } from '@/portal/lib/agentsApi'
 import type { ScreenProps } from './types'
 import { Badge, severityTone, statusTone } from './ui'
-import { formatBRLKpi, formatPct } from './format'
+import { formatBRLKpi, formatDateTime, formatPct } from './format'
 export const I18N_PT_LEGEND_REFERENCE = 'Valores em R$'
+
+// Ordem de preferência para o rótulo principal de um item de evidência. O
+// payload é jsonb arbitrário; renderizamos com segurança (nunca [object Object]).
+const EVIDENCE_LABEL_KEYS = ['label', 'summary', 'title', 'description', 'event_type', 'type', 'name']
+
+function formatEvidenceValue(v: unknown): string {
+  if (v === null || v === undefined) return '—'
+  if (typeof v === 'string') return v
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v)
+  try {
+    return JSON.stringify(v)
+  } catch {
+    return '—'
+  }
+}
+
+function evidenceLabelKey(ev: Record<string, unknown>): string | undefined {
+  return EVIDENCE_LABEL_KEYS.find((k) => {
+    const v = ev[k]
+    if (typeof v === 'string') return v.trim().length > 0
+    return typeof v === 'number' || typeof v === 'boolean'
+  })
+}
 
 export default function FindingDetail({ params }: ScreenProps) {
   const t = useTranslations('screens.findingDetail')
   const common = useTranslations('common')
   const findingId = params?.findingId as string | undefined
-  const openWindow = usePortalStore((s) => s.openWindow)
 
   const [data, setData] = useState<FindingDetailVM | null>(null)
   const [loading, setLoading] = useState(true)
@@ -86,6 +107,22 @@ export default function FindingDetail({ params }: ScreenProps) {
   if (!data) return null
 
   const overBilled = (data.billed_amount ?? 0) > (data.expected_amount ?? 0)
+  const directionLabel = overBilled ? t('overBilled') : t('underBilled')
+  const directionTone = overBilled ? 'danger' : 'warning'
+  const impactColor = overBilled ? 'text-destructive' : 'text-warning'
+
+  const approver = data.approver
+  const approverName =
+    (approver?.approver_name ?? approver?.approver_id ?? '').toString().trim() || null
+  const decisionNote = (approver?.note ?? '').toString().trim() || null
+  const isDecided = Boolean(data.decided_at) || approver != null
+  const decisionLabel =
+    data.status === 'approved'
+      ? t('decisionApproved')
+      : data.status === 'rejected'
+        ? t('decisionRejected')
+        : data.status
+  const noteLabel = data.status === 'rejected' ? t('decisionReason') : t('decisionNote')
 
   return (
     <div className="flex h-full flex-col gap-5 overflow-auto p-5">
@@ -101,14 +138,6 @@ export default function FindingDetail({ params }: ScreenProps) {
 
       <div className="flex flex-wrap items-end gap-10">
         <div>
-          <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('impact')}</div>
-          <div
-            className={`text-3xl font-semibold tabular-nums ${overBilled ? 'text-destructive' : 'text-success'}`}
-          >
-            {formatBRLKpi(data.delta)}
-          </div>
-        </div>
-        <div>
           <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('confidence')}</div>
           <div className="text-2xl font-semibold tabular-nums text-foreground">{formatPct(data.confidence)}</div>
         </div>
@@ -119,32 +148,87 @@ export default function FindingDetail({ params }: ScreenProps) {
         <div className="text-sm text-foreground">{data.proposed_action ?? t('noProposedAction')}</div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="rounded-lg border border-border bg-card p-4">
-          <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('expected')}</div>
-          <div className="text-xl font-semibold tabular-nums text-foreground">{formatBRLKpi(data.expected_amount)}</div>
+      <section className="rounded-lg border border-border bg-card p-4">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-foreground">{t('comparison')}</h2>
+          <Badge tone={directionTone}>
+            <span aria-hidden="true">{overBilled ? '▲' : '▼'}</span>&nbsp;{directionLabel}
+          </Badge>
         </div>
-        <div className="rounded-lg border border-border bg-card p-4">
-          <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('billed')}</div>
-          <div className="text-xl font-semibold tabular-nums text-foreground">{formatBRLKpi(data.billed_amount)}</div>
+        <div className="grid grid-cols-3 items-end gap-4">
+          <div>
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('expected')}</div>
+            <div className="text-lg font-semibold tabular-nums text-foreground">{formatBRLKpi(data.expected_amount)}</div>
+          </div>
+          <div>
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('billed')}</div>
+            <div className="text-lg font-semibold tabular-nums text-foreground">{formatBRLKpi(data.billed_amount)}</div>
+          </div>
+          <div>
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('impact')}</div>
+            <div className={`text-2xl font-bold tabular-nums ${impactColor}`}>{formatBRLKpi(data.delta)}</div>
+          </div>
         </div>
-      </div>
+      </section>
 
       <section>
         <h2 className="mb-2 text-sm font-semibold text-foreground">{t('evidence')}</h2>
         {data.evidence && data.evidence.length > 0 ? (
           <ul className="space-y-1">
-            {data.evidence.map((ev, i) => (
-              <li key={i} className="rounded border border-border px-3 py-2 text-sm text-foreground">
-                <span className="text-success">✓</span>{' '}
-                {String(ev.label ?? ev.summary ?? ev.description ?? ev.event_type ?? ev.type ?? `${t('evidence')} ${i + 1}`)}
-              </li>
-            ))}
+            {data.evidence.map((ev, i) => {
+              const labelKey = evidenceLabelKey(ev)
+              const label = labelKey ? formatEvidenceValue(ev[labelKey]) : `${t('evidence')} ${i + 1}`
+              const details = Object.entries(ev).filter(([k]) => k !== labelKey)
+              return (
+                <li key={i} className="rounded border border-border px-3 py-2 text-sm text-foreground">
+                  <div className="flex items-start gap-2">
+                    <span className="text-success" aria-hidden="true">✓</span>
+                    <span className="font-medium">{label}</span>
+                  </div>
+                  {details.length > 0 && (
+                    <dl className="mt-1 space-y-0.5 pl-5">
+                      {details.map(([k, v]) => (
+                        <div key={k} className="flex gap-2">
+                          <dt className="shrink-0 text-muted-foreground">{k}</dt>
+                          <dd className="break-all text-foreground">{formatEvidenceValue(v)}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  )}
+                </li>
+              )
+            })}
           </ul>
         ) : (
           <p className="text-sm text-muted-foreground">{t('noEvidence')}</p>
         )}
       </section>
+
+      {isDecided && (
+        <section className="rounded-lg border border-border bg-card p-4">
+          <h2 className="mb-2 text-sm font-semibold text-foreground">{t('decisionHistory')}</h2>
+          <div className="space-y-1 text-sm">
+            <div>
+              <Badge tone={statusTone(data.status)}>{decisionLabel}</Badge>
+            </div>
+            {approverName && (
+              <div className="text-muted-foreground">
+                {t('decidedBy')}: <span className="text-foreground">{approverName}</span>
+              </div>
+            )}
+            {data.decided_at && (
+              <div className="text-muted-foreground">
+                {t('decidedAt')}: <span className="text-foreground">{formatDateTime(data.decided_at)}</span>
+              </div>
+            )}
+            {decisionNote && (
+              <div className="text-muted-foreground">
+                {noteLabel}: <span className="italic text-foreground">{decisionNote}</span>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       <section className="rounded-lg border border-border bg-card p-4">
         <h2 className="mb-1 text-sm font-semibold text-foreground">{t('agentRationale')}</h2>
@@ -155,22 +239,6 @@ export default function FindingDetail({ params }: ScreenProps) {
         <div>{t('contract')}: {data.contract_label ?? '—'}</div>
         <div>{t('line')}: {data.line_item_label ?? '—'}</div>
         <div>{t('customer')}: {data.customer_name ?? '—'}</div>
-        {data.contract_id && (
-          <button
-            type="button"
-            onClick={() =>
-              openWindow({
-                kind: 'component',
-                componentKey: 'audit-trail',
-                title: t('auditTrail'),
-                params: { entityId: data.contract_id },
-              })
-            }
-            className="mt-1 text-primary hover:underline"
-          >
-            {t('openAuditTrail')}
-          </button>
-        )}
       </section>
 
       {actionMsg && <div className="rounded-md bg-muted px-3 py-2 text-sm text-success">{actionMsg}</div>}

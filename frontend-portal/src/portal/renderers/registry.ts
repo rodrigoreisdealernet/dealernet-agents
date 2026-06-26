@@ -11,7 +11,6 @@ export const componentRegistry: Record<string, LazyExoticComponent<ComponentType
   'agents-dashboard': lazy(() => import('@/portal/renderers/screens/AgentsDashboard')),
   'findings-queue': lazy(() => import('@/portal/renderers/screens/FindingsQueue')),
   'finding-detail': lazy(() => import('@/portal/renderers/screens/FindingDetail')),
-  'audit-trail': lazy(() => import('@/portal/renderers/screens/AuditTrail')),
   'executive-pack': lazy(() => import('@/portal/renderers/screens/ExecutivePack')),
   // Fast BI (issue #16) — dashboard de Vendas VN/VU.
   'dia-sales': lazy(() => import('@/portal/renderers/screens/SalesDashboard')),
