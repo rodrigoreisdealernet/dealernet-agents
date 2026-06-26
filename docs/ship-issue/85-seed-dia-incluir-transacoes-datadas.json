@@ -1,0 +1,85 @@
+{
+  "issue": "85",
+  "title": "Seed DIA: transacoes datadas de ONTEM p/ Morning Brief",
+  "slug": "85-seed-dia-incluir-transacoes-datadas",
+  "branch": "feature/85-seed-dia-incluir-transacoes-datadas",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/85",
+  "pr": null,
+  "prUrl": null,
+  "updatedAt": "2026-06-26T02:35:48.110Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "5 criterios de aceite",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/85-seed-dia-incluir-transacoes-datadas.md"
+        }
+      ],
+      "notes": [
+        "Spec written: 5 acceptance criteria covering novos/usados/pecas/AT population for yesterday, floor plan regression, and relative dates."
+      ],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec aprovada (--approved)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "running",
+      "summary": "",
+      "artifacts": [],
+      "notes": [
+        "Adding curated 'vendido ontem' vehicle block (sold_at=now()-1) + a few concluida OS opened yesterday with revenue so Novos/Usados/AT populate; Pecas stays '—' (view filters entity_type parts_sale, seed uses part_sale = out-of-scope view mismatch).",
+        "Done implementing. Added curated 'demo-dia-sold-yesterday-%' block (10 vehicles, sold_at=now()-1, novo+usado x4 brands/8 stores); 3 concluida OS opened yesterday with revenue (AT); 2 part_sale rows with 'yesterday' flag -> sale_date=now()-1 (Pecas). Verified live: all 4 brands resultado>0, by_store consistent, FP=118 intact. NOTE: applied via bash cat (PowerShell Get-Content -Raw corrupts UTF-8 accents -> use bash to apply seed)."
+      ],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    }
+  ]
+}
