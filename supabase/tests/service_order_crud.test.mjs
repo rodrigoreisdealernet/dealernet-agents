@@ -425,11 +425,12 @@ rollback;
 })
 
 // ---------------------------------------------------------------------------
-// AC7 (seed): ~10 ordens demo namespace 'demo-dia-service-%' existem, com pelo
-// menos uma 'concluida' com turnaround_hours nao-nulo. SOMENTE LEITURA — sem
-// reset/mutacao do banco compartilhado.
+// AC7 (seed): o conjunto CURADO 'demo-dia-service-%' (~18 ordens, todos os
+// status) existe na view, com pelo menos uma 'concluida' com turnaround_hours
+// nao-nulo. O volume em massa vive no namespace separado 'demo-dia-svcvol-%' e
+// NAO entra neste filtro. SOMENTE LEITURA — sem reset/mutacao do banco.
 // ---------------------------------------------------------------------------
-test('AC7 seed: ~10 ordens demo-dia-service-% existem na view corrente', () => {
+test('AC7 seed: conjunto curado demo-dia-service-% (~18 ordens) existe na view corrente', () => {
   const { ok, out, err } = psql(`
 select count(*)
 from v_dia_service_order_current v
@@ -439,8 +440,8 @@ where e.source_record_id like 'demo-dia-service-%';
   assert.ok(ok, `psql falhou: ${err}`)
   const n = Number(out)
   assert.ok(
-    n >= 8 && n <= 12,
-    `esperado ~10 ordens demo na view (8..12); obtido ${n}. (seed aplicado?)`,
+    n >= 15 && n <= 20,
+    `esperado ~18 ordens curadas na view (15..20); obtido ${n}. (seed aplicado? volume colidindo no namespace?)`,
   )
 })
 
