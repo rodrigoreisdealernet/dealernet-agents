@@ -1,0 +1,104 @@
+// Verificacao dependency-free do fluxo de locale end-to-end — Issue #76.
+//
+// Roda no harness source-text only do frontend, sem node_modules/jsdom.
+
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { existsSync, readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const ROOT = resolve(__dirname, '..')
+const REPO_ROOT = resolve(ROOT, '..')
+
+function read(relPath, root = ROOT) {
+  const full = resolve(root, relPath)
+  assert.ok(existsSync(full), `arquivo esperado nao encontrado: ${relPath}`)
+  return readFileSync(full, 'utf8')
+}
+
+function readJson(relPath) {
+  return JSON.parse(read(relPath))
+}
+
+function flattenLeaves(value, prefix = '', out = []) {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    for (const key of Object.keys(value).sort()) {
+      flattenLeaves(value[key], prefix ? `${prefix}.${key}` : key, out)
+    }
+    return out
+  }
+  out.push(prefix)
+  return out
+}
+
+test('AC1: DIA chat envia locale do Portal no contexto da ops-api', () => {
+  const assistantApi = read('src/portal/lib/assistantApi.ts')
+  const daiStore = read('src/portal/components/dai/useDaiStore.ts')
+  const daiAssistant = read('src/portal/components/dai/DaiAssistant.tsx')
+
+  assert.match(assistantApi, /import\s+type\s+\{\s*Locale\s*\}\s+from\s+['"]@\/i18n\/locale['"]/, 'assistantApi deve tipar locale')
+  assert.match(assistantApi, /locale\?:\s*Locale/, 'AssistantChatContext deve aceitar locale')
+  assert.match(assistantApi, /body:\s*JSON\.stringify\(\{\s*messages,\s*context\s*\}\)/, 'payload deve preservar context.locale')
+  assert.match(daiStore, /send:\s*\(text:\s*string,\s*locale:\s*Locale,\s*fallbackReply:\s*string\)/, 'store deve exigir locale ao enviar')
+  assert.match(daiStore, /const\s+context\s*=\s*\{[\s\S]*?locale,\s*[\s\S]*?\}/, 'contexto enviado deve incluir locale')
+  assert.match(daiAssistant, /const\s+\{\s*locale\s*\}\s*=\s*useLocale\(\)/, 'painel DIA deve ler locale selecionado')
+  assert.match(daiAssistant, /send\(text,\s*locale,\s*t\(['"]replyError['"]\)\)/, 'painel DIA deve repassar locale ao envio')
+})
+
+test('AC1/AC3: disparo de agente envia locale e usa fallback pt-BR', () => {
+  const agentsApi = read('src/portal/lib/agentsApi.ts')
+  const agentsDashboard = read('src/portal/renderers/screens/AgentsDashboard.tsx')
+
+  assert.match(agentsApi, /import\s+type\s+\{\s*Locale\s*\}\s+from\s+['"]@\/i18n\/locale['"]/, 'agentsApi deve importar Locale')
+  assert.match(agentsApi, /runAgentNow\(agentKey:\s*string,\s*locale\?:\s*Locale\)/, 'runAgentNow deve aceitar locale opcional')
+  assert.match(agentsApi, /body:\s*JSON\.stringify\(\{\s*locale:\s*locale\s*\?\?\s*['"]pt-BR['"]\s*\}\)/, 'payload deve incluir locale com fallback pt-BR')
+  assert.match(agentsDashboard, /const\s+\{\s*locale\s*\}\s*=\s*useLocale\(\)/, 'AgentsDashboard deve ler locale selecionado')
+  assert.match(agentsDashboard, /await\s+runAgentNow\(\s*agentKey,\s*locale\s*\)/, 'AgentsDashboard deve repassar locale ao disparar agente')
+})
+
+test('AC2: portal_assistant usa diretiva dinamica e nao a instrucao fixa antiga', () => {
+  const portalAssistant = read('temporal/src/agents/portal_assistant.py', REPO_ROOT)
+  const i18n = read('temporal/src/agents/i18n.py', REPO_ROOT)
+
+  assert.match(portalAssistant, /language_directive\(locale\)/, 'prompt deve injetar diretiva conforme locale resolvido')
+  assert.match(portalAssistant, /context\.get\(["']locale["']\)/, 'build_messages deve ler context.locale')
+  assert.doesNotMatch(portalAssistant, /SEMPRE\s+em\s+portugu[eê]s/i, 'nao deve manter instrucao fixa de portugues')
+  assert.match(i18n, /Reply in English \(en-US\)/, 'helper deve fornecer diretiva en-US')
+  assert.match(i18n, /Responda em portugu[eê]s do Brasil \(pt-BR\)/, 'helper deve fornecer diretiva pt-BR')
+})
+
+test('AC4: pt-BR e en-US mantem exatamente as mesmas 603 chaves', () => {
+  const ptKeys = flattenLeaves(readJson('src/i18n/messages/pt-BR.json')).sort()
+  const enKeys = flattenLeaves(readJson('src/i18n/messages/en-US.json')).sort()
+
+  assert.equal(ptKeys.length, 603, 'pt-BR deve manter o catalogo completo de 603 chaves')
+  assert.equal(enKeys.length, 603, 'en-US deve manter o catalogo completo de 603 chaves')
+  assert.deepEqual(enKeys, ptKeys, 'catalogos pt-BR/en-US devem ter key-set identico')
+})
+
+test('AC4: componentes migrados usam t() para textos antes hardcoded', () => {
+  const agentsDashboard = read('src/portal/renderers/screens/AgentsDashboard.tsx')
+  const daiAssistant = read('src/portal/components/dai/DaiAssistant.tsx')
+  const messagesPt = readJson('src/i18n/messages/pt-BR.json')
+  const messagesEn = readJson('src/i18n/messages/en-US.json')
+
+  assert.match(agentsDashboard, /useTranslations\(['"]screens\.agentsDashboard['"]\)/, 'AgentsDashboard deve usar namespace i18n')
+  for (const key of ['runNow', 'running', 'runSuccess', 'runError']) {
+    assert.match(agentsDashboard, new RegExp(`t\\(['"]${key}['"]\\)`), `AgentsDashboard deve renderizar t('${key}')`)
+    assert.equal(typeof messagesPt.screens.agentsDashboard[key], 'string', `pt-BR deve definir ${key}`)
+    assert.equal(typeof messagesEn.screens.agentsDashboard[key], 'string', `en-US deve definir ${key}`)
+  }
+  assert.match(daiAssistant, /useTranslations\(['"]dai['"]\)/, 'DIA assistant deve usar namespace dai')
+  for (const key of ['replyError', 'openScreenCommand', 'openedScreen']) {
+    assert.match(daiAssistant, new RegExp(`t\\(['"]${key}['"]`), `DaiAssistant deve renderizar t('${key}')`)
+    assert.equal(typeof messagesPt.dai[key], 'string', `pt-BR deve definir dai.${key}`)
+    assert.equal(typeof messagesEn.dai[key], 'string', `en-US deve definir dai.${key}`)
+  }
+})
+
+test('AC5: npm test executa a verificacao de locale da issue 76', () => {
+  const pkg = readJson('package.json')
+  assert.ok(pkg.scripts.test.includes('scripts/verify-issue76-i18n-locale.mjs'))
+})

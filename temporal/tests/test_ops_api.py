@@ -17,6 +17,7 @@ from temporal.src.integrations.samsara import SamsaraHealthcheckResult
 from temporal.src.ops_api.app import (
     _BEARER_PREFIX,
     AgentScheduleNotProvisioned,
+    AssistantChatRequest,
     EntityCurrentVersion,
     FindingRecord,
     Principal,
@@ -272,9 +273,12 @@ class _FakeTemporalClient:
             },
         }
 
-    async def run_agent_now(self, *, agent_key: str, tenant_id: str) -> dict[str, Any]:
+    async def run_agent_now(self, *, agent_key: str, tenant_id: str, locale: str | None = None) -> dict[str, Any]:
         self.calls.append("run_agent_now")
-        self.run_agent_now_calls.append({"agent_key": agent_key, "tenant_id": tenant_id})
+        call = {"agent_key": agent_key, "tenant_id": tenant_id}
+        if locale is not None:
+            call["locale"] = locale
+        self.run_agent_now_calls.append(call)
         if self._run_agent_now_raises is not None:
             raise self._run_agent_now_raises
         return {"agent_key": agent_key, "schedule_id": f"fake:{tenant_id}:{agent_key}", "status": "triggered"}
@@ -329,10 +333,21 @@ class _FakeScheduleTemporalClient:
     def __init__(self, handle: _FakeScheduleHandle) -> None:
         self.handle = handle
         self.schedule_ids: list[str] = []
+        self.started_workflows: list[dict[str, Any]] = []
 
     def get_schedule_handle(self, schedule_id: str) -> _FakeScheduleHandle:
         self.schedule_ids.append(schedule_id)
         return self.handle
+
+    async def start_workflow(self, workflow_run: Any, workflow_input: Any, **kwargs: Any) -> object:
+        self.started_workflows.append(
+            {
+                "workflow_run": workflow_run,
+                "workflow_input": workflow_input,
+                "kwargs": kwargs,
+            }
+        )
+        return object()
 
 
 def _make_finding(
@@ -400,6 +415,25 @@ def _make_client(
 
 def _auth_header() -> dict[str, str]:
     return {"Authorization": f"{_BEARER_PREFIX} test-token"}
+
+
+def test_i18n_assistant_chat_request_defaults_locale_to_pt_br() -> None:
+    request = AssistantChatRequest.model_validate(
+        {"messages": [{"role": "user", "content": "como estão minhas vendas?"}]}
+    )
+
+    assert request.context.locale == "pt-BR"
+
+
+def test_i18n_assistant_chat_request_accepts_context_locale() -> None:
+    request = AssistantChatRequest.model_validate(
+        {
+            "messages": [{"role": "user", "content": "how are sales?"}],
+            "context": {"locale": "en-US"},
+        }
+    )
+
+    assert request.context.locale == "en-US"
 
 
 def _descartes_registry(
@@ -548,6 +582,22 @@ def test_ac1_ac2_run_agent_now_accepts_valid_ops_keys_and_uses_resolved_tenant()
     assert supabase.tenant_lookups == ["tenant-ops", "tenant-ops"]
 
 
+def test_i18n_run_agent_now_endpoint_forwards_valid_locale_to_temporal_client() -> None:
+    client, _supabase, temporal, _ = _make_client(role="field_operator")
+
+    response = client.post(
+        "/api/ops/agents/revrec-analyst/run",
+        headers=_auth_header(),
+        json={"locale": "en-US"},
+    )
+
+    assert response.status_code == 202
+    assert response.json()["status"] == "triggered"
+    assert temporal.run_agent_now_calls == [
+        {"agent_key": "revrec-analyst", "tenant_id": "tenant-a-id", "locale": "en-US"}
+    ]
+
+
 def test_ac3_run_agent_now_unknown_key_returns_404_without_temporal_interaction() -> None:
     client, supabase, temporal, _ = _make_client()
 
@@ -657,6 +707,55 @@ async def test_ac5_temporal_signal_client_triggers_schedule_with_skip_overlap() 
     }
     assert fake_temporal_client.schedule_ids == ["ops:tenant-a-id:revrec-analyst"]
     assert handle.trigger_calls == [{"overlap": ScheduleOverlapPolicy.SKIP}]
+    assert fake_temporal_client.started_workflows == []
+
+
+@pytest.mark.asyncio
+async def test_i18n_temporal_signal_client_resolves_unknown_locale_to_default_schedule_path() -> None:
+    signal_client = TemporalSignalClient(temporal_address="temporal.example:7233", temporal_namespace="default")
+    handle = _FakeScheduleHandle()
+    fake_temporal_client = _FakeScheduleTemporalClient(handle)
+
+    async def fake_client_instance() -> _FakeScheduleTemporalClient:
+        return fake_temporal_client
+
+    signal_client._client_instance = fake_client_instance  # type: ignore[method-assign]
+
+    result = await signal_client.run_agent_now(agent_key="revrec-analyst", tenant_id="tenant-a-id", locale="fr-FR")
+
+    assert result == {
+        "agent_key": "revrec-analyst",
+        "schedule_id": "ops:tenant-a-id:revrec-analyst",
+        "status": "triggered",
+    }
+    assert fake_temporal_client.schedule_ids == ["ops:tenant-a-id:revrec-analyst"]
+    assert handle.trigger_calls == [{"overlap": ScheduleOverlapPolicy.SKIP}]
+    assert fake_temporal_client.started_workflows == []
+
+
+@pytest.mark.asyncio
+async def test_i18n_temporal_signal_client_starts_workflow_with_valid_locale_input() -> None:
+    signal_client = TemporalSignalClient(temporal_address="temporal.example:7233", temporal_namespace="default")
+    handle = _FakeScheduleHandle()
+    fake_temporal_client = _FakeScheduleTemporalClient(handle)
+
+    async def fake_client_instance() -> _FakeScheduleTemporalClient:
+        return fake_temporal_client
+
+    signal_client._client_instance = fake_client_instance  # type: ignore[method-assign]
+
+    result = await signal_client.run_agent_now(agent_key="revrec-analyst", tenant_id="tenant-a-id", locale="en-US")
+
+    assert result["agent_key"] == "revrec-analyst"
+    assert result["schedule_id"] == "ops:tenant-a-id:revrec-analyst"
+    assert result["status"] == "started"
+    assert result["locale"] == "en-US"
+    assert fake_temporal_client.schedule_ids == []
+    assert handle.trigger_calls == []
+    assert len(fake_temporal_client.started_workflows) == 1
+    workflow_input = fake_temporal_client.started_workflows[0]["workflow_input"]
+    assert workflow_input.tenant_id == "tenant-a-id"
+    assert workflow_input.locale == "en-US"
 
 
 @pytest.mark.asyncio
