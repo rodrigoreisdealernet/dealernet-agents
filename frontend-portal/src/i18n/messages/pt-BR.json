@@ -3,6 +3,21 @@
     "pt-BR": "Português (Brasil)",
     "en-US": "English (US)"
   },
+  "labels": {
+    "agents": {
+      "vehicle-aging-analyst": "Analista de estoque parado"
+    },
+    "findingTypes": {
+      "stock_aging_90d": "Veículo parado há 90+ dias"
+    },
+    "actions": {
+      "markdown": "Baixar preço",
+      "transfer": "Transferir",
+      "prioritize_sale": "Priorizar venda",
+      "wholesale_auction": "Leilão atacado",
+      "monitor": "Monitorar"
+    }
+  },
   "common": {
     "valuesInBRL": "Valores em R$",
     "error": "Erro",
@@ -601,6 +616,7 @@
       "dismiss": "Dispensar",
       "brandStore": "Marca / Loja",
       "confirmFailed": "Falha ao confirmar",
+      "dismissFailed": "Falha ao dispensar",
       "currentMonth": "Mês atual",
       "byBrandTap": "Por marca · toque para ver lojas",
       "noMonthData": "Sem dados do mês.",

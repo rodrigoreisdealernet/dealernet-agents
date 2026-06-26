@@ -8,6 +8,7 @@ import type { CrudListApi, DnColumn } from '@/portal/components/datatable/types'
 import { gridStorage } from '@/portal/lib/gridStateApi'
 import { usePortalStore } from '@/portal/store/portalStore'
 import { getFindings } from '@/portal/lib/agentsApi'
+import { useFindingLabels } from '@/portal/lib/findingLabels'
 import type { ScreenProps } from './types'
 
 interface FindingRowVM {
@@ -25,6 +26,7 @@ interface FindingRowVM {
 
 export default function FindingsQueue({ params }: ScreenProps) {
   const t = useTranslations('screens.findingsQueue')
+  const { agentLabel, findingTypeLabel } = useFindingLabels()
   const agentKey = params?.agentKey as string | undefined
   const openWindow = usePortalStore((s) => s.openWindow)
   const [reloadKey, setReloadKey] = useState(0)
@@ -100,8 +102,8 @@ export default function FindingsQueue({ params }: ScreenProps) {
             ativo: true,
             id: f.id,
             severidade: f.severity,
-            agente: f.agent_key,
-            tipo: f.finding_type,
+            agente: agentLabel(f.agent_key),
+            tipo: findingTypeLabel(f.finding_type),
             cliente: f.customer_name ?? f.contract_label ?? '—',
             delta: f.delta ?? 0,
             confianca: Math.round((f.confidence ?? 0) * 100),
@@ -110,7 +112,7 @@ export default function FindingsQueue({ params }: ScreenProps) {
         }
       },
     }),
-    [agentKey],
+    [agentKey, agentLabel, findingTypeLabel],
   )
 
   return (
