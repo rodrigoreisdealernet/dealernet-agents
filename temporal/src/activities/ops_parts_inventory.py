@@ -5,6 +5,7 @@ import datetime as dt
 import hashlib
 import json
 import logging
+import math
 from collections.abc import Mapping, Sequence
 from typing import Any
 
@@ -67,6 +68,32 @@ def _windowed_velocity(
     return velocity
 
 
+def _parts_avg_daily_demand(velocity: Any, window_days: Any) -> float | None:
+    days = _coerce_int(window_days)
+    demand_units = _coerce_float(velocity)
+    if days <= 0 or demand_units <= 0:
+        return None
+    return demand_units / days
+
+
+def _parts_days_to_breach(on_hand: Any, avg_daily_demand: Any) -> int | None:
+    demand = _coerce_float(avg_daily_demand)
+    if demand <= 0:
+        return None
+    return int(math.ceil(max(_coerce_float(on_hand), 0.0) / demand))
+
+
+def _parts_predicted_breach_at(
+    days_to_breach: int | None,
+    *,
+    today: dt.date | None = None,
+) -> str | None:
+    if days_to_breach is None:
+        return None
+    breach_date = (today or dt.date.today()) + dt.timedelta(days=days_to_breach)
+    return dt.datetime.combine(breach_date, dt.time.min, tzinfo=dt.timezone.utc).isoformat().replace("+00:00", "Z")
+
+
 def _severity_for_stock_status(stock_status: str) -> str:
     match str(stock_status or "").strip().lower():
         case "zerado":
@@ -120,6 +147,8 @@ def ops_scope_parts_replenish(tenant_id: str, run_context: dict[str, Any]) -> li
             continue
         velocity = _windowed_velocity(sale_rows, part_id, window_days, now)
         quantity_in_stock = _coerce_float(row.get("quantity_in_stock"))
+        avg_daily_demand = _parts_avg_daily_demand(velocity, window_days)
+        days_to_breach = _parts_days_to_breach(quantity_in_stock, avg_daily_demand)
         reorder_point = _coerce_float(row.get("reorder_point"))
         unit_cost = _coerce_float(row.get("unit_cost"))
         stock_value = round(_coerce_float(row.get("stock_value")), 2)
@@ -140,6 +169,9 @@ def ops_scope_parts_replenish(tenant_id: str, run_context: dict[str, Any]) -> li
                 "stock_value": stock_value,
                 "stock_status": row.get("stock_status"),
                 "velocity": velocity,
+                "avg_daily_demand": avg_daily_demand,
+                "predicted_breach_at": _parts_predicted_breach_at(days_to_breach, today=now),
+                "days_to_breach": days_to_breach,
                 "quantity_suggested": quantity_suggested,
                 "value_at_risk": value_at_risk,
                 "severity": _severity_for_stock_status(str(row.get("stock_status") or "")),
@@ -185,6 +217,8 @@ def ops_scope_parts_dead_stock(tenant_id: str, run_context: dict[str, Any]) -> l
             continue
         velocity = _windowed_velocity(sale_rows, part_id, window_days, now)
         quantity_in_stock = _coerce_float(row.get("quantity_in_stock"))
+        avg_daily_demand = _parts_avg_daily_demand(velocity, window_days)
+        days_to_breach = _parts_days_to_breach(quantity_in_stock, avg_daily_demand)
         stock_value = round(_coerce_float(row.get("stock_value")), 2)
         if velocity > dead_stock_max_velocity or stock_value < dead_stock_min_value or quantity_in_stock <= 0:
             continue
@@ -201,6 +235,9 @@ def ops_scope_parts_dead_stock(tenant_id: str, run_context: dict[str, Any]) -> l
                 "stock_value": stock_value,
                 "stock_status": row.get("stock_status"),
                 "velocity": velocity,
+                "avg_daily_demand": avg_daily_demand,
+                "predicted_breach_at": _parts_predicted_breach_at(days_to_breach, today=now),
+                "days_to_breach": days_to_breach,
                 "quantity_suggested": 0,
                 "value_at_risk": stock_value,
                 "severity": "high" if stock_value >= dead_stock_high_value else "medium",
@@ -268,6 +305,8 @@ async def ops_parts_inventory_assess(part_payload: dict[str, Any], config: dict[
     result["severity"] = str(part_payload.get("severity") or result.get("severity") or "medium")
     result["quantity_suggested"] = _coerce_int(part_payload.get("quantity_suggested"))
     result["value_at_risk"] = round(_coerce_float(part_payload.get("value_at_risk")), 2)
+    result["predicted_breach_at"] = part_payload.get("predicted_breach_at")
+    result["days_to_breach"] = part_payload.get("days_to_breach")
     result.setdefault("recommended_action", "monitor")
     result.setdefault("evidence", [])
     result.setdefault("confidence", 0.0)
@@ -311,6 +350,9 @@ def _parts_finding_for_storage(finding: dict[str, Any]) -> dict[str, Any]:
             "reorder_point": finding.get("reorder_point"),
             "stock_value": finding.get("stock_value"),
             "velocity": finding.get("velocity"),
+            "avg_daily_demand": finding.get("avg_daily_demand"),
+            "predicted_breach_at": finding.get("predicted_breach_at"),
+            "days_to_breach": finding.get("days_to_breach"),
             "quantity_suggested": finding.get("quantity_suggested"),
             "recommended_action": finding.get("recommended_action"),
         },
@@ -347,4 +389,7 @@ __all__ = [
     "ops_record_finding_disposition",
     "ops_scope_parts_dead_stock",
     "ops_scope_parts_replenish",
+    "_parts_avg_daily_demand",
+    "_parts_days_to_breach",
+    "_parts_predicted_breach_at",
 ]

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import datetime as dt
 import hashlib
 import json
 import logging
@@ -24,6 +25,12 @@ _MIN_SCOPED_ESTIMATES = 1
 _MAX_SCOPED_ESTIMATES = 500
 # Pending estimates at or above this recoverable value are escalated to "high".
 _DEFAULT_HIGH_VALUE_THRESHOLD = 5000.0
+_BREACH_FIELD_CANDIDATES = (
+    "valid_until",
+    "authorization_valid_until",
+    "authorization_expires_at",
+    "expires_at",
+)
 
 
 def _coerce_int(value: Any) -> int:
@@ -38,6 +45,46 @@ def _coerce_float(value: Any) -> float:
         return float(value)
     except (TypeError, ValueError):
         return 0.0
+
+
+def _parse_datetime(value: Any) -> dt.datetime | None:
+    if isinstance(value, dt.datetime):
+        parsed = value
+    elif isinstance(value, dt.date):
+        parsed = dt.datetime.combine(value, dt.time.min)
+    elif value:
+        raw = str(value).strip()
+        try:
+            parsed = dt.datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        except ValueError:
+            try:
+                parsed = dt.datetime.combine(dt.date.fromisoformat(raw[:10]), dt.time.min)
+            except ValueError:
+                return None
+    else:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=dt.timezone.utc)
+    return parsed.astimezone(dt.timezone.utc)
+
+
+def _service_estimate_predicted_breach_at(estimate_payload: Mapping[str, Any]) -> str | None:
+    for field in _BREACH_FIELD_CANDIDATES:
+        parsed = _parse_datetime(estimate_payload.get(field))
+        if parsed is not None:
+            return parsed.isoformat().replace("+00:00", "Z")
+    return None
+
+
+def _service_estimate_days_to_breach(
+    predicted_breach_at: Any,
+    *,
+    today: dt.date | None = None,
+) -> int | None:
+    parsed = _parse_datetime(predicted_breach_at)
+    if parsed is None:
+        return None
+    return (parsed.date() - (today or dt.date.today())).days
 
 
 def _severity_for(
@@ -98,6 +145,7 @@ def ops_scope_service_estimates(tenant_id: str, run_context: dict[str, Any]) -> 
         line_value = round(_coerce_float(row.get("line_value")), 2)
         recovery_rank = _coerce_int(row.get("recovery_rank"))
         severity = _severity_for(estimate_status, line_value, high_value_threshold=high_value_threshold)
+        predicted_breach_at = _service_estimate_predicted_breach_at(row)
         scoped.append(
             {
                 "estimate_id": estimate_id,
@@ -111,6 +159,8 @@ def ops_scope_service_estimates(tenant_id: str, run_context: dict[str, Any]) -> 
                 "estimate_status": estimate_status,
                 "line_value": line_value,
                 "recoverable_value": line_value,
+                "predicted_breach_at": predicted_breach_at,
+                "days_to_breach": _service_estimate_days_to_breach(predicted_breach_at),
                 "lost_sale_reason": row.get("lost_sale_reason"),
                 "estimate_description": row.get("estimate_description"),
                 "severity": severity,
@@ -189,6 +239,8 @@ async def ops_service_estimate_assess(estimate_payload: dict[str, Any], config: 
     result["finding_type"] = _FINDING_TYPE
     result["severity"] = str(estimate_payload.get("severity") or result.get("severity") or "medium")
     result["recoverable_value"] = round(_coerce_float(estimate_payload.get("recoverable_value")), 2)
+    result["predicted_breach_at"] = estimate_payload.get("predicted_breach_at")
+    result["days_to_breach"] = estimate_payload.get("days_to_breach")
     result.setdefault("recommended_action", "monitor")
     result.setdefault("evidence", [])
     result.setdefault("confidence", 0.0)
@@ -235,6 +287,8 @@ def _service_estimate_finding_for_storage(finding: dict[str, Any]) -> dict[str, 
             "estimate_id": finding.get("estimate_id"),
             "estimate_status": finding.get("estimate_status"),
             "line_value": finding.get("line_value"),
+            "predicted_breach_at": finding.get("predicted_breach_at"),
+            "days_to_breach": finding.get("days_to_breach"),
             "lost_sale_reason": finding.get("lost_sale_reason"),
             "customer": finding.get("customer"),
             "vehicle": finding.get("vehicle"),
@@ -265,6 +319,8 @@ def ops_record_finding_disposition(
 
 
 __all__ = [
+    "_service_estimate_days_to_breach",
+    "_service_estimate_predicted_breach_at",
     "ops_create_workflow_run",
     "ops_finalize_workflow_run",
     "ops_list_open_finding_fingerprints",

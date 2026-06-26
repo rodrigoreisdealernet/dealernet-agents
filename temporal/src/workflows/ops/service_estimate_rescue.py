@@ -113,6 +113,8 @@ class ServiceEstimateRescueWorkflow:
                         "estimate_status": str(estimate.get("estimate_status") or "pending"),
                         "line_value": estimate.get("line_value"),
                         "recoverable_value": estimate.get("recoverable_value"),
+                        "predicted_breach_at": estimate.get("predicted_breach_at"),
+                        "days_to_breach": estimate.get("days_to_breach"),
                         "lost_sale_reason": estimate.get("lost_sale_reason"),
                         "order_number": estimate.get("order_number"),
                         "customer": estimate.get("customer"),

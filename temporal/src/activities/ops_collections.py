@@ -5,7 +5,7 @@ import hashlib
 import json
 import logging
 from collections.abc import Mapping, Sequence
-from datetime import date
+from datetime import date, datetime, time, timedelta, timezone
 from typing import Any
 
 import temporalio.exceptions
@@ -44,6 +44,8 @@ def _coerce_float(value: Any) -> float:
 
 
 def _parse_date(value: Any) -> date | None:
+    if isinstance(value, datetime):
+        return value.date()
     if isinstance(value, date):
         return value
     if not value:
@@ -52,6 +54,30 @@ def _parse_date(value: Any) -> date | None:
         return date.fromisoformat(str(value)[:10])
     except ValueError:
         return None
+
+
+def _iso_midnight_utc(value: date) -> str:
+    return datetime.combine(value, time.min, tzinfo=timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _collections_days_to_breach(days_overdue: Any) -> int | None:
+    if days_overdue in (None, ""):
+        return None
+    overdue = max(_coerce_int(days_overdue), 0)
+    for band in (30, 60, 90):
+        if overdue < band:
+            return band - overdue
+    return None
+
+
+def _collections_predicted_breach_at(
+    days_to_breach: int | None,
+    *,
+    today: date | None = None,
+) -> str | None:
+    if days_to_breach is None:
+        return None
+    return _iso_midnight_utc((today or date.today()) + timedelta(days=days_to_breach))
 
 
 def _bounded_text(value: Any, *, limit: int = _MAX_NOTE_CHARS) -> str:
@@ -175,6 +201,7 @@ def ops_scope_collections(tenant_id: str, run_context: dict[str, Any]) -> list[d
             reverse=True,
         )[:_MAX_CONTACT_NOTES_PER_CUSTOMER]
         max_days_overdue = _coerce_int(customer.get("max_days_overdue"))
+        days_to_breach = _collections_days_to_breach(max_days_overdue)
         total_exposure = round(_coerce_float(customer.get("total_exposure")), 2)
         scoped.append(
             {
@@ -186,6 +213,8 @@ def ops_scope_collections(tenant_id: str, run_context: dict[str, Any]) -> list[d
                 "total_exposure": total_exposure,
                 "max_days_overdue": max_days_overdue,
                 "days_overdue": max_days_overdue,
+                "predicted_breach_at": _collections_predicted_breach_at(days_to_breach, today=today),
+                "days_to_breach": days_to_breach,
                 "severity": _severity_for_days(max_days_overdue),
                 "finding_type": _FINDING_TYPE,
                 "fingerprint": _collections_fingerprint(tenant_id, customer_id),
@@ -243,6 +272,8 @@ async def ops_collections_assess(customer_payload: dict[str, Any], config: dict[
     result["finding_type"] = _FINDING_TYPE
     result["total_exposure"] = round(_coerce_float(customer_payload.get("total_exposure")), 2)
     result["days_overdue"] = _coerce_int(customer_payload.get("max_days_overdue") or customer_payload.get("days_overdue"))
+    result["predicted_breach_at"] = customer_payload.get("predicted_breach_at")
+    result["days_to_breach"] = customer_payload.get("days_to_breach")
     result["severity"] = str(customer_payload.get("severity") or result.get("severity") or "medium")
     result.setdefault("recommended_action", "monitor")
     result.setdefault("evidence", [])
@@ -287,6 +318,8 @@ def _collections_finding_for_storage(finding: dict[str, Any]) -> dict[str, Any]:
             "customer_id": customer_id,
             "total_exposure": finding.get("total_exposure"),
             "days_overdue": finding.get("days_overdue"),
+            "predicted_breach_at": finding.get("predicted_breach_at"),
+            "days_to_breach": finding.get("days_to_breach"),
             "recommended_action": finding.get("recommended_action"),
             "next_step_note": _bounded_text(finding.get("next_step_note"), limit=_MAX_EVIDENCE_CHARS),
             "evidence_summary": evidence,
@@ -324,4 +357,6 @@ __all__ = [
     "ops_record_finding",
     "ops_record_finding_disposition",
     "ops_scope_collections",
+    "_collections_days_to_breach",
+    "_collections_predicted_breach_at",
 ]

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime as dt
 from collections.abc import Mapping
 from typing import Any
 
@@ -17,6 +18,8 @@ class CollectionsFindingV1(BaseModel):
     recommended_action: str
     total_exposure: float = 0.0
     days_overdue: int = 0
+    predicted_breach_at: dt.datetime | None = None
+    days_to_breach: int | None = None
     next_step_note: str = ""
     evidence: list[str] = Field(default_factory=list)
     confidence: float = 0.0

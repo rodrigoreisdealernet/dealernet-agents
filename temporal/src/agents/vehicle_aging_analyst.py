@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime as dt
 from collections.abc import Mapping
 from typing import Any
 
@@ -28,6 +29,8 @@ class VehicleAgingFindingV2(BaseModel):
     finding_type: str = FINDING_FLOOR_PLAN_ESCALATION
     severity: str = "medium"
     days_in_stock: int = 0
+    predicted_breach_at: dt.datetime | None = None
+    days_to_breach: int | None = None
     signals: list[str] = Field(default_factory=list)
     recommended_action: str
     estimated_exposure: float = 0.0
