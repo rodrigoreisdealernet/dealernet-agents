@@ -461,6 +461,7 @@ def _run_context_bounds(run_context: Mapping[str, Any]) -> tuple[datetime | None
 @activity.defn
 async def ops_revrec_analyze(contract_payload: dict[str, Any], config: dict[str, Any]) -> dict[str, Any]:
     bounds = config.get("bounds") or {}
+    locale = str(config.get("locale") or "pt-BR")
     max_tool_rounds = int(bounds.get("max_tool_rounds", 5))
     system_prompt = str(config.get("system_prompt") or "You are a revenue recognition analyst.")
     user_prompt_template = str(
@@ -493,6 +494,7 @@ async def ops_revrec_analyze(contract_payload: dict[str, Any], config: dict[str,
             user_prompt_template=user_prompt_template,
             tools=tools,
             tool_executor=tool_executor,
+            locale=locale,
             max_tool_rounds=max_tool_rounds,
         )
     finally:

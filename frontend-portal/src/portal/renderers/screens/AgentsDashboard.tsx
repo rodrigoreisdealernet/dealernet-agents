@@ -2,6 +2,7 @@
 // abre a fila filtrada. Polling 10s. Lê ops_agent_status_view + ops_finding_kpis.
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'use-intl'
+import { useLocale } from '@/i18n/LocaleProvider'
 import { usePortalStore } from '@/portal/store/portalStore'
 import { getAgentStatus, getFindingKpis, runAgentNow, type AgentStatus, type FindingKpis } from '@/portal/lib/agentsApi'
 import { KpiCard, Badge, ScreenShell } from './ui'
@@ -16,6 +17,7 @@ type RunNowState = {
 export default function AgentsDashboard() {
   const t = useTranslations('screens.agentsDashboard')
   const common = useTranslations('common')
+  const { locale } = useLocale()
   const openWindow = usePortalStore((s) => s.openWindow)
   const [agents, setAgents] = useState<AgentStatus[]>([])
   const [kpis, setKpis] = useState<FindingKpis | null>(null)
@@ -33,7 +35,7 @@ export default function AgentsDashboard() {
   const handleRunNow = async (agentKey: string) => {
     setRunNowStates((s) => ({ ...s, [agentKey]: { status: 'running' } }))
     try {
-      await runAgentNow(agentKey)
+      await runAgentNow(agentKey, locale)
       setRunNowStates((s) => ({ ...s, [agentKey]: { status: 'success' } }))
     } catch (e) {
       setRunNowStates((s) => ({

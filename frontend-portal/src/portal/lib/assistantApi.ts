@@ -6,6 +6,7 @@
 
 import { getAccessToken } from '@/portal/lib/agentsApi'
 import type { AvailableScreen } from '@/portal/components/dai/daiSuggestions'
+import type { Locale } from '@/i18n/locale'
 
 const ENV = import.meta.env as unknown as Record<string, string | undefined>
 const OPS_API_URL = ENV.VITE_OPS_API_URL || '/api/ops'
@@ -19,6 +20,7 @@ export interface AssistantChatContext {
   current_screen?: string | null
   available_screens: AvailableScreen[]
   empresa_id?: string | null
+  locale?: Locale
 }
 
 /** Ação de navegação proposta pela DIA — executada no front via openWindow. */

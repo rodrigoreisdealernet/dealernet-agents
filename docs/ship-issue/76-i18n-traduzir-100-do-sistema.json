@@ -1,0 +1,94 @@
+{
+  "issue": "76",
+  "title": "i18n: traduzir 100% do sistema conforme idioma selecionado",
+  "slug": "76-i18n-traduzir-100-do-sistema",
+  "branch": "feature/76-i18n-traduzir-100-do-sistema",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/76",
+  "pr": null,
+  "prUrl": null,
+  "updatedAt": "2026-06-26T02:20:21.676Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "6 acceptance criteria drafted",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/76-i18n-traduzir-100-do-sistema.md"
+        }
+      ],
+      "notes": [
+        "reading issue and role file; grounding spec in code",
+        "confirmed symbol names and writing spec file",
+        "spec file written; 6 testable acceptance criteria grounded in code reality"
+      ],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec approved by human (--approved)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "running",
+      "summary": "",
+      "artifacts": [],
+      "notes": [
+        "reading approved spec",
+        "inspecting chat and agent locale flow",
+        "reading assistant contracts",
+        "adding backend locale directives",
+        "wiring portal locale into chat and run payloads",
+        "auditing remaining visible frontend strings",
+        "validating dictionaries and static types",
+        "pytest still running; reviewing diff",
+        "staging and committing implementation"
+      ],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    }
+  ]
+}

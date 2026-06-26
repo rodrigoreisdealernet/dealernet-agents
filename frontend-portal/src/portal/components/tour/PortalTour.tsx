@@ -3,6 +3,7 @@
 
 import { useEffect, useLayoutEffect, useState } from 'react'
 import { Sparkles, X } from 'lucide-react'
+import { useTranslations } from 'use-intl'
 import { useTour, TOUR_STEPS } from '@/portal/components/tour/useTour'
 
 interface Rect { top: number; left: number; width: number; height: number }
@@ -10,6 +11,7 @@ interface Rect { top: number; left: number; width: number; height: number }
 const PAD = 6 // respiro do recorte ao redor do alvo
 
 export function PortalTour() {
+  const t = useTranslations('tour')
   const active = useTour((s) => s.active)
   const step = useTour((s) => s.step)
   const next = useTour((s) => s.next)
@@ -57,6 +59,8 @@ export function PortalTour() {
 
   const last = step === TOUR_STEPS.length - 1
   const balloon = balloonPosition(rect, current.placement)
+  const title = t(`steps.${current.key}.title`)
+  const body = t(`steps.${current.key}.body`)
 
   return (
     <div className="fixed inset-0 z-[10000]">
@@ -84,7 +88,7 @@ export function PortalTour() {
       {/* Balão */}
       <div
         role="dialog"
-        aria-label={current.title}
+        aria-label={title}
         onClick={(e) => e.stopPropagation()}
         className="absolute w-[300px] max-w-[90vw] rounded-xl border bg-card p-4 text-card-foreground shadow-2xl"
         style={balloon}
@@ -93,17 +97,17 @@ export function PortalTour() {
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Sparkles size={15} />
           </span>
-          <h3 className="flex-1 text-sm font-semibold">{current.title}</h3>
+          <h3 className="flex-1 text-sm font-semibold">{title}</h3>
           <button
             type="button"
             onClick={() => stop(true)}
             className="text-muted-foreground hover:text-foreground"
-            aria-label="Fechar tour"
+            aria-label={t('close')}
           >
             <X size={16} />
           </button>
         </div>
-        <p className="text-sm leading-relaxed text-muted-foreground">{current.body}</p>
+        <p className="text-sm leading-relaxed text-muted-foreground">{body}</p>
 
         <div className="mt-4 flex items-center justify-between">
           {/* progresso */}
@@ -124,7 +128,7 @@ export function PortalTour() {
               onClick={() => stop(true)}
               className="text-xs text-muted-foreground hover:text-foreground"
             >
-              Pular
+              {t('skip')}
             </button>
             {step > 0 && (
               <button
@@ -132,7 +136,7 @@ export function PortalTour() {
                 onClick={prev}
                 className="rounded-md border px-2.5 py-1 text-xs hover:bg-secondary"
               >
-                Voltar
+                {t('back')}
               </button>
             )}
             <button
@@ -140,7 +144,7 @@ export function PortalTour() {
               onClick={next}
               className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:opacity-90"
             >
-              {last ? 'Concluir' : 'Próximo'}
+              {last ? t('finish') : t('next')}
             </button>
           </div>
         </div>

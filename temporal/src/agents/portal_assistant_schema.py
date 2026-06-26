@@ -54,7 +54,7 @@ class AssistantReplyV1(BaseModel):
 
     reply: str = Field(
         min_length=1,
-        description="Natural-language answer in Brazilian Portuguese (pt-BR), concise and factual.",
+        description="Natural-language answer in the requested portal locale, concise and factual.",
     )
     actions: list[AssistantAction] = Field(
         default_factory=list,

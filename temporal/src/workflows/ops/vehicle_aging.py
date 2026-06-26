@@ -29,6 +29,7 @@ class VehicleAgingWorkflowInput:
     tenant_id: str
     run_window_start: str | None = None
     run_window_end: str | None = None
+    locale: str = "pt-BR"
 
 
 @workflow.defn
@@ -88,7 +89,7 @@ class VehicleAgingWorkflow:
             assess_tasks = [
                 workflow.execute_activity(
                     ops_vehicle_aging.ops_vehicle_aging_assess,
-                    args=[vehicle_payload, config],
+                    args=[vehicle_payload, {**config, "locale": inp.locale}],
                     start_to_close_timeout=workflow.timedelta(minutes=2),
                     heartbeat_timeout=_AI_HEARTBEAT_TIMEOUT,
                     retry_policy=_AI_RETRY,

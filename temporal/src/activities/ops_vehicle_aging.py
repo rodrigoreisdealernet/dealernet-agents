@@ -137,6 +137,7 @@ def ops_scope_vehicle_aging(tenant_id: str, run_context: dict[str, Any]) -> list
 @activity.defn
 async def ops_vehicle_aging_assess(vehicle_payload: dict[str, Any], config: dict[str, Any]) -> dict[str, Any]:
     bounds = config.get("bounds") or {}
+    locale = str(config.get("locale") or "pt-BR")
     max_tool_rounds = _coerce_int(bounds.get("max_tool_rounds")) or 0
     system_prompt = str(config.get("system_prompt") or "You are a vehicle stock-aging analyst.")
     user_prompt_template = str(
@@ -180,6 +181,7 @@ async def ops_vehicle_aging_assess(vehicle_payload: dict[str, Any], config: dict
             vehicle_payload,
             system_prompt=rendered_system_prompt,
             user_prompt_template=rendered_user_prompt,
+            locale=locale,
             max_tool_rounds=max_tool_rounds,
         )
     finally:

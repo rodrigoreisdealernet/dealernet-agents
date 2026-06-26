@@ -27,6 +27,17 @@
     "all": "Todos",
     "name": "Nome",
     "noData": "Sem dados para exibir",
+    "colorPicker": "Seletor de cor",
+    "searchModal": {
+      "search": "Buscar",
+      "noneSelected": "Nenhum selecionado",
+      "clear": "Limpar",
+      "close": "Fechar",
+      "queryPlaceholder": "Digite nome ou documento…",
+      "searching": "Buscando…",
+      "minChars": "Digite ao menos 1 caractere para buscar.",
+      "noResults": "Nenhum resultado."
+    },
     "grid": {
       "tryAgain": "Tentar novamente",
       "noFilterResults": "Nenhum resultado para os filtros aplicados.",
@@ -107,6 +118,8 @@
       "connectError": "Não foi possível conectar. Verifique sua conexão.",
       "pocMode": "Modo POC — qualquer login entra automaticamente como o usuário demo (admin).",
       "user": "Usuário",
+      "userPlaceholderUpper": "SEU.LOGIN",
+      "userPlaceholder": "seu.login",
       "password": "Senha",
       "hidePassword": "Ocultar senha",
       "showPassword": "Mostrar senha",
@@ -143,6 +156,68 @@
       "idlePrefix": "Por inatividade, em",
       "signOutNow": "Sair agora",
       "stayConnected": "Continuar conectado"
+    }
+  },
+  "dai": {
+    "openAssistant": "Abrir assistente DIA",
+    "beta": "beta",
+    "subtitle": "Dealernet Intelligence Agents · assistente do portal",
+    "newConversation": "Nova conversa",
+    "close": "Fechar",
+    "placeholder": "Pergunte ou peça algo à DIA…",
+    "send": "Enviar mensagem",
+    "disclaimer": "DIA pode cometer erros. Confira ações importantes.",
+    "welcomeTitle": "Olá! Sou a DIA 👋",
+    "welcomeBody": "Posso responder sobre vendas, estoque, oficina e peças com dados reais — e abrir a tela certa pra você. É só perguntar.",
+    "quickAccess": "Acesso rápido às suas telas:",
+    "openScreenTitle": "Abrir {screen} ({solution})",
+    "openScreenCommand": "Abrir {screen}",
+    "openedScreen": "Pronto — abri \"{screen}\" pra você. ✅",
+    "replyError": "Desculpe, não consegui responder agora. Tente novamente em instantes."
+  },
+  "tour": {
+    "close": "Fechar tour",
+    "skip": "Pular",
+    "back": "Voltar",
+    "next": "Próximo",
+    "finish": "Concluir",
+    "steps": {
+      "menu": {
+        "title": "Menu por solução",
+        "body": "Suas telas ficam aqui, organizadas por solução do DMS. Só aparece o que você tem permissão de acessar."
+      },
+      "search": {
+        "title": "Busca de telas",
+        "body": "Digite para encontrar qualquer tela em todos os níveis do menu — sem precisar navegar a árvore."
+      },
+      "mode": {
+        "title": "Abas ou Janelas",
+        "body": "Alterne entre o modo Abas (estilo navegador) e Janelas flutuantes (MDI). Sua preferência fica salva."
+      },
+      "workspaces": {
+        "title": "Workspaces",
+        "body": "Salve o conjunto de telas abertas como um workspace e volte a ele depois. Use os botões ao lado para salvar, criar ou excluir."
+      },
+      "favorites": {
+        "title": "Favoritos",
+        "body": "Marque as telas que você mais usa como favoritas e abra-as com um clique aqui embaixo."
+      },
+      "company": {
+        "title": "Empresa e marca",
+        "body": "Troque a empresa em que você está trabalhando — a marca dela aparece ao lado. As telas e as cores do portal passam a refletir o contexto escolhido."
+      },
+      "theme": {
+        "title": "Tema por marca",
+        "body": "O portal já vem na cor da marca da sua empresa. Aqui você pode escolher outro tema da marca ou alternar entre claro e escuro — sua preferência fica salva."
+      },
+      "account": {
+        "title": "Sua conta",
+        "body": "Aqui você altera a senha e sai com segurança do portal."
+      },
+      "dai": {
+        "title": "DAI — Dealernet AI",
+        "body": "Seu assistente: peça para abrir telas e navegar por comando. Em breve, também responde sobre seus dados."
+      }
     }
   },
   "menu": {

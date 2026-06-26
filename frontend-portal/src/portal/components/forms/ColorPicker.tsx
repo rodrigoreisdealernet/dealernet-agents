@@ -1,5 +1,6 @@
 // Seletor de cor reutilizável: swatch nativo (input type=color) + campo hex sincronizados.
 // Aceita vazio. Controlado por value/onChange. (Cópia do DHI Front — acervos paralelos.)
+import { useTranslations } from 'use-intl'
 import { cn } from '@/lib/utils'
 
 const HEX6 = /^#[0-9a-fA-F]{6}$/
@@ -14,6 +15,7 @@ export interface ColorPickerProps {
 }
 
 export default function ColorPicker({ value, onChange, placeholder, invalid, disabled, className }: ColorPickerProps) {
+  const t = useTranslations('common')
   const hex = typeof value === 'string' ? value : ''
   return (
     <div className={cn('flex items-center gap-2', className)}>
@@ -23,7 +25,7 @@ export default function ColorPicker({ value, onChange, placeholder, invalid, dis
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
         className="h-9 w-12 cursor-pointer rounded-md border border-input bg-background p-1 disabled:cursor-not-allowed disabled:opacity-60"
-        aria-label="Seletor de cor"
+        aria-label={t('colorPicker')}
       />
       <input
         type="text"
