@@ -21,7 +21,38 @@
       "transfer": "Transfer",
       "prioritize_sale": "Prioritize sale",
       "wholesale_auction": "Wholesale auction",
-      "monitor": "Monitor"
+      "monitor": "Monitor",
+      "contact_customer": "Contact customer",
+      "offer_discount": "Offer discount",
+      "reprice": "Reprice",
+      "escalate": "Escalate",
+      "payment_plan": "Set payment plan",
+      "send_to_collections": "Send to collections",
+      "replenish": "Replenish stock",
+      "expedite_order": "Expedite order",
+      "substitute_part": "Substitute part"
+    },
+    "agentMissions": {
+      "vehicle-aging-analyst": {
+        "objective": "Spot vehicles sitting in inventory too long and recommend the best exit to free up tied-up capital.",
+        "data": "Days in stock, price, cost, vehicle age and turnover history per store.",
+        "predicts": "vehicles at high risk of aging out and the financial impact of keeping them on the lot."
+      },
+      "collections-prioritizer": {
+        "objective": "Prioritize which overdue receivables to chase first to maximize cash recovery.",
+        "data": "Open balances, days overdue, total exposure and the customer's payment history.",
+        "predicts": "the accounts with the highest default risk and the best collection order."
+      },
+      "parts-inventory-advisor": {
+        "objective": "Recommend parts replenishment before critical stockouts halt the service shop.",
+        "data": "Stock levels, reorder point, recent demand and value at risk per part.",
+        "predicts": "imminent stockouts and the ideal replenishment quantity."
+      },
+      "service-estimate-rescue": {
+        "objective": "Rescue stalled or rejected service estimates before the revenue is lost.",
+        "data": "Estimate status, amount, time since creation and the reason for rejection or inactivity.",
+        "predicts": "estimates most likely to convert and the recoverable revenue."
+      }
     }
   },
   "common": {
@@ -321,7 +352,13 @@
       "healthIdle": "Idle",
       "healthDisabled": "Disabled",
       "noAgents": "No agents configured.",
-      "loadError": "Could not load agents."
+      "loadError": "Could not load agents.",
+      "mission": "Mission",
+      "assistOnly": "Assist-only",
+      "objective": "Objective",
+      "dataAnalyzed": "Data analyzed",
+      "predicts": "Predicts",
+      "possibleActions": "Possible actions"
     },
     "executivePack": {
       "title": "Executive Pack — Owner",

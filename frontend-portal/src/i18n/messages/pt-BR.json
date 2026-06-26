@@ -21,7 +21,38 @@
       "transfer": "Transferir",
       "prioritize_sale": "Priorizar venda",
       "wholesale_auction": "Leilão atacado",
-      "monitor": "Monitorar"
+      "monitor": "Monitorar",
+      "contact_customer": "Contatar cliente",
+      "offer_discount": "Oferecer desconto",
+      "reprice": "Reprecificar",
+      "escalate": "Escalar",
+      "payment_plan": "Parcelar dívida",
+      "send_to_collections": "Enviar para cobrança",
+      "replenish": "Repor estoque",
+      "expedite_order": "Agilizar pedido",
+      "substitute_part": "Substituir peça"
+    },
+    "agentMissions": {
+      "vehicle-aging-analyst": {
+        "objective": "Identificar veículos parados no estoque há tempo demais e recomendar a melhor saída para reduzir capital imobilizado.",
+        "data": "Dias em estoque, preço, custo, idade do veículo e histórico de giro por loja.",
+        "predicts": "veículos com alto risco de encalhe e o impacto financeiro de mantê-los parados."
+      },
+      "collections-prioritizer": {
+        "objective": "Priorizar quais contas a receber em atraso cobrar primeiro para maximizar a recuperação de caixa.",
+        "data": "Valores em aberto, dias de atraso, exposição total e histórico de pagamento do cliente.",
+        "predicts": "as contas com maior risco de inadimplência e a melhor ordem de cobrança."
+      },
+      "parts-inventory-advisor": {
+        "objective": "Recomendar reposições de peças antes que faltas críticas parem o serviço da oficina.",
+        "data": "Níveis de estoque, ponto de ressuprimento, demanda recente e valor em risco por peça.",
+        "predicts": "rupturas de estoque iminentes e a quantidade ideal de reposição."
+      },
+      "service-estimate-rescue": {
+        "objective": "Recuperar orçamentos de serviço parados ou recusados antes que a receita seja perdida.",
+        "data": "Status do orçamento, valor, tempo desde a criação e motivo de recusa ou inatividade.",
+        "predicts": "orçamentos com maior chance de conversão e a receita recuperável."
+      }
     }
   },
   "common": {
@@ -321,7 +352,13 @@
       "healthIdle": "Ocioso",
       "healthDisabled": "Desativado",
       "noAgents": "Nenhum agente configurado.",
-      "loadError": "Não foi possível carregar os agentes."
+      "loadError": "Não foi possível carregar os agentes.",
+      "mission": "Missão",
+      "assistOnly": "Apenas sugere",
+      "objective": "Objetivo",
+      "dataAnalyzed": "Dados analisados",
+      "predicts": "Prevê",
+      "possibleActions": "Ações possíveis"
     },
     "executivePack": {
       "title": "Painel Executivo — Dono",

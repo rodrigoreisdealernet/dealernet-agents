@@ -1038,6 +1038,30 @@ export async function runAgentNow(agentKey: string, locale?: Locale): Promise<Ru
   return (await res.json()) as RunAgentNowResult
 }
 
+// ── Catálogo de missão (read-only) — GET /api/ops/agents/catalog (issue #125) ──
+// Catálogo estático versionado no código (sem migração). Traz apenas chaves i18n
+// + dados estruturais (lista de ações, assist_only); nunca expõe o prompt do agente.
+export interface AgentMission {
+  agent_key: string
+  objective_key: string
+  data_key: string
+  predicts_key: string
+  actions: string[]
+  assist_only: boolean
+}
+
+export async function getAgentCatalog(): Promise<AgentMission[]> {
+  const res = await fetch(`${OPS_API_URL}/agents/catalog`, {
+    headers: { 'Content-Type': 'application/json' },
+  })
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(`Catálogo falhou (HTTP ${res.status}): ${text.slice(0, 200)}`)
+  }
+  const body = (await res.json()) as { agents?: AgentMission[] }
+  return body.agents ?? []
+}
+
 export async function decideFinding(input: DecideInput): Promise<DecideResult> {
   if (input.decision === 'reject' && !input.reason?.trim()) {
     throw new Error('Motivo é obrigatório para rejeitar.')
