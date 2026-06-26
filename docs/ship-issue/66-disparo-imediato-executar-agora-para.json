@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/66",
   "pr": "69",
   "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/69",
-  "updatedAt": "2026-06-26T00:31:18.378Z",
+  "updatedAt": "2026-06-26T00:36:09.080Z",
   "steps": [
     {
       "id": "spec",
@@ -69,8 +69,8 @@
     {
       "id": "test-review",
       "label": "05 · Test review",
-      "status": "running",
-      "summary": "",
+      "status": "done",
+      "summary": "1 iteração: +2 testes (403 tenant-denied; RPCError não-NOT_FOUND ≠ 409). pytest 76 passed",
       "artifacts": [],
       "notes": [
         "Auditando cobertura/vanity/weak assertions",
@@ -82,20 +82,27 @@
     {
       "id": "code-review",
       "label": "06 · Code review",
-      "status": "pending",
-      "summary": "",
-      "artifacts": [],
-      "notes": [],
+      "status": "done",
+      "summary": "Aprovado: 6/6 ACs, sem bugs/segurança/regressão. Review postado no PR #69",
+      "artifacts": [
+        {
+          "label": "PR review",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/69"
+        }
+      ],
+      "notes": [
+        "Revisando diff completo: correção, segurança, regressão"
+      ],
       "gate": null
     },
     {
       "id": "merge",
       "label": "Merge (human gate)",
-      "status": "pending",
+      "status": "waiting",
       "summary": "",
       "artifacts": [],
       "notes": [],
-      "gate": null
+      "gate": "merge"
     }
   ]
 }
