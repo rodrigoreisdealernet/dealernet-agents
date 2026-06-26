@@ -4,9 +4,9 @@
   "slug": "findings-orfaos-inflam-morning-queue",
   "branch": "feature/72-findings-orfaos-inflam-morning-queue",
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/72",
-  "pr": null,
-  "prUrl": null,
-  "updatedAt": "2026-06-26T01:18:00.952Z",
+  "pr": "75",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/75",
+  "updatedAt": "2026-06-26T01:31:47.504Z",
   "steps": [
     {
       "id": "spec",
@@ -49,8 +49,8 @@
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "running",
-      "summary": "",
+      "status": "done",
+      "summary": "39 pytest + 3 SQL contract tests green",
       "artifacts": [],
       "notes": [
         "Fixed 6 workflow harness tests; added activity+workflow unit tests (pytest 39 green) and SQL purge/migration contract test (node --test 3 green)"
@@ -60,29 +60,38 @@
     {
       "id": "test-review",
       "label": "05 · Test review",
-      "status": "pending",
-      "summary": "",
+      "status": "done",
+      "summary": "1 iteration: empty-scope supersede-all footgun guarded by test",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "CHANGES REQUESTED: suite is strong (real purge/migration/e2e helper drive) but no test guards the supersede-all footgun on empty scope (assert expire skipped when scoped_vehicles empty)."
+      ],
       "gate": null
     },
     {
       "id": "code-review",
       "label": "06 · Code review",
-      "status": "pending",
-      "summary": "",
-      "artifacts": [],
-      "notes": [],
+      "status": "done",
+      "summary": "APPROVE — no blockers; also fixes latent 'superseded' CHECK bug",
+      "artifacts": [
+        {
+          "label": "PR review",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/75"
+        }
+      ],
+      "notes": [
+        "APPROVE: in_scope derived from full scoped set (no over-cap supersede); empty-scope early-return guards supersede-all; seed purge type-safe+idempotent+agent-scoped; migration non-destructive & also fixes latent ops_disposition superseded write; no status consumer breaks. 1 non-blocking comment-inaccuracy note."
+      ],
       "gate": null
     },
     {
       "id": "merge",
       "label": "Merge (human gate)",
-      "status": "pending",
+      "status": "waiting",
       "summary": "",
       "artifacts": [],
       "notes": [],
-      "gate": null
+      "gate": "merge"
     }
   ]
 }
