@@ -332,6 +332,77 @@ $$;
 commit;
 
 -- ===========================================================================
+-- DIA dealership domain — VENDAS DE ONTEM p/ o Morning Brief do Dono (issue #85)
+-- Idempotent namespace: source_record_id LIKE 'demo-dia-sold-yesterday-%'.
+-- O Morning Brief (#43, v_dia_owner_brief_by_brand/by_store) agrega o DIA ANTERIOR
+-- derivando a data da venda como coalesce(data->>'sold_at', updated_at, valid_from).
+-- Os blocos de veículos acima marcam alguns como 'vendido' SEM 'sold_at', então o
+-- fallback usa updated_at = data do seed (HOJE) e nada cai em "ontem". Este bloco
+-- semeia um conjunto CURADO e determinístico de veículos vendidos ONTEM
+-- (sold_at = now()::date - 1), cobrindo NOVO e USADO espalhados pelas 4 marcas /
+-- várias lojas, com cost/sale_price realistas, para que Novos/Usados e o resultado
+-- do dia anterior populem. Datas são SEMPRE relativas (now()::date - 1) — o seed
+-- continua válido em qualquer dia. Namespace próprio, sem colisão com fleet/vehicle.
+-- ===========================================================================
+
+begin;
+set local request.jwt.claim.role = 'service_role';
+
+DO $$
+DECLARE
+  v_yesterday text := to_char(now()::date - 1, 'YYYY-MM-DD');
+  -- (sr, brand, store, model, condition, cost, sale_price) — 10 vendas de ONTEM
+  -- distribuídas pelas 4 marcas e 8 lojas; mistura novo/usado com margem positiva.
+  v_sold jsonb := jsonb_build_array(
+    jsonb_build_object('sr','demo-dia-sold-yesterday-001','brand','Fiat','store','Fiat São Paulo','model','Toro','condition','novo','cost', 90000,'sale_price', 112000),
+    jsonb_build_object('sr','demo-dia-sold-yesterday-002','brand','Fiat','store','Fiat Campinas','model','Pulse','condition','usado','cost', 72000,'sale_price', 86000),
+    jsonb_build_object('sr','demo-dia-sold-yesterday-003','brand','Volkswagen','store','Volkswagen Porto Alegre','model','Nivus','condition','novo','cost', 98000,'sale_price', 121000),
+    jsonb_build_object('sr','demo-dia-sold-yesterday-004','brand','Volkswagen','store','Volkswagen Curitiba','model','T-Cross','condition','usado','cost', 88000,'sale_price', 104000),
+    jsonb_build_object('sr','demo-dia-sold-yesterday-005','brand','Volvo','store','Volvo Caminhões Manaus','model','FH 460','condition','novo','cost', 460000,'sale_price', 545000),
+    jsonb_build_object('sr','demo-dia-sold-yesterday-006','brand','Volvo','store','Volvo Caminhões Brasília','model','VM 270','condition','usado','cost', 380000,'sale_price', 442000),
+    jsonb_build_object('sr','demo-dia-sold-yesterday-007','brand','Honda','store','Honda Motos Belo Horizonte','model','CB 500','condition','novo','cost', 36000,'sale_price', 44900),
+    jsonb_build_object('sr','demo-dia-sold-yesterday-008','brand','Honda','store','Honda Motos Salvador','model','XRE 300','condition','usado','cost', 24000,'sale_price', 29900),
+    jsonb_build_object('sr','demo-dia-sold-yesterday-009','brand','Fiat','store','Fiat São Paulo','model','Strada','condition','novo','cost', 98000,'sale_price', 119000),
+    jsonb_build_object('sr','demo-dia-sold-yesterday-010','brand','Volkswagen','store','Volkswagen Porto Alegre','model','Virtus','condition','usado','cost', 84000,'sale_price', 99000)
+  );
+  v_v jsonb;
+BEGIN
+  PERFORM set_config('request.jwt.claim.role', 'service_role', true);
+
+  -- Idempotent: drop prior "vendido ontem" curated set, then recreate.
+  DELETE FROM entities
+  WHERE entity_type = 'vehicle'
+    AND source_record_id LIKE 'demo-dia-sold-yesterday-%';
+
+  FOR v_v IN SELECT * FROM jsonb_array_elements(v_sold)
+  LOOP
+    PERFORM rental_upsert_entity_current_state(
+      p_entity_type => 'vehicle',
+      p_source_record_id => v_v ->> 'sr',
+      p_data => jsonb_build_object(
+        'name', concat_ws(' ', v_v ->> 'brand', v_v ->> 'model',
+          CASE WHEN v_v ->> 'condition' = 'novo' THEN '2026' ELSE '2022' END),
+        'condition', v_v ->> 'condition',
+        'brand', v_v ->> 'brand',
+        'model', v_v ->> 'model',
+        'model_year', CASE WHEN v_v ->> 'condition' = 'novo' THEN 2026 ELSE 2022 END,
+        'cost', (v_v ->> 'cost')::numeric,
+        'sale_price', (v_v ->> 'sale_price')::numeric,
+        -- comprado bem antes de vender (aging plausível, fora da janela de FP).
+        'purchase_date', to_char((now()::date - 1) - 45, 'YYYY-MM-DD'),
+        'status', 'vendido',
+        'sold_at', v_yesterday,
+        'store', v_v ->> 'store',
+        'source_record_id', v_v ->> 'sr'
+      )
+    );
+  END LOOP;
+END
+$$;
+
+commit;
+
+-- ===========================================================================
 -- Vehicle Stock-Aging Analyst agent config (issue #32)
 -- Seeds `vehicle-aging-analyst` for demo-ops-a and demo-ops-b in BOTH the
 -- entity store (entity_type='agent_config'; read by ops_agent_config_current →
@@ -655,7 +726,13 @@ DECLARE
     jsonb_build_object('sr','demo-dia-service-016','order_number','OS-2026-016','customer','Eduardo Pires','vehicle','THE9V77','description','Troca de fluido de freio','status','aberta','open_days',0,'turn_h',null,'revenue',null,'technician',null),
     -- canceladas (validam o status cancelada na view)
     jsonb_build_object('sr','demo-dia-service-017','order_number','OS-2026-017','customer','Vanessa Cardoso','vehicle','SLZ4W88','description','Orçamento de motor recusado pelo cliente','status','cancelada','open_days',12,'turn_h',null,'revenue',null,'technician','Ana'),
-    jsonb_build_object('sr','demo-dia-service-018','order_number','OS-2026-018','customer','Henrique Dantas','vehicle','PMW7X99','description','Serviço cancelado — peça indisponível','status','cancelada','open_days',6,'turn_h',null,'revenue',null,'technician','Bruno')
+    jsonb_build_object('sr','demo-dia-service-018','order_number','OS-2026-018','customer','Henrique Dantas','vehicle','PMW7X99','description','Serviço cancelado — peça indisponível','status','cancelada','open_days',6,'turn_h',null,'revenue',null,'technician','Bruno'),
+    -- AT/Oficina de ONTEM (issue #85): OS concluídas ABERTAS ontem (open_days=1) com
+    -- revenue, para a coluna AT do Morning Brief popular (a view filtra opened_at =
+    -- now()::date - 1). turn_h pequeno fecha de forma coerente no mesmo dia.
+    jsonb_build_object('sr','demo-dia-service-019','order_number','OS-2026-019','customer','Aline Moreira','vehicle','SAO1Y10','description','Revisão de 30.000 km','status','concluida','open_days',1,'turn_h',4,'revenue',1340.00,'technician','Carlos'),
+    jsonb_build_object('sr','demo-dia-service-020','order_number','OS-2026-020','customer','Bruno Carvalho','vehicle','POA2Z20','description','Troca de amortecedores','status','concluida','open_days',1,'turn_h',5,'revenue',1780.00,'technician','Ana'),
+    jsonb_build_object('sr','demo-dia-service-021','order_number','OS-2026-021','customer','Carla Esteves','vehicle','MAO3A30','description','Revisão preventiva de frota','status','concluida','open_days',1,'turn_h',6,'revenue',2450.00,'technician','Bruno')
   );
   v_item jsonb;
   v_opened timestamptz;
@@ -843,6 +920,10 @@ DECLARE
     jsonb_build_object('sr','demo-dia-part-sale-016','part_sr','demo-dia-part-020','qty',2,'unit_price',169.90,'discount',0,'customer','Frota Rápida Ltda','salesperson','Marina Souza','mo',0,'day',5,'cancel',false),
     jsonb_build_object('sr','demo-dia-part-sale-017','part_sr','demo-dia-part-026','qty',10,'unit_price',49.90,'discount',5.00,'customer','Cliente Balcão','salesperson','João Pedro','mo',0,'day',9,'cancel',false),
     jsonb_build_object('sr','demo-dia-part-sale-018','part_sr','demo-dia-part-001','qty',15,'unit_price',39.90,'discount',0,'customer','TransLog Transportes','salesperson','Carlos Lima','mo',0,'day',11,'cancel',false),
+    -- vendas de ONTEM (issue #85): sale_date = now()::date - 1 (flag 'yesterday')
+    -- p/ a coluna Peças do Morning Brief popular de forma determinística qualquer dia.
+    jsonb_build_object('sr','demo-dia-part-sale-021','part_sr','demo-dia-part-004','qty',24,'unit_price',59.90,'discount',0,'customer','Frota Rápida Ltda','salesperson','Marina Souza','yesterday',true,'cancel',false),
+    jsonb_build_object('sr','demo-dia-part-sale-022','part_sr','demo-dia-part-001','qty',30,'unit_price',39.90,'discount',0,'customer','Auto Center Vitória','salesperson','João Pedro','yesterday',true,'cancel',false),
     -- vendas canceladas (exercitam cancel_part_sale + estorno de estoque; somem da view)
     jsonb_build_object('sr','demo-dia-part-sale-019','part_sr','demo-dia-part-019','qty',8,'unit_price',45.90,'discount',0,'customer','Auto Center Vitória','salesperson','Marina Souza','mo',0,'day',13,'cancel',true),
     jsonb_build_object('sr','demo-dia-part-sale-020','part_sr','demo-dia-part-003','qty',4,'unit_price',189.90,'discount',0,'customer','Oficina do Zé','salesperson','Carlos Lima','mo',0,'day',15,'cancel',true)
@@ -871,15 +952,22 @@ BEGIN
       CONTINUE;
     END IF;
 
+    -- Vendas de ONTEM (issue #85): com 'yesterday'=true, ancora a venda em
+    -- now()::date - 1 para a coluna Peças do Morning Brief popular de forma
+    -- determinística (a view filtra sale_date = dia anterior). Caso contrário,
     -- Conceito MÊS ATUAL (#46): ignora o offset de mês ('mo') e ancora a venda no
     -- mês corrente (dia 'day'), travando em hoje para não gerar data futura.
-    v_sale_date := to_char(
-      least(
-        (date_trunc('month', now()) + (((v_item ->> 'day')::int - 1) || ' days')::interval)::date,
-        now()::date
-      ),
-      'YYYY-MM-DD'
-    );
+    IF coalesce((v_item ->> 'yesterday')::boolean, false) THEN
+      v_sale_date := to_char(now()::date - 1, 'YYYY-MM-DD');
+    ELSE
+      v_sale_date := to_char(
+        least(
+          (date_trunc('month', now()) + (((v_item ->> 'day')::int - 1) || ' days')::interval)::date,
+          now()::date
+        ),
+        'YYYY-MM-DD'
+      );
+    END IF;
 
     SELECT entity_id INTO v_sale_id
     FROM create_part_sale(
