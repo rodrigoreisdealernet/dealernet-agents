@@ -9,6 +9,7 @@
 // a ESCRITA (decisão) NUNCA vai ao PostgREST: passa pela ops-api (fonte da verdade).
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import type { Locale } from '@/i18n/locale'
 
 const ENV = import.meta.env as unknown as Record<string, string | undefined>
 
@@ -985,7 +986,7 @@ const OPS_API_URL = ENV.VITE_OPS_API_URL || '/api/ops'
 
 export interface DecideInput {
   findingId: string
-  decision: 'approve' | 'reject'
+  decision: 'approve' | 'reject' | 'dismiss'
   note?: string
   reason?: string
   workflowId?: string | null
@@ -1004,13 +1005,14 @@ export interface RunAgentNowResult {
   status: string
 }
 
-export async function runAgentNow(agentKey: string): Promise<RunAgentNowResult> {
+export async function runAgentNow(agentKey: string, locale?: Locale): Promise<RunAgentNowResult> {
   const token = await getAccessToken()
   if (!token) throw new Error('Sem sessão — faça login antes de executar o agente.')
 
   const res = await fetch(`${OPS_API_URL}/agents/${encodeURIComponent(agentKey)}/run`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ locale: locale ?? 'pt-BR' }),
   })
   if (!res.ok) {
     const text = await res.text().catch(() => '')
@@ -1033,7 +1035,7 @@ export async function decideFinding(input: DecideInput): Promise<DecideResult> {
   if (input.workflowId) body.workflow_id = input.workflowId
   if (input.runId) body.run_id = input.runId
   if (input.approverId) body.approver_id = input.approverId
-  if (input.decision === 'approve' && input.note) body.note = input.note
+  if (input.decision !== 'reject' && input.note) body.note = input.note
   if (input.decision === 'reject') body.reason = input.reason
 
   const res = await fetch(`${OPS_API_URL}/findings/decision`, {

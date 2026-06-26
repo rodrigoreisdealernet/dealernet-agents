@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import hashlib
 import json
 import logging
@@ -11,7 +12,7 @@ from datetime import UTC, datetime
 from typing import Any, Callable, Literal, NoReturn
 from urllib import error, parse, request
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response, status
+from fastapi import Body, Depends, FastAPI, Header, HTTPException, Request, Response, status
 from prometheus_client import (
     CONTENT_TYPE_LATEST,
     REGISTRY,
@@ -50,7 +51,12 @@ from ..workflows.ops import (
     RejectFleetFindingSignal,
     RejectFindingSignal,
     RevenueRecognitionWorkflow,
+    RevenueRecognitionWorkflowInput,
 )
+from ..workflows.ops.credit import CreditRiskWorkflow, CreditRiskWorkflowInput
+from ..workflows.ops.disposition_queue import DispositionQueueWorkflow, DispositionQueueWorkflowInput
+from ..workflows.ops.vehicle_aging import VehicleAgingWorkflow, VehicleAgingWorkflowInput
+from ..agents.i18n import DEFAULT_LOCALE, resolve_locale
 from ..workflows.ops.branch_morning_brief import (
     BranchMorningBriefWorkflow,
     BranchMorningBriefWorkflowInput,
@@ -73,10 +79,21 @@ _CAN_VIEW_FINANCIALS_ROLES = {"admin", "branch_manager"}
 _LEDGER_FETCH_LIMIT = 50_000
 _TERMINAL_FINDING_STATUSES = {"approved", "rejected", "informational"}
 _FLEET_AUDITOR_AGENT_KEY = "fleet-auditor"
+# Issue #73 — execute the recommended action after a vehicle-aging finding is
+# approved. Single configurable markdown percentage for this vertical slice
+# (no rules engine). Used when agent config does not provide an override.
+_VEHICLE_AGING_AGENT_KEY = "vehicle-aging-analyst"
+_VEHICLE_AGING_FINDING_TYPE = "stock_aging_90d"
+DEFAULT_MARKDOWN_PCT = 0.10
+_PENDING_EXECUTION_ACTIONS = {"transfer", "prioritize_sale", "wholesale_auction"}
+_OPS_AUDIT_FACT_KEY = "ops_audit_event"
 _OPS_AGENT_KEYS = (
     "revrec-analyst",
     "pm-evaluator",
     "vehicle-aging-analyst",
+    "collections-prioritizer",
+    "service-estimate-rescue",
+    "parts-inventory-advisor",
     "fleet-auditor",
     "credit-analyst",
     "shop-morning-queue",
@@ -122,6 +139,7 @@ class FindingRecord:
     fingerprint: str
     finding_type: str
     status: str
+    proposed_action: str | None = None
 
 
 class AgentScheduleNotProvisioned(Exception):
@@ -143,7 +161,7 @@ class RejectFindingRequest(BaseModel):
 
 class FindingDecisionRequest(BaseModel):
     finding_id: str = Field(min_length=1)
-    decision: Literal["approve", "reject"]
+    decision: Literal["approve", "reject", "dismiss"]
     workflow_id: str | None = None
     run_id: str | None = None
     approver_id: str | None = None
@@ -356,11 +374,16 @@ class AssistantChatContext(BaseModel):
     current_screen: str | None = None
     available_screens: list[AssistantScreen] = Field(default_factory=list)
     empresa_id: str | None = None
+    locale: str = DEFAULT_LOCALE
 
 
 class AssistantChatRequest(BaseModel):
     messages: list[AssistantChatMessage] = Field(min_length=1)
     context: AssistantChatContext = Field(default_factory=AssistantChatContext)
+
+
+class AgentRunRequest(BaseModel):
+    locale: str = DEFAULT_LOCALE
 
 
 @dataclass(frozen=True)
@@ -426,7 +449,7 @@ class SupabaseServiceClient:
             url=(
                 f"{self._base_url}/rest/v1/finding"
                 f"?id=eq.{finding_id_q}&tenant_id=eq.{tenant_id_q}"
-                "&select=id,tenant_id,agent_key,run_id,workflow_id,contract_id,line_item_id,fingerprint,finding_type,status&limit=1"
+                "&select=id,tenant_id,agent_key,run_id,workflow_id,contract_id,line_item_id,fingerprint,finding_type,status,proposed_action&limit=1"
             ),
             headers=self._service_role_headers(),
         )
@@ -526,7 +549,7 @@ class SupabaseServiceClient:
             url=(
                 f"{self._base_url}/rest/v1/finding"
                 f"?id=eq.{finding_id_q}&tenant_id=eq.{tenant_id_q}&status=eq.pending_approval"
-                "&select=id,tenant_id,agent_key,run_id,workflow_id,contract_id,line_item_id,fingerprint,finding_type,status"
+                "&select=id,tenant_id,agent_key,run_id,workflow_id,contract_id,line_item_id,fingerprint,finding_type,status,proposed_action"
             ),
             headers={
                 **self._service_role_headers(),
@@ -663,6 +686,212 @@ class SupabaseServiceClient:
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Invalid entity version payload")
         return response[0]
 
+    async def get_finding_action(self, *, finding_id: str) -> dict[str, Any] | None:
+        finding_id_q = parse.quote(finding_id, safe="")
+        response = await self._request_json(
+            method="GET",
+            url=(
+                f"{self._base_url}/rest/v1/finding_action"
+                f"?finding_id=eq.{finding_id_q}&select=id,status,action_type&limit=1"
+            ),
+            headers=self._service_role_headers(),
+        )
+        if not isinstance(response, list) or not response:
+            return None
+        return response[0] if isinstance(response[0], dict) else None
+
+    async def insert_finding_action(
+        self,
+        *,
+        finding_id: str,
+        tenant_id: str,
+        vehicle_id: str | None,
+        action_type: str,
+        status_value: str,
+        payload: dict[str, Any],
+        approver: dict[str, Any] | None,
+    ) -> dict[str, Any] | None:
+        response = await self._request_json(
+            method="POST",
+            url=f"{self._base_url}/rest/v1/finding_action?select=id,status,action_type",
+            headers={
+                **self._service_role_headers(),
+                "Prefer": "return=representation",
+                "Content-Type": "application/json",
+            },
+            body={
+                "finding_id": finding_id,
+                "tenant_id": tenant_id,
+                "vehicle_id": vehicle_id,
+                "action_type": action_type,
+                "status": status_value,
+                "payload": payload,
+                "approver": approver,
+            },
+        )
+        if not isinstance(response, list) or not response:
+            return None
+        return response[0] if isinstance(response[0], dict) else None
+
+    async def _resolve_ops_audit_fact_type_id(self) -> str | None:
+        key_q = parse.quote(_OPS_AUDIT_FACT_KEY, safe="")
+        response = await self._request_json(
+            method="GET",
+            url=f"{self._base_url}/rest/v1/fact_types?key=eq.{key_q}&select=id&limit=1",
+            headers=self._service_role_headers(),
+        )
+        if not isinstance(response, list) or not response or not isinstance(response[0], dict):
+            return None
+        fact_type_id = response[0].get("id")
+        return fact_type_id if isinstance(fact_type_id, str) else None
+
+    async def append_audit_event(
+        self,
+        *,
+        entity_id: str,
+        tenant_id: str,
+        event_type: str,
+        finding_id: str,
+        action_type: str,
+        approver: dict[str, Any] | None,
+        payload: dict[str, Any],
+    ) -> None:
+        fact_type_id = await self._resolve_ops_audit_fact_type_id()
+        if fact_type_id is None:
+            logger.warning("finding_action_audit_skipped finding_id=%s reason=missing_fact_type", finding_id)
+            return
+        await self._request_json(
+            method="POST",
+            url=f"{self._base_url}/rest/v1/time_series_points",
+            headers={
+                **self._service_role_headers(),
+                "Prefer": "return=minimal",
+                "Content-Type": "application/json",
+            },
+            body={
+                "entity_id": entity_id,
+                "fact_type_id": fact_type_id,
+                "observed_at": datetime.now(UTC).isoformat(),
+                "data_payload": {
+                    "event_type": event_type,
+                    "finding_id": finding_id,
+                    "action_type": action_type,
+                    "approver": approver,
+                    "payload": payload,
+                },
+                "metadata": {"tenant_id": tenant_id, "source": "ops_api_decision"},
+            },
+        )
+
+    async def execute_finding_action(
+        self,
+        *,
+        finding: FindingRecord,
+        approver: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        """Execute the recommended action for an approved vehicle-aging finding.
+
+        Idempotent: a single finding_action row per finding (unique key). The
+        side effect is applied via a new SCD2 entity_version so the vehicle's
+        price/history is preserved. Failures are recorded and swallowed so the
+        decision response is never broken.
+        """
+        if finding.finding_type != _VEHICLE_AGING_FINDING_TYPE:
+            return {"executed": False, "skipped": True}
+        vehicle_id = finding.contract_id
+        action = (finding.proposed_action or "").strip()
+        if not vehicle_id or not action:
+            logger.warning(
+                "finding_action_skipped finding_id=%s reason=missing_vehicle_or_action", finding.id
+            )
+            return {"executed": False, "skipped": True}
+
+        existing = await self.get_finding_action(finding_id=finding.id)
+        if existing is not None:
+            logger.info(
+                "finding_action_idempotent finding_id=%s action=%s status=%s",
+                finding.id,
+                existing.get("action_type"),
+                existing.get("status"),
+            )
+            return {"executed": False, "idempotent": True}
+
+        try:
+            if action == "markdown":
+                current = await self.get_entity_current_version(entity_id=vehicle_id)
+                if current is None or current.entity_type != "vehicle":
+                    raise ValueError("vehicle entity not found for markdown")
+                old_price = _coerce_float(current.data.get("sale_price"))
+                if old_price <= 0:
+                    raise ValueError("vehicle has missing or non-positive sale_price; markdown not applied")
+                pct = DEFAULT_MARKDOWN_PCT
+                new_price = round(old_price * (1 - pct), 2)
+                await self.append_entity_version(
+                    entity_id=vehicle_id,
+                    version_number=current.version_number + 1,
+                    data={**current.data, "sale_price": new_price},
+                )
+                payload = {"old_sale_price": old_price, "new_sale_price": new_price, "markdown_pct": pct}
+                status_value = "executed"
+            elif action in _PENDING_EXECUTION_ACTIONS:
+                current = await self.get_entity_current_version(entity_id=vehicle_id)
+                if current is None or current.entity_type != "vehicle":
+                    raise ValueError("vehicle entity not found for disposition")
+                await self.append_entity_version(
+                    entity_id=vehicle_id,
+                    version_number=current.version_number + 1,
+                    data={**current.data, "disposition": action},
+                )
+                payload = {"disposition": action}
+                status_value = "pending_execution"
+            elif action == "monitor":
+                payload = {"note": "monitor"}
+                status_value = "executed"
+            else:
+                payload = {"note": "unknown_action", "action": action}
+                status_value = "executed"
+
+            await self.insert_finding_action(
+                finding_id=finding.id,
+                tenant_id=finding.tenant_id,
+                vehicle_id=vehicle_id,
+                action_type=action,
+                status_value=status_value,
+                payload=payload,
+                approver=approver,
+            )
+            await self.append_audit_event(
+                entity_id=vehicle_id,
+                tenant_id=finding.tenant_id,
+                event_type="vehicle_action_executed",
+                finding_id=finding.id,
+                action_type=action,
+                approver=approver,
+                payload=payload,
+            )
+            logger.info(
+                "finding_action_executed finding_id=%s action=%s status=%s",
+                finding.id,
+                action,
+                status_value,
+            )
+            return {"executed": True, "action": action, "status": status_value}
+        except Exception as exc:  # noqa: BLE001 — never break the decision response.
+            logger.warning(
+                "finding_action_failed finding_id=%s action=%s error=%s", finding.id, action, exc
+            )
+            with contextlib.suppress(Exception):  # best-effort failure record.
+                await self.insert_finding_action(
+                    finding_id=finding.id,
+                    tenant_id=finding.tenant_id,
+                    vehicle_id=vehicle_id,
+                    action_type=action,
+                    status_value="failed",
+                    payload={"action": action, "error": str(exc)},
+                    approver=approver,
+                )
+            return {"executed": False, "failed": True}
+
     def _service_role_headers(self) -> dict[str, str]:
         return {"apikey": self._service_role_key, "Authorization": f"{_BEARER_PREFIX} {self._service_role_key}"}
 
@@ -713,8 +942,45 @@ class TemporalSignalClient:
         self._client: Client | None = None
         self._lock = asyncio.Lock()
 
-    async def run_agent_now(self, *, agent_key: str, tenant_id: str) -> dict[str, Any]:
+    async def run_agent_now(self, *, agent_key: str, tenant_id: str, locale: str | None = None) -> dict[str, Any]:
         schedule_id = _agent_schedule_id(agent_key=agent_key, tenant_id=tenant_id)
+        resolved_locale = resolve_locale(locale)
+        if locale is not None:
+            workflow_id = f"{schedule_id}:manual:{int(time.time() * 1000)}"
+            start = {
+                "revrec-analyst": (
+                    RevenueRecognitionWorkflow.run,
+                    RevenueRecognitionWorkflowInput(tenant_id=tenant_id, locale=resolved_locale),
+                ),
+                "vehicle-aging-analyst": (
+                    VehicleAgingWorkflow.run,
+                    VehicleAgingWorkflowInput(tenant_id=tenant_id, locale=resolved_locale),
+                ),
+                "credit-analyst": (
+                    CreditRiskWorkflow.run,
+                    CreditRiskWorkflowInput(tenant_id=tenant_id, locale=resolved_locale),
+                ),
+                "disposition-queue": (
+                    DispositionQueueWorkflow.run,
+                    DispositionQueueWorkflowInput(tenant_id=tenant_id, locale=resolved_locale),
+                ),
+            }.get(agent_key)
+            if start is not None:
+                workflow_run, workflow_input = start
+                await (await self._client_instance()).start_workflow(
+                    workflow_run,
+                    workflow_input,
+                    id=workflow_id,
+                    task_queue=settings.temporal_task_queue,
+                )
+                return {
+                    "agent_key": agent_key,
+                    "schedule_id": schedule_id,
+                    "workflow_id": workflow_id,
+                    "status": "started",
+                    "locale": resolved_locale,
+                }
+
         handle = (await self._client_instance()).get_schedule_handle(schedule_id)
         try:
             await handle.trigger(overlap=ScheduleOverlapPolicy.SKIP)
@@ -1172,6 +1438,7 @@ def _parse_finding_record(value: Any) -> FindingRecord:
         fingerprint=fingerprint,
         finding_type=finding_type,
         status=status_value,
+        proposed_action=value.get("proposed_action") if isinstance(value.get("proposed_action"), str) else None,
     )
 
 
@@ -1339,7 +1606,7 @@ def create_app(
         principal: Principal,
         client: SupabaseServiceClient,
         signal_client: TemporalSignalClient,
-        decision: Literal["approve", "reject"],
+        decision: Literal["approve", "reject", "dismiss"],
         note: str | None,
         workflow_id: str | None,
         run_id: str | None,
@@ -1362,6 +1629,10 @@ def create_app(
         if finding.status in _TERMINAL_FINDING_STATUSES:
             return {"status": "accepted", "idempotent": True}
         approver = {"approver_id": resolved_approver_id, "approver_name": resolved_approver_name, "note": note}
+        # Dismiss leaves the pending queue (recorded as rejected) but is tagged so
+        # it is distinguishable from an explicit reject and needs no reason.
+        if decision == "dismiss":
+            approver["disposition"] = "dismissed"
         status_value = "approved" if decision == "approve" else "rejected"
         persisted = await client.persist_disposition(
             finding_id=finding_id,
@@ -1375,7 +1646,24 @@ def create_app(
                 return {"status": "accepted", "idempotent": True}
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Finding disposition conflict")
 
-        if persisted.workflow_id:
+        # Execute the recommended action for an approved vehicle-aging finding.
+        if decision == "approve":
+            await client.execute_finding_action(finding=persisted, approver=approver)
+        elif decision == "dismiss" and persisted.contract_id:
+            try:
+                await client.append_audit_event(
+                    entity_id=persisted.contract_id,
+                    tenant_id=tenant_id,
+                    event_type="vehicle_finding_dismissed",
+                    finding_id=finding_id,
+                    action_type=persisted.proposed_action or "",
+                    approver=approver,
+                    payload={"disposition": "dismissed"},
+                )
+            except Exception as exc:  # noqa: BLE001 — never break the decision response.
+                logger.warning(f"finding_dismiss_audit_failed finding_id={finding_id} error={exc}")
+
+        if decision in ("approve", "reject") and persisted.workflow_id:
             try:
                 if decision == "approve":
                     await signal_client.signal_approve(finding=persisted, approver=principal, note=note)
@@ -1448,7 +1736,7 @@ def create_app(
             client=client,
             signal_client=signal_client,
             decision=payload.decision,
-            note=note if payload.decision == "approve" else reason,
+            note=reason if payload.decision == "reject" else note,
             workflow_id=payload.workflow_id,
             run_id=payload.run_id,
             approver_id=payload.approver_id,
@@ -2306,6 +2594,7 @@ def create_app(
     @app.post("/api/ops/agents/{agent_key}/run", status_code=status.HTTP_202_ACCEPTED)
     async def trigger_agent_now(
         agent_key: str,
+        payload: AgentRunRequest | None = Body(default=None),
         principal: Principal = Depends(_principal),
         client: SupabaseServiceClient = Depends(_supabase_client),
         temporal_client: TemporalSignalClient = Depends(_temporal_client),
@@ -2316,7 +2605,14 @@ def create_app(
         _require_operate_permission(principal)
         tenant_id = await _authorized_tenant_id(principal=principal, client=client)
         try:
-            result = await temporal_client.run_agent_now(agent_key=agent_key, tenant_id=tenant_id)
+            if payload is None:
+                result = await temporal_client.run_agent_now(agent_key=agent_key, tenant_id=tenant_id)
+            else:
+                result = await temporal_client.run_agent_now(
+                    agent_key=agent_key,
+                    tenant_id=tenant_id,
+                    locale=resolve_locale(payload.locale),
+                )
         except AgentScheduleNotProvisioned as exc:
             logger.warning(
                 "manual ops agent trigger not provisioned",
@@ -2342,6 +2638,7 @@ def create_app(
                 "principal_name": principal.name,
                 "agent_key": agent_key,
                 "tenant_id": tenant_id,
+                "locale": resolve_locale(payload.locale) if payload else DEFAULT_LOCALE,
                 "schedule_id": result["schedule_id"],
                 "status": result["status"],
             },
@@ -2614,6 +2911,7 @@ def create_app(
         context = {
             "current_screen": payload.context.current_screen,
             "empresa_id": payload.context.empresa_id,
+            "locale": resolve_locale(payload.context.locale),
             "available_screens": [s.model_dump() for s in payload.context.available_screens],
         }
         history = [m.model_dump() for m in payload.messages]
@@ -2631,6 +2929,19 @@ def create_app(
         return reply.model_dump(mode="json")
 
     return app
+
+
+def _coerce_float(value: Any) -> float:
+    if isinstance(value, bool):
+        return 0.0
+    if isinstance(value, int | float):
+        return float(value)
+    if isinstance(value, str):
+        try:
+            return float(value.strip())
+        except ValueError:
+            return 0.0
+    return 0.0
 
 
 def _coerce_optional_bool(value: Any) -> bool | None:

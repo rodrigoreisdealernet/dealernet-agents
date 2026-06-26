@@ -4,14 +4,17 @@
 // docs/planos-aprovados/2026-06-25-dia-conversacional-portal.md.
 
 import { create } from 'zustand'
-import { chatWithAssistant, type AssistantChatMessage } from '@/portal/lib/assistantApi'
+import { chatWithAssistant, type AssistantChatMessage, type AssistantChart } from '@/portal/lib/assistantApi'
 import { availableScreensFromMenu } from '@/portal/components/dai/daiSuggestions'
 import { usePortalStore } from '@/portal/store/portalStore'
+import type { Locale } from '@/i18n/locale'
 
 export interface DaiMessage {
   id: string
   role: 'user' | 'assistant'
   text: string
+  /** Gráficos inline (só em mensagens do assistente). */
+  charts?: AssistantChart[]
 }
 
 interface DaiState {
@@ -20,8 +23,8 @@ interface DaiState {
   messages: DaiMessage[]
   suggestions: string[]
   setOpen: (v: boolean) => void
-  send: (text: string) => Promise<void>
-  ackSuggestion: (tela: string) => void
+  send: (text: string, locale: Locale, fallbackReply: string) => Promise<void>
+  ackSuggestion: (openCommand: string, openedMessage: string) => void
   reset: () => void
 }
 
@@ -41,15 +44,15 @@ export const useDaiStore = create<DaiState>((set, get) => ({
   setOpen: (v) => set({ open: v }),
   reset: () => set({ messages: [], suggestions: [], thinking: false }),
   // Registra no chat que abriu uma tela a partir de uma sugestão (ação de navegação).
-  ackSuggestion: (tela) =>
+  ackSuggestion: (openCommand, openedMessage) =>
     set((s) => ({
       messages: [
         ...s.messages,
-        { id: nextId(), role: 'user', text: `Abrir ${tela}` },
-        { id: nextId(), role: 'assistant', text: `Pronto — abri "${tela}" pra você. ✅` },
+        { id: nextId(), role: 'user', text: openCommand },
+        { id: nextId(), role: 'assistant', text: openedMessage },
       ],
     })),
-  send: async (text) => {
+  send: async (text, locale, fallbackReply) => {
     const userMsg: DaiMessage = { id: nextId(), role: 'user', text }
     const history = [...get().messages, userMsg]
     set({ messages: history, thinking: true })
@@ -61,12 +64,16 @@ export const useDaiStore = create<DaiState>((set, get) => ({
       current_screen: active?.componentKey ?? null,
       available_screens: availableScreensFromMenu(portal.menu),
       empresa_id: portal.empresaAtualId,
+      locale,
     }
 
     try {
       const res = await chatWithAssistant(toApiMessages(history), context)
       set((s) => ({
-        messages: [...s.messages, { id: nextId(), role: 'assistant', text: res.reply || '…' }],
+        messages: [
+          ...s.messages,
+          { id: nextId(), role: 'assistant', text: res.reply || '…', charts: res.charts },
+        ],
         suggestions: res.suggestions ?? [],
         thinking: false,
       }))
@@ -87,7 +94,7 @@ export const useDaiStore = create<DaiState>((set, get) => ({
           {
             id: nextId(),
             role: 'assistant',
-            text: 'Desculpe, não consegui responder agora. Tente novamente em instantes.',
+            text: fallbackReply,
           },
         ],
         thinking: false,

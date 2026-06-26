@@ -7,6 +7,8 @@
 // (useDaiStore → chatWithAssistant): a DIA responde dados de BI e navega pelas telas.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import {
   Sparkles,
   X,
@@ -18,30 +20,35 @@ import {
   AppWindow,
   type LucideIcon,
 } from 'lucide-react'
+import { useTranslations } from 'use-intl'
+import { useLocale } from '@/i18n/LocaleProvider'
 import { useDaiStore } from '@/portal/components/dai/useDaiStore'
 import { usePortalStore } from '@/portal/store/portalStore'
 import { daiSuggestionsFromMenu, type DaiSuggestion } from '@/portal/components/dai/daiSuggestions'
+import { ChartCard } from '@/portal/renderers/screens/ChartCard'
+import type { AssistantChart } from '@/portal/lib/assistantApi'
 
 export function DaiAssistant() {
+  const t = useTranslations('dai')
   const open = useDaiStore((s) => s.open)
   const setOpen = useDaiStore((s) => s.setOpen)
 
   return (
     <>
-      <DaiLauncher open={open} onClick={() => setOpen(!open)} />
+      <DaiLauncher open={open} onClick={() => setOpen(!open)} label={t('openAssistant')} />
       <DaiPanel open={open} onClose={() => setOpen(false)} />
     </>
   )
 }
 
 // ── Launcher: botão flutuante no canto inferior direito ────────────────────────
-function DaiLauncher({ open, onClick }: { open: boolean; onClick: () => void }) {
+function DaiLauncher({ open, onClick, label }: { open: boolean; onClick: () => void; label: string }) {
   return (
     <button
       type="button"
       onClick={onClick}
       title="DIA — Dealernet Intelligence Agents"
-      aria-label="Abrir assistente DIA"
+      aria-label={label}
       data-tour="dai"
       className={[
         // bottom-16: acima do rodapé/paginação das janelas MDI (botão não cobre os
@@ -64,6 +71,8 @@ function DaiLauncher({ open, onClick }: { open: boolean; onClick: () => void }) 
 
 // ── Painel lateral de conversa ─────────────────────────────────────────────────
 function DaiPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const t = useTranslations('dai')
+  const { locale } = useLocale()
   const messages = useDaiStore((s) => s.messages)
   const thinking = useDaiStore((s) => s.thinking)
   const send = useDaiStore((s) => s.send)
@@ -83,16 +92,16 @@ function DaiPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const suggestions = useMemo(() => daiSuggestionsFromMenu(menu, { max: 4 }), [menu])
 
   const submit = () => {
-    const t = draft.trim()
-    if (!t || thinking) return
+    const text = draft.trim()
+    if (!text || thinking) return
     setDraft('')
-    void send(t)
+    void send(text, locale, t('replyError'))
   }
 
   // Clicar numa sugestão ABRE a tela na hora + registra no chat (ação de navegação).
   const pickSuggestion = (s: DaiSuggestion) => {
     openWindow(s.spec)
-    ackSuggestion(s.text)
+    ackSuggestion(t('openScreenCommand', { screen: s.text }), t('openedScreen', { screen: s.text }))
   }
 
   return (
@@ -113,15 +122,16 @@ function DaiPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
           <div className="flex items-center gap-1.5 font-semibold leading-tight">
             DIA
             <span className="rounded bg-white/20 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide">
-              beta
+              {t('beta')}
             </span>
           </div>
-          <div className="text-xs text-white/75">Dealernet Intelligence Agents · assistente do portal</div>
+          <div className="text-xs text-white/75">{t('subtitle')}</div>
         </div>
         <button
           type="button"
           onClick={reset}
-          title="Nova conversa"
+          title={t('newConversation')}
+          aria-label={t('newConversation')}
           className="flex h-8 w-8 items-center justify-center rounded-md text-white/80 transition-colors hover:bg-white/15 hover:text-white"
         >
           <RotateCcw size={16} />
@@ -129,7 +139,8 @@ function DaiPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
         <button
           type="button"
           onClick={onClose}
-          title="Fechar"
+          title={t('close')}
+          aria-label={t('close')}
           className="flex h-8 w-8 items-center justify-center rounded-md text-white/80 transition-colors hover:bg-white/15 hover:text-white"
         >
           <X size={18} />
@@ -140,7 +151,10 @@ function DaiPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
       <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
         {messages.length === 0 && <DaiWelcome suggestions={suggestions} onPick={pickSuggestion} />}
         {messages.map((m) => (
-          <DaiBubble key={m.id} role={m.role} text={m.text} />
+          <div key={m.id} className="space-y-2">
+            <DaiBubble role={m.role} text={m.text} />
+            {m.charts?.map((c, i) => <DaiChart key={i} chart={c} />)}
+          </div>
         ))}
         {thinking && <DaiTyping />}
       </div>
@@ -154,7 +168,7 @@ function DaiPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
               type="button"
               onClick={() => pickSuggestion(s)}
               disabled={thinking}
-              title={`Abrir ${s.text} (${s.solucao})`}
+              title={t('openScreenTitle', { screen: s.text, solution: s.solucao })}
               className="flex items-center gap-1.5 rounded-full border bg-background px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-50"
             >
               <SuggestionIcon name={s.icon} size={12} />
@@ -177,20 +191,21 @@ function DaiPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
               }
             }}
             rows={1}
-            placeholder="Pergunte ou peça algo à DIA…"
+            placeholder={t('placeholder')}
             className="max-h-28 flex-1 resize-none bg-transparent px-1 text-sm outline-none placeholder:text-muted-foreground"
           />
           <button
             type="button"
             onClick={submit}
             disabled={!draft.trim() || thinking}
+            aria-label={t('send')}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
           >
             <SendHorizontal size={16} />
           </button>
         </div>
         <p className="mt-1.5 px-1 text-[11px] text-muted-foreground">
-          DIA pode cometer erros. Confira ações importantes.
+          {t('disclaimer')}
         </p>
       </div>
     </aside>
@@ -205,22 +220,22 @@ function DaiWelcome({
   suggestions: DaiSuggestion[]
   onPick: (s: DaiSuggestion) => void
 }) {
+  const t = useTranslations('dai')
   return (
     <div className="flex flex-col items-center gap-4 px-2 py-8 text-center">
       <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/60 text-white shadow-md">
         <Sparkles size={28} />
       </div>
       <div>
-        <h3 className="text-base font-semibold text-foreground">Olá! Sou a DIA 👋</h3>
+        <h3 className="text-base font-semibold text-foreground">{t('welcomeTitle')}</h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          Posso responder sobre vendas, estoque, oficina e peças com dados reais — e abrir a tela
-          certa pra você. É só perguntar.
+          {t('welcomeBody')}
         </p>
       </div>
       {suggestions.length > 0 && (
         <div className="flex w-full flex-col gap-2">
           <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-            <Wand2 size={13} /> Acesso rápido às suas telas:
+            <Wand2 size={13} /> {t('quickAccess')}
           </span>
           {suggestions.map((s) => (
             <button
@@ -272,8 +287,62 @@ function DaiBubble({ role, text }: { role: 'user' | 'assistant'; text: string })
             : 'rounded-tl-sm border bg-background text-foreground',
         ].join(' ')}
       >
-        {text}
+        {isUser ? text : <Markdown text={text} />}
       </div>
+    </div>
+  )
+}
+
+// Renderiza markdown (negrito, listas, tabelas via GFM) com estilos do DS — sem
+// HTML cru (react-markdown não interpreta HTML por padrão). Mapeia os elementos
+// para classes Tailwind (não dependemos do plugin de typography).
+function Markdown({ text }: { text: string }) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+        ul: ({ children }) => <ul className="mb-2 list-disc pl-4 last:mb-0">{children}</ul>,
+        ol: ({ children }) => <ol className="mb-2 list-decimal pl-4 last:mb-0">{children}</ol>,
+        li: ({ children }) => <li className="mb-0.5">{children}</li>,
+        strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+        a: ({ children, href }) => (
+          <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline">
+            {children}
+          </a>
+        ),
+        code: ({ children }) => (
+          <code className="rounded bg-secondary px-1 py-0.5 font-mono text-xs">{children}</code>
+        ),
+        table: ({ children }) => (
+          <div className="mb-2 overflow-x-auto last:mb-0">
+            <table className="w-full border-collapse text-xs">{children}</table>
+          </div>
+        ),
+        th: ({ children }) => (
+          <th className="border border-border bg-secondary px-2 py-1 text-left font-semibold">{children}</th>
+        ),
+        td: ({ children }) => <td className="border border-border px-2 py-1">{children}</td>,
+      }}
+    >
+      {text}
+    </ReactMarkdown>
+  )
+}
+
+// ── Gráfico inline (reusa o ChartCard dos dashboards do Fast BI) ────────────────
+function DaiChart({ chart }: { chart: AssistantChart }) {
+  return (
+    <div className="ml-9">
+      <ChartCard
+        title={chart.title}
+        type={chart.type}
+        data={chart.data}
+        xKey={chart.x_key}
+        series={chart.series.map((s) => ({ key: s.key, label: s.label, format: s.format }))}
+        valueFormat={chart.value_format ?? 'number'}
+        height={200}
+      />
     </div>
   )
 }

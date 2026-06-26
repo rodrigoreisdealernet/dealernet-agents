@@ -1,0 +1,97 @@
+{
+  "issue": "72",
+  "title": "Findings órfãos inflam Morning Queue/Brief após reseed (vehicle-aging)",
+  "slug": "findings-orfaos-inflam-morning-queue",
+  "branch": "feature/72-findings-orfaos-inflam-morning-queue",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/72",
+  "pr": "75",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/75",
+  "updatedAt": "2026-06-26T01:31:47.504Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "5 acceptance criteria drafted",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/72-findings-orfaos-inflam-morning-queue.md"
+        }
+      ],
+      "notes": [
+        "Iniciando spec a partir da issue #72"
+      ],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec approved by human",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": "seed purge + worker supersede + migration; 6 files",
+      "artifacts": [],
+      "notes": [
+        "Starting coder: reading vehicle-aging activities, workflow, seed.sql",
+        "A: seed.sql orphan purge added. B: superseded migration + ops_revrec helper + vehicle-aging activity wired into workflow/worker. SQL validated on live container; ruff clean.",
+        "Committed 60bca60. A+B implemented; SQL validated on live container; ruff clean. 6 workflow tests now reference the new activity (tester to update mocks)."
+      ],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "done",
+      "summary": "39 pytest + 3 SQL contract tests green",
+      "artifacts": [],
+      "notes": [
+        "Fixed 6 workflow harness tests; added activity+workflow unit tests (pytest 39 green) and SQL purge/migration contract test (node --test 3 green)"
+      ],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "done",
+      "summary": "1 iteration: empty-scope supersede-all footgun guarded by test",
+      "artifacts": [],
+      "notes": [
+        "CHANGES REQUESTED: suite is strong (real purge/migration/e2e helper drive) but no test guards the supersede-all footgun on empty scope (assert expire skipped when scoped_vehicles empty)."
+      ],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "done",
+      "summary": "APPROVE — no blockers; also fixes latent 'superseded' CHECK bug",
+      "artifacts": [
+        {
+          "label": "PR review",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/75"
+        }
+      ],
+      "notes": [
+        "APPROVE: in_scope derived from full scoped set (no over-cap supersede); empty-scope early-return guards supersede-all; seed purge type-safe+idempotent+agent-scoped; migration non-destructive & also fixes latent ops_disposition superseded write; no status consumer breaks. 1 non-blocking comment-inaccuracy note."
+      ],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "waiting",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": "merge"
+    }
+  ]
+}

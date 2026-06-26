@@ -442,12 +442,15 @@ def _build_harness(
     scoped: list[dict[str, Any]],
     assessment_by_vehicle: dict[str, dict[str, Any]],
     existing_fingerprints: list[str] | None = None,
+    superseded_count: int = 0,
 ):
     state: dict[str, Any] = {
         "recorded_findings": [],
         "finalized": None,
         "created_workflow_key": None,
         "assess_kwargs": [],
+        "expire_args": None,
+        "expire_kwargs": None,
     }
     existing = existing_fingerprints or []
 
@@ -467,6 +470,12 @@ def _build_harness(
         if fn_name == "ops_vehicle_aging_assess":
             state["assess_kwargs"].append(kw)
             return assessment_by_vehicle[str(args[0]["vehicle_id"])]
+        if fn_name == "ops_vehicle_aging_expire_out_of_scope_findings":
+            # Capture the in-scope fingerprint set the workflow computed so the
+            # test can assert scope reconciliation; return the superseded count.
+            state["expire_args"] = args
+            state["expire_kwargs"] = kw
+            return superseded_count
         if fn_name == "ops_list_open_finding_fingerprints":
             return existing
         if fn_name == "ops_record_finding":
@@ -635,6 +644,13 @@ async def test_workflow_empty_scope_finalizes_and_persists_workflow_key() -> Non
     # The run row is keyed by the agent key so ops_agent_status_view can align.
     assert state["created_workflow_key"] == _WORKFLOW_KEY
     assert state["finalized"] is not None
+    # CRITICAL early-return guard: with an empty scope the in_scope set is empty,
+    # which would make ops_expire_out_of_scope_findings supersede EVERY open
+    # finding for this tenant+agent. The workflow must short-circuit before the
+    # expire activity. Assert it was never invoked (regression guard if the
+    # empty-scope early-return is ever refactored away).
+    assert state["expire_args"] is None
+    assert result["superseded_findings"] == 0
 
 
 @pytest.mark.asyncio
@@ -656,6 +672,117 @@ async def test_workflow_assess_activity_has_heartbeat_timeout_and_retry_cap() ->
     retry_policy = kw.get("retry_policy")
     assert retry_policy is not None
     assert retry_policy.maximum_attempts == 2
+
+
+# ===========================================================================
+# Workflow scope reconciliation — supersede out-of-scope findings (issue #72)
+# AC#4: a vehicle no longer in scope stops being a pending action.
+# AC#5: a still-in-scope vehicle's finding remains untouched.
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+async def test_workflow_computes_in_scope_fingerprints_and_reports_superseded() -> None:
+    # The workflow must derive the in-scope set from THIS run's surfaced
+    # vehicles and report the activity's superseded count in the summary.
+    scoped = [
+        _scoped_vehicle("veh-120", days=120, severity="critical", bucket="breached", floor=4273.97),
+        _scoped_vehicle("veh-86", days=86, severity="high", bucket="imminent", floor=3063.01),
+    ]
+    assessment = {v["vehicle_id"]: _assessment() for v in scoped}
+    harness = _build_harness(
+        config=_default_config(),
+        scoped=scoped,
+        assessment_by_vehicle=assessment,
+        superseded_count=3,
+    )
+    state, _ = harness
+
+    result = await _run_workflow(harness)
+
+    # Summary surfaces exactly what the expire activity returned.
+    assert result["superseded_findings"] == 3
+
+    # The expire activity was invoked with the tenant + the sorted, de-duped set
+    # of fingerprints produced by this run's scoped vehicles.
+    assert state["expire_args"] is not None, "expire activity was never called"
+    tenant_arg, in_scope_arg = state["expire_args"]
+    assert tenant_arg == _TENANT
+    expected_in_scope = sorted(
+        {_stock_aging_fingerprint(_TENANT, "veh-120"), _stock_aging_fingerprint(_TENANT, "veh-86")}
+    )
+    assert in_scope_arg == expected_in_scope
+
+
+@pytest.mark.asyncio
+async def test_workflow_supersedes_out_of_scope_finding_keeps_in_scope() -> None:
+    # End-to-end at the workflow level: drive the REAL expire helper against a
+    # fake persistence client. A previously-open finding for a vehicle no longer
+    # in scope must end up superseded; the in-scope one must survive as pending.
+    from temporal.tests.test_ops_revrec_activity import _FakeOpsPersistenceClient
+
+    ops_client = _FakeOpsPersistenceClient()
+    in_scope_fp = _stock_aging_fingerprint(_TENANT, "veh-120")
+    stale_fp = _stock_aging_fingerprint(_TENANT, "veh-OLD")
+    ops_client.tables["finding"] = [
+        {
+            "id": "finding-in-scope",
+            "tenant_id": _TENANT,
+            "agent_key": _WORKFLOW_KEY,
+            "status": "pending_approval",
+            "fingerprint": in_scope_fp,
+        },
+        {
+            "id": "finding-stale",
+            "tenant_id": _TENANT,
+            "agent_key": _WORKFLOW_KEY,
+            "status": "pending_approval",
+            "fingerprint": stale_fp,
+        },
+    ]
+
+    scoped = [_scoped_vehicle("veh-120", days=120, severity="critical", bucket="breached", floor=4273.97)]
+    assessment = {"veh-120": _assessment()}
+
+    state: dict[str, Any] = {"recorded_findings": []}
+
+    async def fake_execute_activity(fn_or_str, *pos_args, **kw):  # noqa: ANN001
+        fn_name = getattr(fn_or_str, "__name__", str(fn_or_str))
+        args = kw.get("args", list(pos_args))
+        if fn_name == "ops_create_workflow_run":
+            return {"run_id": "run-1"}
+        if fn_name == "ops_finalize_workflow_run":
+            return True
+        if fn_name == "ops_load_agent_config":
+            return _default_config()
+        if fn_name == "ops_scope_vehicle_aging":
+            return scoped
+        if fn_name == "ops_vehicle_aging_assess":
+            return assessment[str(args[0]["vehicle_id"])]
+        if fn_name == "ops_vehicle_aging_expire_out_of_scope_findings":
+            # Real reconciliation against the in-memory finding table.
+            return ops_revrec.ops_expire_out_of_scope_findings(args[0], _WORKFLOW_KEY, args[1])
+        if fn_name == "ops_list_open_finding_fingerprints":
+            return [in_scope_fp]  # the in-scope finding already exists -> deduped
+        if fn_name == "ops_record_finding":
+            state["recorded_findings"].append(args[0])
+            return {"finding_id": "finding-x"}
+        raise AssertionError(f"Unexpected activity: {fn_name}")
+
+    wf = VehicleAgingWorkflow()
+    with (
+        patch.object(ops_revrec, "_ops_client", ops_client),
+        patch.object(tw_mod, "execute_activity", side_effect=fake_execute_activity),
+        patch.object(tw_mod, "logger", logging.getLogger("test_vehicle_aging_workflow"), create=True),
+    ):
+        result = await wf.run(VehicleAgingWorkflowInput(tenant_id=_TENANT))
+
+    assert result["superseded_findings"] == 1
+    rows = {row["id"]: row for row in ops_client.tables["finding"]}
+    # The stale, out-of-scope finding is retired...
+    assert rows["finding-stale"]["status"] == "superseded"
+    # ...while the in-scope finding stays a pending action (no false removal).
+    assert rows["finding-in-scope"]["status"] == "pending_approval"
 
 
 # ===========================================================================

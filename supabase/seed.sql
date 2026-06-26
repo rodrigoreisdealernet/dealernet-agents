@@ -59,8 +59,14 @@ BEGIN
   WHERE entity_type = 'agent_config'
     AND split_part(source_record_id, ':', 3) = ANY(v_wynne_agents);
 
-  -- Schemas de saída do legado (mantém apenas o do agente DIA).
-  DELETE FROM ops_output_schema_registry WHERE schema_key <> 'vehicle_aging_finding_v1';
+  -- Schemas de saída do legado (mantém apenas os dos agentes DIA).
+  DELETE FROM ops_output_schema_registry
+  WHERE schema_key NOT IN (
+    'vehicle_aging_finding_v1',
+    'parts_inventory_finding_v1',
+    'service_estimate_finding_v1',
+    'collections_finding_v1'
+  );
 
   -- Câmbio multi-moeda (Wynne); o DIA opera em BRL.
   DELETE FROM fx_rates;
@@ -91,7 +97,10 @@ BEGIN
 
   -- Tipos exclusivos do domínio DIA: apaga tudo (demo e não-demo).
   DELETE FROM entities
-  WHERE entity_type IN ('vehicle', 'brand', 'part', 'part_sale', 'service_order');
+  WHERE entity_type IN (
+    'vehicle', 'brand', 'part', 'part_sale', 'service_order',
+    'receivable', 'collection_contact'
+  );
 
   -- 'company' é compartilhado com rental: remove apenas o namespace DIA.
   DELETE FROM entities
@@ -103,16 +112,17 @@ $$;
 commit;
 
 -- ===========================================================================
--- DIA dealership domain — demo fleet, high volume (issue #4, ampliado #46)
+-- DIA dealership domain — frota: HISTÓRICO DE VENDAS DO ANO (issue #4/#46)
 -- Idempotent namespace: source_record_id LIKE 'demo-dia-fleet-%'.
--- ~120 veículos GERADOS POR LOJA (8 lojas, 15 cada) para concentrar os dados do
--- BI: cada veículo herda a 'brand' e o 'store' da sua loja (marca consistente com
--- a loja, alinhado às 4 marcas / 8 lojas do bloco de empresas abaixo). Cobre
--- condition novo/usado, status em_estoque/vendido e days_in_stock de 0 a ~420
--- (variando floor_plan_cost). Reuses rental_upsert_entity_current_state.
--- NOTA: este namespace é o 'demo-dia-fleet-%' (volume p/ dashboards). Os 15
--- veículos determinísticos do Vehicle Stock-Aging Analyst (#32) vivem no bloco
--- 'demo-dia-vehicle-%' logo abaixo — namespaces separados de propósito.
+-- Gera, POR LOJA (8 lojas), um histórico de 12 meses de VENDAS de veículos com
+-- montantes DINÂMICOS por loja × mês × dia (sales_base da loja × sazonalidade do
+-- mês × jitter), além de um ESTOQUE ENXUTO (4 em_estoque por loja). Cada venda
+-- registra sold_at (data da venda no mês correspondente), purchase_date anterior
+-- (período em estoque), condition novo/usado e preços/margens variados; marca e
+-- loja consistentes. Reuses rental_upsert_entity_current_state.
+-- NOTA: namespace 'demo-dia-fleet-%'. Os 15 veículos determinísticos do Vehicle
+-- Stock-Aging Analyst (#32) vivem em 'demo-dia-vehicle-%' (em_estoque), logo
+-- abaixo — namespaces separados de propósito.
 -- ===========================================================================
 
 begin;
@@ -120,31 +130,43 @@ set local request.jwt.claim.role = 'service_role';
 
 DO $$
 DECLARE
-  v_now timestamptz := now();
+  v_now   timestamptz := now();
+  v_today date := now()::date;
   -- store/brand alinhados às 4 marcas e 8 lojas (2 por marca). cost_base reflete
-  -- o segmento (motos baratas, caminhões caros) e cada loja tem seus modelos.
-  -- A geração (days_in_stock 0..~420) inclui veículos em_estoque na faixa 75-90d
-  -- e acima de 90d, cobrindo o que o Vehicle Stock-Aging Analyst (#32) precisa.
+  -- o segmento (motos baratas, caminhões caros); sales_base é o volume MENSAL
+  -- típico de vendas da loja (flagship vende mais; caminhões poucos e caros;
+  -- motos muitas e baratas). Cada loja tem seus modelos.
   v_lojas jsonb := jsonb_build_array(
-    jsonb_build_object('store','Fiat São Paulo','brand','Fiat','cost_base',85000,'models',jsonb_build_array('Pulse','Argo','Mobi','Cronos','Toro','Strada')),
-    jsonb_build_object('store','Fiat Campinas','brand','Fiat','cost_base',82000,'models',jsonb_build_array('Pulse','Argo','Mobi','Cronos','Fastback','Fiorino')),
-    jsonb_build_object('store','Volkswagen Porto Alegre','brand','Volkswagen','cost_base',95000,'models',jsonb_build_array('Polo','Nivus','T-Cross','Virtus','Golf','Saveiro')),
-    jsonb_build_object('store','Volkswagen Curitiba','brand','Volkswagen','cost_base',98000,'models',jsonb_build_array('Polo','Nivus','T-Cross','Virtus','Taos','Amarok')),
-    jsonb_build_object('store','Volvo Caminhões Manaus','brand','Volvo','cost_base',420000,'models',jsonb_build_array('FH 460','VM 270','FH 540','VM 220')),
-    jsonb_build_object('store','Volvo Caminhões Brasília','brand','Volvo','cost_base',460000,'models',jsonb_build_array('FH 460','VM 270','FH 540','FMX 500')),
-    jsonb_build_object('store','Honda Motos Belo Horizonte','brand','Honda','cost_base',18000,'models',jsonb_build_array('CG 160','Biz 125','CB 500','XRE 300','PCX 160')),
-    jsonb_build_object('store','Honda Motos Salvador','brand','Honda','cost_base',16000,'models',jsonb_build_array('CG 160','Biz 125','CB 300','XRE 190','Pop 110'))
+    jsonb_build_object('store','Fiat São Paulo','brand','Fiat','cost_base',85000,'sales_base',5,'models',jsonb_build_array('Pulse','Argo','Mobi','Cronos','Toro','Strada')),
+    jsonb_build_object('store','Fiat Campinas','brand','Fiat','cost_base',82000,'sales_base',4,'models',jsonb_build_array('Pulse','Argo','Mobi','Cronos','Fastback','Fiorino')),
+    jsonb_build_object('store','Volkswagen Porto Alegre','brand','Volkswagen','cost_base',95000,'sales_base',4,'models',jsonb_build_array('Polo','Nivus','T-Cross','Virtus','Golf','Saveiro')),
+    jsonb_build_object('store','Volkswagen Curitiba','brand','Volkswagen','cost_base',98000,'sales_base',3,'models',jsonb_build_array('Polo','Nivus','T-Cross','Virtus','Taos','Amarok')),
+    jsonb_build_object('store','Volvo Caminhões Manaus','brand','Volvo','cost_base',420000,'sales_base',2,'models',jsonb_build_array('FH 460','VM 270','FH 540','VM 220')),
+    jsonb_build_object('store','Volvo Caminhões Brasília','brand','Volvo','cost_base',460000,'sales_base',2,'models',jsonb_build_array('FH 460','VM 270','FH 540','FMX 500')),
+    jsonb_build_object('store','Honda Motos Belo Horizonte','brand','Honda','cost_base',18000,'sales_base',6,'models',jsonb_build_array('CG 160','Biz 125','CB 500','XRE 300','PCX 160')),
+    jsonb_build_object('store','Honda Motos Salvador','brand','Honda','cost_base',16000,'sales_base',5,'models',jsonb_build_array('CG 160','Biz 125','CB 300','XRE 190','Pop 110'))
   );
+  -- Sazonalidade mensal (m=0 é o mês corrente; m=11 é 11 meses atrás).
+  v_seasonal numeric[] := ARRAY[1.00, 0.85, 1.10, 0.95, 1.25, 0.70, 1.05, 1.30, 0.90, 1.15, 0.80, 1.40];
   v_loja jsonb;
   v_models jsonb;
   v_nmodels int;
+  v_loja_idx int := 0;
   v_seq int := 0;
-  k int;
+  v_base numeric;
+  m int; j int; s int;
+  v_month_start date;
+  v_dim int;
+  v_count int;
+  v_day int;
+  v_sold date;
   v_cond text;
-  v_status text;
-  v_cost numeric;
   v_model text;
-  v_days int;
+  v_year int;
+  v_margin numeric;
+  v_cost numeric;
+  v_price numeric;
+  v_purchase date;
 BEGIN
   PERFORM set_config('request.jwt.claim.role', 'service_role', true);
 
@@ -155,35 +177,89 @@ BEGIN
 
   FOR v_loja IN SELECT * FROM jsonb_array_elements(v_lojas)
   LOOP
-    v_models  := v_loja -> 'models';
-    v_nmodels := jsonb_array_length(v_models);
+    v_loja_idx := v_loja_idx + 1;
+    v_models   := v_loja -> 'models';
+    v_nmodels  := jsonb_array_length(v_models);
+    v_base     := (v_loja ->> 'cost_base')::numeric;
 
-    FOR k IN 1..15 LOOP
+    -- ESTOQUE ENXUTO: 4 veículos em_estoque por loja, purchase_date espalhado
+    -- (inclui unidades > 90 dias para alimentar Floor Plan / aging).
+    FOR s IN 1..4 LOOP
       v_seq    := v_seq + 1;
-      v_cond   := CASE WHEN k % 2 = 0 THEN 'novo' ELSE 'usado' END;
-      v_status := CASE WHEN k % 7 = 0 THEN 'vendido' ELSE 'em_estoque' END;
-      v_model  := v_models ->> (k % v_nmodels);
-      v_days   := (k * 29) % 420;
-      v_cost   := (v_loja ->> 'cost_base')::numeric
-                  + ((k % 8) * ((v_loja ->> 'cost_base')::numeric * 0.05));
+      v_cond   := CASE WHEN s % 2 = 0 THEN 'novo' ELSE 'usado' END;
+      v_model  := v_models ->> (s % v_nmodels);
+      v_year   := CASE WHEN v_cond = 'novo' THEN 2026 ELSE 2020 + (s % 5) END;
+      v_cost   := round(v_base * (1 + (s % 5) * 0.04) * (CASE WHEN v_cond = 'usado' THEN 0.7 ELSE 1 END), 2);
+      v_price  := round(v_cost * 1.15, -2);
+      v_purchase := v_today - (20 + s * 45);   -- 65,110,155,200 dias em estoque
 
       PERFORM rental_upsert_entity_current_state(
         p_entity_type => 'vehicle',
-        p_source_record_id => format('demo-dia-fleet-%s', lpad(v_seq::text, 3, '0')),
+        p_source_record_id => format('demo-dia-fleet-%s', lpad(v_seq::text, 4, '0')),
         p_data => jsonb_build_object(
-          'name', concat_ws(' ', v_loja ->> 'brand', v_model, (2018 + (k % 9))::text),
+          'name', concat_ws(' ', v_loja ->> 'brand', v_model, v_year::text),
           'condition', v_cond,
           'brand', v_loja ->> 'brand',
           'model', v_model,
-          'model_year', CASE WHEN v_cond = 'novo' THEN 2026 ELSE 2018 + (k % 8) END,
-          'cost', round(v_cost, 2),
-          'sale_price', round(v_cost * 1.18, -2),
-          'purchase_date', to_char((v_now - (v_days || ' days')::interval)::date, 'YYYY-MM-DD'),
-          'status', v_status,
+          'model_year', v_year,
+          'cost', v_cost,
+          'sale_price', v_price,
+          'purchase_date', to_char(v_purchase, 'YYYY-MM-DD'),
+          'status', 'em_estoque',
           'store', v_loja ->> 'store',
-          'source_record_id', format('demo-dia-fleet-%s', lpad(v_seq::text, 3, '0'))
+          'source_record_id', format('demo-dia-fleet-%s', lpad(v_seq::text, 4, '0'))
         )
       );
+    END LOOP;
+
+    -- HISTÓRICO DE VENDAS: 12 meses (m=0 corrente .. m=11). O montante por
+    -- loja/mês varia (sales_base × sazonalidade × jitter); cada venda cai num dia
+    -- variado do mês, com preço/margem/condição próprios.
+    FOR m IN 0..11 LOOP
+      v_month_start := (date_trunc('month', now()) - (m || ' months')::interval)::date;
+      v_dim := extract(day from (v_month_start + interval '1 month' - interval '1 day'))::int;
+      v_count := greatest(
+        1,
+        round((v_loja ->> 'sales_base')::numeric
+              * v_seasonal[1 + (m % 12)]
+              * (1 + ((v_loja_idx + m) % 4) * 0.10))::int
+      );
+
+      FOR j IN 1..v_count LOOP
+        v_seq  := v_seq + 1;
+        v_day  := ((v_loja_idx * 7 + m * 13 + j * 17) % v_dim) + 1;
+        v_sold := v_month_start + (v_day - 1);
+        IF v_sold > v_today THEN v_sold := v_today; END IF;  -- mês corrente: nunca futuro
+
+        v_cond   := CASE WHEN (j + m + v_loja_idx) % 3 = 0 THEN 'usado' ELSE 'novo' END;
+        v_model  := v_models ->> ((j + m) % v_nmodels);
+        v_year   := CASE WHEN v_cond = 'novo' THEN 2025 + (m % 2) ELSE 2017 + ((j + m) % 7) END;
+        v_margin := 0.08 + ((j * 5 + m * 3 + v_loja_idx) % 14) * 0.01;          -- 8%..21%
+        v_cost   := round(v_base
+                          * (1 + ((j + m) % 6) * 0.03)
+                          * (CASE WHEN v_cond = 'usado' THEN 0.68 ELSE 1 END), 2);
+        v_price  := round(v_cost * (1 + v_margin), -2);
+        v_purchase := v_sold - (25 + ((j * 11 + m) % 70));                       -- 25..94 dias em estoque
+
+        PERFORM rental_upsert_entity_current_state(
+          p_entity_type => 'vehicle',
+          p_source_record_id => format('demo-dia-fleet-%s', lpad(v_seq::text, 4, '0')),
+          p_data => jsonb_build_object(
+            'name', concat_ws(' ', v_loja ->> 'brand', v_model, v_year::text),
+            'condition', v_cond,
+            'brand', v_loja ->> 'brand',
+            'model', v_model,
+            'model_year', v_year,
+            'cost', v_cost,
+            'sale_price', v_price,
+            'purchase_date', to_char(v_purchase, 'YYYY-MM-DD'),
+            'sold_at', to_char(v_sold, 'YYYY-MM-DD'),
+            'status', 'vendido',
+            'store', v_loja ->> 'store',
+            'source_record_id', format('demo-dia-fleet-%s', lpad(v_seq::text, 4, '0'))
+          )
+        );
+      END LOOP;
     END LOOP;
   END LOOP;
 END
@@ -254,6 +330,77 @@ BEGIN
         'sale_price', round((v_v ->> 'cost')::numeric * 1.18, -2),
         'purchase_date', to_char(v_today - ((v_v ->> 'days')::int), 'YYYY-MM-DD'),
         'status', v_v ->> 'status',
+        'store', v_v ->> 'store',
+        'source_record_id', v_v ->> 'sr'
+      )
+    );
+  END LOOP;
+END
+$$;
+
+commit;
+
+-- ===========================================================================
+-- DIA dealership domain — VENDAS DE ONTEM p/ o Morning Brief do Dono (issue #85)
+-- Idempotent namespace: source_record_id LIKE 'demo-dia-sold-yesterday-%'.
+-- O Morning Brief (#43, v_dia_owner_brief_by_brand/by_store) agrega o DIA ANTERIOR
+-- derivando a data da venda como coalesce(data->>'sold_at', updated_at, valid_from).
+-- Os blocos de veículos acima marcam alguns como 'vendido' SEM 'sold_at', então o
+-- fallback usa updated_at = data do seed (HOJE) e nada cai em "ontem". Este bloco
+-- semeia um conjunto CURADO e determinístico de veículos vendidos ONTEM
+-- (sold_at = now()::date - 1), cobrindo NOVO e USADO espalhados pelas 4 marcas /
+-- várias lojas, com cost/sale_price realistas, para que Novos/Usados e o resultado
+-- do dia anterior populem. Datas são SEMPRE relativas (now()::date - 1) — o seed
+-- continua válido em qualquer dia. Namespace próprio, sem colisão com fleet/vehicle.
+-- ===========================================================================
+
+begin;
+set local request.jwt.claim.role = 'service_role';
+
+DO $$
+DECLARE
+  v_yesterday text := to_char(now()::date - 1, 'YYYY-MM-DD');
+  -- (sr, brand, store, model, condition, cost, sale_price) — 10 vendas de ONTEM
+  -- distribuídas pelas 4 marcas e 8 lojas; mistura novo/usado com margem positiva.
+  v_sold jsonb := jsonb_build_array(
+    jsonb_build_object('sr','demo-dia-sold-yesterday-001','brand','Fiat','store','Fiat São Paulo','model','Toro','condition','novo','cost', 90000,'sale_price', 112000),
+    jsonb_build_object('sr','demo-dia-sold-yesterday-002','brand','Fiat','store','Fiat Campinas','model','Pulse','condition','usado','cost', 72000,'sale_price', 86000),
+    jsonb_build_object('sr','demo-dia-sold-yesterday-003','brand','Volkswagen','store','Volkswagen Porto Alegre','model','Nivus','condition','novo','cost', 98000,'sale_price', 121000),
+    jsonb_build_object('sr','demo-dia-sold-yesterday-004','brand','Volkswagen','store','Volkswagen Curitiba','model','T-Cross','condition','usado','cost', 88000,'sale_price', 104000),
+    jsonb_build_object('sr','demo-dia-sold-yesterday-005','brand','Volvo','store','Volvo Caminhões Manaus','model','FH 460','condition','novo','cost', 460000,'sale_price', 545000),
+    jsonb_build_object('sr','demo-dia-sold-yesterday-006','brand','Volvo','store','Volvo Caminhões Brasília','model','VM 270','condition','usado','cost', 380000,'sale_price', 442000),
+    jsonb_build_object('sr','demo-dia-sold-yesterday-007','brand','Honda','store','Honda Motos Belo Horizonte','model','CB 500','condition','novo','cost', 36000,'sale_price', 44900),
+    jsonb_build_object('sr','demo-dia-sold-yesterday-008','brand','Honda','store','Honda Motos Salvador','model','XRE 300','condition','usado','cost', 24000,'sale_price', 29900),
+    jsonb_build_object('sr','demo-dia-sold-yesterday-009','brand','Fiat','store','Fiat São Paulo','model','Strada','condition','novo','cost', 98000,'sale_price', 119000),
+    jsonb_build_object('sr','demo-dia-sold-yesterday-010','brand','Volkswagen','store','Volkswagen Porto Alegre','model','Virtus','condition','usado','cost', 84000,'sale_price', 99000)
+  );
+  v_v jsonb;
+BEGIN
+  PERFORM set_config('request.jwt.claim.role', 'service_role', true);
+
+  -- Idempotent: drop prior "vendido ontem" curated set, then recreate.
+  DELETE FROM entities
+  WHERE entity_type = 'vehicle'
+    AND source_record_id LIKE 'demo-dia-sold-yesterday-%';
+
+  FOR v_v IN SELECT * FROM jsonb_array_elements(v_sold)
+  LOOP
+    PERFORM rental_upsert_entity_current_state(
+      p_entity_type => 'vehicle',
+      p_source_record_id => v_v ->> 'sr',
+      p_data => jsonb_build_object(
+        'name', concat_ws(' ', v_v ->> 'brand', v_v ->> 'model',
+          CASE WHEN v_v ->> 'condition' = 'novo' THEN '2026' ELSE '2022' END),
+        'condition', v_v ->> 'condition',
+        'brand', v_v ->> 'brand',
+        'model', v_v ->> 'model',
+        'model_year', CASE WHEN v_v ->> 'condition' = 'novo' THEN 2026 ELSE 2022 END,
+        'cost', (v_v ->> 'cost')::numeric,
+        'sale_price', (v_v ->> 'sale_price')::numeric,
+        -- comprado bem antes de vender (aging plausível, fora da janela de FP).
+        'purchase_date', to_char((now()::date - 1) - 45, 'YYYY-MM-DD'),
+        'status', 'vendido',
+        'sold_at', v_yesterday,
         'store', v_v ->> 'store',
         'source_record_id', v_v ->> 'sr'
       )
@@ -364,6 +511,427 @@ BEGIN
   END LOOP;
 END
 $$;
+
+-- ===========================================================================
+-- Parts Inventory Advisor agent config (issue #80)
+-- Seeds `parts-inventory-advisor` for demo-ops-a and demo-ops-b in BOTH the
+-- entity store and the base `ops_agent_config` table. enabled=true but
+-- schedule.enabled=false so the recurring run stays off by default. The output
+-- schema registry row is owned by migration 20260627130000_parts_inventory_agent.sql.
+-- ===========================================================================
+DO $$
+DECLARE
+  v_agent_key   text  := 'parts-inventory-advisor';
+  v_schema_key  text  := 'parts_inventory_finding_v1';
+  v_model       jsonb := '{"provider":"azure_openai","deployment":"gpt-4.1-mini","api_version":"2024-12-01-preview"}'::jsonb;
+  v_system_prompt text := 'You are the Parts Inventory Advisor for a vehicle dealership. Recommend a reviewable next action (order_now, expedite, substitute, transfer, liquidate, monitor) for parts inventory findings. Never order, transfer, liquidate, or change inventory automatically; use manufacturer as the sourcing/grouping hint; explain whether replenishment reflects true demand versus a one-off spike using velocity and stock evidence.';
+  v_user_prompt text := 'Assess part {part_id} ({part_number}) from manufacturer {manufacturer} for tenant {tenant_id}. Finding type: {finding_type}. Stock status: {stock_status}. Quantity in stock: {quantity_in_stock}. Reorder point: {reorder_point}. Stock value: {stock_value}. 90-day velocity: {velocity}. Suggested quantity: {quantity_suggested}. Value at risk: {value_at_risk}. Recommend the next human-approved action with supporting evidence. Evidence:\n{evidence_json}';
+  v_tools       jsonb := '[]'::jsonb;
+  v_thresholds  jsonb := '{"velocity_window_days":90,"dead_stock_max_velocity":0,"dead_stock_min_value":0,"dead_stock_high_value":1000}'::jsonb;
+  v_bounds      jsonb := '{"max_findings_per_run":50,"max_parts":200,"max_tool_rounds":2}'::jsonb;
+  v_schedule    jsonb := '{"cron":"0 6 * * 1","enabled":false}'::jsonb;
+  v_tenant_keys text[] := ARRAY['demo-ops-a','demo-ops-b'];
+  v_tenant_key  text;
+  v_tenant_id   uuid;
+  v_entity_id   uuid;
+BEGIN
+  PERFORM set_config('request.jwt.claim.role', 'service_role', true);
+
+  FOREACH v_tenant_key IN ARRAY v_tenant_keys
+  LOOP
+    SELECT id INTO v_tenant_id FROM tenants WHERE tenant_key = v_tenant_key;
+    IF v_tenant_id IS NULL THEN
+      RAISE EXCEPTION 'Parts inventory seed requires tenant % (run the main ops seed first)', v_tenant_key;
+    END IF;
+
+    DELETE FROM entities
+    WHERE entity_type = 'agent_config'
+      AND source_record_id = format('demo-ops-agent-config:%s:%s', v_tenant_id, v_agent_key);
+
+    INSERT INTO entities (entity_type, source_record_id)
+    VALUES ('agent_config', format('demo-ops-agent-config:%s:%s', v_tenant_id, v_agent_key))
+    ON CONFLICT (entity_type, source_record_id) DO UPDATE
+      SET source_record_id = EXCLUDED.source_record_id
+    RETURNING id INTO v_entity_id;
+
+    INSERT INTO entity_versions (entity_id, version_number, data)
+    VALUES (
+      v_entity_id,
+      1,
+      jsonb_build_object(
+        'tenant_id', v_tenant_id,
+        'agent_key', v_agent_key,
+        'enabled', true,
+        'model', v_model,
+        'system_prompt', v_system_prompt,
+        'user_prompt_template', v_user_prompt,
+        'tools', v_tools,
+        'output_schema_key', v_schema_key,
+        'thresholds', v_thresholds,
+        'bounds', v_bounds,
+        'schedule', v_schedule,
+        'auto_apply', false
+      )
+    )
+    ON CONFLICT (entity_id, version_number) DO UPDATE
+      SET data = EXCLUDED.data,
+          is_current = true,
+          valid_to = NULL;
+
+    INSERT INTO ops_agent_config (
+      tenant_id, agent_key, enabled, model,
+      system_prompt, user_prompt_template,
+      tools, output_schema_key, thresholds, bounds, schedule, auto_apply
+    )
+    VALUES (
+      v_tenant_id, v_agent_key, true, v_model,
+      v_system_prompt, v_user_prompt,
+      v_tools, v_schema_key, v_thresholds, v_bounds, v_schedule, false
+    )
+    ON CONFLICT (tenant_id, agent_key) DO UPDATE
+      SET enabled              = EXCLUDED.enabled,
+          model                = EXCLUDED.model,
+          system_prompt        = EXCLUDED.system_prompt,
+          user_prompt_template = EXCLUDED.user_prompt_template,
+          tools                = EXCLUDED.tools,
+          output_schema_key    = EXCLUDED.output_schema_key,
+          thresholds           = EXCLUDED.thresholds,
+          bounds               = EXCLUDED.bounds,
+          schedule             = EXCLUDED.schedule,
+          auto_apply           = EXCLUDED.auto_apply,
+          updated_at           = now();
+  END LOOP;
+END
+$$;
+
+-- ===========================================================================
+-- Collections Prioritizer agent config + representative finance demo (#82)
+-- Seeds `collections-prioritizer` for demo-ops-a and demo-ops-b in BOTH the
+-- entity store and the base `ops_agent_config` table. enabled=true but
+-- schedule.enabled=false so the recurring run stays off by default. The finance
+-- mirror fixtures create one demo customer, three open receivables, and two
+-- collection-contact notes for run-now validation.
+-- ===========================================================================
+DO $$
+DECLARE
+  v_agent_key   text  := 'collections-prioritizer';
+  v_schema_key  text  := 'collections_finding_v1';
+  v_model       jsonb := '{"provider":"azure_openai","deployment":"gpt-4.1-mini","api_version":"2024-12-01-preview"}'::jsonb;
+  v_system_prompt text := 'You are the Collections Prioritizer for a vehicle dealership. Rank customers by recoverable overdue exposure, read the recent collection-contact notes, and recommend one human-approved next action (call, renegotiate, send_notice, escalate_legal, hold_credit, monitor). Never send customer communications and never move money.';
+  v_user_prompt text := 'Assess customer {customer_id} ({customer_name}) for tenant {tenant_id}. Total open exposure: {total_exposure}. Max days overdue: {days_overdue}. Severity: {severity}. Open receivables and bounded contact-note evidence are provided inline. Recommend the next human-approved collections action with concise evidence. Evidence:\n{evidence_json}';
+  v_tools       jsonb := '[]'::jsonb;
+  v_thresholds  jsonb := '{"near_due_days":-5}'::jsonb;
+  v_bounds      jsonb := '{"max_findings_per_run":50,"max_customers":200,"max_tool_rounds":2}'::jsonb;
+  v_schedule    jsonb := '{"cron":"0 6 * * 1-5","enabled":false}'::jsonb;
+  v_tenant_keys text[] := ARRAY['demo-ops-a','demo-ops-b'];
+  v_tenant_key  text;
+  v_tenant_id   uuid;
+  v_entity_id   uuid;
+BEGIN
+  PERFORM set_config('request.jwt.claim.role', 'service_role', true);
+
+  FOREACH v_tenant_key IN ARRAY v_tenant_keys
+  LOOP
+    SELECT id INTO v_tenant_id FROM tenants WHERE tenant_key = v_tenant_key;
+    IF v_tenant_id IS NULL THEN
+      RAISE EXCEPTION 'Collections prioritizer seed requires tenant % (run the main ops seed first)', v_tenant_key;
+    END IF;
+
+    DELETE FROM entities
+    WHERE entity_type = 'agent_config'
+      AND source_record_id = format('demo-ops-agent-config:%s:%s', v_tenant_id, v_agent_key);
+
+    INSERT INTO entities (entity_type, source_record_id)
+    VALUES ('agent_config', format('demo-ops-agent-config:%s:%s', v_tenant_id, v_agent_key))
+    ON CONFLICT (entity_type, source_record_id) DO UPDATE
+      SET source_record_id = EXCLUDED.source_record_id
+    RETURNING id INTO v_entity_id;
+
+    INSERT INTO entity_versions (entity_id, version_number, data)
+    VALUES (
+      v_entity_id,
+      1,
+      jsonb_build_object(
+        'tenant_id', v_tenant_id,
+        'agent_key', v_agent_key,
+        'enabled', true,
+        'model', v_model,
+        'system_prompt', v_system_prompt,
+        'user_prompt_template', v_user_prompt,
+        'tools', v_tools,
+        'output_schema_key', v_schema_key,
+        'thresholds', v_thresholds,
+        'bounds', v_bounds,
+        'schedule', v_schedule,
+        'auto_apply', false
+      )
+    )
+    ON CONFLICT (entity_id, version_number) DO UPDATE
+      SET data = EXCLUDED.data,
+          is_current = true,
+          valid_to = NULL;
+
+    INSERT INTO ops_agent_config (
+      tenant_id, agent_key, enabled, model,
+      system_prompt, user_prompt_template,
+      tools, output_schema_key, thresholds, bounds, schedule, auto_apply
+    )
+    VALUES (
+      v_tenant_id, v_agent_key, true, v_model,
+      v_system_prompt, v_user_prompt,
+      v_tools, v_schema_key, v_thresholds, v_bounds, v_schedule, false
+    )
+    ON CONFLICT (tenant_id, agent_key) DO UPDATE
+      SET enabled              = EXCLUDED.enabled,
+          model                = EXCLUDED.model,
+          system_prompt        = EXCLUDED.system_prompt,
+          user_prompt_template = EXCLUDED.user_prompt_template,
+          tools                = EXCLUDED.tools,
+          output_schema_key    = EXCLUDED.output_schema_key,
+          thresholds           = EXCLUDED.thresholds,
+          bounds               = EXCLUDED.bounds,
+          schedule             = EXCLUDED.schedule,
+          auto_apply           = EXCLUDED.auto_apply,
+          updated_at           = now();
+  END LOOP;
+END
+$$;
+
+-- ===========================================================================
+-- Service Estimate Authorization Rescue agent config (issue #81)
+-- Seeds `service-estimate-rescue` for demo-ops-a and demo-ops-b in BOTH the
+-- entity store (entity_type='agent_config'; read by ops_agent_config_current →
+-- ops_load_agent_config and by the worker schedule reconcile) and the base
+-- `ops_agent_config` table (parity). enabled=true but schedule.enabled=false so
+-- the recurring run stays off by default. The output schema registry row is
+-- owned by migration 20260627090100_service_estimate_rescue_agent.sql.
+-- Assist-only: the agent only recommends a reviewable next contact/recovery
+-- action; it never sends SMS/notifications or authorizes/reprices estimates.
+-- Idempotent via DELETE-then-INSERT + ON CONFLICT; tenants come from the main
+-- ops seed above.
+-- ===========================================================================
+DO $$
+DECLARE
+  v_agent_key   text  := 'service-estimate-rescue';
+  v_schema_key  text  := 'service_estimate_finding_v1';
+  v_model       jsonb := '{"provider":"azure_openai","deployment":"gpt-4.1-mini","api_version":"2024-12-01-preview"}'::jsonb;
+  v_system_prompt text := 'You are the Service Estimate Authorization Rescue analyst for a vehicle dealership workshop. Rank workshop service estimates (orçamentos de OS) that are PENDING authorization or were DECLINED by recoverable revenue for tenant {tenant_id}, and recommend a reviewable next action (contact_customer, offer_discount, reprice, escalate, monitor). You are assist-only: never send SMS/notifications, never authorize, reprice, discount, or cancel an estimate, never generate VendaPerdida, and never move money — a human acts on your recommendation. Surface evidence and keep uncertainty explicit.';
+  v_user_prompt text := 'Assess estimate {estimate_id} on order {order_number} for customer {customer} (vehicle {vehicle}) for tenant {tenant_id}. Estimate status: {estimate_status}. Recoverable value: {recoverable_value}. Lost-sale reason: {lost_sale_reason}. Description: {estimate_description}. Severity: {severity}. Recommend the next human-approved contact/recovery action with supporting evidence. Evidence:\n{evidence_json}';
+  v_tools       jsonb := '[]'::jsonb;
+  v_thresholds  jsonb := '{"high_value_threshold":5000}'::jsonb;
+  v_bounds      jsonb := '{"max_findings_per_run":50,"max_estimates":200,"max_tool_rounds":2}'::jsonb;
+  v_schedule    jsonb := '{"cron":"0 7 * * 1-5","enabled":false}'::jsonb;
+  v_tenant_keys text[] := ARRAY['demo-ops-a','demo-ops-b'];
+  v_tenant_key  text;
+  v_tenant_id   uuid;
+  v_entity_id   uuid;
+BEGIN
+  PERFORM set_config('request.jwt.claim.role', 'service_role', true);
+
+  FOREACH v_tenant_key IN ARRAY v_tenant_keys
+  LOOP
+    SELECT id INTO v_tenant_id FROM tenants WHERE tenant_key = v_tenant_key;
+    IF v_tenant_id IS NULL THEN
+      RAISE EXCEPTION 'Service estimate rescue seed requires tenant % (run the main ops seed first)', v_tenant_key;
+    END IF;
+
+    DELETE FROM entities
+    WHERE entity_type = 'agent_config'
+      AND source_record_id = format('demo-ops-agent-config:%s:%s', v_tenant_id, v_agent_key);
+
+    INSERT INTO entities (entity_type, source_record_id)
+    VALUES ('agent_config', format('demo-ops-agent-config:%s:%s', v_tenant_id, v_agent_key))
+    ON CONFLICT (entity_type, source_record_id) DO UPDATE
+      SET source_record_id = EXCLUDED.source_record_id
+    RETURNING id INTO v_entity_id;
+
+    INSERT INTO entity_versions (entity_id, version_number, data)
+    VALUES (
+      v_entity_id,
+      1,
+      jsonb_build_object(
+        'tenant_id', v_tenant_id,
+        'agent_key', v_agent_key,
+        'enabled', true,
+        'model', v_model,
+        'system_prompt', v_system_prompt,
+        'user_prompt_template', v_user_prompt,
+        'tools', v_tools,
+        'output_schema_key', v_schema_key,
+        'thresholds', v_thresholds,
+        'bounds', v_bounds,
+        'schedule', v_schedule,
+        'auto_apply', false
+      )
+    )
+    ON CONFLICT (entity_id, version_number) DO UPDATE
+      SET data = EXCLUDED.data,
+          is_current = true,
+          valid_to = NULL;
+
+    INSERT INTO ops_agent_config (
+      tenant_id, agent_key, enabled, model,
+      system_prompt, user_prompt_template,
+      tools, output_schema_key, thresholds, bounds, schedule, auto_apply
+    )
+    VALUES (
+      v_tenant_id, v_agent_key, true, v_model,
+      v_system_prompt, v_user_prompt,
+      v_tools, v_schema_key, v_thresholds, v_bounds, v_schedule, false
+    )
+    ON CONFLICT (tenant_id, agent_key) DO UPDATE
+      SET enabled              = EXCLUDED.enabled,
+          model                = EXCLUDED.model,
+          system_prompt        = EXCLUDED.system_prompt,
+          user_prompt_template = EXCLUDED.user_prompt_template,
+          tools                = EXCLUDED.tools,
+          output_schema_key    = EXCLUDED.output_schema_key,
+          thresholds           = EXCLUDED.thresholds,
+          bounds               = EXCLUDED.bounds,
+          schedule             = EXCLUDED.schedule,
+          auto_apply           = EXCLUDED.auto_apply,
+          updated_at           = now();
+  END LOOP;
+END
+$$;
+
+begin;
+set local request.jwt.claim.role = 'service_role';
+
+DO $$
+DECLARE
+  v_today date := now()::date;
+  v_customer_id uuid;
+  v_receivable_001 uuid;
+  v_receivable_002 uuid;
+BEGIN
+  PERFORM set_config('request.jwt.claim.role', 'service_role', true);
+
+  DELETE FROM entities
+  WHERE entity_type = 'collection_contact'
+    AND source_record_id LIKE 'demo-dia-collection-contact-%';
+
+  DELETE FROM entities
+  WHERE entity_type = 'receivable'
+    AND source_record_id LIKE 'demo-dia-receivable-%';
+
+  PERFORM rental_upsert_entity_current_state(
+    p_entity_type => 'customer',
+    p_source_record_id => 'demo-dia-customer-collections-001',
+    p_data => jsonb_build_object(
+      'name', 'Auto Peças Horizonte Ltda',
+      'customer_name', 'Auto Peças Horizonte Ltda',
+      'document_number', '11.222.333/0001-44',
+      'segment', 'oficina_multimarcas',
+      'status', 'ativo',
+      'source_record_id', 'demo-dia-customer-collections-001'
+    )
+  );
+
+  SELECT id INTO v_customer_id
+  FROM entities
+  WHERE entity_type = 'customer'
+    AND source_record_id = 'demo-dia-customer-collections-001';
+
+  PERFORM rental_upsert_entity_current_state(
+    p_entity_type => 'receivable',
+    p_source_record_id => 'demo-dia-receivable-001',
+    p_data => jsonb_build_object(
+      'name', 'Auto Peças Horizonte NF-9001',
+      'customer_id', v_customer_id::text,
+      'customer_name', 'Auto Peças Horizonte Ltda',
+      'document_number', 'NF-9001',
+      'receivable_type', 'a_receber',
+      'balance', 18000.00,
+      'due_date', to_char(v_today - 120, 'YYYY-MM-DD'),
+      'collector_code', 'COB-01',
+      'collector_name', 'Marina',
+      'status', 'aberto',
+      'source_record_id', 'demo-dia-receivable-001'
+    )
+  );
+
+  PERFORM rental_upsert_entity_current_state(
+    p_entity_type => 'receivable',
+    p_source_record_id => 'demo-dia-receivable-002',
+    p_data => jsonb_build_object(
+      'name', 'Auto Peças Horizonte NF-9018',
+      'customer_id', v_customer_id::text,
+      'customer_name', 'Auto Peças Horizonte Ltda',
+      'document_number', 'NF-9018',
+      'receivable_type', 'a_receber',
+      'balance', 7200.00,
+      'due_date', to_char(v_today - 45, 'YYYY-MM-DD'),
+      'collector_code', 'COB-01',
+      'collector_name', 'Marina',
+      'status', 'aberto',
+      'source_record_id', 'demo-dia-receivable-002'
+    )
+  );
+
+  PERFORM rental_upsert_entity_current_state(
+    p_entity_type => 'receivable',
+    p_source_record_id => 'demo-dia-receivable-003',
+    p_data => jsonb_build_object(
+      'name', 'Auto Peças Horizonte NF-9042',
+      'customer_id', v_customer_id::text,
+      'customer_name', 'Auto Peças Horizonte Ltda',
+      'document_number', 'NF-9042',
+      'receivable_type', 'a_receber',
+      'balance', 3500.00,
+      'due_date', to_char(v_today + 3, 'YYYY-MM-DD'),
+      'collector_code', 'COB-01',
+      'collector_name', 'Marina',
+      'status', 'aberto',
+      'source_record_id', 'demo-dia-receivable-003'
+    )
+  );
+
+  SELECT id INTO v_receivable_001
+  FROM entities
+  WHERE entity_type = 'receivable'
+    AND source_record_id = 'demo-dia-receivable-001';
+
+  SELECT id INTO v_receivable_002
+  FROM entities
+  WHERE entity_type = 'receivable'
+    AND source_record_id = 'demo-dia-receivable-002';
+
+  PERFORM rental_upsert_entity_current_state(
+    p_entity_type => 'collection_contact',
+    p_source_record_id => 'demo-dia-collection-contact-001',
+    p_data => jsonb_build_object(
+      'name', 'Ligação Auto Peças Horizonte',
+      'customer_id', v_customer_id::text,
+      'receivable_id', v_receivable_001::text,
+      'action', 'ligacao',
+      'note', 'Cliente informou queda temporária de fluxo de caixa e prometeu pagar a NF-9001 em duas parcelas até sexta-feira.',
+      'contact_date', to_char(v_today - 4, 'YYYY-MM-DD'),
+      'next_contact_date', to_char(v_today + 1, 'YYYY-MM-DD'),
+      'result', 'promessa_pagamento',
+      'source_record_id', 'demo-dia-collection-contact-001'
+    )
+  );
+
+  PERFORM rental_upsert_entity_current_state(
+    p_entity_type => 'collection_contact',
+    p_source_record_id => 'demo-dia-collection-contact-002',
+    p_data => jsonb_build_object(
+      'name', 'WhatsApp Auto Peças Horizonte',
+      'customer_id', v_customer_id::text,
+      'receivable_id', v_receivable_002::text,
+      'action', 'whatsapp',
+      'note', 'Financeiro pediu segunda via e sinalizou possibilidade de renegociação se houver bloqueio de crédito em novos pedidos.',
+      'contact_date', to_char(v_today - 1, 'YYYY-MM-DD'),
+      'next_contact_date', to_char(v_today + 2, 'YYYY-MM-DD'),
+      'result', 'segunda_via_enviada',
+      'source_record_id', 'demo-dia-collection-contact-002'
+    )
+  );
+END
+$$;
+
+commit;
 
 -- ===========================================================================
 -- DIA dealership domain — demo companies + brands (issue #5)
@@ -478,7 +1046,11 @@ DECLARE
     jsonb_build_object('sr','demo-dia-service-001','order_number','OS-2026-001','customer','Maria Souza','vehicle','BRA2E19','description','Revisão de 10.000 km','status','concluida','open_days',55,'turn_h',6,'revenue',850.00,'technician','Carlos'),
     jsonb_build_object('sr','demo-dia-service-002','order_number','OS-2026-002','customer','João Lima','vehicle','RIO3F45','description','Troca de pastilhas de freio','status','concluida','open_days',40,'turn_h',3,'revenue',520.00,'technician','Ana'),
     jsonb_build_object('sr','demo-dia-service-003','order_number','OS-2026-003','customer','Pedro Alves','vehicle','SAO7G88','description','Alinhamento e balanceamento','status','concluida','open_days',20,'turn_h',2,'revenue',280.00,'technician','Carlos'),
-    jsonb_build_object('sr','demo-dia-service-004','order_number','OS-2026-004','customer','Lucas Reis','vehicle','BHZ1H22','description','Diagnóstico eletrônico','status','em_andamento','open_days',5,'turn_h',null,'revenue',150.00,'technician','Ana'),
+    jsonb_build_object('sr','demo-dia-service-004','order_number','OS-2026-004','customer','Lucas Reis','vehicle','BHZ1H22','description','Diagnóstico eletrônico','status','em_andamento','open_days',5,'turn_h',null,'revenue',150.00,'technician','Ana',
+      'estimates', jsonb_build_array(
+        jsonb_build_object('estimate_id','demo-dia-service-004-est-1','status','pending','line_value',1200.00,'description','Troca de módulo de injeção'),
+        jsonb_build_object('estimate_id','demo-dia-service-004-est-2','status','declined','line_value',8000.00,'lost_sale_reason','cliente achou caro','description','Reparo de chicote elétrico')
+      )),
     jsonb_build_object('sr','demo-dia-service-005','order_number','OS-2026-005','customer','Fernanda Dias','vehicle','POA9J33','description','Troca de óleo e filtros','status','em_andamento','open_days',3,'turn_h',null,'revenue',420.00,'technician','Bruno'),
     jsonb_build_object('sr','demo-dia-service-006','order_number','OS-2026-006','customer','Roberto Nunes','vehicle','CWB4K11','description','Reparo do ar-condicionado','status','aberta','open_days',2,'turn_h',null,'revenue',null,'technician',null),
     jsonb_build_object('sr','demo-dia-service-007','order_number','OS-2026-007','customer','Camila Rocha','vehicle','REC6L77','description','Substituição de embreagem','status','aberta','open_days',1,'turn_h',null,'revenue',null,'technician','Bruno'),
@@ -490,13 +1062,24 @@ DECLARE
     jsonb_build_object('sr','demo-dia-service-012','order_number','OS-2026-012','customer','Rafael Teixeira','vehicle','NAT3R12','description','Troca de correia dentada','status','concluida','open_days',33,'turn_h',12,'revenue',1450.00,'technician','Carlos'),
     jsonb_build_object('sr','demo-dia-service-013','order_number','OS-2026-013','customer','Patrícia Moraes','vehicle','MCZ8S21','description','Reparo de embreagem','status','concluida','open_days',15,'turn_h',5,'revenue',980.00,'technician','Ana'),
     -- em andamento adicionais
-    jsonb_build_object('sr','demo-dia-service-014','order_number','OS-2026-014','customer','Gustavo Barros','vehicle','BSB6T34','description','Funilaria e pintura','status','em_andamento','open_days',9,'turn_h',null,'revenue',2300.00,'technician','Bruno'),
+    jsonb_build_object('sr','demo-dia-service-014','order_number','OS-2026-014','customer','Gustavo Barros','vehicle','BSB6T34','description','Funilaria e pintura','status','em_andamento','open_days',9,'turn_h',null,'revenue',2300.00,'technician','Bruno',
+      'estimates', jsonb_build_array(
+        jsonb_build_object('estimate_id','demo-dia-service-014-est-1','status','pending','line_value',3500.00,'description','Pintura completa do capô e paralama'),
+        jsonb_build_object('estimate_id','demo-dia-service-014-est-2','status','declined','line_value',4200.00,'lost_sale_reason','cliente vai cotar em outra oficina','description','Troca de para-choque dianteiro'),
+        jsonb_build_object('estimate_id','demo-dia-service-014-est-3','status','authorized','line_value',900.00,'description','Polimento técnico')
+      )),
     jsonb_build_object('sr','demo-dia-service-015','order_number','OS-2026-015','customer','Sandra Lopes','vehicle','GYN2U55','description','Diagnóstico de ruído na suspensão','status','em_andamento','open_days',4,'turn_h',null,'revenue',null,'technician','Carlos'),
     -- abertas adicionais
     jsonb_build_object('sr','demo-dia-service-016','order_number','OS-2026-016','customer','Eduardo Pires','vehicle','THE9V77','description','Troca de fluido de freio','status','aberta','open_days',0,'turn_h',null,'revenue',null,'technician',null),
     -- canceladas (validam o status cancelada na view)
     jsonb_build_object('sr','demo-dia-service-017','order_number','OS-2026-017','customer','Vanessa Cardoso','vehicle','SLZ4W88','description','Orçamento de motor recusado pelo cliente','status','cancelada','open_days',12,'turn_h',null,'revenue',null,'technician','Ana'),
-    jsonb_build_object('sr','demo-dia-service-018','order_number','OS-2026-018','customer','Henrique Dantas','vehicle','PMW7X99','description','Serviço cancelado — peça indisponível','status','cancelada','open_days',6,'turn_h',null,'revenue',null,'technician','Bruno')
+    jsonb_build_object('sr','demo-dia-service-018','order_number','OS-2026-018','customer','Henrique Dantas','vehicle','PMW7X99','description','Serviço cancelado — peça indisponível','status','cancelada','open_days',6,'turn_h',null,'revenue',null,'technician','Bruno'),
+    -- AT/Oficina de ONTEM (issue #85): OS concluídas ABERTAS ontem (open_days=1) com
+    -- revenue, para a coluna AT do Morning Brief popular (a view filtra opened_at =
+    -- now()::date - 1). turn_h pequeno fecha de forma coerente no mesmo dia.
+    jsonb_build_object('sr','demo-dia-service-019','order_number','OS-2026-019','customer','Aline Moreira','vehicle','SAO1Y10','description','Revisão de 30.000 km','status','concluida','open_days',1,'turn_h',4,'revenue',1340.00,'technician','Carlos'),
+    jsonb_build_object('sr','demo-dia-service-020','order_number','OS-2026-020','customer','Bruno Carvalho','vehicle','POA2Z20','description','Troca de amortecedores','status','concluida','open_days',1,'turn_h',5,'revenue',1780.00,'technician','Ana'),
+    jsonb_build_object('sr','demo-dia-service-021','order_number','OS-2026-021','customer','Carla Esteves','vehicle','MAO3A30','description','Revisão preventiva de frota','status','concluida','open_days',1,'turn_h',6,'revenue',2450.00,'technician','Bruno')
   );
   v_item jsonb;
   v_opened timestamptz;
@@ -540,6 +1123,12 @@ BEGIN
         'closed_at',
         to_char(v_opened + ((v_item ->> 'turn_h')::int || ' hours')::interval, 'YYYY-MM-DD"T"HH24:MI:SSOF')
       );
+    END IF;
+
+    -- Workshop estimate (orçamento de OS) lines feed v_dia_service_estimate_current
+    -- and the service-estimate-rescue agent (issue #81). Only some OS carry them.
+    IF v_item ? 'estimates' THEN
+      v_data := v_data || jsonb_build_object('estimates', v_item -> 'estimates');
     END IF;
 
     PERFORM rental_upsert_entity_current_state(
@@ -684,6 +1273,10 @@ DECLARE
     jsonb_build_object('sr','demo-dia-part-sale-016','part_sr','demo-dia-part-020','qty',2,'unit_price',169.90,'discount',0,'customer','Frota Rápida Ltda','salesperson','Marina Souza','mo',0,'day',5,'cancel',false),
     jsonb_build_object('sr','demo-dia-part-sale-017','part_sr','demo-dia-part-026','qty',10,'unit_price',49.90,'discount',5.00,'customer','Cliente Balcão','salesperson','João Pedro','mo',0,'day',9,'cancel',false),
     jsonb_build_object('sr','demo-dia-part-sale-018','part_sr','demo-dia-part-001','qty',15,'unit_price',39.90,'discount',0,'customer','TransLog Transportes','salesperson','Carlos Lima','mo',0,'day',11,'cancel',false),
+    -- vendas de ONTEM (issue #85): sale_date = now()::date - 1 (flag 'yesterday')
+    -- p/ a coluna Peças do Morning Brief popular de forma determinística qualquer dia.
+    jsonb_build_object('sr','demo-dia-part-sale-021','part_sr','demo-dia-part-004','qty',24,'unit_price',59.90,'discount',0,'customer','Frota Rápida Ltda','salesperson','Marina Souza','yesterday',true,'cancel',false),
+    jsonb_build_object('sr','demo-dia-part-sale-022','part_sr','demo-dia-part-001','qty',30,'unit_price',39.90,'discount',0,'customer','Auto Center Vitória','salesperson','João Pedro','yesterday',true,'cancel',false),
     -- vendas canceladas (exercitam cancel_part_sale + estorno de estoque; somem da view)
     jsonb_build_object('sr','demo-dia-part-sale-019','part_sr','demo-dia-part-019','qty',8,'unit_price',45.90,'discount',0,'customer','Auto Center Vitória','salesperson','Marina Souza','mo',0,'day',13,'cancel',true),
     jsonb_build_object('sr','demo-dia-part-sale-020','part_sr','demo-dia-part-003','qty',4,'unit_price',189.90,'discount',0,'customer','Oficina do Zé','salesperson','Carlos Lima','mo',0,'day',15,'cancel',true)
@@ -712,15 +1305,22 @@ BEGIN
       CONTINUE;
     END IF;
 
+    -- Vendas de ONTEM (issue #85): com 'yesterday'=true, ancora a venda em
+    -- now()::date - 1 para a coluna Peças do Morning Brief popular de forma
+    -- determinística (a view filtra sale_date = dia anterior). Caso contrário,
     -- Conceito MÊS ATUAL (#46): ignora o offset de mês ('mo') e ancora a venda no
     -- mês corrente (dia 'day'), travando em hoje para não gerar data futura.
-    v_sale_date := to_char(
-      least(
-        (date_trunc('month', now()) + (((v_item ->> 'day')::int - 1) || ' days')::interval)::date,
-        now()::date
-      ),
-      'YYYY-MM-DD'
-    );
+    IF coalesce((v_item ->> 'yesterday')::boolean, false) THEN
+      v_sale_date := to_char(now()::date - 1, 'YYYY-MM-DD');
+    ELSE
+      v_sale_date := to_char(
+        least(
+          (date_trunc('month', now()) + (((v_item ->> 'day')::int - 1) || ' days')::interval)::date,
+          now()::date
+        ),
+        'YYYY-MM-DD'
+      );
+    END IF;
 
     SELECT entity_id INTO v_sale_id
     FROM create_part_sale(
@@ -767,7 +1367,7 @@ commit;
 --  8 lojas e os ~120 veículos por loja já são criados nos blocos curados acima.
 --  Aqui em baixo geram-se apenas OS, peças e vendas em massa.)
 
--- --- Ordens de serviço em massa (~82) -------------------------------------
+-- --- Ordens de serviço em massa (~100, espalhadas por 12 MESES) ---------
 begin;
 set local request.jwt.claim.role = 'service_role';
 
@@ -778,7 +1378,10 @@ DECLARE
   v_descs    text[] := ARRAY['Revisão programada','Troca de óleo','Reparo de freios','Diagnóstico eletrônico','Alinhamento e balanceamento','Troca de embreagem','Reparo de suspensão','Funilaria e pintura','Troca de bateria','Reparo do ar-condicionado'];
   v_techs    text[] := ARRAY['Carlos','Ana','Bruno','Diego','Eduardo',null];
   v_custs    text[] := ARRAY['Cliente A','Cliente B','Cliente C','Cliente D','Cliente E','Cliente F','Cliente G','Cliente H'];
-  i int;
+  v_seasonal numeric[] := ARRAY[1.00, 0.85, 1.10, 0.95, 1.25, 0.70, 1.05, 1.30, 0.90, 1.15, 0.80, 1.40];
+  v_today date := now()::date;
+  v_seq int := 0;
+  m int; j int; v_cnt int; v_dim int; v_day int;
   v_status text;
   v_opened timestamptz;
   v_data jsonb;
@@ -790,41 +1393,49 @@ BEGIN
   WHERE entity_type = 'service_order'
     AND source_record_id LIKE 'demo-dia-svcvol-%';
 
-  FOR i IN 1..82 LOOP
-    v_status := v_statuses[1 + (i % 4)];
-    -- MÊS ATUAL (#46): abre dentro do mês corrente (clamp no 1º dia do mês).
-    v_opened := greatest(
-      date_trunc('month', now()),
-      v_now - (((i * 3) % 28) || ' days')::interval
-    );
+  -- HISTÓRICO DE 12 MESES: o montante por mês varia (sazonalidade); cada OS abre
+  -- num dia variado do mês. m=0 é o mês corrente (clamp para não gerar futuro).
+  FOR m IN 0..11 LOOP
+    v_dim := extract(day from ((date_trunc('month', now()) - (m || ' months')::interval)
+                               + interval '1 month' - interval '1 day'))::int;
+    v_cnt := greatest(4, round(8 * v_seasonal[1 + (m % 12)])::int);   -- ~6..11 por mês
 
-    v_data := jsonb_build_object(
-      'name', format('OS-2026-B%s - %s', lpad(i::text, 3, '0'), v_custs[1 + (i % array_length(v_custs, 1))]),
-      'order_number', format('OS-2026-B%s', lpad(i::text, 3, '0')),
-      'customer', v_custs[1 + (i % array_length(v_custs, 1))],
-      'vehicle', format('%s%s%s%s', chr(65 + (i % 26)), chr(65 + ((i * 2) % 26)), chr(65 + ((i * 3) % 26)), lpad((i % 10000)::text, 4, '0')),
-      'description', v_descs[1 + (i % array_length(v_descs, 1))],
-      'status', v_status,
-      'opened_at', to_char(v_opened, 'YYYY-MM-DD"T"HH24:MI:SSOF'),
-      'technician', v_techs[1 + (i % array_length(v_techs, 1))],
-      'source_record_id', format('demo-dia-svcvol-%s', lpad(i::text, 3, '0'))
-    );
+    FOR j IN 1..v_cnt LOOP
+      v_seq := v_seq + 1;
+      v_status := v_statuses[1 + ((m + j) % 4)];
+      v_day := ((m * 13 + j * 17) % v_dim) + 1;
+      v_opened := (date_trunc('month', now()) - (m || ' months')::interval)
+                  + ((v_day - 1) || ' days')::interval;
+      IF v_opened::date > v_today THEN v_opened := v_now; END IF;   -- mês corrente: nunca futuro
 
-    -- Concluídas ganham closed_at (turnaround) e receita; em_andamento receita parcial.
-    IF v_status = 'concluida' THEN
-      v_data := v_data || jsonb_build_object(
-        'closed_at', to_char(v_opened + (((i % 12) + 2) || ' hours')::interval, 'YYYY-MM-DD"T"HH24:MI:SSOF'),
-        'revenue', 200 + ((i % 20) * 95)
+      v_data := jsonb_build_object(
+        'name', format('OS-VOL-%s - %s', lpad(v_seq::text, 4, '0'), v_custs[1 + (v_seq % array_length(v_custs, 1))]),
+        'order_number', format('OS-VOL-%s', lpad(v_seq::text, 4, '0')),
+        'customer', v_custs[1 + (v_seq % array_length(v_custs, 1))],
+        'vehicle', format('%s%s%s%s', chr(65 + (v_seq % 26)), chr(65 + ((v_seq * 2) % 26)), chr(65 + ((v_seq * 3) % 26)), lpad((v_seq % 10000)::text, 4, '0')),
+        'description', v_descs[1 + (v_seq % array_length(v_descs, 1))],
+        'status', v_status,
+        'opened_at', to_char(v_opened, 'YYYY-MM-DD"T"HH24:MI:SSOF'),
+        'technician', v_techs[1 + (v_seq % array_length(v_techs, 1))],
+        'source_record_id', format('demo-dia-svcvol-%s', lpad(v_seq::text, 4, '0'))
       );
-    ELSIF v_status = 'em_andamento' AND i % 2 = 0 THEN
-      v_data := v_data || jsonb_build_object('revenue', 150 + ((i % 15) * 70));
-    END IF;
 
-    PERFORM rental_upsert_entity_current_state(
-      p_entity_type => 'service_order',
-      p_source_record_id => format('demo-dia-svcvol-%s', lpad(i::text, 3, '0')),
-      p_data => v_data
-    );
+      -- Concluídas ganham closed_at (turnaround) e receita; em_andamento receita parcial.
+      IF v_status = 'concluida' THEN
+        v_data := v_data || jsonb_build_object(
+          'closed_at', to_char(v_opened + (((v_seq % 12) + 2) || ' hours')::interval, 'YYYY-MM-DD"T"HH24:MI:SSOF'),
+          'revenue', 200 + ((v_seq % 20) * 95)
+        );
+      ELSIF v_status = 'em_andamento' AND v_seq % 2 = 0 THEN
+        v_data := v_data || jsonb_build_object('revenue', 150 + ((v_seq % 15) * 70));
+      END IF;
+
+      PERFORM rental_upsert_entity_current_state(
+        p_entity_type => 'service_order',
+        p_source_record_id => format('demo-dia-svcvol-%s', lpad(v_seq::text, 4, '0')),
+        p_data => v_data
+      );
+    END LOOP;
   END LOOP;
 END
 $$;
@@ -872,7 +1483,7 @@ $$;
 
 commit;
 
--- --- Vendas em massa (~88, só contra as peças em massa de estoque amplo) ---
+-- --- Vendas em massa (~125, 12 MESES, só contra peças de estoque amplo) ---
 begin;
 set local request.jwt.claim.role = 'service_role';
 
@@ -880,7 +1491,10 @@ DO $$
 DECLARE
   v_custs text[] := ARRAY['Auto Center Vitória','Oficina do Zé','Frota Rápida Ltda','Mecânica Central','Cliente Balcão','TransLog Transportes','Garagem Premium','Oficina Bairro'];
   v_sellers text[] := ARRAY['Marina Souza','Carlos Lima','João Pedro','Aline Costa','Rafael Dias'];
-  i int;
+  v_seasonal numeric[] := ARRAY[1.00, 0.85, 1.10, 0.95, 1.25, 0.70, 1.05, 1.30, 0.90, 1.15, 0.80, 1.40];
+  v_today date := now()::date;
+  v_seq int := 0;
+  m int; j int; v_cnt int; v_dim int; v_day int;
   v_part_id uuid;
   v_part_sr text;
   v_unit_price numeric;
@@ -888,44 +1502,78 @@ DECLARE
 BEGIN
   PERFORM set_config('request.jwt.claim.role', 'service_role', true);
 
-  FOR i IN 1..88 LOOP
-    -- referencia peças em massa (1..74), cada uma com estoque amplo
-    v_part_sr := format('demo-dia-part-b%s', lpad((1 + ((i - 1) % 74))::text, 3, '0'));
+  -- HISTÓRICO DE 12 MESES: vendas espalhadas pelos meses (montante por mês varia
+  -- com a sazonalidade). Só referenciam as peças em massa (estoque amplo >=120)
+  -- com qty pequena (1..3), então o total vendido por peça no ano NÃO estoura o
+  -- estoque (não dispara o guard de estoque insuficiente). m=0 é o mês corrente.
+  FOR m IN 0..11 LOOP
+    v_dim := extract(day from ((date_trunc('month', now()) - (m || ' months')::interval)
+                               + interval '1 month' - interval '1 day'))::int;
+    v_cnt := greatest(6, round(10 * v_seasonal[1 + (m % 12)])::int);   -- ~7..14 por mês
 
-    SELECT id INTO v_part_id
-    FROM entities
-    WHERE entity_type = 'part' AND source_record_id = v_part_sr;
+    FOR j IN 1..v_cnt LOOP
+      v_seq := v_seq + 1;
+      -- referencia peças em massa (1..74), cada uma com estoque amplo
+      v_part_sr := format('demo-dia-part-b%s', lpad((1 + (v_seq % 74))::text, 3, '0'));
 
-    CONTINUE WHEN v_part_id IS NULL;
+      SELECT id INTO v_part_id
+      FROM entities
+      WHERE entity_type = 'part' AND source_record_id = v_part_sr;
 
-    SELECT unit_price INTO v_unit_price
-    FROM v_dia_part_current WHERE entity_id = v_part_id;
+      CONTINUE WHEN v_part_id IS NULL;
 
-    -- MÊS ATUAL (#46): todas as vendas no mês corrente (sem recuar meses),
-    -- travadas em hoje para não gerar data futura.
-    v_sale_date := to_char(
-      least(
-        (date_trunc('month', now()) + (((i * 7) % 27) || ' days')::interval)::date,
-        now()::date
-      ),
-      'YYYY-MM-DD'
-    );
+      SELECT unit_price INTO v_unit_price
+      FROM v_dia_part_current WHERE entity_id = v_part_id;
 
-    PERFORM create_part_sale(
-      jsonb_build_object(
-        'part_id', v_part_id::text,
-        'quantity', 1 + (i % 5),                 -- 1..5, << estoque (>=120)
-        'unit_price', coalesce(v_unit_price, 49.90),
-        'discount', CASE WHEN i % 4 = 0 THEN round((i % 30)::numeric, 2) ELSE 0 END,
-        'sale_date', v_sale_date,
-        'customer', v_custs[1 + (i % array_length(v_custs, 1))],
-        'salesperson', v_sellers[1 + (i % array_length(v_sellers, 1))],
-        'channel', 'balcao',
-        'source_record_id', format('demo-dia-part-sale-b%s', lpad(i::text, 3, '0'))
-      )
-    );
+      v_day := ((m * 11 + j * 13) % v_dim) + 1;
+      v_sale_date := to_char(
+        least(
+          (date_trunc('month', now()) - (m || ' months')::interval
+            + ((v_day - 1) || ' days')::interval)::date,
+          v_today
+        ),
+        'YYYY-MM-DD'
+      );
+
+      PERFORM create_part_sale(
+        jsonb_build_object(
+          'part_id', v_part_id::text,
+          'quantity', 1 + (v_seq % 3),             -- 1..3 (ano todo << estoque >=120)
+          'unit_price', coalesce(v_unit_price, 49.90),
+          'discount', CASE WHEN v_seq % 4 = 0 THEN round((v_seq % 30)::numeric, 2) ELSE 0 END,
+          'sale_date', v_sale_date,
+          'customer', v_custs[1 + (v_seq % array_length(v_custs, 1))],
+          'salesperson', v_sellers[1 + (v_seq % array_length(v_sellers, 1))],
+          'channel', 'balcao',
+          'source_record_id', format('demo-dia-part-sale-b%s', lpad(v_seq::text, 4, '0'))
+        )
+      );
+    END LOOP;
   END LOOP;
 END
 $$;
+
+commit;
+
+-- ===========================================================================
+-- Purga de findings órfãos do vehicle-aging (issue #72)
+-- Roda DEPOIS de recriar as entidades 'vehicle' (acima), então as entidades
+-- atuais já existem. Findings cujo contract_id não corresponde a uma entidade
+-- 'vehicle' atual ficaram pendurados de runs anteriores e inflam a Morning
+-- Queue / "DIA preparou estas ações". Idempotente: rodar de novo é seguro.
+-- ===========================================================================
+
+begin;
+set local request.jwt.claim.role = 'service_role';
+
+-- Purga de findings órfãos do vehicle-aging: contract_id que não corresponde a
+-- uma entidade 'vehicle' atual (os UUIDs de veículo mudam a cada reseed, então
+-- findings de runs anteriores ficam pendurados e inflam a Morning Queue).
+DELETE FROM finding f
+WHERE f.agent_key = 'vehicle-aging-analyst'
+  AND NOT EXISTS (
+    SELECT 1 FROM entities e
+    WHERE e.id = f.contract_id AND e.entity_type = 'vehicle'
+  );
 
 commit;

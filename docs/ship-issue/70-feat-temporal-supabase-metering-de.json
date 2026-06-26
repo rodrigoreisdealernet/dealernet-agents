@@ -1,0 +1,92 @@
+{
+  "issue": "70",
+  "title": "feat(temporal/supabase): metering de custo de tokens LLM por execução de agente (fundação + piloto credit)",
+  "slug": "feat-temporal-supabase-metering-de",
+  "branch": "feature/70-feat-temporal-supabase-metering-de",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/70",
+  "pr": "74",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/74",
+  "updatedAt": "2026-06-26T01:27:25.205Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "8 acceptance criteria drafted",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/70-feat-temporal-supabase-metering-de.md"
+        }
+      ],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec approved by human (--approved)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": "8 files: migration + openai_client + ops_llm_usage + credit wiring + worker",
+      "artifacts": [],
+      "notes": [
+        "coder start: reading grounding done; writing migration (bumped to 20260627130000 > latest 20260627120000)",
+        "migration validated (clean+idempotent in BEGIN/ROLLBACK); openai_client.py done (LlmCallUsage + on_llm_call + llm_calls, NFR-001 pure); 8 openai tests green",
+        "T-001..T-006 done: migration clean+idempotent (2 RLS policies); openai_client/ops_llm_usage/credit wiring/worker registered; ruff clean; 33 green (openai/credit/registration); AC-001..006 proven inline. 2 pre-existing direct-call ops_credit tests now need activity-context+fake-client (tester T-005/T-007)."
+      ],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "running",
+      "summary": "58 pytest + 3 node contract tests green",
+      "artifacts": [],
+      "notes": [
+        "Analyzed diff + spec; reproduced credit test breakage (heartbeat needs activity ctx); starting pytest test layer",
+        "pytest GREEN: openai_client 12, ops_llm_usage 10(new), ops_credit_activity 11 (breakage fixed via ActivityEnvironment). 58 incl regressions. Lint clean. Writing node SQL contract test.",
+        "node SQL contract test GREEN: 3/3 (AC-007 RLS deny+isolation, AC-008 rollup aggregation). All BEGIN..ROLLBACK, no DB mutation.",
+        "Test layer committed (7cd58e1) + draft PR #74 opened. pytest 58 passed, node 3 passed. AC-001..AC-008 covered.",
+        "Addressed 3 review should-fix: DB-level AC-006 upsert contract (node), AC-003 schema-exhaustion (pytest), best-effort invariant sink+activity (pytest). pytest 37 in new files (62 incl regressions), node 4. Green."
+      ],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "running",
+      "summary": "",
+      "artifacts": [],
+      "notes": [
+        "Suite green (33 py + 3 SQL). 0 blocker, 3 should-fix (AC-006 DB idempotency only smoke-tested vs fake; AC-003 schema-exhaustion branch untested; best-effort swallow path untested), 3 nits. Re-run recommended."
+      ],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    }
+  ]
+}

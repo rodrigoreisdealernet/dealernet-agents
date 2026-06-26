@@ -65,6 +65,7 @@ class DispositionQueueWorkflowInput:
     age_months_threshold: float | None = None
     utilization_pct_threshold: float | None = None
     maintenance_cost_ratio_threshold: float | None = None
+    locale: str = "pt-BR"
 
 
 @dataclass
@@ -203,7 +204,7 @@ class DispositionQueueWorkflow:
             assess_tasks = [
                 workflow.execute_activity(
                     ops_disposition.ops_disposition_assess,
-                    args=[asset_payload, config],
+                    args=[asset_payload, {**config, "locale": inp.locale}],
                     start_to_close_timeout=workflow.timedelta(minutes=2),
                     heartbeat_timeout=_AI_HEARTBEAT_TIMEOUT,
                     retry_policy=_AI_RETRY,

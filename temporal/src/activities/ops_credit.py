@@ -29,7 +29,7 @@ from ..agents.tools.rental_data import (
     query_relationships,
     query_time_series,
 )
-from . import ops_revrec
+from . import ops_llm_usage, ops_revrec
 
 # Upper bound guards against runaway LLM cost and activity duration when the
 # tenant has a large number of billing accounts.  Lower bound ensures at least
@@ -380,9 +380,10 @@ def _build_collections_assessment(
 
 @activity.defn
 async def ops_credit_assess(
-    account_payload: dict[str, Any], config: dict[str, Any]
+    account_payload: dict[str, Any], config: dict[str, Any], run_id: str | None = None
 ) -> dict[str, Any]:
     bounds = config.get("bounds") or {}
+    locale = str(config.get("locale") or "pt-BR")
     max_tool_rounds = int(_coerce_float(bounds.get("max_tool_rounds")) or 5)
     tools = _normalize_tools(list(config.get("tools") or []))
     system_prompt = str(
@@ -413,6 +414,22 @@ async def ops_credit_assess(
 
     heartbeat_task = asyncio.ensure_future(_heartbeat_loop())
     try:
+        # Metering context is best-effort: it must never alter agent business
+        # behavior, so fall back to empty values when not in an activity context.
+        try:
+            info = activity.info()
+            workflow_id, activity_id, activity_attempt = info.workflow_id, info.activity_id, info.attempt
+        except RuntimeError:
+            workflow_id, activity_id, activity_attempt = "", "", 0
+        usage_sink = ops_llm_usage.build_usage_sink(
+            tenant_id=str(account_payload.get("tenant_id") or ""),
+            run_id=run_id or "",
+            workflow_id=workflow_id,
+            activity_id=activity_id,
+            activity_attempt=activity_attempt,
+            agent_key="credit-analyst",
+            item_key=str(account_payload.get("account_id") or ""),
+        )
         tool_executor = _credit_tool_executor(account_payload, tools)
         raw_assessment = await run_credit_analyst(
             account_payload,
@@ -420,7 +437,9 @@ async def ops_credit_assess(
             user_prompt_template=rendered_user_prompt,
             tools=tools,
             tool_executor=tool_executor,
+            locale=locale,
             max_tool_rounds=max_tool_rounds,
+            on_llm_call=usage_sink,
         )
         return _build_collections_assessment(account_payload, raw_assessment, config)
     finally:
@@ -907,6 +926,7 @@ async def ops_application_assess(
     human analyst approval.
     """
     bounds = config.get("bounds") or {}
+    locale = str(config.get("locale") or "pt-BR")
     max_tool_rounds = int(_coerce_float(bounds.get("max_tool_rounds")) or 5)
     tools = _normalize_tools(list(config.get("tools") or []))
     system_prompt = str(
@@ -944,6 +964,7 @@ async def ops_application_assess(
         user_prompt_template=user_prompt_template,
         tools=tools,
         tool_executor=tool_executor,
+        locale=locale,
         max_tool_rounds=max_tool_rounds,
     )
     result.setdefault("operating_model_tags", list(_CREDIT_APPLICATION_OPERATING_MODEL_TAGS))

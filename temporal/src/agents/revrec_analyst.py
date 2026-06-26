@@ -5,6 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .i18n import with_language_directive
 from .openai_client import ChatCompletionTransport, chat_with_tools
 
 # tool name, JSON-serializable arguments -> tool result (sync or async)
@@ -52,11 +53,12 @@ async def run_revrec_analyst(
     user_prompt_template: str,
     tools: Sequence[Mapping[str, Any]],
     tool_executor: ToolExecutor,
+    locale: str | None = None,
     max_tool_rounds: int = 5,
     transport: ChatCompletionTransport | None = None,
 ) -> dict[str, Any]:
     messages = [
-        {"role": "system", "content": system_prompt},
+        {"role": "system", "content": with_language_directive(system_prompt, locale)},
         {"role": "user", "content": user_prompt_template},
     ]
     result = await chat_with_tools(

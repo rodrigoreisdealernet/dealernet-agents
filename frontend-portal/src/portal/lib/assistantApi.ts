@@ -6,6 +6,7 @@
 
 import { getAccessToken } from '@/portal/lib/agentsApi'
 import type { AvailableScreen } from '@/portal/components/dai/daiSuggestions'
+import type { Locale } from '@/i18n/locale'
 
 const ENV = import.meta.env as unknown as Record<string, string | undefined>
 const OPS_API_URL = ENV.VITE_OPS_API_URL || '/api/ops'
@@ -19,6 +20,7 @@ export interface AssistantChatContext {
   current_screen?: string | null
   available_screens: AvailableScreen[]
   empresa_id?: string | null
+  locale?: Locale
 }
 
 /** Ação de navegação proposta pela DIA — executada no front via openWindow. */
@@ -30,9 +32,27 @@ export interface AssistantAction {
   reason?: string
 }
 
+/** Série de um gráfico (espelha ChartSeries do ChartCard). */
+export interface AssistantChartSeries {
+  key: string
+  label?: string
+  format?: 'currency' | 'percent' | 'number'
+}
+
+/** Gráfico inline proposto pela DIA — renderizado no balão via ChartCard. */
+export interface AssistantChart {
+  title: string
+  type: 'line' | 'bar' | 'pie'
+  x_key: string
+  series: AssistantChartSeries[]
+  data: Array<Record<string, number | string>>
+  value_format?: 'currency' | 'percent' | 'number'
+}
+
 export interface AssistantReply {
   reply: string
   actions: AssistantAction[]
+  charts: AssistantChart[]
   suggestions: string[]
 }
 
@@ -56,6 +76,7 @@ export async function chatWithAssistant(
   return {
     reply: data.reply ?? '',
     actions: Array.isArray(data.actions) ? data.actions : [],
+    charts: Array.isArray(data.charts) ? data.charts : [],
     suggestions: Array.isArray(data.suggestions) ? data.suggestions : [],
   }
 }

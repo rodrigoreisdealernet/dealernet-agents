@@ -1,17 +1,27 @@
 from __future__ import annotations
 
+import inspect
 import json
 from collections.abc import Mapping
 from typing import Any
 
 import pytest
+from temporal.src.agents import portal_assistant
+from temporal.src.agents.i18n import language_directive
 from temporal.src.agents.portal_assistant import (
+    MAX_CHART_POINTS,
     allowed_screen_keys,
     build_messages,
     filter_actions_to_allowlist,
     run_portal_assistant,
+    sanitize_charts,
 )
-from temporal.src.agents.portal_assistant_schema import AssistantAction, AssistantReplyV1
+from temporal.src.agents.portal_assistant_schema import (
+    AssistantAction,
+    AssistantChart,
+    AssistantChartSeries,
+    AssistantReplyV1,
+)
 
 
 class _FakeTransport:
@@ -135,6 +145,71 @@ def test_filter_actions_to_allowlist_is_noop_when_all_allowed() -> None:
     assert out is reply  # unchanged object when nothing is dropped
 
 
+@pytest.mark.asyncio
+async def test_run_portal_assistant_returns_inline_chart_from_tool() -> None:
+    final_reply = {
+        "reply": "Tendência das vendas dos últimos dias:",
+        "charts": [
+            {
+                "title": "Vendas por dia",
+                "type": "line",
+                "x_key": "sale_date",
+                "series": [{"key": "revenue", "label": "Receita", "format": "currency"}],
+                "data": [
+                    {"sale_date": "2026-06-24", "revenue": 1200000},
+                    {"sale_date": "2026-06-25", "revenue": 1500000},
+                ],
+                "value_format": "currency",
+            }
+        ],
+    }
+    transport = _FakeTransport(
+        [
+            _assistant_message(
+                tool_calls=[
+                    {
+                        "id": "c1",
+                        "type": "function",
+                        "function": {"name": "get_sales_trend", "arguments": "{}"},
+                    }
+                ]
+            ),
+            _assistant_message(content=json.dumps(final_reply)),
+        ]
+    )
+    read_client = _FakeReadClient([{"sale_date": "2026-06-25", "revenue": 1500000}])
+
+    reply = await run_portal_assistant(
+        [{"role": "user", "content": "mostre a tendência de vendas"}],
+        _CONTEXT,
+        read_client=read_client,
+        transport=transport,
+    )
+
+    assert read_client.requested_views == ["v_dia_sales_trend"]
+    assert len(reply.charts) == 1
+    assert reply.charts[0].type == "line"
+    assert reply.charts[0].series[0].key == "revenue"
+    assert len(reply.charts[0].data) == 2
+
+
+def test_sanitize_charts_drops_empty_and_caps_points() -> None:
+    big = AssistantChart(
+        title="X",
+        type="line",
+        x_key="d",
+        series=[AssistantChartSeries(key="v")],
+        data=[{"d": str(i), "v": float(i)} for i in range(MAX_CHART_POINTS + 15)],
+    )
+    empty = AssistantChart(title="Y", type="bar", x_key="d", series=[AssistantChartSeries(key="v")], data=[])
+    reply = AssistantReplyV1(reply="ok", charts=[big, empty])
+
+    out = sanitize_charts(reply)
+
+    assert len(out.charts) == 1  # empty dropped
+    assert len(out.charts[0].data) == MAX_CHART_POINTS  # capped
+
+
 def test_build_messages_injects_allowlist_into_system_prompt() -> None:
     messages, allowed = build_messages(
         [{"role": "user", "content": "oi"}],
@@ -142,5 +217,39 @@ def test_build_messages_injects_allowlist_into_system_prompt() -> None:
     )
     assert messages[0]["role"] == "system"
     assert "dia-sales" in messages[0]["content"]
+    # Period-disambiguation guidance must be present (issue #104).
+    assert "PERÍODO" in messages[0]["content"]
     assert messages[-1] == {"role": "user", "content": "oi"}
     assert allowed == {"dia-sales", "dia-overview"}
+
+
+def test_build_messages_uses_english_directive_when_context_locale_is_en_us() -> None:
+    messages, _allowed = build_messages(
+        [{"role": "user", "content": "how are sales?"}],
+        {**_CONTEXT, "locale": "en-US"},
+    )
+
+    system_prompt = messages[0]["content"]
+    assert language_directive("en-US") in system_prompt
+    assert "Reply in English (en-US)" in system_prompt
+    assert language_directive("pt-BR") not in system_prompt
+
+
+@pytest.mark.parametrize("context", [_CONTEXT, {**_CONTEXT, "locale": ""}, {**_CONTEXT, "locale": "fr-FR"}])
+def test_build_messages_defaults_to_portuguese_directive_for_missing_or_unknown_locale(context: Mapping[str, Any]) -> None:
+    messages, _allowed = build_messages(
+        [{"role": "user", "content": "oi"}],
+        context,
+    )
+
+    system_prompt = messages[0]["content"]
+    assert language_directive("pt-BR") in system_prompt
+    assert "Responda em português do Brasil (pt-BR)" in system_prompt
+    assert "Reply in English" not in system_prompt
+
+
+def test_portal_assistant_module_no_longer_hardcodes_portuguese_only_instruction() -> None:
+    source = inspect.getsource(portal_assistant)
+
+    assert "SEMPRE em português" not in source
+    assert "sempre em português" not in source.lower()

@@ -33,6 +33,7 @@ class CreditRiskWorkflowInput:
     run_window_start: str | None = None
     run_window_end: str | None = None
     approval_timeout_seconds: int = 300
+    locale: str = "pt-BR"
 
 
 @dataclass
@@ -122,7 +123,7 @@ class CreditRiskWorkflow:
             analyze_tasks = [
                 workflow.execute_activity(
                     ops_credit.ops_credit_assess,
-                    args=[account_payload, config],
+                    args=[account_payload, {**config, "locale": inp.locale}, run_id],
                     start_to_close_timeout=workflow.timedelta(minutes=2),
                     heartbeat_timeout=_AI_HEARTBEAT_TIMEOUT,
                     retry_policy=_AI_RETRY,

@@ -119,7 +119,7 @@ function LoginForm({ onForgot }: { onForgot: () => void }) {
         <input
           id="usuario"
           autoComplete="username"
-          placeholder="SEU.LOGIN"
+          placeholder={t('userPlaceholderUpper')}
           className="w-full rounded-md border bg-background py-2 pl-9 pr-3 text-sm uppercase outline-none focus:ring-2 focus:ring-ring"
           value={usuario}
           onChange={(e) => setUsuario(e.target.value.toUpperCase())}
@@ -245,7 +245,7 @@ function RecoverForm({ onBack }: { onBack: () => void }) {
             <input
               id="rec-usuario"
               autoComplete="username"
-              placeholder="seu.login"
+              placeholder={t('userPlaceholder')}
               className="w-full rounded-md border bg-background py-2 pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring"
               value={usuario}
               onChange={(e) => setUsuario(e.target.value)}

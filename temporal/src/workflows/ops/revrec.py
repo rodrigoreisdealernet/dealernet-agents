@@ -34,6 +34,7 @@ class RevenueRecognitionWorkflowInput:
     run_window_start: str | None = None
     run_window_end: str | None = None
     approval_timeout_seconds: int = 300
+    locale: str = "pt-BR"
 
 
 @dataclass
@@ -145,6 +146,7 @@ class RevenueRecognitionWorkflow:
                                     str(config.get("user_prompt_template") or ""),
                                     prompt_variables,
                                 ),
+                                "locale": inp.locale,
                             },
                         ],
                         start_to_close_timeout=workflow.timedelta(minutes=2),

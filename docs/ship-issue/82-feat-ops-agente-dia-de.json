@@ -1,0 +1,110 @@
+{
+  "issue": "82",
+  "title": "feat(ops): agente DIA collections-prioritizer (priorização de cobrança)",
+  "slug": "feat-ops-agente-dia-de",
+  "branch": "feature/82-feat-ops-agente-dia-de",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/82",
+  "pr": "100",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/100",
+  "updatedAt": "2026-06-26T03:31:38.489Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "17 acceptance criteria distilled from PRD (Phase A + Phase B)",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/82-feat-ops-agente-dia-de.md"
+        },
+        {
+          "label": "PRD",
+          "href": "docs/prd/2026-06-25-agente-priorizacao-cobranca.md"
+        }
+      ],
+      "notes": [
+        "Distilling PRD §7 acceptance criteria into the spec"
+      ],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec approved by human (--approved)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": "9 files: 4 migrations + agent triad + worker/run-now wiring + seed (commit 86f6312)",
+      "artifacts": [],
+      "notes": [
+        "Coder implementing Phase A migrations + Phase B triad per PRD",
+        "Starting coder step: reading PRD/spec and reference files",
+        "Phase A finance CRUD/catalog migrations created; implementing collections agent module",
+        "Seed config and representative finance demo block added; implementing ops_collections activities",
+        "Agent and activities modules created; implementing collections workflow and exports",
+        "Collections workflow created and exported; wiring worker registration and run-now allowlist",
+        "Worker and run-now wiring complete; running SQL/Python verifications",
+        "All required SQL, import, registry, and worker-registration verifications are green; committing coder diff"
+      ],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "done",
+      "summary": "RLS 8/8 pass; pytest 26 passed; draft PR opened",
+      "artifacts": [],
+      "notes": [
+        "Tester writing collections_rls.test.mjs + test_ops_collections.py",
+        "Starting tester pass: reading specs and existing test patterns.",
+        "RLS/CRUD SQL contract test is green: node --test supabase/tests/collections_rls.test.mjs passed.",
+        "Collections pytest suite is green: python -m pytest temporal/tests/test_ops_collections.py temporal/tests/test_worker_registration.py -v passed."
+      ],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "done",
+      "summary": "2 iterations: 5 gaps raised, 1 dropped as over-reach, 4 fixed; RLS 10/10, pytest green",
+      "artifacts": [],
+      "notes": [
+        "Reviewer auditing test coverage, vanity tests, weak assertions",
+        "Iteration 1: reviewer requested 5 coverage hardenings; sending back to tester"
+      ],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "done",
+      "summary": "Approved after 1 fix (rationale PII bound); 2 findings dispositioned (pre-existing/contract-faithful)",
+      "artifacts": [
+        {
+          "label": "PR review",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/100"
+        }
+      ],
+      "notes": [
+        "Reviewer auditing full diff for correctness/security/regression"
+      ],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "waiting",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": "merge"
+    }
+  ]
+}

@@ -1,0 +1,86 @@
+{
+  "issue": "81",
+  "title": "feat(ops): agente DIA de resgate de orçamentos de oficina (service-estimate-rescue)",
+  "slug": "feat-ops-agente-dia-de",
+  "branch": "feature/81-feat-ops-agente-dia-de",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/81",
+  "pr": null,
+  "prUrl": null,
+  "updatedAt": "2026-06-26T03:02:52.368Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "6 acceptance criteria drafted",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/81-feat-ops-agente-dia-de.md"
+        }
+      ],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec approved by human (--approved)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": "Phase A view + Phase B triad; 6 files added, 5 modified; migrations validated via psql (commit 4ef4b1f)",
+      "artifacts": [],
+      "notes": [
+        "reading PRD/spec + cloned vehicle_aging triad; starting Phase A view migration",
+        "migrations+triad+wiring+seed done; psql validation green (view 4 rows declined-first, cfg=2, registry survives); worker-registration tests pass; committing"
+      ],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "running",
+      "summary": "Generating contract + workflow tests",
+      "artifacts": [],
+      "notes": [
+        "writing scope + workflow + schema-parity tests for service-estimate-rescue",
+        "running pytest for test_ops_service_estimate"
+      ],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "pending",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    }
+  ]
+}
