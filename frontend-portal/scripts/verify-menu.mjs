@@ -182,15 +182,15 @@ test('AC3: grupo ai-ops com as telas remanescentes na ordem coerente (Morning Br
   const leafIds = matchAll(/id:\s*'([^']+)'/g, aiOps).filter((id) => id !== 'ai-ops')
   assert.deepEqual(
     leafIds,
-    ['morning-brief-owner', 'ai-agents-dashboard', 'ai-morning-queue'],
-    'ai-ops deve listar Morning Brief primeiro, depois Painel de Agentes e Fila Matinal',
+    ['morning-brief-owner', 'cockpit-brief-owner', 'ai-agents-dashboard', 'ai-morning-queue'],
+    'ai-ops deve listar Morning Brief, depois Cockpit Matinal (#142), Painel de Agentes e Fila Matinal',
   )
   // E os componentKeys das telas, na mesma ordem, batem com as telas-ancora da IA.
   const compKeys = matchAll(/componentKey:\s*'([^']+)'/g, aiOps)
   assert.deepEqual(
     compKeys,
-    ['morning-brief', 'agents-dashboard', 'findings-queue'],
-    'ai-ops deve mapear morning-brief, agents-dashboard e findings-queue nessa ordem',
+    ['morning-brief', 'dia-cockpit-brief', 'agents-dashboard', 'findings-queue'],
+    'ai-ops deve mapear morning-brief, dia-cockpit-brief (#142), agents-dashboard e findings-queue nessa ordem',
   )
 })
 
