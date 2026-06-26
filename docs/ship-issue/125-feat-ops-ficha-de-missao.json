@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/125",
   "pr": null,
   "prUrl": null,
-  "updatedAt": "2026-06-26T14:09:29.208Z",
+  "updatedAt": "2026-06-26T14:12:39.591Z",
   "steps": [
     {
       "id": "spec",
@@ -34,8 +34,8 @@
     {
       "id": "code",
       "label": "03 · Code",
-      "status": "running",
-      "summary": "",
+      "status": "done",
+      "summary": "Catálogo estático + endpoint /api/ops/agents/catalog + cards de missão + i18n (6 arquivos)",
       "artifacts": [],
       "notes": [
         "Building static agent mission catalog (Python) + GET /api/ops/agents/catalog + mission cards in AgentsDashboard + i18n",
@@ -46,10 +46,12 @@
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "pending",
+      "status": "running",
       "summary": "",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "Writing Python catalog tests + frontend verify-agent-missions.mjs; running both surfaces"
+      ],
       "gate": null
     },
     {
