@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/73",
   "pr": null,
   "prUrl": null,
-  "updatedAt": "2026-06-26T01:26:01.836Z",
+  "updatedAt": "2026-06-26T01:38:05.579Z",
   "steps": [
     {
       "id": "spec",
@@ -34,8 +34,8 @@
     {
       "id": "code",
       "label": "03 · Code",
-      "status": "running",
-      "summary": "",
+      "status": "done",
+      "summary": "migration + app.py execution/dismiss/audit + i18n labels (11 files)",
       "artifacts": [],
       "notes": [
         "reading code: app.py decision handler, migrations, frontend",
@@ -49,10 +49,14 @@
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "pending",
+      "status": "running",
       "summary": "",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "Reading spec, diff, and existing test harnesses",
+        "SQL contract tests green (7/7): AC1 markdown SCD2+view, AC2 idempotency, AC3 disposition+status check, AC4 monitor no-op, AC6 RLS grants+row-level. Writing pytest.",
+        "All layers green: SQL 7/7 (finding_action.test.mjs), pytest 10/10 (test_finding_action_execution.py), frontend 5/5 (verify-finding-labels.mjs). Committing + opening draft PR."
+      ],
       "gate": null
     },
     {

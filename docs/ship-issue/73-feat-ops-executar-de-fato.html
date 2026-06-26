@@ -9,7 +9,7 @@
   .sub{color:#9ca3af;font-size:13px;margin-bottom:16px}
   .sub a{color:#60a5fa;text-decoration:none}
   .bar{height:8px;background:#1f2937;border-radius:99px;overflow:hidden;margin:12px 0 20px}
-  .bar>i{display:block;height:100%;background:#16a34a;width:29%}
+  .bar>i{display:block;height:100%;background:#16a34a;width:43%}
   .banner{background:#7c2d12;color:#fed7aa;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:14px}
   table{width:100%;border-collapse:collapse}
   td{padding:12px 8px;border-top:1px solid #1f2937;vertical-align:top}
@@ -24,7 +24,7 @@
   .foot{color:#6b7280;font-size:12px;margin-top:20px}
 </style></head><body><div class="wrap">
 <h1>ship-issue #73 — feat(ops): executar de fato a ação recomendada após aprovação do agente de veículos</h1>
-<div class="sub"><a href="https://github.com/rodrigoreisdealernet/dealernet-agents/issues/73">issue</a> · branch <code>feature/73-feat-ops-executar-de-fato</code>  · 29% complete</div>
+<div class="sub"><a href="https://github.com/rodrigoreisdealernet/dealernet-agents/issues/73">issue</a> · branch <code>feature/73-feat-ops-executar-de-fato</code>  · 43% complete</div>
 <div class="bar"><i></i></div>
 
 <table><tbody><tr class="done">
@@ -43,21 +43,21 @@
           
           
         </td>
-      </tr><tr class="running">
-        <td class="ic" style="color:#2563eb">◐</td>
-        <td class="lbl">03 · Code<div class="st" style="color:#2563eb">running</div></td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">03 · Code<div class="st" style="color:#16a34a">done</div></td>
         <td class="meta">
-          
+          <div class="sum">migration + app.py execution/dismiss/audit + i18n labels (11 files)</div>
           
           <ul class="notes"><li>reading code: app.py decision handler, migrations, frontend</li><li>writing finding_action migration</li><li>validated migration via psql; adding execute_finding_action in app.py</li><li>adding i18n labels + wiring onDismiss + friendly labels in UI</li><li>committing: migration + execute_finding_action + dismiss + i18n labels</li></ul>
         </td>
-      </tr><tr class="pending">
-        <td class="ic" style="color:#9ca3af">○</td>
-        <td class="lbl">04 · Tests<div class="st" style="color:#9ca3af">pending</div></td>
+      </tr><tr class="running">
+        <td class="ic" style="color:#2563eb">◐</td>
+        <td class="lbl">04 · Tests<div class="st" style="color:#2563eb">running</div></td>
         <td class="meta">
           
           
-          
+          <ul class="notes"><li>Reading spec, diff, and existing test harnesses</li><li>SQL contract tests green (7/7): AC1 markdown SCD2+view, AC2 idempotency, AC3 disposition+status check, AC4 monitor no-op, AC6 RLS grants+row-level. Writing pytest.</li><li>All layers green: SQL 7/7 (finding_action.test.mjs), pytest 10/10 (test_finding_action_execution.py), frontend 5/5 (verify-finding-labels.mjs). Committing + opening draft PR.</li></ul>
         </td>
       </tr><tr class="pending">
         <td class="ic" style="color:#9ca3af">○</td>
@@ -84,5 +84,5 @@
           
         </td>
       </tr></tbody></table>
-<div class="foot">auto-refreshes every 5s · last update 2026-06-26T01:26:01.836Z</div>
+<div class="foot">auto-refreshes every 5s · last update 2026-06-26T01:38:05.579Z</div>
 </div></body></html>
