@@ -281,7 +281,6 @@ def describe_action_effect(finding: FindingRecord) -> DecisionPreview:
         }
 
     return {"on_approve": on_approve, "on_reject": on_reject}
-    pass
 
 
 def _agent_schedule_id(*, agent_key: str, tenant_id: str) -> str:
