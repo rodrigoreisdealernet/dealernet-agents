@@ -40,3 +40,12 @@ export function formatDateTime(v: string | null | undefined): string {
   const d = new Date(v)
   return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString('pt-BR')
 }
+
+// Data sem hora (ex.: vencimento de título 'YYYY-MM-DD' -> '26/06/2026'). Ancora
+// no meio-dia para evitar deslocamento de fuso ao parsear datas puras.
+export function formatDate(v: string | null | undefined): string {
+  if (!v) return '—'
+  const raw = /^\d{4}-\d{2}-\d{2}$/.test(v) ? `${v}T12:00:00` : v
+  const d = new Date(raw)
+  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString('pt-BR')
+}

@@ -25,6 +25,7 @@ from temporalio.client import Client, ScheduleOverlapPolicy
 from temporalio.service import RPCError, RPCStatusCode
 
 from ..config import settings
+from ..schedule_next_run import next_action_time_iso, persist_schedule_next_run
 from ..accounting.export import build_export_package
 from ..integrations import MuleSoftCallbackReceipt, verify_mulesoft_signature
 from ..integrations.registry import ConnectorProvider, build_connector_registry
@@ -991,6 +992,25 @@ class SupabaseServiceClient:
         return await asyncio.to_thread(_call)
 
 
+async def _refresh_next_run_after_trigger(handle: Any, *, agent_key: str, tenant_id: str) -> None:
+    """Re-read the schedule's next fire time after a manual run and persist it.
+
+    Best-effort: only persists Temporal's reported ``next_action_times`` (no cron
+    fallback), so a non-provisioned or disabled schedule stays "no scheduled
+    run". Never raises — a failed refresh must not fail the run-now request.
+    """
+    try:
+        desc = await handle.describe()
+        next_run_at = next_action_time_iso(desc)
+        if next_run_at is not None:
+            await asyncio.to_thread(persist_schedule_next_run, agent_key, tenant_id, next_run_at)
+    except BaseException as exc:  # noqa: BLE001 - refresh is advisory, never fatal
+        logger.warning(
+            "run-now next_run_at refresh skipped",
+            extra={"agent_key": agent_key, "tenant_id": tenant_id, "error": str(exc)},
+        )
+
+
 class TemporalSignalClient:
     def __init__(self, *, temporal_address: str, temporal_namespace: str) -> None:
         self._temporal_address = temporal_address
@@ -1028,6 +1048,7 @@ class TemporalSignalClient:
             if exc.status == RPCStatusCode.NOT_FOUND:
                 raise AgentScheduleNotProvisioned(agent_key) from exc
             raise
+        await _refresh_next_run_after_trigger(handle, agent_key=agent_key, tenant_id=tenant_id)
         return {"agent_key": agent_key, "schedule_id": schedule_id, "status": "triggered"}
 
     async def signal_approve(self, *, finding: FindingRecord, approver: Principal, note: str | None) -> None:

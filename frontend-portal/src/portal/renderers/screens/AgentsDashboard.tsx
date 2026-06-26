@@ -8,6 +8,7 @@ import { useLocale } from '@/i18n/LocaleProvider'
 import { usePortalStore } from '@/portal/store/portalStore'
 import { getAgentStatus, getFindingKpis, runAgentNow, type AgentStatus, type FindingKpis } from '@/portal/lib/agentsApi'
 import { useFindingLabels } from '@/portal/lib/findingLabels'
+import { cadenceForAgent } from '@/portal/lib/cron'
 import { KpiCard, Badge, ProgressBar, ScreenShell, type Tone } from './ui'
 import { formatBRLKpi, formatDateTime } from './format'
 export const I18N_PT_LEGEND_REFERENCE = 'Valores em R$'
@@ -194,6 +195,7 @@ export default function AgentsDashboard() {
           const isRunning = runNowState?.status === 'running'
           const health = agentHealth(a)
           const rate = successRate(a)
+          const cadence = cadenceForAgent(a.agent_key, locale)
           return (
             <div
               key={a.agent_key}
@@ -243,6 +245,17 @@ export default function AgentsDashboard() {
                 </div>
                 <div className="mt-1 text-xs text-muted-foreground">
                   {t('lastRun')}: {formatDateTime(a.last_run_finished_at)} · {a.last_run_status ?? '—'}
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  {t('nextRun')}:{' '}
+                  {a.enabled && a.next_run_at ? (
+                    <>
+                      <span className="tabular-nums">{formatDateTime(a.next_run_at)}</span>
+                      {cadence && <> · {cadence}</>}
+                    </>
+                  ) : (
+                    <span>{t('noSchedule')}</span>
+                  )}
                 </div>
               </button>
               <div className="mt-3 flex flex-wrap items-center gap-2">

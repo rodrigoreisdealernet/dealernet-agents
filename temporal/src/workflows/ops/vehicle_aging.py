@@ -23,6 +23,8 @@ _AI_HEARTBEAT_TIMEOUT = workflow.timedelta(seconds=45)
 
 _WORKFLOW_KEY = "vehicle-aging-analyst"
 
+_SEVERITY_RANK = {"medium": 1, "high": 2, "critical": 3}
+
 
 @dataclass
 class VehicleAgingWorkflowInput:
@@ -108,10 +110,10 @@ class VehicleAgingWorkflow:
                         "tenant_id": inp.tenant_id,
                         "agent_key": _WORKFLOW_KEY,
                         "workflow_id": f"ops-vehicle-aging:{run_id}",
-                        "finding_type": "stock_aging_90d",
+                        "finding_type": str(vehicle.get("finding_type") or ""),
                         "severity": str(vehicle.get("severity") or "medium"),
                         "days_in_stock": int(vehicle.get("days_in_stock") or 0),
-                        "aging_bucket": str(vehicle.get("aging_bucket") or "approaching"),
+                        "signals": list(vehicle.get("signals") or []),
                         "brand": vehicle.get("brand"),
                         "model": vehicle.get("model"),
                         "model_year": vehicle.get("model_year"),
@@ -119,6 +121,9 @@ class VehicleAgingWorkflow:
                         "condition": vehicle.get("condition"),
                         "cost": vehicle.get("cost"),
                         "sale_price": vehicle.get("sale_price"),
+                        "monthly_carry": vehicle.get("monthly_carry"),
+                        "accrued_floor_plan": vehicle.get("accrued_floor_plan"),
+                        "gross_margin": vehicle.get("gross_margin"),
                         "floor_plan_cost": vehicle.get("floor_plan_cost"),
                         "estimated_exposure": vehicle.get("estimated_exposure"),
                         "recommended_action": str(assessment.get("recommended_action") or "monitor"),
@@ -130,7 +135,8 @@ class VehicleAgingWorkflow:
                 )
             surfaced.sort(
                 key=lambda item: (
-                    -int(item.get("days_in_stock") or 0),
+                    -_SEVERITY_RANK.get(str(item.get("severity")), 0),
+                    -float(item.get("estimated_exposure") or 0.0),
                     str(item.get("fingerprint") or ""),
                 )
             )

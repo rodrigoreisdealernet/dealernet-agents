@@ -63,6 +63,7 @@ BEGIN
   DELETE FROM ops_output_schema_registry
   WHERE schema_key NOT IN (
     'vehicle_aging_finding_v1',
+    'vehicle_aging_finding_v2',
     'parts_inventory_finding_v1',
     'service_estimate_finding_v1',
     'collections_finding_v1'
@@ -268,15 +269,23 @@ $$;
 commit;
 
 -- ===========================================================================
--- DIA dealership domain — Vehicle Stock-Aging Analyst fixtures (issue #32)
+-- DIA dealership domain — Vehicle Inventory Analyst fixtures (anticipatory)
 -- Idempotent namespace: source_record_id LIKE 'demo-dia-vehicle-%' (EXATAMENTE 15).
--- Conjunto determinístico que alimenta o contrato do #32
--- (supabase/tests/vehicle_aging_contract.test.mjs): 9 em escopo (em_estoque,
--- days_in_stock >= 75) e 6 controles (5 abaixo de 75d + 1 vendido). Separado do
--- fleet de alto volume acima (demo-dia-fleet-%). days_in_stock é derivado como
--- now()::date - purchase_date, então purchase_date = current_date - N dias.
--- brand/store reutilizam as 4 marcas / 8 lojas existentes p/ manter o owner-brief
--- alinhado. Reuses rental_upsert_entity_current_state sob o guard service_role.
+-- Conjunto determinístico que exercita o motor de SINAIS antecipatórios
+-- (temporal/src/agents/vehicle_inventory_signals.py), substituindo o antigo
+-- aviso "parado há 90 dias". Cada veículo é desenhado para um problema:
+--   * floor_plan_band_escalation: a ≤7 dias de cruzar de faixa / fim da carência
+--     (001 médio, 002/013/015 alto, 003 crítico)
+--   * margin_erosion: floor plan acumulado comendo a margem (004/014 crítico,
+--     006 alto, 005 médio)
+--   * carryover_model_year: novo com ano-modelo atrás do corrente (007 alto 1a,
+--     008 crítico 2a)
+--   * CONTROLES que NÃO disparam nada: 009 (240 DIAS porém margem ampla, faixa
+--     estável, ano corrente — prova de que "velho" não basta), 010 (recém-
+--     chegado saudável), 011 (meia-vida saudável) e 012 (vendido).
+-- days_in_stock = now()::date - purchase_date; model_year é relativo ao ano
+-- corrente para carryover (v_year_now - 1/-2). brand/store reutilizam as 4
+-- marcas / 8 lojas. Reuses rental_upsert_entity_current_state (guard service_role).
 -- ===========================================================================
 
 begin;
@@ -285,27 +294,29 @@ set local request.jwt.claim.role = 'service_role';
 DO $$
 DECLARE
   v_today date := now()::date;
-  -- (sr, days_in_stock, status, brand, store, model, condition, cost) — as 9
-  -- linhas em_estoque com days>=75 produzem a ordem esperada por days desc:
-  -- 009=240, 005=200, 008=160, 002=120, 007=90, 015=89, 014=86, 013=80, 001=75.
+  v_year_now int := extract(year from now())::int;
+  -- (sr, days, status, brand, store, model, condition, cost, sale, my_off)
+  -- my_off só vale p/ 'novo': model_year = v_year_now + my_off (0 atual, -1/-2
+  -- carryover). 'usado' usa model_year fixo 2020 (carryover só checa 'novo').
   v_fix jsonb := jsonb_build_array(
-    jsonb_build_object('sr','demo-dia-vehicle-001','days', 75,'status','em_estoque','brand','Fiat','store','Fiat São Paulo','model','Pulse','condition','usado','cost', 85000),
-    jsonb_build_object('sr','demo-dia-vehicle-002','days',120,'status','em_estoque','brand','Fiat','store','Fiat Campinas','model','Argo','condition','novo','cost', 82000),
-    jsonb_build_object('sr','demo-dia-vehicle-003','days', 40,'status','em_estoque','brand','Volkswagen','store','Volkswagen Porto Alegre','model','Polo','condition','usado','cost', 95000),
-    jsonb_build_object('sr','demo-dia-vehicle-004','days', 30,'status','em_estoque','brand','Volkswagen','store','Volkswagen Curitiba','model','Nivus','condition','novo','cost', 98000),
-    jsonb_build_object('sr','demo-dia-vehicle-005','days',200,'status','em_estoque','brand','Volvo','store','Volvo Caminhões Manaus','model','FH 460','condition','usado','cost',420000),
-    jsonb_build_object('sr','demo-dia-vehicle-006','days', 60,'status','em_estoque','brand','Honda','store','Honda Motos Belo Horizonte','model','CG 160','condition','novo','cost', 18000),
-    jsonb_build_object('sr','demo-dia-vehicle-007','days', 90,'status','em_estoque','brand','Honda','store','Honda Motos Salvador','model','Biz 125','condition','usado','cost', 16000),
-    jsonb_build_object('sr','demo-dia-vehicle-008','days',160,'status','em_estoque','brand','Fiat','store','Fiat São Paulo','model','Toro','condition','novo','cost', 90000),
-    jsonb_build_object('sr','demo-dia-vehicle-009','days',240,'status','em_estoque','brand','Volkswagen','store','Volkswagen Porto Alegre','model','T-Cross','condition','usado','cost', 99000),
-    jsonb_build_object('sr','demo-dia-vehicle-010','days', 20,'status','em_estoque','brand','Volvo','store','Volvo Caminhões Brasília','model','VM 270','condition','novo','cost',460000),
-    jsonb_build_object('sr','demo-dia-vehicle-011','days', 50,'status','em_estoque','brand','Honda','store','Honda Motos Belo Horizonte','model','CB 500','condition','usado','cost', 35000),
-    jsonb_build_object('sr','demo-dia-vehicle-012','days',100,'status','vendido','brand','Fiat','store','Fiat Campinas','model','Mobi','condition','usado','cost', 75000),
-    jsonb_build_object('sr','demo-dia-vehicle-013','days', 80,'status','em_estoque','brand','Volkswagen','store','Volkswagen Curitiba','model','Virtus','condition','novo','cost', 96000),
-    jsonb_build_object('sr','demo-dia-vehicle-014','days', 86,'status','em_estoque','brand','Volvo','store','Volvo Caminhões Manaus','model','FH 540','condition','usado','cost',480000),
-    jsonb_build_object('sr','demo-dia-vehicle-015','days', 89,'status','em_estoque','brand','Honda','store','Honda Motos Salvador','model','XRE 190','condition','novo','cost', 22000)
+    jsonb_build_object('sr','demo-dia-vehicle-001','days', 88,'status','em_estoque','brand','Fiat','store','Fiat São Paulo','model','Pulse','condition','novo','cost', 90000,'sale',112000,'my_off', 0),
+    jsonb_build_object('sr','demo-dia-vehicle-002','days', 28,'status','em_estoque','brand','Volkswagen','store','Volkswagen Curitiba','model','Nivus','condition','novo','cost', 98000,'sale',121000,'my_off', 0),
+    jsonb_build_object('sr','demo-dia-vehicle-003','days',118,'status','em_estoque','brand','Volvo','store','Volvo Caminhões Manaus','model','FH 540','condition','usado','cost',480000,'sale',560000,'my_off', 0),
+    jsonb_build_object('sr','demo-dia-vehicle-004','days',200,'status','em_estoque','brand','Fiat','store','Fiat Campinas','model','Mobi','condition','usado','cost', 90000,'sale', 95000,'my_off', 0),
+    jsonb_build_object('sr','demo-dia-vehicle-005','days', 95,'status','em_estoque','brand','Volkswagen','store','Volkswagen Porto Alegre','model','T-Cross','condition','usado','cost',100000,'sale',105000,'my_off', 0),
+    jsonb_build_object('sr','demo-dia-vehicle-006','days',150,'status','em_estoque','brand','Honda','store','Honda Motos Salvador','model','CB 500','condition','usado','cost', 35000,'sale', 37500,'my_off', 0),
+    jsonb_build_object('sr','demo-dia-vehicle-007','days', 52,'status','em_estoque','brand','Honda','store','Honda Motos Belo Horizonte','model','XRE 300','condition','novo','cost', 22000,'sale', 26000,'my_off',-1),
+    jsonb_build_object('sr','demo-dia-vehicle-008','days', 70,'status','em_estoque','brand','Fiat','store','Fiat São Paulo','model','Toro','condition','novo','cost', 90000,'sale',112000,'my_off',-2),
+    jsonb_build_object('sr','demo-dia-vehicle-009','days',240,'status','em_estoque','brand','Volkswagen','store','Volkswagen Porto Alegre','model','Virtus','condition','usado','cost', 99000,'sale',130000,'my_off', 0),
+    jsonb_build_object('sr','demo-dia-vehicle-010','days', 20,'status','em_estoque','brand','Volkswagen','store','Volkswagen Curitiba','model','Polo','condition','novo','cost', 98000,'sale',121000,'my_off', 0),
+    jsonb_build_object('sr','demo-dia-vehicle-011','days', 50,'status','em_estoque','brand','Honda','store','Honda Motos Belo Horizonte','model','CB 500','condition','usado','cost', 35000,'sale', 44000,'my_off', 0),
+    jsonb_build_object('sr','demo-dia-vehicle-012','days',100,'status','vendido','brand','Fiat','store','Fiat Campinas','model','Argo','condition','usado','cost', 75000,'sale', 88000,'my_off', 0),
+    jsonb_build_object('sr','demo-dia-vehicle-013','days', 86,'status','em_estoque','brand','Volvo','store','Volvo Caminhões Brasília','model','VM 270','condition','usado','cost',200000,'sale',250000,'my_off', 0),
+    jsonb_build_object('sr','demo-dia-vehicle-014','days',160,'status','em_estoque','brand','Volvo','store','Volvo Caminhões Manaus','model','FH 460','condition','usado','cost',120000,'sale',128000,'my_off', 0),
+    jsonb_build_object('sr','demo-dia-vehicle-015','days', 26,'status','em_estoque','brand','Fiat','store','Fiat São Paulo','model','Strada','condition','novo','cost', 82000,'sale', 99000,'my_off', 0)
   );
   v_v jsonb;
+  v_model_year int;
 BEGIN
   PERFORM set_config('request.jwt.claim.role', 'service_role', true);
 
@@ -316,18 +327,21 @@ BEGIN
 
   FOR v_v IN SELECT * FROM jsonb_array_elements(v_fix)
   LOOP
+    v_model_year := CASE
+      WHEN v_v ->> 'condition' = 'novo' THEN v_year_now + (v_v ->> 'my_off')::int
+      ELSE 2020
+    END;
     PERFORM rental_upsert_entity_current_state(
       p_entity_type => 'vehicle',
       p_source_record_id => v_v ->> 'sr',
       p_data => jsonb_build_object(
-        'name', concat_ws(' ', v_v ->> 'brand', v_v ->> 'model',
-          CASE WHEN v_v ->> 'condition' = 'novo' THEN '2026' ELSE '2020' END),
+        'name', concat_ws(' ', v_v ->> 'brand', v_v ->> 'model', v_model_year::text),
         'condition', v_v ->> 'condition',
         'brand', v_v ->> 'brand',
         'model', v_v ->> 'model',
-        'model_year', CASE WHEN v_v ->> 'condition' = 'novo' THEN 2026 ELSE 2020 END,
+        'model_year', v_model_year,
         'cost', (v_v ->> 'cost')::numeric,
-        'sale_price', round((v_v ->> 'cost')::numeric * 1.18, -2),
+        'sale_price', (v_v ->> 'sale')::numeric,
         'purchase_date', to_char(v_today - ((v_v ->> 'days')::int), 'YYYY-MM-DD'),
         'status', v_v ->> 'status',
         'store', v_v ->> 'store',
@@ -412,24 +426,43 @@ $$;
 commit;
 
 -- ===========================================================================
--- Vehicle Stock-Aging Analyst agent config (issue #32)
+-- Vehicle Inventory Analyst agent config (anticipatory stock analysis)
 -- Seeds `vehicle-aging-analyst` for demo-ops-a and demo-ops-b in BOTH the
 -- entity store (entity_type='agent_config'; read by ops_agent_config_current →
 -- ops_load_agent_config and by the worker schedule reconcile) and the base
 -- `ops_agent_config` table (parity). enabled=true but schedule.enabled=false so
--- the recurring run stays off by default. The output schema registry row is
--- owned by migration 20260626140001_vehicle_aging_agent.sql (applied first).
+-- the recurring run stays off by default. The output schema registry row
+-- (`vehicle_aging_finding_v2`) is owned by migration
+-- 20260628120000_vehicle_aging_agent_v2.sql (applied first).
 -- Idempotent via ON CONFLICT upserts; tenants come from the main ops seed above.
 -- ===========================================================================
 DO $$
 DECLARE
   v_agent_key   text  := 'vehicle-aging-analyst';
-  v_schema_key  text  := 'vehicle_aging_finding_v1';
+  v_schema_key  text  := 'vehicle_aging_finding_v2';
   v_model       jsonb := '{"provider":"azure_openai","deployment":"gpt-4.1-mini","api_version":"2024-12-01-preview"}'::jsonb;
-  v_system_prompt text := 'You are the Vehicle Stock-Aging Analyst for a vehicle dealership. Rank in-stock vehicles approaching the 90-day floor-plan exposure line for tenant {tenant_id}. Recommend a reviewable next action (monitor, markdown, transfer, prioritize_sale, wholesale_auction) using days in stock, floor-plan cost, store, and pricing. Never apply markdowns, transfers, or sales automatically; surface evidence and keep uncertainty explicit.';
-  v_user_prompt text := 'Assess vehicle {vehicle_id} ({brand} {model} {model_year}) at store {store} for tenant {tenant_id}. Days in stock: {days_in_stock}. Aging bucket: {aging_bucket}. Floor-plan cost: {floor_plan_cost}. Cost: {cost}. Sale price: {sale_price}. Recommend the next human-approved action with supporting evidence. Evidence:\n{evidence_json}';
+  v_system_prompt text := 'You are the Vehicle Inventory Analyst for a vehicle dealership. Do NOT flag a vehicle merely for being old (everyone already knows how long a unit has sat). Anticipate REAL, non-obvious inventory problems for tenant {tenant_id}. The deterministic engine has already classified the problem (finding_type), its severity and the money exposure — your job is to prioritize it, recommend ONE reviewable action (monitor, markdown, transfer, prioritize_sale, wholesale_auction) and justify it from the evidence. Problem types: floor_plan_band_escalation (the floor-plan financing cost is about to jump to a higher band, or the grace/carência is ending); margin_erosion (accrued floor-plan cost is eating the gross margin or will push the unit underwater); carryover_model_year (a new unit whose model year is behind the current year — leftover/obsolescing). Never apply markdowns, transfers, or sales automatically; surface evidence and keep uncertainty explicit.';
+  v_user_prompt text := 'Assess vehicle {vehicle_id} ({brand} {model} {model_year}) at store {store} for tenant {tenant_id}. Problem: {finding_type}. Signals: {signals}. Days in stock (context only, not the reason): {days_in_stock}. Money exposure: {estimated_exposure}. Monthly floor-plan carry: {monthly_carry}. Accrued floor plan: {accrued_floor_plan}. Gross margin: {gross_margin}. Cost: {cost}. Sale price: {sale_price}. Recommend the next human-approved action with supporting evidence. Evidence:\n{evidence_json}';
   v_tools       jsonb := '[]'::jsonb;
-  v_thresholds  jsonb := '{"aging_warning_days":75,"aging_breach_days":90}'::jsonb;
+  -- Floor-plan carry curve (grace + escalating bands, grounded in the ERP
+  -- CarenciaFloorPlan model) plus per-signal thresholds. Overridable per tenant.
+  v_thresholds  jsonb := '{
+    "floor_plan": {
+      "grace_days": 30,
+      "escalation_window_days": 7,
+      "bands": [
+        {"until_day": 60, "monthly_rate": 0.010},
+        {"until_day": 90, "monthly_rate": 0.015},
+        {"until_day": 120, "monthly_rate": 0.020},
+        {"until_day": null, "monthly_rate": 0.025}
+      ]
+    },
+    "escalation_high_brl": 800,
+    "escalation_critical_brl": 1500,
+    "margin_floor_pct": 0.5,
+    "margin_lookahead_days": 30,
+    "carryover_min_days": 45
+  }'::jsonb;
   v_bounds      jsonb := '{"max_findings_per_run":50,"max_tool_rounds":2}'::jsonb;
   v_schedule    jsonb := '{"cron":"0 6 * * 1-5","enabled":false}'::jsonb;
   v_tenant_keys text[] := ARRAY['demo-ops-a','demo-ops-b'];
@@ -928,6 +961,152 @@ BEGIN
       'source_record_id', 'demo-dia-collection-contact-002'
     )
   );
+END
+$$;
+
+commit;
+
+-- ===========================================================================
+-- DIA — Contas a Receber: volume de demonstração para o agente de cobrança
+-- (collections-prioritizer) e a tela Fast BI "Contas a Receber".
+-- Namespaces idempotentes: customers 'demo-dia-custvol-collections-%' e
+-- receivables 'demo-dia-recvol-%' (NÃO usar 'demo-dia-receivable-' p/ não colidir
+-- com a fixture curada 001..003). ~8 clientes com títulos distribuídos pelas
+-- faixas de atraso (a vencer / 1-30 / 31-60 / 61-90 / 90+) para que o ranking do
+-- agente e os KPIs/aging da tela tenham substância. Escrita sob o guard de
+-- service_role via rental_upsert_entity_current_state (SCD2).
+-- ===========================================================================
+begin;
+set local request.jwt.claim.role = 'service_role';
+
+DO $$
+DECLARE
+  v_today date := now()::date;
+  v_customers jsonb := jsonb_build_array(
+    jsonb_build_object(
+      'sr','demo-dia-custvol-collections-001','name','Transportadora Rio Verde Ltda',
+      'doc','21.334.556/0001-08','segment','transportadora','collector_code','COB-01','collector_name','Marina',
+      'receivables', jsonb_build_array(
+        jsonb_build_object('doc','NF-10412','balance',42500.00,'due_offset',132),
+        jsonb_build_object('doc','NF-10455','balance',18750.00,'due_offset',74),
+        jsonb_build_object('doc','NF-10501','balance',9300.00,'due_offset',12)
+      )
+    ),
+    jsonb_build_object(
+      'sr','demo-dia-custvol-collections-002','name','Oficina Central Mecânica ME',
+      'doc','33.221.118/0001-55','segment','oficina','collector_code','COB-02','collector_name','Rafael',
+      'receivables', jsonb_build_array(
+        jsonb_build_object('doc','NF-20231','balance',6400.00,'due_offset',47),
+        jsonb_build_object('doc','NF-20288','balance',2150.00,'due_offset',8)
+      )
+    ),
+    jsonb_build_object(
+      'sr','demo-dia-custvol-collections-003','name','Locadora Veloz S.A.',
+      'doc','45.678.901/0001-23','segment','locadora','collector_code','COB-01','collector_name','Marina',
+      'receivables', jsonb_build_array(
+        jsonb_build_object('doc','NF-30877','balance',58900.00,'due_offset',96),
+        jsonb_build_object('doc','NF-30912','balance',23400.00,'due_offset',38),
+        jsonb_build_object('doc','NF-30999','balance',15600.00,'due_offset',-9)
+      )
+    ),
+    jsonb_build_object(
+      'sr','demo-dia-custvol-collections-004','name','Comercial Pneus Brasil Ltda',
+      'doc','56.789.012/0001-34','segment','varejo','collector_code','COB-03','collector_name','Beatriz',
+      'receivables', jsonb_build_array(
+        jsonb_build_object('doc','NF-40110','balance',3100.00,'due_offset',-3),
+        jsonb_build_object('doc','NF-40155','balance',4800.00,'due_offset',22)
+      )
+    ),
+    jsonb_build_object(
+      'sr','demo-dia-custvol-collections-005','name','Construtora Horizonte Norte Ltda',
+      'doc','67.890.123/0001-45','segment','construtora','collector_code','COB-02','collector_name','Rafael',
+      'receivables', jsonb_build_array(
+        jsonb_build_object('doc','NF-50320','balance',71200.00,'due_offset',158),
+        jsonb_build_object('doc','NF-50361','balance',12900.00,'due_offset',63)
+      )
+    ),
+    jsonb_build_object(
+      'sr','demo-dia-custvol-collections-006','name','Auto Center Premium Ltda',
+      'doc','78.901.234/0001-56','segment','varejo','collector_code','COB-03','collector_name','Beatriz',
+      'receivables', jsonb_build_array(
+        jsonb_build_object('doc','NF-60777','balance',5400.00,'due_offset',-15),
+        jsonb_build_object('doc','NF-60790','balance',2600.00,'due_offset',-2),
+        jsonb_build_object('doc','NF-60812','balance',1900.00,'due_offset',5)
+      )
+    ),
+    jsonb_build_object(
+      'sr','demo-dia-custvol-collections-007','name','Frota Logística Sul Ltda',
+      'doc','89.012.345/0001-67','segment','transportadora','collector_code','COB-01','collector_name','Marina',
+      'receivables', jsonb_build_array(
+        jsonb_build_object('doc','NF-70533','balance',19800.00,'due_offset',54),
+        jsonb_build_object('doc','NF-70588','balance',27300.00,'due_offset',81)
+      )
+    ),
+    jsonb_build_object(
+      'sr','demo-dia-custvol-collections-008','name','Concessionária Parceira Leste Ltda',
+      'doc','90.123.456/0001-78','segment','concessionaria','collector_code','COB-02','collector_name','Rafael',
+      'receivables', jsonb_build_array(
+        jsonb_build_object('doc','NF-80244','balance',8700.00,'due_offset',29)
+      )
+    )
+  );
+  v_customer jsonb;
+  v_receivable jsonb;
+  v_customer_id uuid;
+  v_offset int;
+BEGIN
+  PERFORM set_config('request.jwt.claim.role', 'service_role', true);
+
+  DELETE FROM entities
+  WHERE entity_type = 'receivable'
+    AND source_record_id LIKE 'demo-dia-recvol-%';
+
+  DELETE FROM entities
+  WHERE entity_type = 'customer'
+    AND source_record_id LIKE 'demo-dia-custvol-collections-%';
+
+  FOR v_customer IN SELECT * FROM jsonb_array_elements(v_customers)
+  LOOP
+    PERFORM rental_upsert_entity_current_state(
+      p_entity_type => 'customer',
+      p_source_record_id => v_customer ->> 'sr',
+      p_data => jsonb_build_object(
+        'name', v_customer ->> 'name',
+        'customer_name', v_customer ->> 'name',
+        'document_number', v_customer ->> 'doc',
+        'segment', v_customer ->> 'segment',
+        'status', 'ativo',
+        'source_record_id', v_customer ->> 'sr'
+      )
+    );
+
+    SELECT id INTO v_customer_id
+    FROM entities
+    WHERE entity_type = 'customer'
+      AND source_record_id = v_customer ->> 'sr';
+
+    FOR v_receivable IN SELECT * FROM jsonb_array_elements(v_customer -> 'receivables')
+    LOOP
+      v_offset := (v_receivable ->> 'due_offset')::int;
+      PERFORM rental_upsert_entity_current_state(
+        p_entity_type => 'receivable',
+        p_source_record_id => format('demo-dia-recvol-%s', v_receivable ->> 'doc'),
+        p_data => jsonb_build_object(
+          'name', format('%s %s', v_customer ->> 'name', v_receivable ->> 'doc'),
+          'customer_id', v_customer_id::text,
+          'customer_name', v_customer ->> 'name',
+          'document_number', v_receivable ->> 'doc',
+          'receivable_type', 'a_receber',
+          'balance', (v_receivable ->> 'balance')::numeric,
+          'due_date', to_char(v_today - v_offset, 'YYYY-MM-DD'),
+          'collector_code', v_customer ->> 'collector_code',
+          'collector_name', v_customer ->> 'collector_name',
+          'status', 'aberto',
+          'source_record_id', format('demo-dia-recvol-%s', v_receivable ->> 'doc')
+        )
+      );
+    END LOOP;
+  END LOOP;
 END
 $$;
 
