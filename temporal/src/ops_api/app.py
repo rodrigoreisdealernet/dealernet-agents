@@ -53,6 +53,10 @@ from ..workflows.ops import (
     RevenueRecognitionWorkflow,
     RevenueRecognitionWorkflowInput,
 )
+from ..workflows.ops.collections_prioritizer import (
+    CollectionsPrioritizerWorkflow,
+    CollectionsPrioritizerWorkflowInput,
+)
 from ..workflows.ops.credit import CreditRiskWorkflow, CreditRiskWorkflowInput
 from ..workflows.ops.disposition_queue import DispositionQueueWorkflow, DispositionQueueWorkflowInput
 from ..workflows.ops.service_estimate_rescue import (
@@ -141,6 +145,10 @@ _MANUAL_RUN_WORKFLOWS: dict[str, tuple[Any, Callable[[str, str], Any]]] = {
     "service-estimate-rescue": (
         ServiceEstimateRescueWorkflow.run,
         lambda tenant_id, locale: ServiceEstimateRescueWorkflowInput(tenant_id=tenant_id),
+    ),
+    "collections-prioritizer": (
+        CollectionsPrioritizerWorkflow.run,
+        lambda tenant_id, locale: CollectionsPrioritizerWorkflowInput(tenant_id=tenant_id),
     ),
 }
 # Keep this assembled to avoid harness-side credential redaction rewriting literal
@@ -829,9 +837,10 @@ class SupabaseServiceClient:
         decision response is never broken.
 
         Assist-only finding types (e.g. ``service-estimate-rescue``'s
-        ``estimate_rescue`` findings) have no executable side effect here: there
-        is no money movement or SMS/outbound contact. Approve/reject/dismiss only
-        persists the disposition and audit trail; such findings return
+        ``estimate_rescue`` findings, and ``collections-prioritizer``'s
+        ``collections_priority`` findings) have no executable side effect here:
+        there is no money movement or SMS/outbound contact. Approve/reject/dismiss
+        only persists the disposition and audit trail; such findings return
         ``{"skipped": True}`` below because they do not match
         ``_VEHICLE_AGING_FINDING_TYPE``.
         """
