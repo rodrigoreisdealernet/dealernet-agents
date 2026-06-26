@@ -697,7 +697,22 @@
       "rejectReasonPrompt": "Enter rejection reason (required).",
       "noteOptional": "Note (optional).",
       "reasonPlaceholder": "Reason…",
-      "notePlaceholder": "Note…"
+      "notePlaceholder": "Note…",
+      "preview": {
+        "title": "What happens next",
+        "branchApprove": "On approve",
+        "branchReject": "On reject",
+        "effectMarkdown": "Applies a {pct} markdown and records the new sale price.",
+        "effectDisposition": "Records the \"{disposition}\" disposition for execution.",
+        "effectMonitorNoop": "Monitors only — no change is applied.",
+        "effectAssistOnly": "Records the recommendation for follow-up; nothing is executed in the DMS.",
+        "effectRejectNoop": "No action is executed — monitored and audited record only.",
+        "sealAssistOnly": "Assist-only",
+        "sealAudited": "Audited",
+        "sealNoop": "No-op",
+        "impactRecoverable": "Recoverable: R$ {amount}",
+        "impactExposure": "Exposure: R$ {amount}"
+      }
     },
     "serviceOrders": {
       "title": "Service Orders",

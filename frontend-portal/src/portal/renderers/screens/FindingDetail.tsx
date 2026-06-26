@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslations } from 'use-intl'
 import ConfirmDialog from '@/portal/components/ui/ConfirmDialog'
-import { decideFinding, getFinding, type FindingDetail as FindingDetailVM } from '@/portal/lib/agentsApi'
+import { decideFinding, getFinding, type DecisionBranch, type FindingDetail as FindingDetailVM } from '@/portal/lib/agentsApi'
 import { useFindingLabels } from '@/portal/lib/findingLabels'
 import type { ScreenProps } from './types'
 import { Badge, severityTone, statusTone } from './ui'
@@ -36,7 +36,7 @@ function evidenceLabelKey(ev: Record<string, unknown>): string | undefined {
 export default function FindingDetail({ params }: ScreenProps) {
   const t = useTranslations('screens.findingDetail')
   const common = useTranslations('common')
-  const { agentLabel } = useFindingLabels()
+  const { agentLabel, actionLabel } = useFindingLabels()
   const findingId = params?.findingId as string | undefined
 
   const [data, setData] = useState<FindingDetailVM | null>(null)
@@ -125,6 +125,49 @@ export default function FindingDetail({ params }: ScreenProps) {
         ? t('decisionRejected')
         : data.status
   const noteLabel = data.status === 'rejected' ? t('decisionReason') : t('decisionNote')
+
+  // Prévia de consequências (issue #126): descreve, de forma determinística, o que
+  // aprovar/recusar realmente faz. O texto e os selos vêm do decision_preview
+  // (espelho do backend describe_action_effect); o valor exibido usa o impacto já
+  // apurado no achado (data.delta).
+  function effectText(b: DecisionBranch): string {
+    switch (b.effect_key) {
+      case 'vehicle_aging.markdown':
+        return t('preview.effectMarkdown', { pct: formatPct(Number(b.params.markdown_pct)) })
+      case 'vehicle_aging.disposition':
+        return t('preview.effectDisposition', { disposition: actionLabel(String(b.params.disposition ?? '')) })
+      case 'generic.monitor_noop':
+        return t('preview.effectMonitorNoop')
+      case 'assist_only.register':
+        return t('preview.effectAssistOnly')
+      case 'generic.reject_noop':
+      default:
+        return t('preview.effectRejectNoop')
+    }
+  }
+
+  function renderBranch(branch: DecisionBranch, header: string) {
+    const impact = branch.value_impact
+    const impactAmount = formatBRLKpi(data?.delta)
+    return (
+      <div className="rounded-md border border-border bg-background p-3">
+        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{header}</div>
+        <p className="mt-1 text-sm text-foreground">{effectText(branch)}</p>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {branch.assist_only && <Badge tone="info">{t('preview.sealAssistOnly')}</Badge>}
+          {branch.is_noop && <Badge tone="neutral">{t('preview.sealNoop')}</Badge>}
+          {branch.audited && <Badge tone="neutral">{t('preview.sealAudited')}</Badge>}
+          {impact && (
+            <Badge tone={impact.kind === 'recoverable' ? 'success' : 'warning'}>
+              {t(impact.kind === 'recoverable' ? 'preview.impactRecoverable' : 'preview.impactExposure', {
+                amount: impactAmount,
+              })}
+            </Badge>
+          )}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex h-full flex-col gap-5 overflow-auto p-5">
@@ -248,6 +291,16 @@ export default function FindingDetail({ params }: ScreenProps) {
         <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {actionErr}
         </div>
+      )}
+
+      {data.status === 'pending_approval' && data.decision_preview && (
+        <section className="rounded-lg border border-border bg-card p-4">
+          <h2 className="mb-3 text-sm font-semibold text-foreground">{t('preview.title')}</h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {renderBranch(data.decision_preview.on_approve, t('preview.branchApprove'))}
+            {renderBranch(data.decision_preview.on_reject, t('preview.branchReject'))}
+          </div>
+        </section>
       )}
 
       {data.status === 'pending_approval' ? (

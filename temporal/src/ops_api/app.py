@@ -9,7 +9,7 @@ import os
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any, Callable, Literal, NoReturn
+from typing import Any, Callable, Literal, NoReturn, TypedDict
 from urllib import error, parse, request
 
 from fastapi import Body, Depends, FastAPI, Header, HTTPException, Request, Response, status
@@ -190,7 +190,93 @@ class FindingRecord:
     proposed_action: str | None = None
 
 
-class AgentScheduleNotProvisioned(Exception):
+# ── Decision preview (issue #126) ───────────────────────────────────────────
+# A deterministic, two-branch description of what Approve vs Reject of a finding
+# actually does. ``describe_action_effect`` is the single source of truth for the
+# action→effect rule: it is REUSED by ``execute_finding_action`` so the preview
+# and the executed effect can never diverge. It is a PURE function over a
+# ``FindingRecord`` (no IO) so both the preview endpoint and execution share it.
+class ValueImpact(TypedDict):
+    amount: float | None
+    currency: str | None
+    kind: Literal["recoverable", "exposure"]
+
+
+class DecisionBranch(TypedDict):
+    effect_key: str
+    is_noop: bool
+    value_impact: ValueImpact | None
+    audited: bool
+    assist_only: bool
+    params: dict[str, Any]
+
+
+class DecisionPreview(TypedDict):
+    on_approve: DecisionBranch
+    on_reject: DecisionBranch
+
+
+def describe_action_effect(finding: FindingRecord) -> DecisionPreview:
+    """Describe both decision branches (approve/reject) for a finding.
+
+    Faithful to ``execute_finding_action``: only ``stock_aging_90d`` findings have
+    an executable effect (markdown / disposition / monitor no-op); every other
+    finding type is assist-only (no DMS write). Reject is always a
+    monitored/audited no-op. ``describe_action_effect`` is reused by
+    ``execute_finding_action`` so the description cannot drift from the effect.
+    """
+    action = (finding.proposed_action or "").strip()
+    on_reject: DecisionBranch = {
+        "effect_key": "generic.reject_noop",
+        "is_noop": True,
+        "value_impact": None,
+        "audited": True,
+        "assist_only": True,
+        "params": {},
+    }
+
+    if finding.finding_type == _VEHICLE_AGING_FINDING_TYPE:
+        if action == "markdown":
+            on_approve: DecisionBranch = {
+                "effect_key": "vehicle_aging.markdown",
+                "is_noop": False,
+                "value_impact": {"amount": None, "currency": None, "kind": "recoverable"},
+                "audited": True,
+                "assist_only": True,
+                "params": {"markdown_pct": DEFAULT_MARKDOWN_PCT},
+            }
+            # Declining a recoverable markdown leaves the value exposed.
+            on_reject["value_impact"] = {"amount": None, "currency": None, "kind": "exposure"}
+        elif action in _PENDING_EXECUTION_ACTIONS:
+            on_approve = {
+                "effect_key": "vehicle_aging.disposition",
+                "is_noop": False,
+                "value_impact": {"amount": None, "currency": None, "kind": "recoverable"},
+                "audited": True,
+                "assist_only": True,
+                "params": {"disposition": action},
+            }
+            on_reject["value_impact"] = {"amount": None, "currency": None, "kind": "exposure"}
+        else:  # monitor / unknown action → audited no-op
+            on_approve = {
+                "effect_key": "generic.monitor_noop",
+                "is_noop": True,
+                "value_impact": None,
+                "audited": True,
+                "assist_only": True,
+                "params": {} if action in ("", "monitor") else {"action": action},
+            }
+    else:  # assist-only agents: records the recommendation, no DMS write
+        on_approve = {
+            "effect_key": "assist_only.register",
+            "is_noop": False,
+            "value_impact": None,
+            "audited": True,
+            "assist_only": True,
+            "params": {},
+        }
+
+    return {"on_approve": on_approve, "on_reject": on_reject}
     pass
 
 
@@ -875,14 +961,18 @@ class SupabaseServiceClient:
             return {"executed": False, "idempotent": True}
 
         try:
-            if action == "markdown":
+            # Reuse the shared action→effect rule so the executed effect can never
+            # diverge from the decision preview (issue #126).
+            effect = describe_action_effect(finding)["on_approve"]
+            effect_key = effect["effect_key"]
+            if effect_key == "vehicle_aging.markdown":
                 current = await self.get_entity_current_version(entity_id=vehicle_id)
                 if current is None or current.entity_type != "vehicle":
                     raise ValueError("vehicle entity not found for markdown")
                 old_price = _coerce_float(current.data.get("sale_price"))
                 if old_price <= 0:
                     raise ValueError("vehicle has missing or non-positive sale_price; markdown not applied")
-                pct = DEFAULT_MARKDOWN_PCT
+                pct = effect["params"]["markdown_pct"]
                 new_price = round(old_price * (1 - pct), 2)
                 await self.append_entity_version(
                     entity_id=vehicle_id,
@@ -891,16 +981,17 @@ class SupabaseServiceClient:
                 )
                 payload = {"old_sale_price": old_price, "new_sale_price": new_price, "markdown_pct": pct}
                 status_value = "executed"
-            elif action in _PENDING_EXECUTION_ACTIONS:
+            elif effect_key == "vehicle_aging.disposition":
                 current = await self.get_entity_current_version(entity_id=vehicle_id)
                 if current is None or current.entity_type != "vehicle":
                     raise ValueError("vehicle entity not found for disposition")
+                disposition = effect["params"]["disposition"]
                 await self.append_entity_version(
                     entity_id=vehicle_id,
                     version_number=current.version_number + 1,
-                    data={**current.data, "disposition": action},
+                    data={**current.data, "disposition": disposition},
                 )
-                payload = {"disposition": action}
+                payload = {"disposition": disposition}
                 status_value = "pending_execution"
             elif action == "monitor":
                 payload = {"note": "monitor"}
@@ -1813,6 +1904,27 @@ def create_app(
             approver_id=payload.approver_id,
             approver_name=payload.approver_name,
         )
+
+    @app.get("/api/ops/findings/{finding_id}")
+    async def get_finding_detail(
+        finding_id: str,
+        principal: Principal = Depends(_principal),
+        client: SupabaseServiceClient = Depends(_supabase_client),
+    ) -> dict[str, Any]:
+        # Read-only finding detail that exposes the deterministic decision preview
+        # (issue #126): what Approve vs Reject actually does, faithful to
+        # execute_finding_action via the shared describe_action_effect rule.
+        tenant_id = await _authorized_tenant_id(principal=principal, client=client)
+        finding = await client.get_finding(finding_id=finding_id, tenant_id=tenant_id)
+        if finding is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Finding not found")
+        return {
+            "id": finding.id,
+            "finding_type": finding.finding_type,
+            "status": finding.status,
+            "proposed_action": finding.proposed_action,
+            "decision_preview": describe_action_effect(finding),
+        }
 
     @app.post("/api/ops/assets/{asset_id}/update-request")
     async def submit_asset_update_request(
