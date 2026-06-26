@@ -6,7 +6,7 @@
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/85",
   "pr": null,
   "prUrl": null,
-  "updatedAt": "2026-06-26T02:35:48.110Z",
+  "updatedAt": "2026-06-26T02:38:23.427Z",
   "steps": [
     {
       "id": "spec",
@@ -36,8 +36,8 @@
     {
       "id": "code",
       "label": "03 · Code",
-      "status": "running",
-      "summary": "",
+      "status": "done",
+      "summary": "seed: 10 veiculos vendidos ontem + 3 OS + 2 part_sale (datas relativas); brief popula 4 marcas",
       "artifacts": [],
       "notes": [
         "Adding curated 'vendido ontem' vehicle block (sold_at=now()-1) + a few concluida OS opened yesterday with revenue so Novos/Usados/AT populate; Pecas stays '—' (view filters entity_type parts_sale, seed uses part_sale = out-of-scope view mismatch).",
@@ -48,10 +48,12 @@
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "pending",
+      "status": "running",
       "summary": "",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "Escrevendo contrato SQL (brief mostra vendas/peças/OS de ontem) + guard de seed relativo; live view e month-to-date, ajustando boundary p/ mês anterior"
+      ],
       "gate": null
     },
     {
