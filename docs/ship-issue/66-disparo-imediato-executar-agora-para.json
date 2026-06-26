@@ -4,9 +4,9 @@
   "slug": "disparo-imediato-executar-agora-para",
   "branch": "feature/66-disparo-imediato-executar-agora-para",
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/66",
-  "pr": null,
-  "prUrl": null,
-  "updatedAt": "2026-06-26T00:22:20.369Z",
+  "pr": "69",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/69",
+  "updatedAt": "2026-06-26T00:31:18.378Z",
   "steps": [
     {
       "id": "spec",
@@ -55,8 +55,8 @@
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "running",
-      "summary": "",
+      "status": "done",
+      "summary": "pytest 74 passed; node --test 6/6 (verify-issue66-wiring)",
       "artifacts": [],
       "notes": [
         "Briefing tester: pytest endpoint + verify-*.mjs UI wiring",
@@ -69,10 +69,14 @@
     {
       "id": "test-review",
       "label": "05 · Test review",
-      "status": "pending",
+      "status": "running",
       "summary": "",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "Auditando cobertura/vanity/weak assertions",
+        "Iteração 1: 2 lacunas reais (403 tenant-unresolved; RPCError não-NOT_FOUND não vira 409). Devolvendo ao tester.",
+        "Iteration 1 added tenant-denied and non-409 generic-error run-now endpoint coverage; pytest green: 76 passed."
+      ],
       "gate": null
     },
     {

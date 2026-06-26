@@ -42,7 +42,7 @@ class _FakeSupabaseClient:
         principal: Principal,
         finding: FindingRecord,
         call_order: list[str],
-        tenant_id: str = "tenant-a-id",
+        tenant_id: str | None = "tenant-a-id",
     ) -> None:
         self._principal = principal
         self.finding = finding
@@ -362,7 +362,7 @@ def _make_client(
     role: str = "branch_manager",
     finding_status: str = "pending_approval",
     principal_tenant: str = "tenant-a",
-    resolved_tenant_id: str = "tenant-a-id",
+    resolved_tenant_id: str | None = "tenant-a-id",
     finding_tenant_id: str = "tenant-a-id",
     can_operate: bool | None = None,
     finding_workflow_id: str | None = "wf-123",
@@ -372,6 +372,7 @@ def _make_client(
     signal_raises: Exception | None = None,
     run_agent_now_raises: Exception | None = None,
     connector_registry: dict[str, ConnectorProvider] | None = None,
+    raise_server_exceptions: bool = True,
 ) -> tuple[TestClient, _FakeSupabaseClient, _FakeTemporalClient, list[str]]:
     principal = Principal(sub="user-1", name="Casey", role=role, tenant=principal_tenant, can_operate=can_operate)
     call_order: list[str] = []
@@ -394,7 +395,7 @@ def _make_client(
         run_agent_now_raises=run_agent_now_raises,
     )
     app = create_app(supabase_client=supabase, temporal_client=temporal, connector_registry=connector_registry)
-    return TestClient(app), supabase, temporal, call_order
+    return TestClient(app, raise_server_exceptions=raise_server_exceptions), supabase, temporal, call_order
 
 
 def _auth_header() -> dict[str, str]:
@@ -571,6 +572,19 @@ def test_ac3_run_agent_now_not_provisioned_returns_409_without_500() -> None:
     assert temporal.run_agent_now_calls == [{"agent_key": "revrec-analyst", "tenant_id": "tenant-a-id"}]
 
 
+def test_ac3_run_agent_now_other_error_is_not_classified_as_409() -> None:
+    client, _, temporal, _ = _make_client(
+        run_agent_now_raises=RuntimeError("temporal down"),
+        raise_server_exceptions=False,
+    )
+
+    response = client.post("/api/ops/agents/revrec-analyst/run", headers=_auth_header())
+
+    assert response.status_code != 409
+    assert response.status_code == 500
+    assert temporal.run_agent_now_calls == [{"agent_key": "revrec-analyst", "tenant_id": "tenant-a-id"}]
+
+
 def test_ac4_run_agent_now_requires_operating_role() -> None:
     client, supabase, temporal, _ = _make_client(role="viewer")
 
@@ -591,6 +605,21 @@ def test_ac4_run_agent_now_rejects_can_operate_false() -> None:
     assert response.json() == {"detail": "Operate permission denied"}
     assert temporal.run_agent_now_calls == []
     assert supabase.tenant_lookups == []
+
+
+def test_ac4_run_agent_now_tenant_access_denied() -> None:
+    client, supabase, temporal, _ = _make_client(
+        role="field_operator",
+        principal_tenant="unknown-tenant",
+        resolved_tenant_id=None,
+    )
+
+    response = client.post("/api/ops/agents/revrec-analyst/run", headers=_auth_header())
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Tenant access denied"}
+    assert supabase.tenant_lookups == ["unknown-tenant"]
+    assert temporal.run_agent_now_calls == []
 
 
 def test_ac4_run_agent_now_scopes_to_authenticated_principal_tenant() -> None:
