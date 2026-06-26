@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import datetime as dt
 import hashlib
 import json
 import logging
@@ -27,6 +28,7 @@ _MIN_SCOPED_VEHICLES = 1
 _MAX_SCOPED_VEHICLES = 500
 
 _SEVERITY_RANK = {"medium": 1, "high": 2, "critical": 3}
+_VEHICLE_BREACH_DAYS = 90
 
 
 def _coerce_int(value: Any) -> int:
@@ -41,6 +43,58 @@ def _coerce_float(value: Any) -> float:
         return float(value)
     except (TypeError, ValueError):
         return 0.0
+
+
+def _parse_date(value: Any) -> dt.date | None:
+    if isinstance(value, dt.datetime):
+        return value.date()
+    if isinstance(value, dt.date):
+        return value
+    if not value:
+        return None
+    try:
+        return dt.date.fromisoformat(str(value)[:10])
+    except ValueError:
+        return None
+
+
+def _iso_midnight_utc(value: dt.date) -> str:
+    return dt.datetime.combine(value, dt.time.min, tzinfo=dt.timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _vehicle_days_to_breach(days_in_stock: Any) -> int | None:
+    if days_in_stock in (None, ""):
+        return None
+    return _VEHICLE_BREACH_DAYS - _coerce_int(days_in_stock)
+
+
+def _vehicle_predicted_breach_at(
+    purchase_date: Any,
+    days_in_stock: Any,
+    *,
+    today: dt.date | None = None,
+) -> str | None:
+    breach_base = _parse_date(purchase_date)
+    if breach_base is None and days_in_stock not in (None, ""):
+        breach_base = (today or dt.date.today()) - dt.timedelta(days=_coerce_int(days_in_stock))
+    if breach_base is None:
+        return None
+    return _iso_midnight_utc(breach_base + dt.timedelta(days=_VEHICLE_BREACH_DAYS))
+
+
+def _vehicle_horizon_severity(days_to_breach: int | None) -> str | None:
+    if days_to_breach is None:
+        return None
+    # The approved AC2 says "attention", but this codebase only supports
+    # medium/high/critical; keep floor-plan severity and only escalate short
+    # horizons into the existing tiers until the owner confirms a new label.
+    return "high" if days_to_breach <= 7 else "medium"
+
+
+def _max_severity(current: str, projected: str | None) -> str:
+    if not projected:
+        return current
+    return max((current, projected), key=lambda value: _SEVERITY_RANK.get(value, 0))
 
 
 def _finding_fingerprint(tenant_id: str, vehicle_id: str, finding_type: str) -> str:
@@ -75,7 +129,7 @@ def ops_scope_vehicle_aging(tenant_id: str, run_context: dict[str, Any]) -> list
         "v_dia_vehicle_current",
         columns=(
             "entity_id,source_record_id,name,condition,brand,model,model_year,"
-            "cost,sale_price,store,status,days_in_stock,floor_plan_cost"
+            "cost,sale_price,store,status,purchase_date,days_in_stock,floor_plan_cost"
         ),
         filters={"status": "em_estoque"},
     )
@@ -90,6 +144,9 @@ def ops_scope_vehicle_aging(tenant_id: str, run_context: dict[str, Any]) -> list
         )
         if not assessment.triggered:
             continue
+        days_to_breach = _vehicle_days_to_breach(row.get("days_in_stock"))
+        predicted_breach_at = _vehicle_predicted_breach_at(row.get("purchase_date"), row.get("days_in_stock"))
+        severity = _max_severity(assessment.severity, _vehicle_horizon_severity(days_to_breach))
         scoped.append(
             {
                 "vehicle_id": vehicle_id,
@@ -104,13 +161,16 @@ def ops_scope_vehicle_aging(tenant_id: str, run_context: dict[str, Any]) -> list
                 "sale_price": _coerce_float(row.get("sale_price")),
                 "store": row.get("store"),
                 "status": row.get("status"),
+                "purchase_date": row.get("purchase_date"),
                 "days_in_stock": _coerce_int(row.get("days_in_stock")),
+                "predicted_breach_at": predicted_breach_at,
+                "days_to_breach": days_to_breach,
                 "floor_plan_cost": round(_coerce_float(row.get("floor_plan_cost")), 2),
                 "monthly_carry": round(assessment.monthly_carry, 2),
                 "accrued_floor_plan": round(assessment.accrued_floor_plan, 2),
                 "gross_margin": round(assessment.gross_margin, 2),
                 "finding_type": assessment.finding_type,
-                "severity": assessment.severity,
+                "severity": severity,
                 "signals": list(assessment.signals),
                 "estimated_exposure": round(assessment.estimated_exposure, 2),
                 "signal_evidence": list(assessment.evidence),
@@ -192,6 +252,8 @@ async def ops_vehicle_aging_assess(vehicle_payload: dict[str, Any], config: dict
     result["vehicle_id"] = str(vehicle_payload.get("vehicle_id") or result.get("vehicle_id") or "")
     result["finding_type"] = str(vehicle_payload.get("finding_type") or FINDING_FLOOR_PLAN_ESCALATION)
     result["days_in_stock"] = _coerce_int(vehicle_payload.get("days_in_stock"))
+    result["predicted_breach_at"] = vehicle_payload.get("predicted_breach_at")
+    result["days_to_breach"] = vehicle_payload.get("days_to_breach")
     result["severity"] = str(vehicle_payload.get("severity") or result.get("severity") or "medium")
     result["signals"] = list(vehicle_payload.get("signals") or [])
     result["estimated_exposure"] = round(_coerce_float(vehicle_payload.get("estimated_exposure")), 2)
@@ -268,7 +330,10 @@ def _vehicle_finding_for_storage(finding: dict[str, Any]) -> dict[str, Any]:
             "model": finding.get("model"),
             "model_year": finding.get("model_year"),
             "store": finding.get("store"),
+            "purchase_date": finding.get("purchase_date"),
             "days_in_stock": finding.get("days_in_stock"),
+            "predicted_breach_at": finding.get("predicted_breach_at"),
+            "days_to_breach": finding.get("days_to_breach"),
             "signals": finding.get("signals"),
             "recommended_action": finding.get("recommended_action"),
             "monthly_carry": finding.get("monthly_carry"),
@@ -311,4 +376,6 @@ __all__ = [
     "ops_scope_vehicle_aging",
     "ops_vehicle_aging_assess",
     "ops_vehicle_aging_expire_out_of_scope_findings",
+    "_vehicle_days_to_breach",
+    "_vehicle_predicted_breach_at",
 ]

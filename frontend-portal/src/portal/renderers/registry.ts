@@ -10,6 +10,8 @@ export const componentRegistry: Record<string, LazyExoticComponent<ComponentType
   // Operations Factory (POC) — ver docs/PRD-portal-dms-frontend-acoplamento.md §7/§9.
   'agents-dashboard': lazy(() => import('@/portal/renderers/screens/AgentsDashboard')),
   'findings-queue': lazy(() => import('@/portal/renderers/screens/FindingsQueue')),
+  // Histórico de execuções por agente (issue #128) — lista read-only das últimas N runs.
+  'agent-run-history': lazy(() => import('@/portal/renderers/screens/AgentRunHistory')),
   'finding-detail': lazy(() => import('@/portal/renderers/screens/FindingDetail')),
   'executive-pack': lazy(() => import('@/portal/renderers/screens/ExecutivePack')),
   // Fast BI (issue #16) — dashboard de Vendas VN/VU.
@@ -38,6 +40,8 @@ export const componentRegistry: Record<string, LazyExoticComponent<ComponentType
   'dia-service-dashboard': lazy(() => import('@/portal/renderers/screens/ServiceDashboard')),
   // Morning Brief do Dono (issue #43) — visão por marca → lojas → ações do agente.
   'morning-brief': lazy(() => import('@/portal/renderers/screens/MorningBrief')),
+  // Cockpit Matinal (issue #142) — segunda experiência visual (Proposta B) com ações reais.
+  'dia-cockpit-brief': lazy(() => import('@/portal/renderers/screens/CockpitBrief')),
   // Contas a Receber (Fast BI) — fonte do agente collections-prioritizer.
   'dia-receivables': lazy(() => import('@/portal/renderers/screens/ReceivablesBI')),
 }

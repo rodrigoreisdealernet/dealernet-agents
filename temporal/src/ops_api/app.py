@@ -12,7 +12,7 @@ from datetime import UTC, datetime
 from typing import Any, Callable, Literal, NoReturn, TypedDict
 from urllib import error, parse, request
 
-from fastapi import Body, Depends, FastAPI, Header, HTTPException, Request, Response, status
+from fastapi import Body, Depends, FastAPI, Header, HTTPException, Query, Request, Response, status
 from prometheus_client import (
     CONTENT_TYPE_LATEST,
     REGISTRY,
@@ -593,6 +593,31 @@ class SupabaseServiceClient:
         if not isinstance(response, list) or not response:
             return None
         return _parse_finding_record(response[0])
+
+    async def get_agent_run_history(
+        self, *, tenant_id: str, agent_key: str, limit: int
+    ) -> list[dict[str, Any]]:
+        """Read the last ``limit`` runs for ``agent_key`` scoped to ``tenant_id``.
+
+        Reads the read-only ``ops_agent_run_history_view`` (issue #128), ordered by
+        ``started_at`` descending. Tenant isolation is enforced by the explicit
+        ``tenant_id`` filter; the surface is strictly read-only.
+        """
+        tenant_id_q = parse.quote(tenant_id, safe="")
+        agent_key_q = parse.quote(agent_key, safe="")
+        response = await self._request_json(
+            method="GET",
+            url=(
+                f"{self._base_url}/rest/v1/ops_agent_run_history_view"
+                f"?tenant_id=eq.{tenant_id_q}&agent_key=eq.{agent_key_q}"
+                "&select=run_id,tenant_id,agent_key,started_at,finished_at,duration,status,findings_emitted"
+                f"&order=started_at.desc&limit={limit}"
+            ),
+            headers=self._service_role_headers(),
+        )
+        if not isinstance(response, list):
+            return []
+        return [row for row in response if isinstance(row, dict)]
 
     async def upsert_integration_config(
         self,
@@ -1722,6 +1747,25 @@ def create_app(
         if tenant_id is None:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Tenant access denied")
         return tenant_id
+
+    @app.get("/api/ops/agents/{agent_key}/runs")
+    async def agent_run_history(
+        agent_key: str,
+        limit: int = Query(default=10, ge=1, le=50),
+        principal: Principal = Depends(_principal),
+        client: SupabaseServiceClient = Depends(_supabase_client),
+    ) -> dict[str, Any]:
+        """Read-only run history for an agent (issue #128, unit U5).
+
+        Returns the last ``limit`` executions of ``agent_key`` for the caller's
+        tenant, ordered by ``started_at`` descending. Strictly read-only and
+        tenant-scoped; ``limit`` is clamped to [1, 50] (default 10).
+        """
+        tenant_id = await _authorized_tenant_id(principal=principal, client=client)
+        runs = await client.get_agent_run_history(
+            tenant_id=tenant_id, agent_key=agent_key, limit=limit
+        )
+        return {"agent_key": agent_key, "runs": runs}
 
     def _require_operate_permission(principal: Principal) -> None:
         if principal.role not in _CAN_OPERATE_ROLES:

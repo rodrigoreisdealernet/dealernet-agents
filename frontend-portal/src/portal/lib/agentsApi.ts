@@ -117,12 +117,19 @@ export interface DecisionPreview {
   on_reject: DecisionBranch
 }
 
+export interface FindingHorizon {
+  predicted_breach_at: string | null
+  days_to_breach: number | null
+}
+
 export interface FindingDetail extends FindingRow {
   run_id: string | null
   workflow_id: string | null
   contract_id: string | null
   line_item_id: string | null
   expected: Record<string, unknown> | null
+  predicted_breach_at: string | null
+  days_to_breach: number | null
   expected_amount: number | null
   billed: Record<string, unknown> | null
   billed_amount: number | null
@@ -286,15 +293,30 @@ export function describeActionEffect(
   return { on_approve: onApprove, on_reject: onReject }
 }
 
+function finiteNumberOrNull(value: unknown): number | null {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null
+  if (typeof value !== 'string' || !value.trim()) return null
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : null
+}
+
+export function extractFindingHorizon(expected: Record<string, unknown> | null): FindingHorizon {
+  const predicted = expected?.predicted_breach_at
+  return {
+    predicted_breach_at: typeof predicted === 'string' && predicted.trim() ? predicted : null,
+    days_to_breach: finiteNumberOrNull(expected?.days_to_breach),
+  }
+}
+
 export async function getFinding(id: string): Promise<FindingDetail> {
   const res = (await supabase
     .from('ops_findings_view')
     .select(FINDING_DETAIL_COLS)
     .eq('id', id)
     .single()) as PgResponse<FindingDetail>
-  const detail = unwrap(res)
-  detail.decision_preview = describeActionEffect(detail)
-  return detail
+  const finding = unwrap(res)
+  finding.decision_preview = describeActionEffect(finding)
+  return { ...finding, ...extractFindingHorizon(finding.expected) }
 }
 
 const HOME_KPI_COLS =
@@ -1155,6 +1177,39 @@ export async function getAgentCatalog(): Promise<AgentMission[]> {
   }
   const body = (await res.json()) as { agents?: AgentMission[] }
   return body.agents ?? []
+}
+
+// ── Histórico de execuções (read-only) — GET /api/ops/agents/{key}/runs (issue #128) ──
+// Lê ops_agent_run_history_view via ops-api (tenant-scoped por JWT). Somente leitura:
+// nenhuma ação altera, cria ou apaga execuções a partir daqui.
+export interface AgentRunHistoryRow {
+  run_id: string
+  tenant_id: string
+  agent_key: string
+  started_at: string | null
+  finished_at: string | null
+  duration: string | null
+  status: string
+  findings_emitted: number
+}
+
+export async function getAgentRunHistory(
+  agentKey: string,
+  limit = 10,
+): Promise<AgentRunHistoryRow[]> {
+  const token = await getAccessToken()
+  if (!token) throw new Error('Sem sessão — faça login antes de ver o histórico.')
+
+  const res = await fetch(
+    `${OPS_API_URL}/agents/${encodeURIComponent(agentKey)}/runs?limit=${encodeURIComponent(String(limit))}`,
+    { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } },
+  )
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(`Histórico falhou (HTTP ${res.status}): ${text.slice(0, 200)}`)
+  }
+  const body = (await res.json()) as { runs?: AgentRunHistoryRow[] }
+  return body.runs ?? []
 }
 
 export async function decideFinding(input: DecideInput): Promise<DecideResult> {

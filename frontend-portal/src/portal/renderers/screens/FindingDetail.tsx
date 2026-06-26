@@ -112,6 +112,14 @@ export default function FindingDetail({ params }: ScreenProps) {
   const directionLabel = overBilled ? t('overBilled') : t('underBilled')
   const directionTone = overBilled ? 'danger' : 'warning'
   const impactColor = overBilled ? 'text-destructive' : 'text-warning'
+  const horizonLabel =
+    data.days_to_breach !== null
+      ? data.days_to_breach < 0
+        ? t('horizonPastDays', { days: Math.abs(data.days_to_breach) })
+        : t('horizonDays', { days: data.days_to_breach })
+      : data.predicted_breach_at
+        ? t('horizonDate', { date: formatDateTime(data.predicted_breach_at) })
+        : null
 
   const approver = data.approver
   const approverName =
@@ -186,6 +194,12 @@ export default function FindingDetail({ params }: ScreenProps) {
           <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('confidence')}</div>
           <div className="text-2xl font-semibold tabular-nums text-foreground">{formatPct(data.confidence)}</div>
         </div>
+        {horizonLabel && (
+          <div>
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('horizon')}</div>
+            <div className="text-2xl font-semibold tabular-nums text-foreground">{horizonLabel}</div>
+          </div>
+        )}
       </div>
 
       <div className="rounded-md border-l-4 border-primary bg-primary/5 p-4">

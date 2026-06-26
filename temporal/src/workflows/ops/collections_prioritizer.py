@@ -101,6 +101,8 @@ class CollectionsPrioritizerWorkflow:
                         "severity": str(customer.get("severity") or "medium"),
                         "total_exposure": float(customer.get("total_exposure") or 0.0),
                         "days_overdue": int(customer.get("max_days_overdue") or customer.get("days_overdue") or 0),
+                        "predicted_breach_at": customer.get("predicted_breach_at"),
+                        "days_to_breach": customer.get("days_to_breach"),
                         "recommended_action": str(assessment.get("recommended_action") or "monitor"),
                         "next_step_note": str(assessment.get("next_step_note") or ""),
                         "evidence": list(assessment.get("evidence") or []),
