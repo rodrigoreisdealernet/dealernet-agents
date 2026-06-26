@@ -403,7 +403,10 @@
       "salesOverTime": "Vendas ao longo do tempo — VN × VU",
       "salesByBrand": "Vendas por marca",
       "units": "Unidades",
-      "mixTitle": "Mix Novos × Usados"
+      "mixTitle": "Mix Novos × Usados",
+      "month": "Mês",
+      "prevMonth": "Mês anterior",
+      "nextMonth": "Próximo mês"
     },
     "serviceDashboard": {
       "title": "Oficina — Fast BI",

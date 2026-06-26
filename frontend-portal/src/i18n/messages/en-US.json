@@ -403,7 +403,10 @@
       "salesOverTime": "Sales over time — NV × UV",
       "salesByBrand": "Sales by brand",
       "units": "Units",
-      "mixTitle": "New × Used mix"
+      "mixTitle": "New × Used mix",
+      "month": "Month",
+      "prevMonth": "Previous month",
+      "nextMonth": "Next month"
     },
     "serviceDashboard": {
       "title": "Service — Fast BI",

@@ -23,6 +23,18 @@ export function formatPct(v: number | null | undefined): string {
   return `${Math.round(pct)}%`
 }
 
+// Rótulo de mês a partir de um period_month ('2026-06-01' -> 'Junho/2026').
+// Acompanha o idioma ativo do portal (default pt-BR); capitaliza a inicial
+// (toLocaleDateString devolve o mês minúsculo) e usa o formato Mês/Ano.
+export function formatMonthLabel(period: string | null | undefined, locale = 'pt-BR'): string {
+  if (!period) return '—'
+  const d = new Date(`${period}T00:00:00`)
+  if (Number.isNaN(d.getTime())) return '—'
+  const month = d.toLocaleDateString(locale, { month: 'long' })
+  const capitalized = month.charAt(0).toUpperCase() + month.slice(1)
+  return `${capitalized}/${d.getFullYear()}`
+}
+
 export function formatDateTime(v: string | null | undefined): string {
   if (!v) return '—'
   const d = new Date(v)
