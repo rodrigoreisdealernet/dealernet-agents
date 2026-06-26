@@ -35,6 +35,7 @@ from temporal.src.workflows.ops import (
 )
 from temporal.src.workflows.ops.credit import CreditRiskWorkflowInput
 from temporal.src.workflows.ops.disposition_queue import DispositionQueueWorkflowInput
+from temporal.src.workflows.ops.service_estimate_rescue import ServiceEstimateRescueWorkflowInput
 from temporal.src.workflows.ops.vehicle_aging import VehicleAgingWorkflowInput
 
 _FLEET_AUDITOR_AGENT_KEY = "fleet-auditor"
@@ -878,6 +879,208 @@ async def test_ac5_temporal_signal_client_maps_missing_schedule_and_propagates_o
         await signal_client.run_agent_now(agent_key="revrec-analyst", tenant_id="tenant-a-id")
 
     assert excinfo.value is internal_error
+
+
+@pytest.mark.asyncio
+async def test_issue115_signal_client_service_estimate_rescue_starts_workflow_directly() -> None:
+    """Issue #115 (AC1/AC2/AC4): a manual run with a non-None locale starts
+    ``ServiceEstimateRescueWorkflow`` directly (status ``started``) instead of
+    falling through to the never-provisioned schedule trigger that produced the
+    old HTTP 409. The workflow input is tenant-only (no locale leakage) and the
+    recurring schedule is never touched (assist-only, off by default).
+    """
+    signal_client = TemporalSignalClient(temporal_address="temporal.example:7233", temporal_namespace="default")
+    handle = _FakeScheduleHandle()
+    fake_temporal_client = _FakeScheduleTemporalClient(handle)
+
+    async def fake_client_instance() -> _FakeScheduleTemporalClient:
+        return fake_temporal_client
+
+    signal_client._client_instance = fake_client_instance  # type: ignore[method-assign]
+
+    result = await signal_client.run_agent_now(
+        agent_key="service-estimate-rescue", tenant_id="tenant-a-id", locale="pt-BR"
+    )
+
+    # AC1/AC2 — the run is started, not 409; the response identifies a started run.
+    assert result["agent_key"] == "service-estimate-rescue"
+    assert result["schedule_id"] == "ops:tenant-a-id:service-estimate-rescue"
+    assert result["status"] == "started"
+    assert result["workflow_id"].startswith("ops:tenant-a-id:service-estimate-rescue:manual:")
+
+    # AC4 — the recurring schedule is never resolved or triggered.
+    assert fake_temporal_client.schedule_ids == []
+    assert handle.trigger_calls == []
+
+    # AC1/AC2 — exactly one workflow started, with the tenant-only input.
+    assert len(fake_temporal_client.started_workflows) == 1
+    started = fake_temporal_client.started_workflows[0]
+    workflow_input = started["workflow_input"]
+    assert isinstance(workflow_input, ServiceEstimateRescueWorkflowInput)
+    assert workflow_input.tenant_id == "tenant-a-id"
+    # Non-Goal — input stays tenant-only; locale must not leak onto the input.
+    assert not hasattr(workflow_input, "locale")
+    assert started["kwargs"]["id"] == result["workflow_id"]
+
+
+@pytest.mark.asyncio
+async def test_issue115_signal_client_service_estimate_rescue_ignores_invalid_locale() -> None:
+    """Issue #115 (AC1/AC2): an invalid/unsupported locale still starts the
+    workflow directly. The resolved locale is echoed in the envelope, but the
+    tenant-only workflow input is unaffected (no locale attribute)."""
+    signal_client = TemporalSignalClient(temporal_address="temporal.example:7233", temporal_namespace="default")
+    handle = _FakeScheduleHandle()
+    fake_temporal_client = _FakeScheduleTemporalClient(handle)
+
+    async def fake_client_instance() -> _FakeScheduleTemporalClient:
+        return fake_temporal_client
+
+    signal_client._client_instance = fake_client_instance  # type: ignore[method-assign]
+
+    result = await signal_client.run_agent_now(
+        agent_key="service-estimate-rescue", tenant_id="tenant-a-id", locale="fr-FR"
+    )
+
+    assert result["status"] == "started"
+    assert result["locale"] == "pt-BR"
+    assert handle.trigger_calls == []
+    assert len(fake_temporal_client.started_workflows) == 1
+    workflow_input = fake_temporal_client.started_workflows[0]["workflow_input"]
+    assert isinstance(workflow_input, ServiceEstimateRescueWorkflowInput)
+    assert workflow_input.tenant_id == "tenant-a-id"
+    assert not hasattr(workflow_input, "locale")
+
+
+@pytest.mark.asyncio
+async def test_issue115_signal_client_service_estimate_rescue_locale_none_falls_back_to_trigger() -> None:
+    """Issue #115 (AC4 / no-regression): with ``locale is None`` the path is
+    unchanged — it still triggers the schedule (status ``triggered``) and starts
+    no workflow directly. This guards the preserved fallback branch."""
+    signal_client = TemporalSignalClient(temporal_address="temporal.example:7233", temporal_namespace="default")
+    handle = _FakeScheduleHandle()
+    fake_temporal_client = _FakeScheduleTemporalClient(handle)
+
+    async def fake_client_instance() -> _FakeScheduleTemporalClient:
+        return fake_temporal_client
+
+    signal_client._client_instance = fake_client_instance  # type: ignore[method-assign]
+
+    result = await signal_client.run_agent_now(agent_key="service-estimate-rescue", tenant_id="tenant-a-id")
+
+    assert result == {
+        "agent_key": "service-estimate-rescue",
+        "schedule_id": "ops:tenant-a-id:service-estimate-rescue",
+        "status": "triggered",
+    }
+    assert fake_temporal_client.schedule_ids == ["ops:tenant-a-id:service-estimate-rescue"]
+    assert handle.trigger_calls == [{"overlap": ScheduleOverlapPolicy.SKIP}]
+    assert fake_temporal_client.started_workflows == []
+
+
+@pytest.mark.asyncio
+async def test_issue115_signal_client_unregistered_agent_with_locale_falls_back_to_trigger() -> None:
+    """Issue #115 (AC6 / no-regression): an agent NOT in the manual-run registry
+    still falls through to the schedule trigger even when a locale is supplied —
+    the fallback path is preserved and surfaces ``AgentScheduleNotProvisioned``
+    (HTTP 409 upstream) when the schedule is missing, rather than a misleading
+    success."""
+    signal_client = TemporalSignalClient(temporal_address="temporal.example:7233", temporal_namespace="default")
+    # ``fleet-auditor`` is a valid ops agent key but has no registered manual-run workflow.
+    handle = _FakeScheduleHandle()
+    fake_temporal_client = _FakeScheduleTemporalClient(handle)
+
+    async def fake_client_instance() -> _FakeScheduleTemporalClient:
+        return fake_temporal_client
+
+    signal_client._client_instance = fake_client_instance  # type: ignore[method-assign]
+
+    result = await signal_client.run_agent_now(
+        agent_key="fleet-auditor", tenant_id="tenant-a-id", locale="en-US"
+    )
+
+    assert result == {
+        "agent_key": "fleet-auditor",
+        "schedule_id": "ops:tenant-a-id:fleet-auditor",
+        "status": "triggered",
+    }
+    assert fake_temporal_client.started_workflows == []
+    assert handle.trigger_calls == [{"overlap": ScheduleOverlapPolicy.SKIP}]
+
+    # And when that agent's schedule is missing, the fallback surfaces the clear error.
+    missing_error = RPCError("missing schedule", RPCStatusCode.NOT_FOUND, b"")
+    missing_handle = _FakeScheduleHandle(trigger_raises=missing_error)
+    missing_temporal_client = _FakeScheduleTemporalClient(missing_handle)
+
+    async def missing_client_instance() -> _FakeScheduleTemporalClient:
+        return missing_temporal_client
+
+    signal_client._client_instance = missing_client_instance  # type: ignore[method-assign]
+
+    with pytest.raises(AgentScheduleNotProvisioned):
+        await signal_client.run_agent_now(agent_key="fleet-auditor", tenant_id="tenant-a-id", locale="en-US")
+    assert missing_temporal_client.started_workflows == []
+
+
+def test_issue115_run_agent_now_endpoint_starts_service_estimate_rescue_with_202_not_409() -> None:
+    """Issue #115 (AC1): POST .../service-estimate-rescue/run with a locale body
+    is routed to the temporal client and returns HTTP 202 (not the old 409). The
+    endpoint forwards the resolved tenant + locale; the direct-start behaviour
+    itself is covered by the signal-client level tests above."""
+    client, supabase, temporal, _ = _make_client(
+        role="field_operator",
+        principal_tenant="tenant-ops",
+        resolved_tenant_id="resolved-tenant-id",
+    )
+
+    response = client.post(
+        "/api/ops/agents/service-estimate-rescue/run",
+        headers=_auth_header(),
+        json={"locale": "pt-BR"},
+    )
+
+    assert response.status_code == 202
+    assert response.json()["agent_key"] == "service-estimate-rescue"
+    assert temporal.run_agent_now_calls == [
+        {"agent_key": "service-estimate-rescue", "tenant_id": "resolved-tenant-id", "locale": "pt-BR"}
+    ]
+    assert supabase.tenant_lookups == ["tenant-ops"]
+
+
+def test_issue115_run_agent_now_endpoint_service_estimate_rescue_without_body_still_202() -> None:
+    """Issue #115 (AC1 / AC6 negative-control): a bodyless manual run for
+    ``service-estimate-rescue`` is also accepted (202) and forwarded without a
+    locale, confirming the agent is a known key (never 404/409 at the endpoint)."""
+    client, supabase, temporal, _ = _make_client(role="field_operator")
+
+    response = client.post("/api/ops/agents/service-estimate-rescue/run", headers=_auth_header())
+
+    assert response.status_code == 202
+    assert temporal.run_agent_now_calls == [
+        {"agent_key": "service-estimate-rescue", "tenant_id": "tenant-a-id"}
+    ]
+
+
+@pytest.mark.parametrize(
+    "agent_key",
+    ["revrec-analyst", "vehicle-aging-analyst", "credit-analyst", "disposition-queue"],
+)
+def test_issue115_run_agent_now_endpoint_existing_agents_unchanged(agent_key: str) -> None:
+    """Issue #115 (AC5 / no-regression): the four already-registered manual-run
+    agents continue to run on demand exactly as before (HTTP 202, forwarded with
+    the resolved tenant)."""
+    client, supabase, temporal, _ = _make_client(
+        role="field_operator",
+        principal_tenant="tenant-ops",
+        resolved_tenant_id="resolved-tenant-id",
+    )
+
+    response = client.post(f"/api/ops/agents/{agent_key}/run", headers=_auth_header())
+
+    assert response.status_code == 202
+    assert response.json()["agent_key"] == agent_key
+    assert temporal.run_agent_now_calls == [
+        {"agent_key": agent_key, "tenant_id": "resolved-tenant-id"}
+    ]
 
 
 def test_reject_requires_reason() -> None:
