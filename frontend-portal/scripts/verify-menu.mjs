@@ -160,18 +160,19 @@ test('AC1: "Trilha de Auditoria" saiu do menu (sem leaf ai-audit-trail nem compo
   assert.ok(!block.includes('Trilha de Auditoria'), "o texto 'Trilha de Auditoria' nao deve sobrar no menu")
 })
 
-test('AC2: a tela audit-trail continua registrada no registry (abrivel por contexto)', () => {
+test('AC2 (atualizado por #97): a tela audit-trail foi removida do registry junto com seu unico entry point', () => {
+  // O #93 mantinha audit-trail no registry para ser aberta a partir de um finding.
+  // O #97 (AC4) remove esse entry point contextual e a propria tela AuditTrail,
+  // ja que ela ficou sem usuarios — substituida pelo historico de decisao.
   const reg = read('src/portal/renderers/registry.ts')
   const regKeys = new Set(matchAll(/'([^']+)'\s*:\s*lazy\(/g, reg))
   assert.ok(
-    regKeys.has('audit-trail'),
-    "audit-trail deve PERMANECER em componentRegistry para abrir a partir de um finding",
+    !regKeys.has('audit-trail'),
+    "audit-trail deve ter sido REMOVIDA do componentRegistry (sem usuarios apos #97)",
   )
-  // resolveComponent('audit-trail') precisa resolver: a chave existe e mapeia para um lazy import.
-  assert.match(
-    reg,
-    /'audit-trail':\s*lazy\(\(\)\s*=>\s*import\(/,
-    "audit-trail deve mapear para um componente lazy em registry.ts",
+  assert.ok(
+    !reg.includes('AuditTrail'),
+    "registry.ts nao deve mais importar a tela AuditTrail",
   )
 })
 
