@@ -190,6 +190,10 @@ class FindingRecord:
     proposed_action: str | None = None
 
 
+class AgentScheduleNotProvisioned(Exception):
+    pass
+
+
 # ── Decision preview (issue #126) ───────────────────────────────────────────
 # A deterministic, two-branch description of what Approve vs Reject of a finding
 # actually does. ``describe_action_effect`` is the single source of truth for the
