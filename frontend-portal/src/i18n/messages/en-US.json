@@ -304,7 +304,16 @@
       "running": "Running…",
       "runSuccess": "Trigger requested",
       "runError": "Run failed",
-      "loadingAgents": "Loading agents…"
+      "loadingAgents": "Loading agents…",
+      "successRate": "Success rate",
+      "failures": "failures",
+      "healthHealthy": "Healthy",
+      "healthAttention": "Attention",
+      "healthFailing": "Failing",
+      "healthIdle": "Idle",
+      "healthDisabled": "Disabled",
+      "noAgents": "No agents configured.",
+      "loadError": "Could not load agents."
     },
     "auditTrail": {
       "title": "Audit Trail",
