@@ -29,7 +29,10 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 
-const CONTAINER = 'supabase_db_dealernet-agents'
+// O nome do container pode ser sobrescrito via SUPABASE_DB_CONTAINER para
+// ambientes de CI que provisionam um container com nome efemero; por padrao usa
+// o container compartilhado local.
+const CONTAINER = process.env.SUPABASE_DB_CONTAINER || 'supabase_db_dealernet-agents'
 
 // Executa um script SQL no Postgres vivo via psql. Retorna {ok,out,err}.
 // -t -A -F'|' = tuplas-only, unaligned, separador pipe (parse simples).

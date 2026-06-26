@@ -4,9 +4,9 @@
   "slug": "feat-ops-executar-de-fato",
   "branch": "feature/73-feat-ops-executar-de-fato",
   "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/73",
-  "pr": null,
-  "prUrl": null,
-  "updatedAt": "2026-06-26T01:38:05.579Z",
+  "pr": "77",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/77",
+  "updatedAt": "2026-06-26T01:56:39.784Z",
   "steps": [
     {
       "id": "spec",
@@ -49,8 +49,8 @@
     {
       "id": "tests",
       "label": "04 · Tests",
-      "status": "running",
-      "summary": "",
+      "status": "done",
+      "summary": "22 tests green: 7 SQL + 10 pytest + 5 frontend",
       "artifacts": [],
       "notes": [
         "Reading spec, diff, and existing test harnesses",
@@ -62,10 +62,15 @@
     {
       "id": "test-review",
       "label": "05 · Test review",
-      "status": "pending",
+      "status": "running",
       "summary": "",
       "artifacts": [],
-      "notes": [],
+      "notes": [
+        "Reviewing 3 test suites against app.py handler + migration; auditing AC1-7 coverage",
+        "CHANGES REQUESTED: branch leaves test_ops_api.py RED (8 approve tests fail, AttributeError execute_finding_action on the shared fake); AC5 dismiss has zero coverage; approve->execute wiring only tested in isolation. New 3 suites (7 SQL + 10 py + 5 fe) pass.",
+        "Posted test review on PR #77 (CHANGES REQUESTED): 3 blockers (red test_ops_api suite / AC5 dismiss uncovered / approve-execute wiring isolation) + 2 weak-assertion notes.",
+        "Fixed CI red: added execute_finding_action + append_audit_event stubs to _FakeSupabaseClient in test_ops_api.py (8 approve tests green again). Added 4 handler tests: approve wires persisted finding to execute_finding_action (AC1-4), reject does not execute, dismiss persists rejected+disposition=dismissed, audits vehicle_finding_dismissed, no signal/no execute (AC5), dismiss-without-contract no-audit. pytest: 90 passed (test_ops_api 80 + execution 10). frontend 5/5. SQL layer env-blocked (shared supabase_db container absent this session)."
+      ],
       "gate": null
     },
     {
