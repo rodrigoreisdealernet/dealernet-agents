@@ -111,6 +111,7 @@ class ServiceEstimateRescueWorkflow:
                         "finding_type": "estimate_rescue",
                         "severity": str(estimate.get("severity") or "medium"),
                         "estimate_status": str(estimate.get("estimate_status") or "pending"),
+                        "valid_from": estimate.get("valid_from"),
                         "line_value": estimate.get("line_value"),
                         "recoverable_value": estimate.get("recoverable_value"),
                         "predicted_breach_at": estimate.get("predicted_breach_at"),
