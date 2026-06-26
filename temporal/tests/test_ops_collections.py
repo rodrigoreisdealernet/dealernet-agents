@@ -101,6 +101,8 @@ def test_collections_finding_for_storage_maps_and_bounds_pii_summary() -> None:
         "customer_id": "cust-1",
         "total_exposure": 9876.54,
         "days_overdue": 120,
+        "predicted_breach_at": None,
+        "days_to_breach": None,
         "recommended_action": "renegotiate",
         "next_step_note": row["expected"]["next_step_note"],
         "evidence_summary": row["evidence"],

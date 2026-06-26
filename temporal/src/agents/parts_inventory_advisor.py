@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import datetime as dt
 from collections.abc import Mapping
 from typing import Any
 
@@ -18,8 +17,6 @@ class PartsInventoryFindingV1(BaseModel):
     recommended_action: str
     quantity_suggested: int = 0
     value_at_risk: float = 0.0
-    predicted_breach_at: dt.datetime | None = None
-    days_to_breach: int | None = None
     evidence: list[str] = Field(default_factory=list)
     confidence: float = 0.0
     rationale: str

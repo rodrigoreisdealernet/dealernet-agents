@@ -121,7 +121,10 @@ def test_vehicle_finding_for_storage_maps_canonical_finding_row() -> None:
         "model": "Kicks",
         "model_year": 2026,
         "store": "Filial Sul",
+        "purchase_date": None,
         "days_in_stock": 86,
+        "predicted_breach_at": None,
+        "days_to_breach": None,
         "signals": [FINDING_FLOOR_PLAN_ESCALATION],
         "recommended_action": "markdown",
         "monthly_carry": 1875.0,
@@ -360,14 +363,14 @@ def test_scope_surfaces_only_signalled_vehicles_ordered_by_severity(fake_vehicle
     assert "veh-fresh" not in ids
     assert "veh-sold" not in ids
 
-    # Ordered by severity desc, then exposure desc: critical margin first,
-    # then high carryover, then medium escalation.
-    assert ids == ["veh-margin", "veh-carry", "veh-esc"]
+    # Ordered by severity desc, then exposure desc. The floor-plan unit is
+    # escalated by its short projected horizon into the existing high tier.
+    assert ids == ["veh-margin", "veh-esc", "veh-carry"]
 
     assert by_id["veh-margin"]["finding_type"] == FINDING_MARGIN_EROSION
     assert by_id["veh-margin"]["severity"] == "critical"
     assert by_id["veh-esc"]["finding_type"] == FINDING_FLOOR_PLAN_ESCALATION
-    assert by_id["veh-esc"]["severity"] == "medium"
+    assert by_id["veh-esc"]["severity"] == "high"
     assert by_id["veh-carry"]["finding_type"] == FINDING_CARRYOVER_MODEL_YEAR
     assert by_id["veh-carry"]["severity"] == "high"
 
@@ -391,7 +394,7 @@ def test_scope_never_fires_on_days_alone(fake_vehicle_view: _FakeSelectClient) -
 
 def test_scope_respects_max_vehicles_bound(fake_vehicle_view: _FakeSelectClient) -> None:
     scoped = ops_scope_vehicle_aging(_TENANT, {"max_vehicles": 2})
-    assert [item["vehicle_id"] for item in scoped] == ["veh-margin", "veh-carry"]
+    assert [item["vehicle_id"] for item in scoped] == ["veh-margin", "veh-esc"]
 
 
 def test_scope_threshold_override_suppresses_carryover(fake_vehicle_view: _FakeSelectClient) -> None:
