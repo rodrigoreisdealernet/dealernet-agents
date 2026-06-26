@@ -1,0 +1,4 @@
+interface:
+  display_name: "Recreate Stack"
+  short_description: "Destroy, rebuild and reseed the whole local stack (clean)"
+  default_prompt: "Use $recreate-stack to recreate the entire local stack from scratch with clean seed-only data and verify everything works."

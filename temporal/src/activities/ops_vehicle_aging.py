@@ -11,21 +11,22 @@ import temporalio.exceptions
 from temporalio import activity
 
 from ..agents.vehicle_aging_analyst import run_vehicle_aging_analyst
+from ..agents.vehicle_inventory_signals import (
+    FINDING_FLOOR_PLAN_ESCALATION,
+    assess_vehicle,
+)
 from . import ops_revrec
 
 logger = logging.getLogger(__name__)
 
 _AGENT_KEY = "vehicle-aging-analyst"
-_FINDING_TYPE = "stock_aging_90d"
 
-# Deterministic scope/severity thresholds (overridable via config.thresholds).
-_DEFAULT_WARNING_DAYS = 75
-_DEFAULT_BREACH_DAYS = 90
+# Cap on how many in-stock vehicles a single run will surface as findings.
 _DEFAULT_MAX_VEHICLES = 200
 _MIN_SCOPED_VEHICLES = 1
 _MAX_SCOPED_VEHICLES = 500
-# Floor-plan exposure window in days below which the high/"imminent" band starts.
-_IMMINENT_WINDOW_DAYS = 5
+
+_SEVERITY_RANK = {"medium": 1, "high": 2, "critical": 3}
 
 
 def _coerce_int(value: Any) -> int:
@@ -42,44 +43,31 @@ def _coerce_float(value: Any) -> float:
         return 0.0
 
 
-def _severity_for_days(
-    days: int,
-    *,
-    warning_days: int = _DEFAULT_WARNING_DAYS,
-    breach_days: int = _DEFAULT_BREACH_DAYS,
-) -> tuple[str, str]:
-    """Deterministic severity + aging bucket from days in stock.
+def _finding_fingerprint(tenant_id: str, vehicle_id: str, finding_type: str) -> str:
+    """SHA-256 dedupe key per (tenant, vehicle, primary finding type).
 
-    warning..(breach-6)  -> medium / approaching   (e.g. 75-84)
-    (breach-5)..breach    -> high   / imminent      (e.g. 85-90)
-    > breach              -> critical / breached     (e.g. 91+)
+    Keying on the finding type (not a fixed legacy string) lets a vehicle move
+    between anticipatory problems over its life without colliding, while still
+    deduping a stable problem run-over-run.
     """
-    imminent_floor = max(warning_days, breach_days - _IMMINENT_WINDOW_DAYS)
-    if days > breach_days:
-        return "critical", "breached"
-    if days >= imminent_floor:
-        return "high", "imminent"
-    return "medium", "approaching"
-
-
-def _stock_aging_fingerprint(tenant_id: str, vehicle_id: str) -> str:
-    return hashlib.sha256(f"{tenant_id}:{vehicle_id}:{_FINDING_TYPE}".encode()).hexdigest()
+    return hashlib.sha256(f"{tenant_id}:{vehicle_id}:{finding_type}".encode()).hexdigest()
 
 
 @activity.defn
 def ops_scope_vehicle_aging(tenant_id: str, run_context: dict[str, Any]) -> list[dict[str, Any]]:
-    """Deterministically scope in-stock vehicles approaching the 90-day floor-plan line.
+    """Deterministically surface in-stock vehicles with an anticipatory problem.
 
-    Reads ``v_dia_vehicle_current`` (NOT any rental_* helper): in-stock vehicles
-    whose derived ``days_in_stock`` is at or beyond the aging-warning threshold,
-    ordered by ``days_in_stock`` descending.  Severity, aging bucket and the
-    SHA-256 dedupe fingerprint are computed here so the run stays deterministic
-    even if the downstream LLM assessment is unavailable.
+    Reads ``v_dia_vehicle_current`` and runs the floor-plan-grounded signal
+    engine (``vehicle_inventory_signals.assess_vehicle``) over every in-stock
+    unit. A vehicle is scoped ONLY when at least one anticipatory signal fires
+    (floor-plan band escalation, margin erosion or model-year carryover) — never
+    merely because it has sat a long time. Finding type, severity, money
+    exposure and the dedupe fingerprint are computed here so the run stays
+    deterministic even if the downstream LLM assessment is unavailable.
     """
     client = ops_revrec._get_ops_persistence_client()  # noqa: SLF001 — shared persistence client
     thresholds = run_context.get("thresholds") if isinstance(run_context.get("thresholds"), Mapping) else {}
-    warning_days = _coerce_int(thresholds.get("aging_warning_days", _DEFAULT_WARNING_DAYS)) or _DEFAULT_WARNING_DAYS
-    breach_days = _coerce_int(thresholds.get("aging_breach_days", _DEFAULT_BREACH_DAYS)) or _DEFAULT_BREACH_DAYS
+    floor_plan_config = thresholds.get("floor_plan") if isinstance(thresholds.get("floor_plan"), Mapping) else None
     max_vehicles = _coerce_int(run_context.get("max_vehicles")) or _DEFAULT_MAX_VEHICLES
     max_vehicles = max(_MIN_SCOPED_VEHICLES, min(max_vehicles, _MAX_SCOPED_VEHICLES))
 
@@ -97,15 +85,11 @@ def ops_scope_vehicle_aging(tenant_id: str, run_context: dict[str, Any]) -> list
         vehicle_id = str(row.get("entity_id") or "")
         if not vehicle_id:
             continue
-        days_in_stock = _coerce_int(row.get("days_in_stock"))
-        if days_in_stock < warning_days:
-            continue
-        severity, aging_bucket = _severity_for_days(
-            days_in_stock,
-            warning_days=warning_days,
-            breach_days=breach_days,
+        assessment = assess_vehicle(
+            row, floor_plan_config=floor_plan_config, thresholds=thresholds
         )
-        floor_plan_cost = round(_coerce_float(row.get("floor_plan_cost")), 2)
+        if not assessment.triggered:
+            continue
         scoped.append(
             {
                 "vehicle_id": vehicle_id,
@@ -120,17 +104,28 @@ def ops_scope_vehicle_aging(tenant_id: str, run_context: dict[str, Any]) -> list
                 "sale_price": _coerce_float(row.get("sale_price")),
                 "store": row.get("store"),
                 "status": row.get("status"),
-                "days_in_stock": days_in_stock,
-                "floor_plan_cost": floor_plan_cost,
-                "estimated_exposure": floor_plan_cost,
-                "severity": severity,
-                "aging_bucket": aging_bucket,
-                "finding_type": _FINDING_TYPE,
-                "fingerprint": _stock_aging_fingerprint(tenant_id, vehicle_id),
+                "days_in_stock": _coerce_int(row.get("days_in_stock")),
+                "floor_plan_cost": round(_coerce_float(row.get("floor_plan_cost")), 2),
+                "monthly_carry": round(assessment.monthly_carry, 2),
+                "accrued_floor_plan": round(assessment.accrued_floor_plan, 2),
+                "gross_margin": round(assessment.gross_margin, 2),
+                "finding_type": assessment.finding_type,
+                "severity": assessment.severity,
+                "signals": list(assessment.signals),
+                "estimated_exposure": round(assessment.estimated_exposure, 2),
+                "signal_evidence": list(assessment.evidence),
+                "fingerprint": _finding_fingerprint(tenant_id, vehicle_id, assessment.finding_type),
             }
         )
 
-    scoped.sort(key=lambda item: (-int(item.get("days_in_stock") or 0), str(item.get("vehicle_id") or "")))
+    # Highest severity first, then largest money exposure, then stable by id.
+    scoped.sort(
+        key=lambda item: (
+            -_SEVERITY_RANK.get(str(item.get("severity")), 0),
+            -float(item.get("estimated_exposure") or 0.0),
+            str(item.get("vehicle_id") or ""),
+        )
+    )
     return scoped[:max_vehicles]
 
 
@@ -155,7 +150,12 @@ async def ops_vehicle_aging_assess(vehicle_payload: dict[str, Any], config: dict
         "cost": str(vehicle_payload.get("cost") or ""),
         "sale_price": str(vehicle_payload.get("sale_price") or ""),
         "days_in_stock": str(vehicle_payload.get("days_in_stock") or ""),
-        "aging_bucket": str(vehicle_payload.get("aging_bucket") or ""),
+        "finding_type": str(vehicle_payload.get("finding_type") or ""),
+        "signals": ", ".join(vehicle_payload.get("signals") or []),
+        "estimated_exposure": str(vehicle_payload.get("estimated_exposure") or ""),
+        "monthly_carry": str(vehicle_payload.get("monthly_carry") or ""),
+        "accrued_floor_plan": str(vehicle_payload.get("accrued_floor_plan") or ""),
+        "gross_margin": str(vehicle_payload.get("gross_margin") or ""),
         "floor_plan_cost": str(vehicle_payload.get("floor_plan_cost") or ""),
         "evidence_json": json.dumps(vehicle_payload, sort_keys=True),
     }
@@ -187,16 +187,26 @@ async def ops_vehicle_aging_assess(vehicle_payload: dict[str, Any], config: dict
     finally:
         heartbeat_task.cancel()
 
-    # Pin the deterministic, money-relevant fields to the scoped view values so a
-    # finding's severity/exposure never depend on free-form model output.
+    # Pin the deterministic, problem-defining fields to the scoped values so a
+    # finding's type/severity/exposure never depend on free-form model output.
     result["vehicle_id"] = str(vehicle_payload.get("vehicle_id") or result.get("vehicle_id") or "")
-    result["finding_type"] = _FINDING_TYPE
+    result["finding_type"] = str(vehicle_payload.get("finding_type") or FINDING_FLOOR_PLAN_ESCALATION)
     result["days_in_stock"] = _coerce_int(vehicle_payload.get("days_in_stock"))
     result["severity"] = str(vehicle_payload.get("severity") or result.get("severity") or "medium")
-    result["aging_bucket"] = str(vehicle_payload.get("aging_bucket") or result.get("aging_bucket") or "approaching")
-    result["estimated_exposure"] = round(_coerce_float(vehicle_payload.get("floor_plan_cost")), 2)
+    result["signals"] = list(vehicle_payload.get("signals") or [])
+    result["estimated_exposure"] = round(_coerce_float(vehicle_payload.get("estimated_exposure")), 2)
+
+    # Surface the deterministic signal evidence first, then any model-provided
+    # detail, de-duplicated and order-preserving.
+    deterministic_evidence = list(vehicle_payload.get("signal_evidence") or [])
+    model_evidence = list(result.get("evidence") or [])
+    merged: list[str] = []
+    for line in [*deterministic_evidence, *model_evidence]:
+        if line and line not in merged:
+            merged.append(line)
+    result["evidence"] = merged
+
     result.setdefault("recommended_action", "monitor")
-    result.setdefault("evidence", [])
     result.setdefault("confidence", 0.0)
     result.setdefault("rationale", "No rationale provided")
     return result
@@ -217,7 +227,7 @@ def ops_vehicle_aging_expire_out_of_scope_findings(
     tenant_id: str,
     in_scope_fingerprints: list[str],
 ) -> int:
-    """Supersede open vehicle-aging findings no longer produced by the current run.
+    """Supersede open vehicle findings no longer produced by the current run.
 
     After a reseed, vehicle UUIDs (and thus fingerprints) change, so stale
     findings never dedupe and linger as ``pending_approval``. This retires any
@@ -240,18 +250,18 @@ def ops_finalize_workflow_run(run_id: str, summary: dict[str, Any]) -> bool:
 
 
 def _vehicle_finding_for_storage(finding: dict[str, Any]) -> dict[str, Any]:
-    """Shape a surfaced vehicle-aging finding into the canonical ``finding`` row.
+    """Shape a surfaced vehicle finding into the canonical ``finding`` row.
 
     The vehicle entity_id is the audit anchor (``contract_id``), there are no
-    line items, and the recoverable ``delta`` is the floor-plan exposure derived
-    from ``v_dia_vehicle_current``.
+    line items, and the recoverable ``delta`` is the money exposure of the
+    primary anticipatory signal.
     """
     vehicle_id = str(finding.get("vehicle_id") or "")
     return {
         **finding,
         "contract_id": vehicle_id,
         "line_item_id": None,
-        "finding_type": str(finding.get("finding_type") or _FINDING_TYPE),
+        "finding_type": str(finding.get("finding_type") or FINDING_FLOOR_PLAN_ESCALATION),
         "severity": str(finding.get("severity") or "medium"),
         "expected": {
             "brand": finding.get("brand"),
@@ -259,8 +269,11 @@ def _vehicle_finding_for_storage(finding: dict[str, Any]) -> dict[str, Any]:
             "model_year": finding.get("model_year"),
             "store": finding.get("store"),
             "days_in_stock": finding.get("days_in_stock"),
-            "aging_bucket": finding.get("aging_bucket"),
+            "signals": finding.get("signals"),
             "recommended_action": finding.get("recommended_action"),
+            "monthly_carry": finding.get("monthly_carry"),
+            "accrued_floor_plan": finding.get("accrued_floor_plan"),
+            "gross_margin": finding.get("gross_margin"),
             "floor_plan_cost": finding.get("floor_plan_cost"),
             "sale_price": finding.get("sale_price"),
             "cost": finding.get("cost"),

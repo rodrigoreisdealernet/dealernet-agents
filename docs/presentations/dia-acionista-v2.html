@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DIA — IA que vigia o caixa da concessionária · Dealernet · Grupo Volaris</title>
+<style>
+  :root{
+    --bg:#eef1f6;
+    --surface:#ffffff;
+    --surface-2:#f7f9fc;
+    --ink:#16243c;
+    --ink-soft:#5b6b85;
+    --ink-faint:#8a97ad;
+    --line:#e1e7f0;
+    --line-strong:#cdd6e4;
+    --brand:#1f63e8;
+    --brand-strong:#0f47c0;
+    --brand-dim:#eaf0fe;
+    --teal:#0f9d8e;
+    --teal-dim:#e3f6f3;
+    --amber:#c47d12;
+    --amber-dim:#fbf1de;
+    --violet:#6a45d6;
+    --violet-dim:#efeafb;
+    --danger:#d6455b;
+    --danger-dim:#fbe8eb;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --shadow:0 1px 2px rgba(16,24,40,.04),0 10px 30px rgba(16,24,40,.07);
+    --shadow-sm:0 1px 2px rgba(16,24,40,.05),0 4px 12px rgba(16,24,40,.05);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);overflow:hidden;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  }
+  #deck{height:100%;position:relative}
+  .slide{
+    position:absolute;inset:0;display:none;flex-direction:column;
+    padding:6vh 7vw 8vh;overflow-y:auto;
+    background:
+      radial-gradient(900px 480px at 88% -8%,rgba(31,99,232,.06),transparent 60%),
+      radial-gradient(720px 420px at -6% 108%,rgba(15,157,142,.05),transparent 60%),
+      var(--bg);
+  }
+  .slide.active{display:flex;animation:rise .4s cubic-bezier(.2,.7,.2,1)}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+  /* ---- typography ---- */
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:.55em;
+    font-size:clamp(11px,1.35vh,13.5px);letter-spacing:.16em;text-transform:uppercase;
+    color:var(--brand);font-weight:800;margin-bottom:1.8vh;
+  }
+  .eyebrow::before{content:"";width:2.4em;height:2px;border-radius:2px;background:var(--brand)}
+  h1{font-size:clamp(34px,7vh,68px);line-height:1.04;letter-spacing:-.022em;font-weight:800}
+  h2{font-size:clamp(24px,4.7vh,44px);line-height:1.1;letter-spacing:-.018em;font-weight:780;margin-bottom:2.2vh}
+  .accent{color:var(--brand)}
+  .lede{font-size:clamp(15px,2.2vh,20px);color:var(--ink-soft);max-width:74ch;line-height:1.55}
+  .lede strong,p strong{color:var(--ink);font-weight:680}
+  .grow{flex:1;display:flex;flex-direction:column;justify-content:center;min-height:0}
+  code{font-family:var(--mono);font-size:.86em;background:var(--surface-2);border:1px solid var(--line);
+    border-radius:5px;padding:.08em .42em;color:var(--brand-strong)}
+
+  /* ---- cards / panels ---- */
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;
+    padding:2.4vh 1.7vw;box-shadow:var(--shadow-sm)}
+  .panel h3{font-size:clamp(15px,2vh,19px);font-weight:740;margin-bottom:.8vh;letter-spacing:-.01em}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.6vw;align-items:stretch}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:1.4vw;align-items:stretch}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:1.3vw;align-items:stretch}
+  .cols-32{display:grid;grid-template-columns:1.35fr 1fr;gap:1.8vw;align-items:stretch}
+
+  .tag{display:inline-block;border-radius:999px;padding:.3em .9em;font-size:clamp(11px,1.5vh,13.5px);
+    font-weight:700;letter-spacing:.01em}
+  .tag.brand{background:var(--brand-dim);color:var(--brand-strong)}
+  .tag.teal{background:var(--teal-dim);color:var(--teal)}
+  .tag.amber{background:var(--amber-dim);color:var(--amber)}
+  .tag.violet{background:var(--violet-dim);color:var(--violet)}
+  .tag.grey{background:var(--surface-2);color:var(--ink-soft);border:1px solid var(--line)}
+
+  .topbar{border-top:3px solid var(--brand);border-radius:16px 16px 14px 14px}
+  .topbar.teal{border-top-color:var(--teal)} .topbar.amber{border-top-color:var(--amber)}
+  .topbar.violet{border-top-color:var(--violet)} .topbar.danger{border-top-color:var(--danger)}
+
+  /* ---- stat / KPI ---- */
+  .stat .num{font-size:clamp(26px,4.4vh,40px);font-weight:820;letter-spacing:-.02em;line-height:1}
+  .stat .lbl{color:var(--ink-soft);font-size:clamp(12px,1.7vh,15px);margin-top:.7vh;line-height:1.35}
+  .num.brand{color:var(--brand)} .num.teal{color:var(--teal)} .num.amber{color:var(--amber)} .num.violet{color:var(--violet)}
+
+  /* ---- bullet lists ---- */
+  ul.points{list-style:none;display:flex;flex-direction:column;gap:1.4vh}
+  ul.points li{padding-left:1.7em;position:relative;font-size:clamp(13.5px,2vh,18px);line-height:1.5;color:var(--ink-soft)}
+  ul.points li::before{content:"";position:absolute;left:.2em;top:.62em;width:.62em;height:.62em;border-radius:3px;
+    background:var(--brand);transform:rotate(45deg)}
+  ul.points li strong{color:var(--ink);font-weight:680}
+  ul.points.tight{gap:.9vh} ul.points.tight li{font-size:clamp(12.5px,1.75vh,16px)}
+  ul.points.teal li::before{background:var(--teal)} ul.points.amber li::before{background:var(--amber)}
+  ul.points.violet li::before{background:var(--violet)}
+
+  /* ---- flow ---- */
+  .flow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;row-gap:1.8vh}
+  .node{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:1.6vh 1.1vw;
+    text-align:center;min-width:8.5vw;display:flex;flex-direction:column;justify-content:center;gap:.5vh;flex:1;
+    box-shadow:var(--shadow-sm)}
+  .node b{font-size:clamp(13px,1.95vh,17px);letter-spacing:-.01em}
+  .node small{color:var(--ink-soft);font-size:clamp(10.5px,1.5vh,13px);line-height:1.4}
+  .node.brand{border-top:3px solid var(--brand)} .node.teal{border-top:3px solid var(--teal)}
+  .node.amber{border-top:3px solid var(--amber)} .node.violet{border-top:3px solid var(--violet)}
+  .node.hero{box-shadow:var(--shadow)}
+  .arrow{align-self:center;color:var(--ink-faint);font-size:clamp(16px,2.6vh,24px);padding:0 .5vw;flex:0 0 auto;user-select:none}
+
+  /* ---- table ---- */
+  .tablewrap{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow-sm)}
+  table{border-collapse:collapse;width:100%;font-size:clamp(12px,1.85vh,16px)}
+  thead th{background:var(--surface-2);color:var(--brand-strong);font-size:.78em;text-transform:uppercase;
+    letter-spacing:.08em;text-align:left;padding:1.3vh 1.1vw;border-bottom:1px solid var(--line)}
+  tbody td{text-align:left;padding:1.25vh 1.1vw;border-bottom:1px solid var(--line);color:var(--ink-soft);
+    line-height:1.42;vertical-align:top}
+  tbody tr:last-child td{border-bottom:none}
+  tbody td b,tbody td strong{color:var(--ink);font-weight:680}
+
+  /* ---- cover ---- */
+  .cover{justify-content:center}
+  .brandline{display:flex;align-items:center;gap:.8em;font-size:clamp(12px,1.7vh,15px);font-weight:800;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:3.4vh}
+  .brandline .dot{width:6px;height:6px;border-radius:50%;background:var(--brand)}
+  .cover .sub{font-size:clamp(16px,2.5vh,23px);color:var(--ink-soft);max-width:60ch;line-height:1.5;margin-top:3vh}
+  .metarow{display:flex;flex-wrap:wrap;gap:.7em;margin-top:4.2vh}
+
+  /* ---- chrome ---- */
+  #progress{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--brand),var(--teal));
+    width:0;transition:width .25s ease;z-index:30}
+  #hud{position:fixed;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:space-between;
+    padding:1.5vh 7vw;font-size:12.5px;color:var(--ink-faint);pointer-events:none;z-index:20}
+  #hud .brand{font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint)}
+  #hud .keys span{font-family:var(--mono);border:1px solid var(--line-strong);border-radius:5px;padding:1px 7px;
+    margin-right:5px;background:var(--surface)}
+  #counter{font-variant-numeric:tabular-nums}
+  #navdots{position:fixed;right:1.6vw;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:9px;z-index:20}
+  #navdots button{width:9px;height:9px;border-radius:50%;border:1px solid var(--line-strong);background:var(--surface);
+    cursor:pointer;padding:0;transition:all .2s ease}
+  #navdots button.on{background:var(--brand);border-color:var(--brand);transform:scale(1.3)}
+  .clickzone{position:fixed;top:0;bottom:0;width:9vw;z-index:15;cursor:pointer}
+  #zoneL{left:0}#zoneR{right:0}
+  .foot{margin-top:2.2vh;color:var(--ink-faint);font-size:clamp(11px,1.55vh,13.5px)}
+
+  @media(max-width:920px){
+    .grid2,.grid3,.grid4,.cols-32{grid-template-columns:1fr}
+    .flow{flex-direction:column}.arrow{transform:rotate(90deg);padding:.3vh 0}
+    #navdots{display:none}.slide{padding:4vh 7vw 11vh}
+  }
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<div id="deck">
+
+  <!-- 1 · Capa -->
+  <section class="slide cover active">
+    <div class="brandline">Dealernet <span class="dot"></span> Grupo Volaris</div>
+    <h1>IA que vigia o <span class="accent">caixa</span><br>da concessionária</h1>
+    <p class="sub">
+      Quatro agentes de inteligência artificial monitoram, de forma contínua, os quatro maiores
+      vazamentos de caixa de uma concessionária — e levam <strong>cada decisão para uma pessoa aprovar</strong>.
+    </p>
+    <div class="metarow">
+      <span class="tag brand">DIA Portal · DMS automotivo</span>
+      <span class="tag teal">4 agentes de IA</span>
+      <span class="tag amber">Prova de conceito funcional</span>
+    </div>
+    <p class="foot">Use <strong>← →</strong> ou clique nas bordas da tela para navegar</p>
+  </section>
+
+  <!-- 2 · A tese -->
+  <section class="slide">
+    <div class="eyebrow">O problema</div>
+    <h2>Toda concessionária perde dinheiro em <span class="accent">quatro frentes silenciosas</span></h2>
+    <div class="grow">
+      <div class="grid4">
+        <div class="panel topbar"><div class="stat"><div class="num brand">01</div><div class="lbl"></div></div>
+          <h3 style="margin-top:1.4vh">Veículos parados</h3>
+          <p class="lede" style="font-size:clamp(12.5px,1.75vh,15px)">Capital imobilizado em estoque que envelhece e desvaloriza a cada dia.</p>
+        </div>
+        <div class="panel topbar teal"><div class="stat"><div class="num teal">02</div></div>
+          <h3 style="margin-top:1.4vh">Estoque de peças</h3>
+          <p class="lede" style="font-size:clamp(12.5px,1.75vh,15px)">Ruptura trava a oficina; excesso prende capital na prateleira.</p>
+        </div>
+        <div class="panel topbar amber"><div class="stat"><div class="num amber">03</div></div>
+          <h3 style="margin-top:1.4vh">Recebíveis vencidos</h3>
+          <p class="lede" style="font-size:clamp(12.5px,1.75vh,15px)">Contas em atraso que ninguém prioriza acabam virando perda.</p>
+        </div>
+        <div class="panel topbar violet"><div class="stat"><div class="num violet">04</div></div>
+          <h3 style="margin-top:1.4vh">Orçamentos de oficina</h3>
+          <p class="lede" style="font-size:clamp(12.5px,1.75vh,15px)">Orçamentos de OS não aprovados são receita de serviço que escorre.</p>
+        </div>
+      </div>
+      <p class="lede" style="margin-top:3.4vh">
+        <strong>A aposta DIA:</strong> um agente de IA dedicado a cada frente, vigiando continuamente —
+        e transformando dado bruto em uma recomendação clara para o gestor agir.
+      </p>
+    </div>
+    <p class="foot">DIA · Dealernet Intelligence Assistant</p>
+  </section>
+
+  <!-- 3 · Os 4 agentes -->
+  <section class="slide">
+    <div class="eyebrow">A solução</div>
+    <h2>Quatro agentes, <span class="accent">quatro alavancas de resultado</span></h2>
+    <div class="grow">
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Agente de IA</th><th>O que vigia</th><th>O que recomenda</th><th>Alavanca de caixa</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><b>Analista de estoque parado</b></td>
+              <td>Veículos com mais de 90 dias em estoque</td>
+              <td>Monitorar · remarcar preço · transferir · priorizar venda · leilão</td>
+              <td>Giro do estoque de veículos</td>
+            </tr>
+            <tr>
+              <td><b>Consultor de estoque de peças</b></td>
+              <td>Rupturas iminentes e excessos</td>
+              <td>Reabastecer agora · quantidade sugerida · valor em risco</td>
+              <td>Disponibilidade × capital em peças</td>
+            </tr>
+            <tr>
+              <td><b>Priorizador de cobranças</b></td>
+              <td>Recebíveis vencidos por cliente</td>
+              <td>Priorizar cliente · próximo passo · exposição total</td>
+              <td>Redução da inadimplência</td>
+            </tr>
+            <tr>
+              <td><b>Resgate de orçamentos de serviço</b></td>
+              <td>Orçamentos de OS travados sem aprovação</td>
+              <td>Contatar cliente · desconto · reprecificar · escalar</td>
+              <td>Receita recuperada na oficina</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="lede" style="margin-top:2.8vh">Cada agente ataca um vazamento específico — e fala a língua do negócio, não a da tecnologia.</p>
+    </div>
+    <p class="foot">Agentes configurados e ativos no produto · <code>temporal/src/agents/</code></p>
+  </section>
+
+  <!-- 4 · Como funciona -->
+  <section class="slide">
+    <div class="eyebrow">Como funciona</div>
+    <h2>De dado bruto a <span class="accent">recomendação auditável</span></h2>
+    <div class="grow">
+      <div class="flow">
+        <div class="node"><b>Dados da<br>concessionária</b><small>veículos, peças,<br>OS, recebíveis</small></div>
+        <div class="arrow">→</div>
+        <div class="node violet hero"><b>Agente de IA</b><small>Azure OpenAI<br>saída estruturada</small></div>
+        <div class="arrow">→</div>
+        <div class="node brand hero"><b>Finding</b><small>recomendação<br>com evidência</small></div>
+        <div class="arrow">→</div>
+        <div class="node amber hero"><b>Fila Matinal</b><small>chega ao gestor</small></div>
+        <div class="arrow">→</div>
+        <div class="node teal hero"><b>Pessoa decide</b><small>aprova ou dispensa</small></div>
+      </div>
+      <div class="grid2" style="margin-top:3vh">
+        <div class="panel topbar brand">
+          <h3>O que vai dentro de um <em>finding</em></h3>
+          <ul class="points tight" style="margin-top:1.2vh">
+            <li><strong>Ação recomendada</strong> — entre opções pré-definidas, nunca livre</li>
+            <li><strong>Valor em risco / exposição</strong> em R$</li>
+            <li><strong>Evidências</strong> que sustentam a recomendação</li>
+            <li><strong>Nível de confiança</strong> e justificativa em texto</li>
+          </ul>
+        </div>
+        <div class="panel topbar teal">
+          <h3>Por que é confiável</h3>
+          <ul class="points tight teal" style="margin-top:1.2vh">
+            <li>A resposta é validada contra um <strong>schema fechado</strong> — o agente não inventa formato</li>
+            <li>Toda recomendação carrega <strong>evidência e confiança</strong> — nada de caixa-preta</li>
+            <li>O gestor vê o <strong>porquê</strong> antes de decidir</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <p class="foot">Saída validada cliente-side contra o schema do agente · sem alucinação de formato</p>
+  </section>
+
+  <!-- 5 · Governança -->
+  <section class="slide">
+    <div class="eyebrow">Governança</div>
+    <h2>Os agentes recomendam. <span class="accent">As pessoas decidem.</span></h2>
+    <div class="grow">
+      <div class="cols-32">
+        <div class="panel topbar amber">
+          <h3>Assist-only por design</h3>
+          <ul class="points amber" style="margin-top:1.4vh">
+            <li>Nenhum agente <strong>envia mensagem</strong>, dá desconto, move dinheiro ou cancela algo sozinho.</li>
+            <li>Cada agente entrega um <strong>finding</strong> — recomendação com evidência, valor em risco e confiança.</li>
+            <li>As recomendações chegam à <strong>Fila Matinal do dono</strong>; ele aprova ou dispensa.</li>
+            <li>Cada decisão fica <strong>registrada e auditável</strong>.</li>
+          </ul>
+        </div>
+        <div class="panel" style="display:flex;flex-direction:column;justify-content:center;gap:1.6vh;background:var(--surface-2)">
+          <div style="text-align:center">
+            <div style="font-size:clamp(34px,6vh,56px)">✋</div>
+            <div style="font-weight:800;font-size:clamp(15px,2.1vh,20px);margin-top:1vh">Humano no controle</div>
+            <p class="lede" style="font-size:clamp(12.5px,1.7vh,15px);margin-top:1vh">
+              A IA acelera o diagnóstico. A autoridade de decidir continua com a operação.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="foot">Aprovações fluem de volta por <em>signals</em> do Temporal · trilha auditável</p>
+  </section>
+
+  <!-- 6 · O produto -->
+  <section class="slide">
+    <div class="eyebrow">A prova — DIA Portal</div>
+    <h2>Um DMS real onde a <span class="accent">IA já opera</span></h2>
+    <div class="grow">
+      <div class="grid3">
+        <div class="panel topbar violet">
+          <span class="tag violet">Cockpit de IA</span>
+          <ul class="points tight violet" style="margin-top:1.4vh">
+            <li>Fila Matinal do dono</li>
+            <li>Fila de Findings</li>
+            <li>Painel de Agentes</li>
+            <li>Pacote Executivo</li>
+          </ul>
+        </div>
+        <div class="panel topbar brand">
+          <span class="tag brand">Fast-BI</span>
+          <ul class="points tight" style="margin-top:1.4vh">
+            <li>Visão do Dono</li>
+            <li>Vendas (VN / VU)</li>
+            <li>Oficina</li>
+            <li>Peças · Estoque de veículos</li>
+          </ul>
+        </div>
+        <div class="panel topbar teal">
+          <span class="tag teal">DMS — operação</span>
+          <ul class="points tight teal" style="margin-top:1.4vh">
+            <li>Veículos / frota</li>
+            <li>Ordens de serviço</li>
+            <li>Peças · venda de peças</li>
+            <li>Empresas · marcas · usuários</li>
+          </ul>
+        </div>
+      </div>
+      <p class="lede" style="margin-top:3vh">
+        Uma <strong>base de dados única</strong> alimenta a operação, o BI e os agentes —
+        <strong>uma fonte de verdade, três superfícies</strong>.
+      </p>
+    </div>
+    <p class="foot">17 telas nativas · <code>frontend-portal/src/portal/renderers/</code></p>
+  </section>
+
+</div>
+
+<div id="navdots"></div>
+<div id="hud">
+  <div class="keys"><span>←</span><span>→</span> navegar &nbsp;·&nbsp; <span>Home</span> início</div>
+  <div class="brand">DIA · Dealernet</div>
+  <div id="counter"></div>
+</div>
+<div class="clickzone" id="zoneL" title="Anterior"></div>
+<div class="clickzone" id="zoneR" title="Próximo"></div>
+
+<script>
+(function(){
+  var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var dots=document.getElementById('navdots');
+  var counter=document.getElementById('counter');
+  var progress=document.getElementById('progress');
+  var i=Math.min(slides.length-1,Math.max(0,(parseInt(location.hash.slice(1),10)||1)-1));
+
+  slides.forEach(function(_,n){
+    var b=document.createElement('button');
+    b.title='Slide '+(n+1);
+    b.addEventListener('click',function(){go(n);});
+    dots.appendChild(b);
+  });
+
+  function go(n){
+    i=Math.min(slides.length-1,Math.max(0,n));
+    slides.forEach(function(s,k){s.classList.toggle('active',k===i);});
+    Array.prototype.forEach.call(dots.children,function(d,k){d.classList.toggle('on',k===i);});
+    counter.textContent=(i+1)+' / '+slides.length;
+    progress.style.width=((i+1)/slides.length*100)+'%';
+    history.replaceState(null,'','#'+(i+1));
+    var active=slides[i]; if(active) active.scrollTop=0;
+  }
+
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();go(i+1);}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();go(i-1);}
+    else if(e.key==='Home'){go(0);}
+    else if(e.key==='End'){go(slides.length-1);}
+  });
+  document.getElementById('zoneL').addEventListener('click',function(){go(i-1);});
+  document.getElementById('zoneR').addEventListener('click',function(){go(i+1);});
+
+  var tx=null;
+  document.addEventListener('touchstart',function(e){tx=e.touches[0].clientX;},{passive:true});
+  document.addEventListener('touchend',function(e){
+    if(tx===null)return;
+    var dx=e.changedTouches[0].clientX-tx;
+    if(Math.abs(dx)>50)go(dx<0?i+1:i-1);
+    tx=null;
+  },{passive:true});
+
+  go(i);
+})();
+</script>
+</body>
+</html>

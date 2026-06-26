@@ -53,10 +53,10 @@ function extractDoBlock(text, marker) {
 
 const SEED = readFileSync(resolve(REPO_ROOT, 'supabase/seed.sql'), 'utf8')
 const MIGRATION = readFileSync(
-  resolve(REPO_ROOT, 'supabase/migrations/20260626140001_vehicle_aging_agent.sql'),
+  resolve(REPO_ROOT, 'supabase/migrations/20260628120000_vehicle_aging_agent_v2.sql'),
   'utf8',
 )
-const AGENT_CONFIG_SEED_BLOCK = extractDoBlock(SEED, 'vehicle_aging_finding_v1')
+const AGENT_CONFIG_SEED_BLOCK = extractDoBlock(SEED, 'vehicle_aging_finding_v2')
 
 const APPLY_FIXTURE = `
 begin;
@@ -175,7 +175,7 @@ select 'prompt',
 })
 
 // ---------------------------------------------------------------------------
-// AC2 (sub-clausula de visibilidade): um achado `stock_aging_90d` do agente
+// AC2 (sub-clausula de visibilidade): um achado `floor_plan_band_escalation` do agente
 //      vehicle-aging-analyst, registrado como pending_approval para um tenant
 //      demo, DEVE aflorar nas views de operacao consumidas pelo painel:
 //        - ops_agent_status_view  (linha do agente: pending_findings, badge,
@@ -189,7 +189,7 @@ select 'prompt',
 // 0 e o teste falharia. delta=12500 e' escolhido para casar identified_delta
 // (status->qualquer) e recoverable_delta (status pending/approved).
 // ---------------------------------------------------------------------------
-test('AC2 visibilidade: achado stock_aging_90d aflora em ops_agent_status_view e ops_finding_kpis', () => {
+test('AC2 visibilidade: achado floor_plan_band_escalation aflora em ops_agent_status_view e ops_finding_kpis', () => {
   const { ok, out, err } = withFixture(`
 create temp table _bl as
 select
@@ -206,7 +206,7 @@ select
 
 insert into finding (tenant_id, agent_key, finding_type, severity, status,
                      expected, billed, evidence, delta, fingerprint)
-select t.id, 'vehicle-aging-analyst', 'stock_aging_90d', 'high', 'pending_approval',
+select t.id, 'vehicle-aging-analyst', 'floor_plan_band_escalation', 'high', 'pending_approval',
        '{}', '{}', '{}', 12500.00, 'issue118-aging-visibility-fixture'
   from tenants t
  where t.tenant_key = 'demo-ops-a';
@@ -229,6 +229,6 @@ select 'vis',
   assert.deepEqual(
     find(out, 'vis'),
     ['vis', '1', '12500.00', 'true', '1', '12500.00'],
-    `achado stock_aging_90d nao aflorou nas views de operacao; saida=${out}`,
+    `achado floor_plan_band_escalation nao aflorou nas views de operacao; saida=${out}`,
   )
 })

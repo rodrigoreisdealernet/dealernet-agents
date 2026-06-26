@@ -161,6 +161,12 @@ const MOCK_MENU: MenuItem[] = applyMenuTranslationKeys([
             icon: 'fa-car',
             spec: { title: 'Estoque de Veículos (Fast BI)', kind: 'component', componentKey: 'dia-vehicle-inventory', icon: 'fa-car' },
           },
+          {
+            id: 'fast-bi-receivables',
+            text: 'Contas a Receber',
+            icon: 'fa-credit-card',
+            spec: { title: 'Contas a Receber', kind: 'component', componentKey: 'dia-receivables', icon: 'fa-credit-card' },
+          },
         ],
       },
     ],
