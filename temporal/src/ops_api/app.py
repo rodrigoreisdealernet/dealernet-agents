@@ -8,7 +8,7 @@ import os
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any, Literal, NoReturn
+from typing import Any, Callable, Literal, NoReturn
 from urllib import error, parse, request
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response, status
@@ -20,7 +20,7 @@ from prometheus_client import (
     generate_latest,
 )
 from pydantic import BaseModel, Field
-from temporalio.client import Client
+from temporalio.client import Client, ScheduleOverlapPolicy
 from temporalio.service import RPCError, RPCStatusCode
 
 from ..config import settings
@@ -68,6 +68,27 @@ _CAN_VIEW_FINANCIALS_ROLES = {"admin", "branch_manager"}
 _LEDGER_FETCH_LIMIT = 50_000
 _TERMINAL_FINDING_STATUSES = {"approved", "rejected", "informational"}
 _FLEET_AUDITOR_AGENT_KEY = "fleet-auditor"
+_OPS_AGENT_KEYS = (
+    "revrec-analyst",
+    "pm-evaluator",
+    "vehicle-aging-analyst",
+    "fleet-auditor",
+    "credit-analyst",
+    "shop-morning-queue",
+    "technician-morning-queue",
+    "branch-morning-brief",
+    "account-health-queue",
+    "integration-exception-queue",
+    "disposition-queue",
+)
+_INTEGRATION_AGENT_KEYS = ("samsara", "coupa", "descartes")
+_AGENT_SCHEDULE_ID_BUILDERS: dict[str, Callable[[str], str]] = {
+    **{agent_key: (lambda tenant_id, key=agent_key: f"ops:{tenant_id}:{key}") for agent_key in _OPS_AGENT_KEYS},
+    **{
+        agent_key: (lambda tenant_id, key=agent_key: f"integration:{tenant_id}:{key}")
+        for agent_key in _INTEGRATION_AGENT_KEYS
+    },
+}
 # Keep this assembled to avoid harness-side credential redaction rewriting literal
 # Authorization header values during automated patch application.
 _BEARER_PREFIX = "Bea" "rer"
@@ -96,6 +117,15 @@ class FindingRecord:
     fingerprint: str
     finding_type: str
     status: str
+
+
+class AgentScheduleNotProvisioned(Exception):
+    pass
+
+
+def _agent_schedule_id(*, agent_key: str, tenant_id: str) -> str:
+    """Mirrors worker.py schedule-id conventions without importing the worker."""
+    return _AGENT_SCHEDULE_ID_BUILDERS[agent_key](tenant_id)
 
 
 class ApproveFindingRequest(BaseModel):
@@ -655,6 +685,17 @@ class TemporalSignalClient:
         self._temporal_namespace = temporal_namespace
         self._client: Client | None = None
         self._lock = asyncio.Lock()
+
+    async def run_agent_now(self, *, agent_key: str, tenant_id: str) -> dict[str, Any]:
+        schedule_id = _agent_schedule_id(agent_key=agent_key, tenant_id=tenant_id)
+        handle = (await self._client_instance()).get_schedule_handle(schedule_id)
+        try:
+            await handle.trigger(overlap=ScheduleOverlapPolicy.SKIP)
+        except RPCError as exc:
+            if exc.status == RPCStatusCode.NOT_FOUND:
+                raise AgentScheduleNotProvisioned(agent_key) from exc
+            raise
+        return {"agent_key": agent_key, "schedule_id": schedule_id, "status": "triggered"}
 
     async def signal_approve(self, *, finding: FindingRecord, approver: Principal, note: str | None) -> None:
         workflow_id = _require_workflow_id(finding)
@@ -2234,6 +2275,51 @@ def create_app(
         if row is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Integration config not found")
         return {"status": "disabled", "connector_key": "netsuite", "config": row}
+
+    @app.post("/api/ops/agents/{agent_key}/run", status_code=status.HTTP_202_ACCEPTED)
+    async def trigger_agent_now(
+        agent_key: str,
+        principal: Principal = Depends(_principal),
+        client: SupabaseServiceClient = Depends(_supabase_client),
+        temporal_client: TemporalSignalClient = Depends(_temporal_client),
+    ) -> dict[str, Any]:
+        if agent_key not in _AGENT_SCHEDULE_ID_BUILDERS:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown agent_key: {agent_key}")
+
+        _require_operate_permission(principal)
+        tenant_id = await _authorized_tenant_id(principal=principal, client=client)
+        try:
+            result = await temporal_client.run_agent_now(agent_key=agent_key, tenant_id=tenant_id)
+        except AgentScheduleNotProvisioned as exc:
+            logger.warning(
+                "manual ops agent trigger not provisioned",
+                extra={
+                    "who": principal.name or principal.sub,
+                    "principal_sub": principal.sub,
+                    "principal_name": principal.name,
+                    "agent_key": agent_key,
+                    "tenant_id": tenant_id,
+                    "status": "not_provisioned",
+                },
+            )
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Agent {agent_key} is disabled or schedule not provisioned",
+            ) from exc
+
+        logger.info(
+            "manual ops agent trigger accepted",
+            extra={
+                "who": principal.name or principal.sub,
+                "principal_sub": principal.sub,
+                "principal_name": principal.name,
+                "agent_key": agent_key,
+                "tenant_id": tenant_id,
+                "schedule_id": result["schedule_id"],
+                "status": result["status"],
+            },
+        )
+        return result
 
     @app.post("/api/ops/branch-morning-brief/trigger", status_code=status.HTTP_202_ACCEPTED)
     async def trigger_branch_morning_brief(

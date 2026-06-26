@@ -1,0 +1,88 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta http-equiv="refresh" content="5">
+<title>ship-issue #66 — Disparo imediato ('Executar agora') para agentes ops existentes</title>
+<style>
+  :root{font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  body{margin:0;background:#0b0e14;color:#e5e7eb;padding:24px}
+  .wrap{max-width:860px;margin:0 auto}
+  h1{font-size:18px;margin:0 0 4px}
+  .sub{color:#9ca3af;font-size:13px;margin-bottom:16px}
+  .sub a{color:#60a5fa;text-decoration:none}
+  .bar{height:8px;background:#1f2937;border-radius:99px;overflow:hidden;margin:12px 0 20px}
+  .bar>i{display:block;height:100%;background:#16a34a;width:86%}
+  .banner{background:#7c2d12;color:#fed7aa;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:14px}
+  table{width:100%;border-collapse:collapse}
+  td{padding:12px 8px;border-top:1px solid #1f2937;vertical-align:top}
+  .ic{font-size:18px;width:28px;text-align:center}
+  .lbl{font-weight:600;width:200px}
+  .st{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
+  .sum{font-size:14px;color:#d1d5db}
+  .arts{margin-top:6px;font-size:13px}
+  .arts a{color:#60a5fa;text-decoration:none}
+  .notes{margin:8px 0 0;padding-left:18px;color:#9ca3af;font-size:12px}
+  tr.running{background:#0f1b33}
+  .foot{color:#6b7280;font-size:12px;margin-top:20px}
+</style></head><body><div class="wrap">
+<h1>ship-issue #66 — Disparo imediato ('Executar agora') para agentes ops existentes</h1>
+<div class="sub"><a href="https://github.com/rodrigoreisdealernet/dealernet-agents/issues/66">issue</a> · branch <code>feature/66-disparo-imediato-executar-agora-para</code> · <a href="https://github.com/rodrigoreisdealernet/dealernet-agents/pull/69">PR #69</a> · 86% complete</div>
+<div class="bar"><i></i></div>
+<div class="banner">🚧 Waiting on human gate: <b>merge</b></div>
+<table><tbody><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">01 · Spec<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">6 critérios de aceite redigidos</div>
+          <div class="arts"><a href="docs/specs/66-disparo-imediato-executar-agora-para.md">Spec</a></div>
+          <ul class="notes"><li>Lendo a issue #66 e redigindo a spec</li><li>Lendo issue #66 e contexto do repositório</li><li>Escrevendo critérios de aceite em linguagem de cliente</li><li>Spec concluída com 6 critérios de aceite e postada no issue</li></ul>
+        </td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">02 · Approve (human gate)<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">Spec aprovada por humano (--approved)</div>
+          
+          
+        </td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">03 · Code<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">Endpoint POST /api/ops/agents/{agent_key}/run + run_agent_now + botão Executar agora (3 arquivos fonte)</div>
+          
+          <ul class="notes"><li>reading approved spec and planning implementation</li><li>inspected backend endpoints, worker schedule ids, frontend API and dashboard</li><li>added generic agent schedule registry, Temporal trigger method, and backend endpoint</li><li>wired AgentsDashboard run-now action and frontend ops-api client</li><li>py_compile and i18n JSON validation green; frontend typecheck skipped without node_modules</li></ul>
+        </td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">04 · Tests<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">pytest 74 passed; node --test 6/6 (verify-issue66-wiring)</div>
+          
+          <ul class="notes"><li>Briefing tester: pytest endpoint + verify-*.mjs UI wiring</li><li>Tester started adding backend and frontend coverage for issue #66</li><li>pytest green: 74 passed for temporal/tests/test_ops_api.py</li><li>frontend wiring green: node --test scripts/verify-issue66-wiring.mjs passed 6/6</li></ul>
+        </td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">05 · Test review<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">1 iteração: +2 testes (403 tenant-denied; RPCError não-NOT_FOUND ≠ 409). pytest 76 passed</div>
+          
+          <ul class="notes"><li>Auditando cobertura/vanity/weak assertions</li><li>Iteração 1: 2 lacunas reais (403 tenant-unresolved; RPCError não-NOT_FOUND não vira 409). Devolvendo ao tester.</li><li>Iteration 1 added tenant-denied and non-409 generic-error run-now endpoint coverage; pytest green: 76 passed.</li></ul>
+        </td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">06 · Code review<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">Aprovado: 6/6 ACs, sem bugs/segurança/regressão. Review postado no PR #69</div>
+          <div class="arts"><a href="https://github.com/rodrigoreisdealernet/dealernet-agents/pull/69">PR review</a></div>
+          <ul class="notes"><li>Revisando diff completo: correção, segurança, regressão</li></ul>
+        </td>
+      </tr><tr class="waiting">
+        <td class="ic" style="color:#d97706">⏸</td>
+        <td class="lbl">Merge (human gate)<div class="st" style="color:#d97706">waiting</div></td>
+        <td class="meta">
+          
+          
+          
+        </td>
+      </tr></tbody></table>
+<div class="foot">auto-refreshes every 5s · last update 2026-06-26T00:36:09.080Z</div>
+</div></body></html>

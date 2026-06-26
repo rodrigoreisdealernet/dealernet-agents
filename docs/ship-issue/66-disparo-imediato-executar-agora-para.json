@@ -1,0 +1,108 @@
+{
+  "issue": "66",
+  "title": "Disparo imediato ('Executar agora') para agentes ops existentes",
+  "slug": "disparo-imediato-executar-agora-para",
+  "branch": "feature/66-disparo-imediato-executar-agora-para",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/66",
+  "pr": "69",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/69",
+  "updatedAt": "2026-06-26T00:36:09.080Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "6 critérios de aceite redigidos",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/66-disparo-imediato-executar-agora-para.md"
+        }
+      ],
+      "notes": [
+        "Lendo a issue #66 e redigindo a spec",
+        "Lendo issue #66 e contexto do repositório",
+        "Escrevendo critérios de aceite em linguagem de cliente",
+        "Spec concluída com 6 critérios de aceite e postada no issue"
+      ],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec aprovada por humano (--approved)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": "Endpoint POST /api/ops/agents/{agent_key}/run + run_agent_now + botão Executar agora (3 arquivos fonte)",
+      "artifacts": [],
+      "notes": [
+        "Briefing coder: endpoint POST /api/ops/agents/{agent_key}/run + botão Executar agora",
+        "reading approved spec and planning implementation",
+        "inspected backend endpoints, worker schedule ids, frontend API and dashboard",
+        "added generic agent schedule registry, Temporal trigger method, and backend endpoint",
+        "wired AgentsDashboard run-now action and frontend ops-api client",
+        "py_compile and i18n JSON validation green; frontend typecheck skipped without node_modules"
+      ],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "done",
+      "summary": "pytest 74 passed; node --test 6/6 (verify-issue66-wiring)",
+      "artifacts": [],
+      "notes": [
+        "Briefing tester: pytest endpoint + verify-*.mjs UI wiring",
+        "Tester started adding backend and frontend coverage for issue #66",
+        "pytest green: 74 passed for temporal/tests/test_ops_api.py",
+        "frontend wiring green: node --test scripts/verify-issue66-wiring.mjs passed 6/6"
+      ],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "done",
+      "summary": "1 iteração: +2 testes (403 tenant-denied; RPCError não-NOT_FOUND ≠ 409). pytest 76 passed",
+      "artifacts": [],
+      "notes": [
+        "Auditando cobertura/vanity/weak assertions",
+        "Iteração 1: 2 lacunas reais (403 tenant-unresolved; RPCError não-NOT_FOUND não vira 409). Devolvendo ao tester.",
+        "Iteration 1 added tenant-denied and non-409 generic-error run-now endpoint coverage; pytest green: 76 passed."
+      ],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "done",
+      "summary": "Aprovado: 6/6 ACs, sem bugs/segurança/regressão. Review postado no PR #69",
+      "artifacts": [
+        {
+          "label": "PR review",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/69"
+        }
+      ],
+      "notes": [
+        "Revisando diff completo: correção, segurança, regressão"
+      ],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "waiting",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": "merge"
+    }
+  ]
+}

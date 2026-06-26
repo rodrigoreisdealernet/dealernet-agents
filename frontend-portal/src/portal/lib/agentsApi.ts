@@ -998,6 +998,27 @@ export interface DecideResult {
   idempotent: boolean
 }
 
+export interface RunAgentNowResult {
+  agent_key: string
+  schedule_id: string
+  status: string
+}
+
+export async function runAgentNow(agentKey: string): Promise<RunAgentNowResult> {
+  const token = await getAccessToken()
+  if (!token) throw new Error('Sem sessão — faça login antes de executar o agente.')
+
+  const res = await fetch(`${OPS_API_URL}/agents/${encodeURIComponent(agentKey)}/run`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(`Execução falhou (HTTP ${res.status}): ${text.slice(0, 200)}`)
+  }
+  return (await res.json()) as RunAgentNowResult
+}
+
 export async function decideFinding(input: DecideInput): Promise<DecideResult> {
   if (input.decision === 'reject' && !input.reason?.trim()) {
     throw new Error('Motivo é obrigatório para rejeitar.')

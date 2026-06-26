@@ -210,6 +210,10 @@
       "pendingLower": "pending",
       "identified": "Identified",
       "lastRun": "Last run",
+      "runNow": "Run now",
+      "running": "Running…",
+      "runSuccess": "Trigger requested",
+      "runError": "Run failed",
       "loadingAgents": "Loading agents…"
     },
     "auditTrail": {
