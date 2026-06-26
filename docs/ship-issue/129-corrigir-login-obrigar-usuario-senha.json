@@ -1,0 +1,97 @@
+{
+  "issue": "129",
+  "title": "Corrigir login (obrigar usuário/senha) e seletor de idioma (apenas bandeira)",
+  "slug": "corrigir-login-obrigar-usuario-senha",
+  "branch": "feature/129-corrigir-login-obrigar-usuario-senha",
+  "issueUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/issues/129",
+  "pr": "132",
+  "prUrl": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/132",
+  "updatedAt": "2026-06-26T12:07:17.744Z",
+  "steps": [
+    {
+      "id": "spec",
+      "label": "01 · Spec",
+      "status": "done",
+      "summary": "5 acceptance criteria drafted",
+      "artifacts": [
+        {
+          "label": "Spec",
+          "href": "docs/specs/129-corrigir-login-obrigar-usuario-senha.md"
+        }
+      ],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "approve",
+      "label": "02 · Approve (human gate)",
+      "status": "done",
+      "summary": "Spec approved by human (--approved)",
+      "artifacts": [],
+      "notes": [],
+      "gate": null
+    },
+    {
+      "id": "code",
+      "label": "03 · Code",
+      "status": "done",
+      "summary": "Login.tsx (-noValidate), TopBar.tsx (flag-only trigger); 2 files",
+      "artifacts": [],
+      "notes": [
+        "Editing Login.tsx (remove noValidate) and TopBar.tsx (flag-only trigger)",
+        "Committed 96650de: removed noValidate from login form; trigger now flag-only; dropped unused Languages import. Static review only (no node_modules)."
+      ],
+      "gate": null
+    },
+    {
+      "id": "tests",
+      "label": "04 · Tests",
+      "status": "done",
+      "summary": "1 new verify script (5 tests); full suite 195 pass",
+      "artifacts": [],
+      "notes": [
+        "Reading diff/spec/sibling verify scripts; authoring verify-login-language-ux.mjs (source-level asserts for Login noValidate/required + TopBar flag-only trigger)",
+        "Authored verify-login-language-ux.mjs (5 tests, all AC). Appended to package.json test list. Updated stale verify-i18n-wiring assertion that required the removed <Languages> icon. Full npm test green: 195 pass / 0 fail."
+      ],
+      "gate": null
+    },
+    {
+      "id": "test-review",
+      "label": "05 · Test review",
+      "status": "done",
+      "summary": "1 iteration — PASS, no gaps",
+      "artifacts": [],
+      "notes": [
+        "Reading test files and source under test",
+        "PASS — 5/5 tests, fix-pinning tests verified to fail on pre-fix; i18n-wiring edit legitimate; no problems. Comment posted on PR #132"
+      ],
+      "gate": null
+    },
+    {
+      "id": "code-review",
+      "label": "06 · Code review",
+      "status": "done",
+      "summary": "APPROVE — no blocking issues",
+      "artifacts": [
+        {
+          "label": "PR review",
+          "href": "https://github.com/rodrigoreisdealernet/dealernet-agents/pull/132"
+        }
+      ],
+      "notes": [
+        "Reviewing full diff vs main: Login.tsx noValidate removal, TopBar flag-only trigger, scope/regression checks",
+        "Review posted on PR #132: APPROVE verdict (self-approval blocked by gh, posted as comment). No blocking issues; 15/15 verify tests green."
+      ],
+      "gate": null
+    },
+    {
+      "id": "merge",
+      "label": "Merge (human gate)",
+      "status": "waiting",
+      "summary": "",
+      "artifacts": [],
+      "notes": [],
+      "gate": "merge"
+    }
+  ]
+}
