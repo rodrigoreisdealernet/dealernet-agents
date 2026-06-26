@@ -81,7 +81,7 @@ def test_collections_finding_for_storage_maps_and_bounds_pii_summary() -> None:
         "next_step_note": long_note,
         "evidence": [f"note-{idx}-" + long_note for idx in range(7)],
         "confidence": 0.83,
-        "rationale": "high exposure and old promise note",
+        "rationale": "PROMISE-NOTE-SECRET " + ("z" * 600),
     }
 
     row = _collections_finding_for_storage(finding)
@@ -107,6 +107,12 @@ def test_collections_finding_for_storage_maps_and_bounds_pii_summary() -> None:
     }
     assert len(row["expected"]["next_step_note"]) <= 240
     assert row["expected"]["next_step_note"].endswith("…")
+
+    # SEC-3/AC-17: persisted rationale is bounded so model output cannot echo a
+    # full contact-note transcript verbatim into the finding row / audit event.
+    assert len(row["rationale"]) <= 500
+    assert row["rationale"].endswith("…")
+    assert ("z" * 600) not in row["rationale"]
 
 
 def test_collections_finding_v1_rejects_extra_fields() -> None:

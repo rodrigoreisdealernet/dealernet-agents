@@ -26,6 +26,7 @@ _MAX_CONTACT_NOTES_PER_CUSTOMER = 5
 _MAX_NOTE_CHARS = 240
 _MAX_EVIDENCE_ITEMS = 5
 _MAX_EVIDENCE_CHARS = 240
+_MAX_RATIONALE_CHARS = 500
 
 
 def _coerce_int(value: Any) -> int:
@@ -281,6 +282,7 @@ def _collections_finding_for_storage(finding: dict[str, Any]) -> dict[str, Any]:
         "line_item_id": None,
         "finding_type": str(finding.get("finding_type") or _FINDING_TYPE),
         "severity": str(finding.get("severity") or "medium"),
+        "rationale": _bounded_text(finding.get("rationale"), limit=_MAX_RATIONALE_CHARS),
         "expected": {
             "customer_id": customer_id,
             "total_exposure": finding.get("total_exposure"),
