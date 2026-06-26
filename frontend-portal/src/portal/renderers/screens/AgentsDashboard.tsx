@@ -209,7 +209,7 @@ export default function AgentsDashboard() {
                   <span className="font-medium text-foreground">{a.agent_key}</span>
                   <div className="flex items-center gap-2">
                     {!a.enabled && <Badge tone="neutral">{t('healthDisabled')}</Badge>}
-                    <Badge tone={HEALTH_TONE[health]}>{healthLabel[health]}</Badge>
+                    {a.enabled && <Badge tone={HEALTH_TONE[health]}>{healthLabel[health]}</Badge>}
                   </div>
                 </div>
 
