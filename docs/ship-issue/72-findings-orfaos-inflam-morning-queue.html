@@ -1,0 +1,88 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta http-equiv="refresh" content="5">
+<title>ship-issue #72 — Findings órfãos inflam Morning Queue/Brief após reseed (vehicle-aging)</title>
+<style>
+  :root{font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  body{margin:0;background:#0b0e14;color:#e5e7eb;padding:24px}
+  .wrap{max-width:860px;margin:0 auto}
+  h1{font-size:18px;margin:0 0 4px}
+  .sub{color:#9ca3af;font-size:13px;margin-bottom:16px}
+  .sub a{color:#60a5fa;text-decoration:none}
+  .bar{height:8px;background:#1f2937;border-radius:99px;overflow:hidden;margin:12px 0 20px}
+  .bar>i{display:block;height:100%;background:#16a34a;width:86%}
+  .banner{background:#7c2d12;color:#fed7aa;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:14px}
+  table{width:100%;border-collapse:collapse}
+  td{padding:12px 8px;border-top:1px solid #1f2937;vertical-align:top}
+  .ic{font-size:18px;width:28px;text-align:center}
+  .lbl{font-weight:600;width:200px}
+  .st{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
+  .sum{font-size:14px;color:#d1d5db}
+  .arts{margin-top:6px;font-size:13px}
+  .arts a{color:#60a5fa;text-decoration:none}
+  .notes{margin:8px 0 0;padding-left:18px;color:#9ca3af;font-size:12px}
+  tr.running{background:#0f1b33}
+  .foot{color:#6b7280;font-size:12px;margin-top:20px}
+</style></head><body><div class="wrap">
+<h1>ship-issue #72 — Findings órfãos inflam Morning Queue/Brief após reseed (vehicle-aging)</h1>
+<div class="sub"><a href="https://github.com/rodrigoreisdealernet/dealernet-agents/issues/72">issue</a> · branch <code>feature/72-findings-orfaos-inflam-morning-queue</code> · <a href="https://github.com/rodrigoreisdealernet/dealernet-agents/pull/75">PR #75</a> · 86% complete</div>
+<div class="bar"><i></i></div>
+<div class="banner">🚧 Waiting on human gate: <b>merge</b></div>
+<table><tbody><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">01 · Spec<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">5 acceptance criteria drafted</div>
+          <div class="arts"><a href="docs/specs/72-findings-orfaos-inflam-morning-queue.md">Spec</a></div>
+          <ul class="notes"><li>Iniciando spec a partir da issue #72</li></ul>
+        </td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">02 · Approve (human gate)<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">Spec approved by human</div>
+          
+          
+        </td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">03 · Code<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">seed purge + worker supersede + migration; 6 files</div>
+          
+          <ul class="notes"><li>Starting coder: reading vehicle-aging activities, workflow, seed.sql</li><li>A: seed.sql orphan purge added. B: superseded migration + ops_revrec helper + vehicle-aging activity wired into workflow/worker. SQL validated on live container; ruff clean.</li><li>Committed 60bca60. A+B implemented; SQL validated on live container; ruff clean. 6 workflow tests now reference the new activity (tester to update mocks).</li></ul>
+        </td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">04 · Tests<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">39 pytest + 3 SQL contract tests green</div>
+          
+          <ul class="notes"><li>Fixed 6 workflow harness tests; added activity+workflow unit tests (pytest 39 green) and SQL purge/migration contract test (node --test 3 green)</li></ul>
+        </td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">05 · Test review<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">1 iteration: empty-scope supersede-all footgun guarded by test</div>
+          
+          <ul class="notes"><li>CHANGES REQUESTED: suite is strong (real purge/migration/e2e helper drive) but no test guards the supersede-all footgun on empty scope (assert expire skipped when scoped_vehicles empty).</li></ul>
+        </td>
+      </tr><tr class="done">
+        <td class="ic" style="color:#16a34a">●</td>
+        <td class="lbl">06 · Code review<div class="st" style="color:#16a34a">done</div></td>
+        <td class="meta">
+          <div class="sum">APPROVE — no blockers; also fixes latent 'superseded' CHECK bug</div>
+          <div class="arts"><a href="https://github.com/rodrigoreisdealernet/dealernet-agents/pull/75">PR review</a></div>
+          <ul class="notes"><li>APPROVE: in_scope derived from full scoped set (no over-cap supersede); empty-scope early-return guards supersede-all; seed purge type-safe+idempotent+agent-scoped; migration non-destructive &amp; also fixes latent ops_disposition superseded write; no status consumer breaks. 1 non-blocking comment-inaccuracy note.</li></ul>
+        </td>
+      </tr><tr class="waiting">
+        <td class="ic" style="color:#d97706">⏸</td>
+        <td class="lbl">Merge (human gate)<div class="st" style="color:#d97706">waiting</div></td>
+        <td class="meta">
+          
+          
+          
+        </td>
+      </tr></tbody></table>
+<div class="foot">auto-refreshes every 5s · last update 2026-06-26T01:31:47.504Z</div>
+</div></body></html>

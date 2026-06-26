@@ -49,6 +49,7 @@ class VehicleAgingWorkflow:
             "recorded_findings": 0,
             "deduped_findings": 0,
             "remaining_findings_count": 0,
+            "superseded_findings": 0,
             "auto_apply": False,
         }
         run_id = ""
@@ -131,6 +132,20 @@ class VehicleAgingWorkflow:
                     -int(item.get("days_in_stock") or 0),
                     str(item.get("fingerprint") or ""),
                 )
+            )
+
+            # Reconcile scope: any open finding for this tenant whose fingerprint is
+            # not produced by THIS run (e.g. a vehicle removed/replaced, or stale
+            # post-reseed fingerprints) is superseded so it stops showing as a
+            # pending action and never inflates the Morning Queue.
+            in_scope_fingerprints = sorted(
+                {str(item.get("fingerprint") or "") for item in surfaced if item.get("fingerprint")}
+            )
+            summary["superseded_findings"] = await workflow.execute_activity(
+                ops_vehicle_aging.ops_vehicle_aging_expire_out_of_scope_findings,
+                args=[inp.tenant_id, in_scope_fingerprints],
+                start_to_close_timeout=workflow.timedelta(seconds=30),
+                retry_policy=_STANDARD_RETRY,
             )
 
             existing_fingerprints = await workflow.execute_activity(
