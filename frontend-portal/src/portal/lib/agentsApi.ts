@@ -625,20 +625,19 @@ export async function getMyRole(): Promise<string> {
   return unwrap(res) ?? 'read_only'
 }
 
+// Criação privilegiada via RPC SECURITY DEFINER admin_create_user (a chave
+// service_role nunca vai ao browser; o privilégio fica no banco). Substitui a
+// Edge Function admin-create-user, que exige o edge runtime servido — ausente no
+// stack de demo local (config.toml [edge_runtime] enabled=false → invoke 503).
 export async function createUser(input: CreateUserInput): Promise<{ user_id: string }> {
-  const { data, error } = await supabase.functions.invoke('admin-create-user', {
-    body: {
-      email: input.email,
-      password: input.password,
-      display_name: input.display_name,
-      role: input.role,
-      tenant: input.tenant,
-    },
-  })
-  if (error) throw new Error(error.message)
-  const payload = data as { user_id?: string; error?: string }
-  if (payload?.error) throw new Error(payload.error)
-  return { user_id: payload?.user_id ?? '' }
+  const res = (await supabase.rpc('admin_create_user', {
+    p_email: input.email,
+    p_password: input.password,
+    p_display_name: input.display_name,
+    p_role: input.role,
+    p_tenant: input.tenant,
+  })) as PgResponse<string>
+  return { user_id: unwrap(res) ?? '' }
 }
 
 export async function updateProfile(userId: string, input: ProfileUpdateInput): Promise<void> {
