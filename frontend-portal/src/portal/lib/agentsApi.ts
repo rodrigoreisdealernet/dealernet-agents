@@ -39,6 +39,25 @@ export async function getAccessToken(): Promise<string | null> {
   return data.session?.access_token ?? null
 }
 
+// Valida se a sessão persistida ainda é ACEITA pelo backend — não basta existir.
+// Ao recriar a stack local (novas chaves de assinatura JWT), o token salvo no
+// localStorage continua presente, mas o Supabase/ops-api respondem 401. getUser()
+// faz um round-trip (com refresh automático) e só retorna sucesso se o token for
+// realmente válido; assim detectamos a sessão obsoleta e podemos reautenticar.
+export async function hasValidSession(): Promise<boolean> {
+  const { data } = await supabase.auth.getSession()
+  if (!data.session) return false
+  const { data: userData, error } = await supabase.auth.getUser()
+  return !error && Boolean(userData.user)
+}
+
+// Limpa qualquer sessão obsoleta e refaz o login do usuário demo (POC §4.4).
+export async function reauthenticateDemo(): Promise<boolean> {
+  await supabase.auth.signOut().catch(() => undefined)
+  const { data, error } = await signInDemo()
+  return !error && Boolean(data.session)
+}
+
 export function signOut() {
   return supabase.auth.signOut()
 }
@@ -1140,14 +1159,24 @@ export interface RunAgentNowResult {
 }
 
 export async function runAgentNow(agentKey: string, locale?: Locale): Promise<RunAgentNowResult> {
-  const token = await getAccessToken()
+  let token = await getAccessToken()
   if (!token) throw new Error('Sem sessão — faça login antes de executar o agente.')
 
-  const res = await fetch(`${OPS_API_URL}/agents/${encodeURIComponent(agentKey)}/run`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ locale: locale ?? 'pt-BR' }),
-  })
+  const call = (bearer: string) =>
+    fetch(`${OPS_API_URL}/agents/${encodeURIComponent(agentKey)}/run`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${bearer}` },
+      body: JSON.stringify({ locale: locale ?? 'pt-BR' }),
+    })
+
+  let res = await call(token)
+  // Sessão obsoleta (stack recriada): o ops-api valida o JWT no Supabase e devolve
+  // 401. Reautentica o usuário demo uma vez e repete a chamada, evitando exigir um
+  // reload manual da página.
+  if (res.status === 401 && (await reauthenticateDemo())) {
+    token = (await getAccessToken()) ?? token
+    res = await call(token)
+  }
   if (!res.ok) {
     const text = await res.text().catch(() => '')
     throw new Error(`Execução falhou (HTTP ${res.status}): ${text.slice(0, 200)}`)

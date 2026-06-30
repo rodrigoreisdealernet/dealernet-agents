@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { signInDemo, signOut as supabaseSignOut, hasSession } from '@/portal/lib/agentsApi'
+import { signInDemo, signOut as supabaseSignOut, hasValidSession } from '@/portal/lib/agentsApi'
 import { resetSessionExpiredFlag } from '@/portal/lib/sessionEvents'
 import type { LoginRequest } from '@/portal/types'
 
@@ -37,13 +37,15 @@ function loadSession(): StoredSession | null {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<StoredSession | null>(loadSession)
 
-  // Boot resiliente (POC §4.4): se o flag de UI existe mas não há sessão Supabase
-  // (expirou/limpou após refresh), reautentica o usuário demo silenciosamente —
-  // senão as views RLS voltam vazias mesmo "logado".
+  // Boot resiliente (POC §4.4): se o flag de UI existe mas a sessão Supabase não é
+  // mais VÁLIDA (expirou, foi limpa, ou ficou obsoleta após recriar a stack local —
+  // novas chaves de assinatura JWT), limpa o token velho e reautentica o usuário
+  // demo silenciosamente — senão as views RLS voltam vazias e o ops-api devolve 401.
   useEffect(() => {
     if (!session) return
     void (async () => {
-      if (!(await hasSession())) {
+      if (!(await hasValidSession())) {
+        await supabaseSignOut().catch(() => undefined)
         await signInDemo().catch(() => undefined)
       }
     })()
