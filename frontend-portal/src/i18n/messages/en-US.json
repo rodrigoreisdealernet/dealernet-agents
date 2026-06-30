@@ -874,6 +874,33 @@
       "high": "High",
       "medium": "Medium",
       "low": "Low"
+    },
+    "receivablesBI": {
+      "title": "Accounts Receivable",
+      "subtitle": "Open receivables portfolio: exposure, aging buckets and critical customers.",
+      "openTotal": "Open total",
+      "overdueTotal": "Overdue total",
+      "customers": "Customers",
+      "titles": "Titles",
+      "maxDaysOverdue": "Max days overdue",
+      "maxDaysOverdueHint": "worst overdue in the portfolio",
+      "avgTicket": "Average ticket",
+      "exposureByAging": "Exposure by aging bucket",
+      "exposure": "Exposure",
+      "noReceivables": "No receivables to display.",
+      "topOverdueCustomers": "Top customers by overdue exposure",
+      "overdueExposure": "Overdue exposure",
+      "noOverdue": "No overdue titles.",
+      "criticalTitles": "Critical titles",
+      "customerMissing": "Unidentified customer",
+      "dueOn": "due",
+      "collector": "collector",
+      "daysOverdue": "{days, plural, one {# day overdue} other {# days overdue}}",
+      "aging_a_vencer": "Not due",
+      "aging_1_30": "1–30 days",
+      "aging_31_60": "31–60 days",
+      "aging_61_90": "61–90 days",
+      "aging_90_mais": "90+ days"
     }
   }
 }

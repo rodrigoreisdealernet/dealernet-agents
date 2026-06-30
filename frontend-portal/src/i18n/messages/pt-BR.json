@@ -874,6 +874,33 @@
       "high": "Alta",
       "medium": "Média",
       "low": "Baixa"
+    },
+    "receivablesBI": {
+      "title": "Contas a Receber",
+      "subtitle": "Carteira de títulos em aberto: exposição, faixas de atraso e clientes críticos.",
+      "openTotal": "Total em aberto",
+      "overdueTotal": "Total vencido",
+      "customers": "Clientes",
+      "titles": "Títulos",
+      "maxDaysOverdue": "Maior atraso (dias)",
+      "maxDaysOverdueHint": "pior atraso da carteira",
+      "avgTicket": "Ticket médio",
+      "exposureByAging": "Exposição por faixa de atraso",
+      "exposure": "Exposição",
+      "noReceivables": "Sem títulos a exibir.",
+      "topOverdueCustomers": "Top clientes por exposição vencida",
+      "overdueExposure": "Exposição vencida",
+      "noOverdue": "Nenhum título vencido.",
+      "criticalTitles": "Títulos críticos",
+      "customerMissing": "Cliente não identificado",
+      "dueOn": "vence em",
+      "collector": "cobrador",
+      "daysOverdue": "{days, plural, one {# dia em atraso} other {# dias em atraso}}",
+      "aging_a_vencer": "A vencer",
+      "aging_1_30": "1–30 dias",
+      "aging_31_60": "31–60 dias",
+      "aging_61_90": "61–90 dias",
+      "aging_90_mais": "90+ dias"
     }
   }
 }
