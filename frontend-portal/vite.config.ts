@@ -50,6 +50,13 @@ export default defineConfig(({ mode }) => {
     '//127.0.0.1',
   )
 
+  // ops-api (FastAPI /api/ops) — alvo do proxy configurável. Default :8000, mas
+  // permite outra porta (ex.: :8009) quando :8000 está ocupada por outro stack.
+  const opsTarget = (env.VITE_OPS_API_TARGET || 'http://127.0.0.1:8000').replace(
+    /\/\/localhost(?=[:/])/,
+    '//127.0.0.1',
+  )
+
   // Demo via túnel (ngrok, HTTPS cross-site): cookie de sessão no iframe exige
   // SameSite=None; Secure. Em dev local (http), usa Lax. Ligar com VITE_TUNNEL=1.
   const tunnel = env.VITE_TUNNEL === '1'
@@ -73,6 +80,9 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 5174,
+      // Bind em todas as interfaces para que tanto :5174 (host) quanto o
+      // portal-bridge (docker → host.docker.internal:5174 → :5273) alcancem o dev.
+      host: true,
       open: true,
       // Libera hosts de túnel (ngrok) p/ demo. Sem isto o Vite 6 bloqueia: "host not allowed".
       allowedHosts: ['.ngrok-free.app', '.ngrok-free.dev', '.ngrok.app', '.ngrok.io'],
@@ -81,7 +91,7 @@ export default defineConfig(({ mode }) => {
         // As rotas do FastAPI JÁ incluem o prefixo /api/ops (ex.: /api/ops/findings/decision),
         // então encaminhamos SEM rewrite — igual ao proxy do dia-frontend. (POC: approve/reject)
         '/api/ops': {
-          target: 'http://127.0.0.1:8000',
+          target: opsTarget,
           changeOrigin: true,
           secure: false,
         },

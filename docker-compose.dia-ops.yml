@@ -96,4 +96,4 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
-      - "8000:8000"
+      - "${DIA_OPS_API_PORT:-8000}:8000"
